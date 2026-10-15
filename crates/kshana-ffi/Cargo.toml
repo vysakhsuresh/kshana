@@ -1,0 +1,30 @@
+[package]
+name = "kshana-ffi"
+description = "UniFFI surface of the Kshana engine for Android (Kotlin), iOS (Swift) and Python"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lib]
+name = "kshana_ffi"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+
+[dependencies]
+uniffi = { version = "0.29", features = ["cli"] }
+kshana-time = { workspace = true }
+kshana-solver = { workspace = true }
+kshana-ephem = { workspace = true }
+kshana-frames = { workspace = true }
+kshana-houses = { workspace = true }
+kshana-western = { workspace = true }
+kshana-vedic = { workspace = true }
+
+[lints]
+workspace = true

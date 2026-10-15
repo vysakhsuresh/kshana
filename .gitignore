@@ -1,0 +1,9 @@
+/target
+**/*.rs.bk
+/data/*.bsp
+/data/*.bpc
+/data/*.tls
+/android/**/build/
+/android/**/.gradle/
+/android/local.properties
+.DS_Store

@@ -1,0 +1,41 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/kshana-time",
+    "crates/kshana-solver",
+    "crates/kshana-ephem",
+    "crates/kshana-frames",
+    "crates/kshana-houses",
+    "crates/kshana-western",
+    "crates/kshana-vedic",
+    "crates/kshana-ffi",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+license = "UNLICENSED"
+repository = "https://github.com/vysakhsuresh/kshana"
+authors = ["Vysakh Suresh"]
+
+[workspace.dependencies]
+kshana-time = { path = "crates/kshana-time" }
+kshana-solver = { path = "crates/kshana-solver" }
+kshana-ephem = { path = "crates/kshana-ephem" }
+kshana-frames = { path = "crates/kshana-frames" }
+kshana-houses = { path = "crates/kshana-houses" }
+kshana-western = { path = "crates/kshana-western" }
+kshana-vedic = { path = "crates/kshana-vedic" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+float_cmp = "allow"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = 3

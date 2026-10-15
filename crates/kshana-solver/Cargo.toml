@@ -1,0 +1,15 @@
+[package]
+name = "kshana-solver"
+description = "Root finding on exact instants: the engine behind every 'exact moment' Kshana reports"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+kshana-time = { workspace = true }
+
+[lints]
+workspace = true

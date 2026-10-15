@@ -1,0 +1,15 @@
+[package]
+name = "kshana-ephem"
+description = "JPL SPK (DAF) ephemeris reader: Chebyshev evaluation of DE440/DE441 kernels"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+kshana-time = { workspace = true }
+
+[lints]
+workspace = true
