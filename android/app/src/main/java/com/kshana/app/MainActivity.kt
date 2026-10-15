@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
@@ -52,7 +52,7 @@ private data class Tab(val route: String, val label: String, val icon: ImageVect
 private val tabs = listOf(
     Tab("now", "NOW", Icons.Filled.Star),
     Tab("chart", "CHART", Icons.Filled.Place),
-    Tab("vedic", "VEDIC", Icons.Filled.List),
+    Tab("vedic", "VEDIC", Icons.AutoMirrored.Filled.List),
     Tab("moments", "MOMENTS", Icons.Filled.DateRange),
     Tab("reading", "READING", Icons.Filled.Info),
 )
