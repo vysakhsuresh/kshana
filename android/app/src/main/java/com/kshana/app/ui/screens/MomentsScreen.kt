@@ -35,7 +35,7 @@ private val DAY = DateTimeFormatter.ofPattern("EEE d MMM")
 private val TIME = DateTimeFormatter.ofPattern("HH:mm:ss")
 
 @Composable
-fun MomentsScreen(ayanamsa: AyanamsaChoice = AyanamsaChoice.LAHIRI) {
+fun MomentsScreen(ayanamsa: AyanamsaChoice = AyanamsaChoice.LAHIRI, onMuhurta: () -> Unit = {}) {
     val context = LocalContext.current
     var events by remember { mutableStateOf<List<EventRecord>>(emptyList()) }
     var status by remember { mutableStateOf("solving the next 14 days to the microsecond…") }
@@ -54,9 +54,10 @@ fun MomentsScreen(ayanamsa: AyanamsaChoice = AyanamsaChoice.LAHIRI) {
         Text("EXACT MOMENTS", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         Text("The sky is about to change", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         Text(status, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted, modifier = Modifier.padding(bottom = 12.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(0.dp)) {
             items(events) { e -> EventRow(e) }
         }
+        QuietButton("FIND A TIME", onClick = onMuhurta, modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp))
     }
 }
 

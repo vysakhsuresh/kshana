@@ -36,6 +36,7 @@ import com.kshana.app.ui.screens.AreasScreen
 import com.kshana.app.ui.screens.BirthScreen
 import com.kshana.app.ui.screens.ChartScreen
 import com.kshana.app.ui.screens.MomentsScreen
+import com.kshana.app.ui.screens.MuhurtaScreen
 import com.kshana.app.ui.screens.NowScreen
 import com.kshana.app.ui.screens.PariharaScreen
 import com.kshana.app.ui.screens.PrashnaScreen
@@ -131,7 +132,17 @@ private fun App() {
             }
             composable("chart") { withProfile { ChartScreen(it, settings) } }
             composable("vedic") { withProfile { VedicScreen(it, settings) } }
-            composable("moments") { MomentsScreen(ayanamsa = settings.ayanamsa) }
+            composable("moments") {
+                MomentsScreen(ayanamsa = settings.ayanamsa, onMuhurta = { nav.navigate("muhurta") { launchSingleTop = true } })
+            }
+            composable("muhurta") {
+                MuhurtaScreen(
+                    place = profile?.place() ?: ProfileStore.currentLocation(context),
+                    settings = settings,
+                    profile = profile,
+                    onBack = { nav.popBackStack() },
+                )
+            }
             composable("reading") {
                 withProfile {
                     ReadingScreen(

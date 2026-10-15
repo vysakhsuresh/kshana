@@ -287,7 +287,8 @@ fn score_step(
         } else if matches!(from_natal, 1 | 3 | 6 | 7 | 10 | 11) {
             score += 0.10;
             factors.push(format!(
-                "Chandra bala: Moon in the {from_natal}th from your natal Moon"
+                "Chandra bala: Moon in the {} from your natal Moon",
+                ordinal(from_natal)
             ));
         }
     }
