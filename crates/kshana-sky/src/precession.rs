@@ -82,6 +82,15 @@ pub fn rotate_x(theta: f64, v: [f64; 3]) -> [f64; 3] {
     [v[0], c * v[1] + s * v[2], -s * v[1] + c * v[2]]
 }
 
+/// Apply the transpose (inverse) of a rotation matrix to a vector.
+pub fn apply_transpose(m: &Mat3, v: [f64; 3]) -> [f64; 3] {
+    [
+        m[0][0] * v[0] + m[1][0] * v[1] + m[2][0] * v[2],
+        m[0][1] * v[0] + m[1][1] * v[1] + m[2][1] * v[2],
+        m[0][2] * v[0] + m[1][2] * v[1] + m[2][2] * v[2],
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -132,13 +141,4 @@ mod tests {
             ang / ARCSEC
         );
     }
-}
-
-/// Apply the transpose (inverse) of a rotation matrix to a vector.
-pub fn apply_transpose(m: &Mat3, v: [f64; 3]) -> [f64; 3] {
-    [
-        m[0][0] * v[0] + m[1][0] * v[1] + m[2][0] * v[2],
-        m[0][1] * v[0] + m[1][1] * v[1] + m[2][1] * v[2],
-        m[0][2] * v[0] + m[1][2] * v[1] + m[2][2] * v[2],
-    ]
 }

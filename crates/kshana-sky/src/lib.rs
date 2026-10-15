@@ -272,78 +272,6 @@ pub fn true_node_longitude(spk: &Spk, t: Instant) -> Result<f64, SpkError> {
 }
 
 #[cfg(test)]
-mod more_tests {
-    use super::*;
-    use kshana_time::Utc;
-
-    fn kernel() -> Option<Spk> {
-        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/de421.bsp");
-        Spk::open(&p).ok()
-    }
-
-    #[test]
-    fn true_node_stays_within_two_degrees_of_the_mean_node() {
-        let Some(spk) = kernel() else { return };
-        let mut max = 0.0f64;
-        for i in 0..40 {
-            let t = Utc::new(2000 + i, 3, 1, 0, 0, 0, 0)
-                .unwrap()
-                .to_instant()
-                .unwrap();
-            let tn = true_node_longitude(&spk, t).unwrap();
-            let mn = mean_node_longitude(t.tt_centuries_since_j2000());
-            let d = ((tn - mn + 180.0).rem_euclid(360.0) - 180.0).abs();
-            max = max.max(d);
-            assert!(d < 2.0, "year {}: true {tn} mean {mn} diff {d}", 2000 + i);
-        }
-        assert!(
-            max > 0.2,
-            "true node never departed from the mean node: suspicious ({max})"
-        );
-    }
-
-    #[test]
-    fn topocentric_moon_parallax_is_under_a_degree_and_sun_under_ten_arcsec() {
-        let Some(spk) = kernel() else { return };
-        let obs = Observer {
-            latitude_deg: 9.9312,
-            longitude_deg: 76.2673,
-            height_m: 0.0,
-        };
-        for d in [1u32, 8, 15, 22] {
-            let t = Utc::new(2026, 10, d, 9, 0, 0, 0)
-                .unwrap()
-                .to_instant()
-                .unwrap();
-            // GAST from UT1 ≈ UTC (error < 1 s → < 0.01″ here), via ΔT-free shortcut
-            let ut1 = kshana_time::TwoPartJd {
-                jd1: t.tt_jd().jd1,
-                jd2: t.tt_jd().jd2 - 69.2 / 86_400.0,
-            };
-            let g = kshana_frames::gast(
-                kshana_frames::earth_rotation_angle(ut1),
-                t.tt_centuries_since_j2000(),
-            );
-            let geo = apparent(&spk, Body::Moon, t).unwrap();
-            let topo = apparent_topocentric(&spk, Body::Moon, t, &obs, g).unwrap();
-            let dl = ((topo.longitude - geo.longitude + 180.0).rem_euclid(360.0) - 180.0).abs();
-            let db = (topo.latitude - geo.latitude).abs();
-            let sep = (dl * dl + db * db).sqrt();
-            assert!(sep > 0.05 && sep < 1.05, "day {d}: parallax {sep}°");
-            assert!(
-                topo.distance_km < geo.distance_km + 6_400.0
-                    && topo.distance_km > geo.distance_km - 6_400.0
-            );
-            let sg = apparent(&spk, Body::Sun, t).unwrap();
-            let st = apparent_topocentric(&spk, Body::Sun, t, &obs, g).unwrap();
-            let ds =
-                ((st.longitude - sg.longitude + 180.0).rem_euclid(360.0) - 180.0).abs() * 3_600.0;
-            assert!(ds < 10.0, "sun parallax {ds}″");
-        }
-    }
-}
-
-#[cfg(test)]
 mod tests {
     use super::*;
     use kshana_time::Utc;
@@ -412,5 +340,66 @@ mod tests {
             .unwrap();
         let a = apparent(&spk, Body::MarsBarycenter, t).unwrap();
         assert!(a.speed < 0.0, "speed {}", a.speed);
+    }
+
+    #[test]
+    fn true_node_stays_within_two_degrees_of_the_mean_node() {
+        let Some(spk) = kernel() else { return };
+        let mut max = 0.0f64;
+        for i in 0..40 {
+            let t = Utc::new(2000 + i, 3, 1, 0, 0, 0, 0)
+                .unwrap()
+                .to_instant()
+                .unwrap();
+            let tn = true_node_longitude(&spk, t).unwrap();
+            let mn = mean_node_longitude(t.tt_centuries_since_j2000());
+            let d = ((tn - mn + 180.0).rem_euclid(360.0) - 180.0).abs();
+            max = max.max(d);
+            assert!(d < 2.0, "year {}: true {tn} mean {mn} diff {d}", 2000 + i);
+        }
+        assert!(
+            max > 0.2,
+            "true node never departed from the mean node: suspicious ({max})"
+        );
+    }
+
+    #[test]
+    fn topocentric_moon_parallax_is_under_a_degree_and_sun_under_ten_arcsec() {
+        let Some(spk) = kernel() else { return };
+        let obs = Observer {
+            latitude_deg: 9.9312,
+            longitude_deg: 76.2673,
+            height_m: 0.0,
+        };
+        for d in [1u32, 8, 15, 22] {
+            let t = Utc::new(2026, 10, d, 9, 0, 0, 0)
+                .unwrap()
+                .to_instant()
+                .unwrap();
+            // GAST from UT1 ≈ UTC (error < 1 s → < 0.01″ here), via ΔT-free shortcut
+            let ut1 = kshana_time::TwoPartJd {
+                jd1: t.tt_jd().jd1,
+                jd2: t.tt_jd().jd2 - 69.2 / 86_400.0,
+            };
+            let g = kshana_frames::gast(
+                kshana_frames::earth_rotation_angle(ut1),
+                t.tt_centuries_since_j2000(),
+            );
+            let geo = apparent(&spk, Body::Moon, t).unwrap();
+            let topo = apparent_topocentric(&spk, Body::Moon, t, &obs, g).unwrap();
+            let dl = ((topo.longitude - geo.longitude + 180.0).rem_euclid(360.0) - 180.0).abs();
+            let db = (topo.latitude - geo.latitude).abs();
+            let sep = (dl * dl + db * db).sqrt();
+            assert!(sep > 0.05 && sep < 1.05, "day {d}: parallax {sep}°");
+            assert!(
+                topo.distance_km < geo.distance_km + 6_400.0
+                    && topo.distance_km > geo.distance_km - 6_400.0
+            );
+            let sg = apparent(&spk, Body::Sun, t).unwrap();
+            let st = apparent_topocentric(&spk, Body::Sun, t, &obs, g).unwrap();
+            let ds =
+                ((st.longitude - sg.longitude + 180.0).rem_euclid(360.0) - 180.0).abs() * 3_600.0;
+            assert!(ds < 10.0, "sun parallax {ds}″");
+        }
     }
 }
