@@ -57,6 +57,7 @@ cargo run -p kshana-cli -- next --spk data/de421.bsp --utc 2026-10-15T00:00:00 -
 cargo run -p kshana-cli -- areas --spk data/de421.bsp --utc 1990-10-29T17:36:00 --lat 9.9312 --lon 76.2673
 cargo run -p kshana-cli -- prashna --spk data/de421.bsp --utc 2026-10-15T09:02:07 --lat 9.9312 --lon 76.2673 --area Marriage --number 108 --tz +05:30
 ./scripts/check.sh                # the gate: fmt, clippy -D warnings, all tests
+./scripts/kotlin-check.sh         # type-check the Android sources without the SDK (Maven artifacts only)
 ./android/build-engine.sh         # Android .so files + Kotlin bindings
 ```
 

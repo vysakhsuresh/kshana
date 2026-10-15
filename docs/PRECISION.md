@@ -54,6 +54,16 @@ from ERFA 2.0.1 (the C port of SOFA), jplephem 2.24 and Skyfield 1.55, and repla
 | Apparent geocentric ecliptic lon/lat, 10 bodies | Skyfield `apparent().ecliptic_latlon(epoch='date')` | 20 | < 0.5″ |
 | Topocentric Moon from Kochi | Skyfield `wgs84.latlon` | 20 | < 0.5″ |
 | New Moon 2000-01-06, March equinox 2026, Mars stations 2003 | Astronomical Almanac dates | | < 1 min, < 2 min, exact dates |
+| Sunrise and sunset, Kochi, 2026-03-20 | hand calculation (equation of time, −0°50′ altitude) | | < 3 min of the estimate; solver itself to 1 ms |
+| Solar return 2026 for a 1990-10-29 birth | Sun returns to the natal longitude | | < 1e-6° at the solved instant |
+
+## The Android shell
+
+The Kotlin sources (ten screens, profile store, navigation, generated bindings) are
+type-checked with `scripts/kotlin-check.sh` against the real Compose 1.7 and Android
+framework classes with the Compose compiler plugin loaded. The APK is not built here
+because the SDK host is unreachable; the first Android Studio build remains the final
+verification step.
 
 Remaining known omissions: gravitational light deflection (≤ 1.75″ at the solar limb,
 usually < 0.02″), the full TDB−TT series (≈ 30 µs in time, negligible in angle), and
