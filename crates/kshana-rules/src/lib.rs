@@ -17,7 +17,10 @@ pub mod kp;
 
 pub use areas::{Area, AREAS};
 pub use facts::{Facts, PlanetFact};
-pub use kp::{promise, significators, Level, Promise, Significance};
+pub use kp::{
+    agreeing_levels, node_agents, period_supports, promise, significators, timing, Level, Promise,
+    Significance, TimingLevel,
+};
 
 /// One fired rule.
 #[derive(Clone, Debug, PartialEq)]

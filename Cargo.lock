@@ -301,6 +301,7 @@ dependencies = [
  "kshana-events",
  "kshana-frames",
  "kshana-houses",
+ "kshana-rules",
  "kshana-sky",
  "kshana-solver",
  "kshana-time",

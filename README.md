@@ -39,6 +39,7 @@ a person can carry, and to be honest about how well it knows.
 | `kshana-events` | Exact instants on the real sky: ingresses, aspects, lunations, tithi and nakshatra boundaries, stations, solved to 1 µs | tested against almanac dates |
 | `kshana-verify` | Golden-vector tests against ERFA, jplephem and Skyfield (`tests/golden/`) | ERA, GMST, GAST, obliquity, precession angles, NPB matrix, 2000A/B nutation all match ERFA to ≤ 1e-12 rad |
 | `kshana-cli` | `kshana` binary: full chart from the kernel for a UTC instant and a place | working |
+| `kshana-rules` | The prediction layer: facts from a chart, KP four-level significators with node agency, cusp sub-lord promise per life area with cited factors, Vimshottari timing funnel with agreement count | tested on a real chart |
 | `kshana-chart` | One instant, one place, the whole chart: placements with KP lords and houses, cusps, nodes, panchanga, provenance stamp | tested; shared by the CLI and the FFI |
 | `kshana-ffi` | UniFFI surface: `Engine` object (kernel loaded once), `chart`, `next_events`, `dasha_chain`, `horary_lagna`, panchanga, exact instants | tested through the boundary; Kotlin bindings generate cleanly |
 

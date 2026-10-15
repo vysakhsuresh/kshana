@@ -6,9 +6,11 @@
 //! 3. it is in the star of the house's lord,
 //! 4. it owns the house.
 //!
-//! Rahu and Ketu additionally represent the planets they are conjoined with or whose
-//! sign they occupy; that agency rule is left for the next version. Until then a node
-//! as cusp sub-lord yields "not promised", which the UI must show as "not yet judged".
+//! Rahu and Ketu own no sign; they act as agents. A node signifies, in addition to its
+//! own star and occupancy levels, everything signified by the planets conjoined with it
+//! in the same sign and, failing any, by the lord of the sign it occupies (KP agency
+//! rule, Reader III). That is the convention implemented here; aspect-based agency is
+//! not included.
 
 use crate::areas::Area;
 use crate::facts::Facts;
@@ -49,10 +51,8 @@ pub struct Significance {
     pub level: Level,
 }
 
-/// All houses a graha signifies, strongest level per house, sorted by house.
-pub fn significators(facts: &Facts, g: DashaLord) -> Vec<Significance> {
+fn own_significations(facts: &Facts, g: DashaLord, best: &mut [Option<Level>; 13]) {
     let p = facts.planet(g);
-    let mut best: [Option<Level>; 13] = [None; 13];
     let mut note = |house: u8, level: Level| {
         let slot = &mut best[house as usize];
         if slot.map_or(true, |l| level < l) {
@@ -69,6 +69,36 @@ pub fn significators(facts: &Facts, g: DashaLord) -> Vec<Significance> {
     note(p.house, Level::Occupant);
     for &h in &p.owns {
         note(h, Level::Owner);
+    }
+}
+
+/// Planets a node stands for: those in its sign, else the lord of its sign.
+pub fn node_agents(facts: &Facts, node: DashaLord) -> Vec<DashaLord> {
+    let n = facts.planet(node);
+    let sign = (n.sidereal / 30.0).floor() as i64;
+    let conjoined: Vec<DashaLord> = facts
+        .planets
+        .iter()
+        .filter(|p| p.graha != DashaLord::Rahu && p.graha != DashaLord::Ketu)
+        .filter(|p| (p.sidereal / 30.0).floor() as i64 == sign)
+        .map(|p| p.graha)
+        .collect();
+    if conjoined.is_empty() {
+        vec![kshana_vedic::sign_lord(sign.rem_euclid(12) as usize)]
+    } else {
+        conjoined
+    }
+}
+
+/// All houses a graha signifies, strongest level per house, sorted by house. Nodes add
+/// the significations of their agents.
+pub fn significators(facts: &Facts, g: DashaLord) -> Vec<Significance> {
+    let mut best: [Option<Level>; 13] = [None; 13];
+    own_significations(facts, g, &mut best);
+    if matches!(g, DashaLord::Rahu | DashaLord::Ketu) {
+        for agent in node_agents(facts, g) {
+            own_significations(facts, agent, &mut best);
+        }
     }
     (1..=12u8)
         .filter_map(|h| best[h as usize].map(|level| Significance { house: h, level }))
@@ -163,6 +193,51 @@ pub fn period_supports(facts: &Facts, area: Area, lord: DashaLord) -> Vec<Signif
         .collect()
 }
 
+/// One level of the timing funnel: a dasha period and the group houses its lord signifies.
+#[derive(Clone, Debug, PartialEq)]
+pub struct TimingLevel {
+    /// 1 = mahadasha … 5 = prana.
+    pub level: u8,
+    /// The period.
+    pub period: kshana_vedic::DashaPeriod,
+    /// Group houses signified by the period lord (empty = this level does not support).
+    pub supports: Vec<Significance>,
+}
+
+/// The Vimshottari funnel for an area at instant `at`, for a birth with the Moon at
+/// `moon_sidereal`: each level's lord is checked against the area's houses. The
+/// tightest supported window is the deepest level whose lord supports with every
+/// level above it supporting too.
+pub fn timing(
+    facts: &Facts,
+    area: Area,
+    moon_sidereal: f64,
+    birth: kshana_time::Instant,
+    at: kshana_time::Instant,
+    depth: usize,
+) -> Vec<TimingLevel> {
+    kshana_vedic::vimshottari_levels(
+        moon_sidereal,
+        birth,
+        kshana_vedic::dasha::YEAR_365_25_NS,
+        at,
+        depth,
+    )
+    .into_iter()
+    .enumerate()
+    .map(|(i, period)| TimingLevel {
+        level: (i + 1) as u8,
+        period,
+        supports: period_supports(facts, area, period.lord),
+    })
+    .collect()
+}
+
+/// Number of consecutive supporting levels from the top of a funnel.
+pub fn agreeing_levels(funnel: &[TimingLevel]) -> usize {
+    funnel.iter().take_while(|l| !l.supports.is_empty()).count()
+}
+
 fn ordinal(h: u8) -> String {
     match h {
         1 => "1st".into(),
@@ -255,6 +330,46 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn nodes_act_through_agents() {
+        let Some(f) = kochi_facts() else { return };
+        for node in [DashaLord::Rahu, DashaLord::Ketu] {
+            let agents = node_agents(&f, node);
+            assert!(!agents.is_empty());
+            let sig = significators(&f, node);
+            for a in agents {
+                for s in significators(&f, a) {
+                    assert!(
+                        sig.iter().any(|x| x.house == s.house),
+                        "{node:?} should carry {a:?}'s house {}",
+                        s.house
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn timing_funnel_nests_and_counts_agreement() {
+        let Some(f) = kochi_facts() else { return };
+        let birth = Utc::new(1990, 10, 29, 23, 6, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        let at = Utc::new(2026, 10, 15, 9, 2, 7, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        let moon = f.planet(DashaLord::Moon).sidereal;
+        let funnel = timing(&f, AREAS[0], moon, birth, at, 5);
+        assert_eq!(funnel.len(), 5);
+        for w in funnel.windows(2) {
+            assert!(w[0].period.start <= w[1].period.start && w[1].period.end <= w[0].period.end);
+        }
+        let n = agreeing_levels(&funnel);
+        assert!(n <= 5);
     }
 
     #[test]

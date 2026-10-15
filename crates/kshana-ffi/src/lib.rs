@@ -318,12 +318,7 @@ impl Engine {
         ayanamsa: AyanamsaChoice,
         topocentric_moon: bool,
     ) -> Result<ChartRecord, KshanaError> {
-        let sys = match system {
-            HouseSystem::WholeSign => kshana_houses::HouseSystem::WholeSign,
-            HouseSystem::Equal => kshana_houses::HouseSystem::Equal,
-            HouseSystem::Porphyry => kshana_houses::HouseSystem::Porphyry,
-            HouseSystem::Placidus => kshana_houses::HouseSystem::Placidus,
-        };
+        let sys = to_house_system(system);
         let input = ChartInput {
             instant: at.into(),
             observer: Observer {
@@ -464,6 +459,149 @@ impl Engine {
     }
 }
 
+/// One signified house.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct SignificanceRecord {
+    pub house: u8,
+    /// 1 star-of-occupant, 2 occupant, 3 star-of-owner, 4 owner.
+    pub level: u8,
+}
+
+/// The promise verdict for one life area.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct PromiseRecord {
+    pub area: String,
+    pub primary_cusp: u8,
+    pub group: Vec<u8>,
+    pub sub_lord: String,
+    pub promised: bool,
+    pub strength: f64,
+    pub fulfilling: Vec<SignificanceRecord>,
+    pub denying: Vec<SignificanceRecord>,
+    pub rule_id: String,
+    pub source: String,
+    pub factors: Vec<String>,
+}
+
+/// One level of the timing funnel.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct TimingRecord {
+    pub level: u8,
+    pub lord: String,
+    pub start: ExactInstant,
+    pub end: ExactInstant,
+    pub supports: Vec<SignificanceRecord>,
+}
+
+/// Promise verdicts and a timing funnel for one area.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct AreaReading {
+    pub promise: PromiseRecord,
+    pub funnel: Vec<TimingRecord>,
+    pub agreeing_levels: u8,
+}
+
+fn sig_records(v: &[kshana_rules::Significance]) -> Vec<SignificanceRecord> {
+    v.iter()
+        .map(|s| SignificanceRecord {
+            house: s.house,
+            level: s.level as u8,
+        })
+        .collect()
+}
+
+fn to_house_system(system: HouseSystem) -> kshana_houses::HouseSystem {
+    match system {
+        HouseSystem::WholeSign => kshana_houses::HouseSystem::WholeSign,
+        HouseSystem::Equal => kshana_houses::HouseSystem::Equal,
+        HouseSystem::Porphyry => kshana_houses::HouseSystem::Porphyry,
+        HouseSystem::Placidus => kshana_houses::HouseSystem::Placidus,
+    }
+}
+
+#[uniffi::export]
+impl Engine {
+    /// Every life area's promise verdict and timing funnel for a natal chart, judged at
+    /// instant `at` (funnel levels: 1 maha … `depth` ≤ 5).
+    #[allow(clippy::too_many_arguments)]
+    pub fn area_readings(
+        &self,
+        birth: ExactInstant,
+        latitude_deg: f64,
+        longitude_deg: f64,
+        height_m: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        at: ExactInstant,
+        depth: u8,
+    ) -> Result<Vec<AreaReading>, KshanaError> {
+        let input = ChartInput {
+            instant: birth.into(),
+            observer: Observer {
+                latitude_deg,
+                longitude_deg,
+                height_m,
+            },
+            system: to_house_system(system),
+            ayanamsa: ayanamsa.into(),
+            topocentric_moon: false,
+        };
+        let ch = compute(&self.spk, self.eop.as_ref(), &input).map_err(|e| match e {
+            kshana_chart::ChartError::Houses(kshana_houses::HouseError::PolarLatitude) => {
+                KshanaError::PolarLatitude
+            }
+            other => KshanaError::Engine(format!("{other:?}")),
+        })?;
+        let facts = kshana_rules::Facts::from_chart(&ch);
+        let moon = ch.bodies[1].sidereal;
+        Ok(kshana_rules::AREAS
+            .iter()
+            .map(|&area| {
+                let p = kshana_rules::promise(&facts, area);
+                let funnel = kshana_rules::timing(
+                    &facts,
+                    area,
+                    moon,
+                    birth.into(),
+                    at.into(),
+                    depth.clamp(1, 5) as usize,
+                );
+                let agreeing = kshana_rules::agreeing_levels(&funnel) as u8;
+                AreaReading {
+                    promise: PromiseRecord {
+                        area: area.name.to_string(),
+                        primary_cusp: area.primary,
+                        group: area.group.to_vec(),
+                        sub_lord: lord_name(p.sub_lord),
+                        promised: p.promised,
+                        strength: p.strength,
+                        fulfilling: sig_records(&p.fulfilling),
+                        denying: sig_records(&p.denying),
+                        rule_id: p.hit.rule_id.to_string(),
+                        source: p.hit.source.to_string(),
+                        factors: p.hit.factors.clone(),
+                    },
+                    funnel: funnel
+                        .iter()
+                        .map(|l| TimingRecord {
+                            level: l.level,
+                            lord: lord_name(l.period.lord),
+                            start: l.period.start.into(),
+                            end: l.period.end.into(),
+                            supports: sig_records(&l.supports),
+                        })
+                        .collect(),
+                    agreeing_levels: agreeing,
+                }
+            })
+            .collect())
+    }
+}
+
 /// Vimshottari chain containing `at`, from mahadasha down `depth` levels (max 5),
 /// for a birth with the Moon at `moon_sidereal` degrees.
 #[uniffi::export]
@@ -541,6 +679,32 @@ mod tests {
                 <= (w[1].instant.tai_seconds, w[1].instant.nanos)));
         let chain = dasha_chain(ch.panchanga.moon_sidereal, at, at, 5);
         assert_eq!(chain.len(), 5);
+        let birth = instant_from_utc(UtcFields {
+            year: 1990,
+            month: 10,
+            day: 29,
+            hour: 23,
+            minute: 6,
+            second: 0,
+            nanos: 0,
+        })
+        .unwrap();
+        let readings = engine
+            .area_readings(
+                birth,
+                9.9312,
+                76.2673,
+                0.0,
+                HouseSystem::Placidus,
+                AyanamsaChoice::Lahiri,
+                at,
+                5,
+            )
+            .unwrap();
+        assert_eq!(readings.len(), 8);
+        assert!(readings
+            .iter()
+            .all(|r| r.funnel.len() == 5 && !r.promise.factors.is_empty()));
         assert_eq!(horary_lagna(1).unwrap(), 0.0);
     }
 
