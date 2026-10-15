@@ -286,6 +286,7 @@ name = "kshana-events"
 version = "0.1.0"
 dependencies = [
  "kshana-ephem",
+ "kshana-frames",
  "kshana-sky",
  "kshana-solver",
  "kshana-time",

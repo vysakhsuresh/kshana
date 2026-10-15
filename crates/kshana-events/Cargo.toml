@@ -13,6 +13,7 @@ kshana-time = { workspace = true }
 kshana-ephem = { workspace = true }
 kshana-solver = { workspace = true }
 kshana-sky = { workspace = true }
+kshana-frames = { workspace = true }
 kshana-vedic = { workspace = true }
 
 [lints]

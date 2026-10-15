@@ -896,6 +896,284 @@ impl Engine {
     }
 }
 
+/// A Western aspect between two bodies.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct AspectRecord {
+    pub body_a: String,
+    pub body_b: String,
+    pub aspect: String,
+    pub orb: f64,
+    pub applying: Option<bool>,
+}
+
+/// One row of the dasha table.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct DashaRow {
+    pub level: u8,
+    pub lord: String,
+    pub parent_lord: Option<String>,
+    pub start: ExactInstant,
+    pub end: ExactInstant,
+}
+
+#[uniffi::export]
+impl Engine {
+    /// Western aspects between the ten bodies at an instant, within `max_orb_deg`.
+    pub fn aspects(
+        &self,
+        at: ExactInstant,
+        latitude_deg: f64,
+        longitude_deg: f64,
+        max_orb_deg: f64,
+    ) -> Result<Vec<AspectRecord>, KshanaError> {
+        let input = ChartInput {
+            instant: at.into(),
+            observer: Observer {
+                latitude_deg,
+                longitude_deg,
+                height_m: 0.0,
+            },
+            system: kshana_houses::HouseSystem::Placidus,
+            ayanamsa: Ayanamsa::Lahiri,
+            topocentric_moon: false,
+        };
+        let ch = compute(&self.spk, self.eop.as_ref(), &input)
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        let mut out = Vec::new();
+        for i in 0..ch.bodies.len() {
+            for j in (i + 1)..ch.bodies.len() {
+                let a = &ch.bodies[i];
+                let b = &ch.bodies[j];
+                if let Some(h) = kshana_western::aspect_between(
+                    a.tropical,
+                    b.tropical,
+                    Some(a.speed),
+                    Some(b.speed),
+                    max_orb_deg,
+                ) {
+                    out.push(AspectRecord {
+                        body_a: a.name.to_string(),
+                        body_b: b.name.to_string(),
+                        aspect: format!("{:?}", h.aspect),
+                        orb: h.orb,
+                        applying: h.applying,
+                    });
+                }
+            }
+        }
+        Ok(out)
+    }
+}
+
+/// Longitude in the D-n divisional chart (sign index × 30 + position in sign).
+#[uniffi::export]
+pub fn varga(sidereal: f64, n: u32) -> f64 {
+    kshana_vedic::varga(sidereal, n)
+}
+
+/// Mahadashas (level 1) each followed by their antardashas (level 2), for a birth with
+/// the Moon at `moon_sidereal`.
+#[uniffi::export]
+pub fn dasha_table(moon_sidereal: f64, birth: ExactInstant) -> Vec<DashaRow> {
+    let mahas = kshana_vedic::vimshottari(
+        moon_sidereal,
+        birth.into(),
+        kshana_vedic::dasha::YEAR_365_25_NS,
+    );
+    let mut out = Vec::new();
+    for m in mahas {
+        out.push(DashaRow {
+            level: 1,
+            lord: lord_name(m.lord),
+            parent_lord: None,
+            start: m.start.into(),
+            end: m.end.into(),
+        });
+        for a in kshana_vedic::subdivide(m) {
+            out.push(DashaRow {
+                level: 2,
+                lord: lord_name(a.lord),
+                parent_lord: Some(lord_name(m.lord)),
+                start: a.start.into(),
+                end: a.end.into(),
+            });
+        }
+    }
+    out
+}
+
+/// Stability of one body under the birth-time window.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct BodyStability {
+    pub name: String,
+    pub sign_stable_tropical: bool,
+    pub sign_stable_sidereal: bool,
+    pub house_stable: bool,
+}
+
+/// What survives a birth-time uncertainty.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct StabilityRecord {
+    pub asc_band_deg: f64,
+    pub bodies: Vec<BodyStability>,
+    pub cusps_stable: Vec<bool>,
+}
+
+/// Panchanga with boundary instants and the solar day.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct PanchangaDetail {
+    pub tithi: String,
+    pub tithi_ends: Option<ExactInstant>,
+    pub nakshatra: String,
+    pub pada: u8,
+    pub nakshatra_ends: Option<ExactInstant>,
+    pub yoga: String,
+    pub karana: String,
+    pub vara: String,
+    pub sunrise: Option<ExactInstant>,
+    pub sunset: Option<ExactInstant>,
+    pub hora: String,
+    pub hora_ends: Option<ExactInstant>,
+    pub rahu_kala_start: Option<ExactInstant>,
+    pub rahu_kala_end: Option<ExactInstant>,
+}
+
+#[uniffi::export]
+impl Engine {
+    /// Which signs and houses stay fixed when the birth time moves by ± `half_window_seconds`.
+    pub fn stability(
+        &self,
+        at: ExactInstant,
+        latitude_deg: f64,
+        longitude_deg: f64,
+        half_window_seconds: u64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+    ) -> Result<StabilityRecord, KshanaError> {
+        let input = ChartInput {
+            instant: at.into(),
+            observer: Observer {
+                latitude_deg,
+                longitude_deg,
+                height_m: 0.0,
+            },
+            system: to_house_system(system),
+            ayanamsa: ayanamsa.into(),
+            topocentric_moon: false,
+        };
+        let st = kshana_chart::stability(
+            &self.spk,
+            self.eop.as_ref(),
+            &input,
+            half_window_seconds as i128 * NS_PER_SEC,
+        )
+        .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(StabilityRecord {
+            asc_band_deg: st.asc_band_deg,
+            bodies: st
+                .bodies
+                .iter()
+                .map(|(n, a, b, c)| BodyStability {
+                    name: n.to_string(),
+                    sign_stable_tropical: *a,
+                    sign_stable_sidereal: *b,
+                    house_stable: *c,
+                })
+                .collect(),
+            cusps_stable: st.cusps_stable.to_vec(),
+        })
+    }
+
+    /// The five limbs with their end instants, plus sunrise, sunset, hora and Rahu kala.
+    pub fn panchanga_detail(
+        &self,
+        at: ExactInstant,
+        latitude_deg: f64,
+        longitude_deg: f64,
+        ayanamsa: AyanamsaChoice,
+    ) -> Result<PanchangaDetail, KshanaError> {
+        use kshana_events::*;
+        let t: Instant = at.into();
+        let obs = Observer {
+            latitude_deg,
+            longitude_deg,
+            height_m: 0.0,
+        };
+        let input = ChartInput {
+            instant: t,
+            observer: obs,
+            system: kshana_houses::HouseSystem::WholeSign,
+            ayanamsa: ayanamsa.into(),
+            topocentric_moon: false,
+        };
+        let ch = compute(&self.spk, self.eop.as_ref(), &input)
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        let moon = ch.bodies[1].sidereal;
+        let sun = ch.bodies[0].sidereal;
+        let n = kshana_vedic::nakshatra(moon);
+        let ti = kshana_vedic::tithi(moon, sun);
+        let y = kshana_vedic::yoga(moon, sun);
+        let k = kshana_vedic::karana(moon, sun);
+        let horizon = t.add_ns(2 * NS_PER_DAY);
+        let tithi_ends = tithi_boundaries(&self.spk, t, horizon, MICROSECOND_NS)
+            .ok()
+            .and_then(|v| v.first().map(|e| e.root.t));
+        let nak_ends = nakshatra_boundaries(
+            &self.spk,
+            Body::Moon,
+            ayanamsa.into(),
+            t,
+            horizon,
+            MICROSECOND_NS,
+        )
+        .ok()
+        .and_then(|v| v.first().map(|e| e.root.t));
+        let day = solar_day(&self.spk, self.eop.as_ref(), &obs, t)
+            .ok()
+            .flatten();
+        let (vara, sunrise, sunset, hora, hora_ends, rk) = match &day {
+            Some(d) => {
+                let (h, _, he) = hora_at(d, &obs, t);
+                let (rs, re) = rahu_kala(d, &obs);
+                (
+                    vara_name(d, &obs).to_string(),
+                    Some(d.sunrise),
+                    Some(d.sunset),
+                    h.to_string(),
+                    Some(he),
+                    Some((rs, re)),
+                )
+            }
+            None => (String::from("—"), None, None, String::from("—"), None, None),
+        };
+        Ok(PanchangaDetail {
+            tithi: format!(
+                "{} {}",
+                if ti.is_shukla() { "Shukla" } else { "Krishna" },
+                ti.name()
+            ),
+            tithi_ends: tithi_ends.map(Into::into),
+            nakshatra: n.name().to_string(),
+            pada: n.pada,
+            nakshatra_ends: nak_ends.map(Into::into),
+            yoga: y.name().to_string(),
+            karana: k.name.to_string(),
+            vara,
+            sunrise: sunrise.map(Into::into),
+            sunset: sunset.map(Into::into),
+            hora,
+            hora_ends: hora_ends.map(Into::into),
+            rahu_kala_start: rk.map(|x| x.0.into()),
+            rahu_kala_end: rk.map(|x| x.1.into()),
+        })
+    }
+}
+
 /// Vimshottari chain containing `at`, from mahadasha down `depth` levels (max 5),
 /// for a birth with the Moon at `moon_sidereal` degrees.
 #[uniffi::export]

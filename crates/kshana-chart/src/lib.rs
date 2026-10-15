@@ -294,6 +294,60 @@ fn compute_with_lagna(
     })
 }
 
+/// Which chart factors survive a birth-time uncertainty of ± `half_window_ns`.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Stability {
+    /// How far the Ascendant moves across the window, degrees (half-band).
+    pub asc_band_deg: f64,
+    /// Per body: (name, tropical sign stable, sidereal sign stable, house stable).
+    pub bodies: Vec<(&'static str, bool, bool, bool)>,
+    /// Per cusp: tropical sign stable.
+    pub cusps_stable: [bool; 12],
+}
+
+fn same_sign(a: f64, b: f64) -> bool {
+    (a.rem_euclid(360.0) / 30.0).floor() == (b.rem_euclid(360.0) / 30.0).floor()
+}
+
+/// Compute the chart at the two ends of the window and compare signs and houses.
+pub fn stability(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    input: &ChartInput,
+    half_window_ns: i128,
+) -> Result<Stability, ChartError> {
+    let early = ChartInput {
+        instant: input.instant.add_ns(-half_window_ns),
+        ..*input
+    };
+    let late = ChartInput {
+        instant: input.instant.add_ns(half_window_ns),
+        ..*input
+    };
+    let a = compute(spk, eop, &early)?;
+    let b = compute(spk, eop, &late)?;
+    let asc_band = ((b.cusps[0] - a.cusps[0] + 180.0).rem_euclid(360.0) - 180.0).abs() / 2.0;
+    let bodies = a
+        .bodies
+        .iter()
+        .zip(b.bodies.iter())
+        .map(|(x, y)| {
+            (
+                x.name,
+                same_sign(x.tropical, y.tropical),
+                same_sign(x.sidereal, y.sidereal),
+                x.house == y.house,
+            )
+        })
+        .collect();
+    let cusps_stable: [bool; 12] = std::array::from_fn(|i| same_sign(a.cusps[i], b.cusps[i]));
+    Ok(Stability {
+        asc_band_deg: asc_band,
+        bodies,
+        cusps_stable,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

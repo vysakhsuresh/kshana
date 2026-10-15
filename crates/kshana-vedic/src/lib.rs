@@ -7,6 +7,7 @@ pub mod ayanamsa;
 pub mod dasha;
 pub mod kp;
 pub mod panchanga;
+pub mod varga;
 
 pub use ayanamsa::{ayanamsa_degrees, Ayanamsa};
 pub use dasha::{subdivide, vimshottari, vimshottari_levels, DashaLord, DashaPeriod};
@@ -14,6 +15,7 @@ pub use kp::{horary_longitude, kp_lords, sign_lord, sub_bounds, sub_of, sub_tabl
 pub use panchanga::{
     karana, nakshatra, tithi, yoga, Karana, Nakshatra, Tithi, Yoga, NAKSHATRA_SPAN,
 };
+pub use varga::varga;
 
 /// Normalise a longitude into `[0, 360)`.
 pub fn norm360(d: f64) -> f64 {

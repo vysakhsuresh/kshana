@@ -422,3 +422,269 @@ mod tests {
         assert_eq!((d2.month, d2.day), (9, 27), "{d2:?}");
     }
 }
+
+// ---------------------------------------------------------------------------------
+// Rising and setting, planetary hours, Rahu kala
+// ---------------------------------------------------------------------------------
+
+use kshana_frames::{
+    earth_rotation_angle, gast, local_sidereal_time, mean_obliquity_iau2006, nutation_iau2006a,
+};
+use kshana_sky::Observer;
+use kshana_time::{delta_t_for_year, ut1_jd_from_delta_t, EopTable, Utc};
+
+/// Apparent altitude (degrees) of the Sun's centre above the geometric horizon, without
+/// refraction, for an observer, using UT1 from `eop` when available.
+pub fn sun_altitude(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    obs: &Observer,
+    t: Instant,
+) -> Result<f64, SpkError> {
+    let a = apparent(spk, Body::Sun, t)?;
+    let tc = t.tt_centuries_since_j2000();
+    let (_, deps) = nutation_iau2006a(tc);
+    let eps = mean_obliquity_iau2006(tc) + deps;
+    // ecliptic → equatorial of date
+    let (sl, cl) = a.longitude.to_radians().sin_cos();
+    let (sb, cb) = a.latitude.to_radians().sin_cos();
+    let (se, ce) = eps.sin_cos();
+    let x = cb * cl;
+    let y = cb * sl * ce - sb * se;
+    let z = cb * sl * se + sb * ce;
+    let ra = y.atan2(x);
+    let dec = z.asin();
+    // UT1
+    let utc = Utc::from_instant(t);
+    let mjd = utc.utc_day() as f64
+        + 40_587.0
+        + (utc.hour as f64 * 3_600.0
+            + utc.minute as f64 * 60.0
+            + utc.second as f64
+            + utc.nanos as f64 * 1e-9)
+            / 86_400.0;
+    let ut1 = match eop.and_then(|e| e.ut1_minus_utc(mjd)) {
+        Some(u) => kshana_time::TwoPartJd {
+            jd1: 2_400_000.5 + mjd.floor(),
+            jd2: mjd.fract() + u.ut1_minus_utc / 86_400.0,
+        },
+        None => ut1_jd_from_delta_t(
+            t,
+            delta_t_for_year(utc.year as f64 + (utc.month as f64 - 1.0) / 12.0),
+        ),
+    };
+    let lst = local_sidereal_time(
+        gast(earth_rotation_angle(ut1), tc),
+        obs.longitude_deg.to_radians(),
+    );
+    let h = lst - ra;
+    let phi = obs.latitude_deg.to_radians();
+    let sin_alt = phi.sin() * dec.sin() + phi.cos() * dec.cos() * h.cos();
+    Ok(sin_alt.asin().to_degrees())
+}
+
+/// Standard rising/setting altitude of the Sun's centre: refraction 34′ plus semi-diameter 16′.
+pub const SUN_RISE_SET_ALT: f64 = -0.8333;
+
+/// Sunrise and sunset instants (Sun's centre at −0°50′) in `[from, to]`, as
+/// `(rises, sets)` lists. Polar day or night yields empty lists.
+pub fn sun_rise_set(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    obs: &Observer,
+    from: Instant,
+    to: Instant,
+    tol_ns: i128,
+) -> Result<(Vec<Instant>, Vec<Instant>), EventError> {
+    let f = |t: Instant| sun_altitude(spk, eop, obs, t).map(|a| a - SUN_RISE_SET_ALT);
+    let mut rises = Vec::new();
+    let mut sets = Vec::new();
+    let step = 20 * 60 * NS_PER_SEC;
+    let mut a = from;
+    let mut fa = f(a)?;
+    while a < to {
+        let b = if a.add_ns(step) > to {
+            to
+        } else {
+            a.add_ns(step)
+        };
+        let fb = f(b)?;
+        if (fa > 0.0) != (fb > 0.0) {
+            let root = find_root(|t| f(t).unwrap_or(f64::NAN), a, b, tol_ns)?;
+            if fb > 0.0 {
+                rises.push(root.t);
+            } else {
+                sets.push(root.t);
+            }
+        }
+        a = b;
+        fa = fb;
+    }
+    Ok((rises, sets))
+}
+
+/// The day's frame: sunrise, sunset and next sunrise around `at` (the civil day is the
+/// one whose sunrise precedes `at`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SolarDay {
+    /// Sunrise that began the day.
+    pub sunrise: Instant,
+    /// Sunset of the day.
+    pub sunset: Instant,
+    /// Next sunrise.
+    pub next_sunrise: Instant,
+}
+
+/// Find the solar day containing `at`.
+pub fn solar_day(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    obs: &Observer,
+    at: Instant,
+) -> Result<Option<SolarDay>, EventError> {
+    let from = at.add_ns(-36 * 3_600 * NS_PER_SEC);
+    let to = at.add_ns(36 * 3_600 * NS_PER_SEC);
+    let (rises, sets) = sun_rise_set(spk, eop, obs, from, to, 1_000_000)?;
+    let sunrise = rises.iter().copied().filter(|r| *r <= at).max();
+    let Some(sunrise) = sunrise else {
+        return Ok(None);
+    };
+    let sunset = sets.iter().copied().find(|s| *s > sunrise);
+    let next_sunrise = rises.iter().copied().find(|r| *r > sunrise);
+    match (sunset, next_sunrise) {
+        (Some(sunset), Some(next_sunrise)) => Ok(Some(SolarDay {
+            sunrise,
+            sunset,
+            next_sunrise,
+        })),
+        _ => Ok(None),
+    }
+}
+
+const HORA_ORDER: [&str; 7] = [
+    "Saturn", "Jupiter", "Mars", "Sun", "Venus", "Mercury", "Moon",
+];
+
+/// Weekday lord index into the Chaldean order for a weekday (0 = Sunday).
+fn day_lord_index(weekday: u32) -> usize {
+    // Sunday→Sun(3), Monday→Moon(6), Tuesday→Mars(2), Wednesday→Mercury(5), Thursday→Jupiter(1), Friday→Venus(4), Saturday→Saturn(0)
+    [3, 6, 2, 5, 1, 4, 0][weekday as usize % 7]
+}
+
+/// Weekday (0 = Sunday) of the local civil date at sunrise, by longitude offset.
+fn weekday_at(sunrise: Instant, obs: &Observer) -> u32 {
+    let local = sunrise.add_ns((obs.longitude_deg / 15.0 * 3_600.0 * NS_PER_SEC as f64) as i128);
+    let u = Utc::from_instant(local);
+    ((u.utc_day() + 4).rem_euclid(7)) as u32
+}
+
+/// The planetary hour at `at`: lord name, start and end. Day horas divide sunrise to
+/// sunset into twelve, night horas sunset to next sunrise; the first hora of the day
+/// belongs to the day lord and they follow the Chaldean order.
+pub fn hora_at(day: &SolarDay, obs: &Observer, at: Instant) -> (&'static str, Instant, Instant) {
+    let wd = weekday_at(day.sunrise, obs);
+    let first = day_lord_index(wd);
+    let (start, span, offset) = if at < day.sunset {
+        (day.sunrise, day.sunset.ns_since(day.sunrise), 0)
+    } else {
+        (day.sunset, day.next_sunrise.ns_since(day.sunset), 12)
+    };
+    let len = span / 12;
+    let idx = (at.ns_since(start) / len).clamp(0, 11) as usize;
+    let lord = HORA_ORDER[(first + offset + idx) % 7];
+    (
+        lord,
+        start.add_ns(idx as i128 * len),
+        start.add_ns((idx as i128 + 1) * len),
+    )
+}
+
+/// Rahu kala: one eighth of the daytime, at the slot fixed by the weekday
+/// (Mon 2nd, Tue 7th, Wed 5th, Thu 6th, Fri 4th, Sat 3rd, Sun 8th).
+pub fn rahu_kala(day: &SolarDay, obs: &Observer) -> (Instant, Instant) {
+    let wd = weekday_at(day.sunrise, obs);
+    let slot = [8usize, 2, 7, 5, 6, 4, 3][wd as usize % 7] - 1;
+    let len = day.sunset.ns_since(day.sunrise) / 8;
+    (
+        day.sunrise.add_ns(slot as i128 * len),
+        day.sunrise.add_ns((slot as i128 + 1) * len),
+    )
+}
+
+/// Vara (weekday) name whose day runs sunrise to sunrise.
+pub fn vara_name(day: &SolarDay, obs: &Observer) -> &'static str {
+    [
+        "Ravivara",
+        "Somavara",
+        "Mangalavara",
+        "Budhavara",
+        "Guruvara",
+        "Shukravara",
+        "Shanivara",
+    ][weekday_at(day.sunrise, obs) as usize % 7]
+}
+
+#[cfg(test)]
+mod solar_tests {
+    use super::*;
+
+    fn kernel() -> Option<Spk> {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/de421.bsp");
+        Spk::open(&p).ok()
+    }
+
+    #[test]
+    fn kochi_sunrise_and_sunset_on_the_equinox() {
+        let Some(spk) = kernel() else { return };
+        let obs = Observer {
+            latitude_deg: 9.9312,
+            longitude_deg: 76.2673,
+            height_m: 0.0,
+        };
+        // 2026-03-20 equinox at Kochi. Solar noon ≈ 12:32 IST (equation of time −7.5 min),
+        // half-day with refraction ≈ 6h03m: sunrise ≈ 06:29 IST (00:59 UTC), sunset ≈ 18:36 IST (13:06 UTC).
+        let at = Utc::new(2026, 3, 20, 6, 0, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        let day = solar_day(&spk, None, &obs, at).unwrap().unwrap();
+        let rise = Utc::from_instant(day.sunrise);
+        let set = Utc::from_instant(day.sunset);
+        let rise_min = rise.hour as i32 * 60 + rise.minute as i32;
+        let set_min = set.hour as i32 * 60 + set.minute as i32;
+        assert_eq!((rise.month, rise.day), (3, 20), "{rise:?}");
+        assert!((rise_min - 59).abs() <= 3, "{rise:?}");
+        assert!((set_min - (13 * 60 + 6)).abs() <= 3, "{set:?}");
+        let day_len_h = day.sunset.ns_since(day.sunrise) as f64 / 3.6e12;
+        assert!((day_len_h - 12.1).abs() < 0.2, "{day_len_h}");
+        // Friday 2026-03-20: first hora Venus; Rahu kala 4th slot
+        assert_eq!(vara_name(&day, &obs), "Shukravara");
+        let (lord, s, e) = hora_at(&day, &obs, day.sunrise.add_ns(1_000));
+        assert_eq!(lord, "Venus");
+        assert!(s <= day.sunrise.add_ns(1_000) && e > s);
+        let (rs, re) = rahu_kala(&day, &obs);
+        let frac = rs.ns_since(day.sunrise) as f64 / day.sunset.ns_since(day.sunrise) as f64;
+        assert!((frac - 3.0 / 8.0).abs() < 1e-9);
+        assert!(re > rs);
+    }
+
+    #[test]
+    fn sun_altitude_is_negative_at_midnight_positive_at_noon() {
+        let Some(spk) = kernel() else { return };
+        let obs = Observer {
+            latitude_deg: 9.9312,
+            longitude_deg: 76.2673,
+            height_m: 0.0,
+        };
+        let noon = Utc::new(2026, 10, 15, 6, 50, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap(); // ~12:20 IST local noon
+        let midnight = Utc::new(2026, 10, 15, 18, 50, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        assert!(sun_altitude(&spk, None, &obs, noon).unwrap() > 70.0);
+        assert!(sun_altitude(&spk, None, &obs, midnight).unwrap() < -60.0);
+    }
+}
