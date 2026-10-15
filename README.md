@@ -62,6 +62,7 @@ cargo run -p kshana-cli -- prashna --spk data/de421.bsp --utc 2026-10-15T09:02:0
 
 ## Design
 
-The five app screens (Now, Chart, Vedic, Moments, The Moment You Arrived) are mocked on
-the Kshana design canvas; the look is a night ground with one gold accent, Cormorant
-Garamond for display, Manrope for UI and IBM Plex Mono for every number.
+The ten app screens (Now, Chart, Vedic, Moments, Birth, Reading, Life Areas, Prashna,
+Parihara, Settings) and the logo are on the Kshana design canvas; the look is a night
+ground with one gold accent, Cormorant Garamond for display, Manrope for UI and IBM
+Plex Mono for every number. The Android shell in `android/` implements them.
