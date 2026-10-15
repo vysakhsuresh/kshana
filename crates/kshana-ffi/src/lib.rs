@@ -1174,6 +1174,24 @@ impl Engine {
     }
 }
 
+#[uniffi::export]
+impl Engine {
+    /// Exact solar return instant in `year` for a birth, or null outside the kernel's range.
+    pub fn solar_return(
+        &self,
+        birth: ExactInstant,
+        year: i64,
+    ) -> Result<Option<ExactInstant>, KshanaError> {
+        let b: Instant = birth.into();
+        let natal = kshana_sky::apparent(&self.spk, Body::Sun, b)
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))?
+            .longitude;
+        kshana_events::solar_return(&self.spk, natal, b, year, kshana_events::MICROSECOND_NS)
+            .map(|o| o.map(Into::into))
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))
+    }
+}
+
 /// Vimshottari chain containing `at`, from mahadasha down `depth` levels (max 5),
 /// for a birth with the Moon at `moon_sidereal` degrees.
 #[uniffi::export]

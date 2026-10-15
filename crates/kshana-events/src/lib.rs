@@ -11,7 +11,7 @@
 use kshana_ephem::{Body, Spk, SpkError};
 use kshana_sky::apparent;
 use kshana_solver::{find_root, wrap180, Root, SolverError};
-use kshana_time::{Instant, NS_PER_SEC};
+use kshana_time::{Instant, NS_PER_DAY, NS_PER_SEC};
 use kshana_vedic::{ayanamsa_degrees, sidereal, Ayanamsa, NAKSHATRA_SPAN};
 
 /// Default solver tolerance: one microsecond.
@@ -314,6 +314,29 @@ where
     Ok(out)
 }
 
+/// Solar return: the instant in calendar year `year` (UTC) when the Sun returns to the
+/// natal tropical longitude. Searched in a ±3 day window around the birthday.
+pub fn solar_return(
+    spk: &Spk,
+    natal_sun_tropical: f64,
+    birth: Instant,
+    year: i64,
+    tol_ns: i128,
+) -> Result<Option<Instant>, EventError> {
+    let b = Utc::from_instant(birth);
+    let day = b.day.min(28); // keep the anchor valid in February; the window covers the rest
+    let anchor = Utc::new(year, b.month, day, b.hour, b.minute, b.second.min(59), 0)
+        .ok()
+        .and_then(|u| u.to_instant().ok());
+    let Some(anchor) = anchor else {
+        return Ok(None);
+    };
+    let from = anchor.add_ns(-4 * NS_PER_DAY);
+    let to = anchor.add_ns(4 * NS_PER_DAY);
+    let ev = longitude_crossings(spk, Body::Sun, natal_sun_tropical, from, to, tol_ns)?;
+    Ok(ev.first().map(|e| e.root.t))
+}
+
 /// Stations: instants where the body's longitude speed is zero.
 pub fn stations(
     spk: &Spk,
@@ -401,6 +424,21 @@ mod tests {
             let gap_h = w[1].root.t.ns_since(w[0].root.t) as f64 / 3.6e12;
             assert!(gap_h > 18.0 && gap_h < 28.0, "gap {gap_h} h");
         }
+    }
+
+    #[test]
+    fn solar_return_lands_near_the_birthday() {
+        let Some(spk) = kernel() else { return };
+        let birth = utc(1990, 10, 29, 17, 36);
+        let natal = apparent(&spk, Body::Sun, birth).unwrap().longitude;
+        let sr = solar_return(&spk, natal, birth, 2026, MICROSECOND_NS)
+            .unwrap()
+            .unwrap();
+        let u = Utc::from_instant(sr);
+        assert_eq!((u.year, u.month), (2026, 10));
+        assert!((u.day as i32 - 29).abs() <= 1, "{u:?}");
+        let again = apparent(&spk, Body::Sun, sr).unwrap().longitude;
+        assert!(wrap180(again - natal).abs() < 1e-6, "{again} vs {natal}");
     }
 
     #[test]
