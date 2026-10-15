@@ -14,17 +14,23 @@ nutation and P03 precession from data tables; TDB from the kernel's own segment;
 `finals2000A` loader for UT1 and polar motion; topocentric correction with WGS84 +
 geoid. Golden tests against JPL Horizons for Sun, Moon and planets at 50 epochs.
 
-**M3 · Traditions, verified.** Lahiri and the other ayanamsas checked against IAE and
-Swiss Ephemeris to 0.01″; Koch, Regiomontanus, Campanus, Alcabitius, Morinus,
-Topocentric; divisional charts D1–D60; KP sub-lords; Ashtakavarga; Shadbala; lots,
-profections, zodiacal releasing, firdaria; fixed stars from Gaia DR3.
+**M3 · Traditions (first pass done).** Done: KP 249 sub-lords and horary numbers,
+significators with node agency, cusp sub-lord promise, Prashna judgment with ruling
+planets and Moon windows; Parashari dignities, drishti, eleven yogas, per-area
+assessment, period quality; Parihara; divisional charts D1–D60. Remaining: ayanamsa
+values checked against IAE to 0.01″; Koch, Regiomontanus, Campanus, Alcabitius,
+Morinus, Topocentric; Ashtakavarga; Shadbala; Hellenistic lots, profections, zodiacal
+releasing, firdaria; fixed stars from Gaia DR3; Kemadruma cancellations.
 
-**M4 · Exact moments.** Event solver wired to the sky: ingresses, stations, returns,
-aspects, phases, eclipses (contacts), panchanga boundaries, muhurta windows.
-Uncertainty propagation and the rectification workbench.
+**M4 · Exact moments (mostly done).** Done: ingresses, stations, aspects, lunations,
+tithi and nakshatra boundaries, sunrise and sunset, horas, Rahu kala, stability under
+a birth-time window. Remaining: solar and lunar returns, eclipse contacts, muhurta
+search, the rectification workbench.
 
-**M5 · Android.** Compose shell over the five screens from the design canvas; offline
-kernel bundled; provenance page; differential self-test on first launch.
+**M5 · Android (written, first build pending).** Compose shell over every screen on the
+design canvas, offline kernel in assets, provenance in Settings. The first Android
+Studio build is the verification step; then bundled fonts, a differential self-test on
+first launch, and the Play listing.
 
 **Always.** No number ships without a comparison test, and every disagreement with
 another ephemeris is written up in `docs/PRECISION.md`.

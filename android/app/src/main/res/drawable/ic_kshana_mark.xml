@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Kshana mark: a wheel, a meridian needle, the instant on the inner ring, a crescent. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+    <group android:translateX="34" android:translateY="34" android:scaleX="0.66" android:scaleY="0.66">
+        <path
+            android:pathData="M100,12 A88,88 0 1,1 99.9,12 Z"
+            android:strokeColor="#E3B96A"
+            android:strokeWidth="3"
+            android:fillColor="#00000000" />
+        <path
+            android:pathData="M100,46 A54,54 0 1,1 99.9,46 Z"
+            android:strokeColor="#E3B96A"
+            android:strokeWidth="2"
+            android:strokeAlpha="0.7"
+            android:fillColor="#00000000" />
+        <path
+            android:pathData="M118.5,49.3 A54,54 0 0,1 118.5,150.7"
+            android:strokeColor="#E3B96A"
+            android:strokeWidth="7"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000" />
+        <path
+            android:pathData="M100,6 L100,100"
+            android:strokeColor="#E3B96A"
+            android:strokeWidth="3"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000" />
+        <path
+            android:pathData="M100,37 A9,9 0 1,1 99.9,37 Z"
+            android:fillColor="#EFE9DC" />
+    </group>
+</vector>
