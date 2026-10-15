@@ -331,6 +331,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "kshana-verify"
+version = "0.1.0"
+dependencies = [
+ "kshana-ephem",
+ "kshana-frames",
+ "kshana-sky",
+ "kshana-time",
+ "serde_json",
+]
+
+[[package]]
 name = "kshana-western"
 version = "0.1.0"
 

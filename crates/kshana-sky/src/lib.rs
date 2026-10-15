@@ -16,10 +16,10 @@
 // Small fixed-size vector and matrix code reads more clearly with indices.
 #![allow(clippy::needless_range_loop)]
 
-pub mod precession;
+pub use kshana_frames::precession;
 
 use kshana_ephem::{Body, Spk, SpkError};
-use kshana_frames::{mean_obliquity_iau2006, nutation_truncated};
+use kshana_frames::{mean_obliquity_iau2006, nutation_iau2006a};
 use kshana_time::Instant;
 use precession::{apply, bias_precession_nutation_matrix, rotate_x};
 
@@ -76,7 +76,7 @@ fn astrometric_direction(
 
 /// Apparent ecliptic longitude and latitude (degrees) of an ICRF direction at `t`.
 fn to_ecliptic_of_date(dir: [f64; 3], t_centuries: f64) -> (f64, f64) {
-    let (dpsi, deps) = nutation_truncated(t_centuries);
+    let (dpsi, deps) = nutation_iau2006a(t_centuries);
     let m = bias_precession_nutation_matrix(t_centuries, dpsi, deps);
     let eq = apply(&m, dir);
     let eps_true = mean_obliquity_iau2006(t_centuries) + deps;
@@ -175,7 +175,7 @@ impl Observer {
         let v_tod = [-OMEGA_EARTH * r_tod[1], OMEGA_EARTH * r_tod[0], 0.0];
         // true-of-date → ICRF is the transpose of the bias-precession-nutation matrix
         let tc = t.tt_centuries_since_j2000();
-        let (dpsi, deps) = nutation_truncated(tc);
+        let (dpsi, deps) = nutation_iau2006a(tc);
         let m = bias_precession_nutation_matrix(tc, dpsi, deps);
         (
             precession::apply_transpose(&m, r_tod),
@@ -257,7 +257,7 @@ pub fn true_node_longitude(spk: &Spk, t: Instant) -> Result<f64, SpkError> {
     let et = Spk::et_of(t);
     let tc = t.tt_centuries_since_j2000();
     let st = spk.state(Body::Moon, Body::Earth, et)?;
-    let (dpsi, deps) = nutation_truncated(tc);
+    let (dpsi, deps) = nutation_iau2006a(tc);
     let m = bias_precession_nutation_matrix(tc, dpsi, deps);
     let eps = mean_obliquity_iau2006(tc) + deps;
     let r = rotate_x(eps, apply(&m, st.position));

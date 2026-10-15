@@ -127,6 +127,33 @@ pub fn subdivide(period: DashaPeriod) -> Vec<DashaPeriod> {
     out
 }
 
+/// The nested chain of periods containing `at`, from mahadasha down `depth` levels
+/// (1 = maha, 2 = antar, 3 = pratyantar, 4 = sookshma, 5 = prana). Each level's bounds
+/// are exact instants, so the prana period's start and end are microsecond-solvable
+/// values the timing funnel can show directly.
+pub fn vimshottari_levels(
+    moon_sidereal_lon: f64,
+    birth: Instant,
+    year_ns: i128,
+    at: Instant,
+    depth: usize,
+) -> Vec<DashaPeriod> {
+    let mut chain = Vec::with_capacity(depth);
+    let mut candidates = vimshottari(moon_sidereal_lon, birth, year_ns);
+    for _ in 0..depth {
+        let Some(p) = candidates
+            .iter()
+            .copied()
+            .find(|p| p.start <= at && at < p.end)
+        else {
+            break;
+        };
+        chain.push(p);
+        candidates = subdivide(p);
+    }
+    chain
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -149,6 +176,22 @@ mod tests {
         let v = vimshottari(243.2, birth, YEAR_365_25_NS);
         assert_eq!(v[0].lord, DashaLord::Ketu);
         assert!(v[0].start <= birth && birth < v[0].end);
+    }
+
+    #[test]
+    fn five_levels_nest_and_the_prana_period_lasts_hours_to_days() {
+        let birth = Instant::j2000();
+        let at = birth.add_ns(26 * YEAR_365_25_NS + 123_456_789_012);
+        let chain = vimshottari_levels(243.2, birth, YEAR_365_25_NS, at, 5);
+        assert_eq!(chain.len(), 5);
+        for w in chain.windows(2) {
+            assert!(w[0].start <= w[1].start && w[1].end <= w[0].end);
+        }
+        for p in &chain {
+            assert!(p.start <= at && at < p.end);
+        }
+        let prana_h = chain[4].end.ns_since(chain[4].start) as f64 / 3.6e12;
+        assert!(prana_h > 2.0 && prana_h < 120.0, "prana {prana_h} h");
     }
 
     #[test]

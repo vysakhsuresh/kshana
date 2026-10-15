@@ -1,7 +1,7 @@
 //! IAU 2006 bias-precession (Fukushima–Williams angles) and the rotation that takes an
 //! ICRF vector to the true equator and equinox of date.
 
-use kshana_frames::ARCSEC;
+use crate::ARCSEC;
 
 /// 3×3 rotation matrix as rows.
 pub type Mat3 = [[f64; 3]; 3];
@@ -57,7 +57,7 @@ fn rz(theta: f64, m: &mut Mat3) {
 /// (SOFA `fw2m` applied to the `pfw06` angles plus nutation, as in `pnm06a`).
 pub fn bias_precession_nutation_matrix(t: f64, dpsi: f64, deps: f64) -> Mat3 {
     let (gamb, phib, psib) = fw_angles(t);
-    let eps_a = kshana_frames::mean_obliquity_iau2006(t);
+    let eps_a = crate::mean_obliquity_iau2006(t);
     let mut m = identity();
     rz(gamb, &mut m);
     rx(phib, &mut m);

@@ -1,0 +1,2551 @@
+{
+ "meta": {
+  "description": "Skyfield apparent positions (light-time, gravitational deflection, aberration; no refraction) expressed in the true ecliptic and equinox of date.  lon/lat in degrees (lon 0-360 east of the true equinox of date), distance in km.",
+  "kernel": "de421.bsp",
+  "timescale": "load.timescale(builtin=True): Skyfield's bundled leap-second and delta-T tables (no download).  Time objects built from the ERFA TT two-part JD with ts.tt_jd(jd1, jd2); the UTC string is informational.",
+  "method": "lat, lon, dist = earth.at(t).observe(body).apparent().ecliptic_latlon(epoch='date'). Verified in skyfield/positionlib.py: ecliptic_latlon(epoch=...) with a non-None epoch calls _Fake(self, epoch).frame_latlon(framelib.ecliptic_frame); for epoch='date' the frame time is the position's own t.  framelib.ecliptic_frame is documented 'Reference frame of the true ecliptic and equinox of date' and its rotation is build_ecliptic_matrix(t) = rot_x(-(mean_obliquity(t.tdb) + d_eps)) @ t.M, where t.M = N @ P @ B (frame bias B, IAU 2006 precession P from Capitaine et al. 2003 4-angle formulation evaluated at TDB, nutation N from the full IAU 2000A series evaluated at TT) and d_eps is the IAU 2000A nutation in obliquity.  With epoch=None the J2000 ecliptic (ECLIPJ2000) is used instead; those values are the *_j2000_* fields.  apparent() applies light deflection by Sun(10), Jupiter(5) and Saturn(6) (599/699 fall back to the barycenters in de421), Earth deflection for a topocentric observer, then annual (and diurnal, for topocentric) aberration.",
+  "moon_topocentric_kochi": {
+   "observer": {
+    "latitude_deg": 9.9312,
+    "longitude_deg": 76.2673,
+    "elevation_m": 0.0
+   },
+   "method": "(earth + wgs84.latlon(9.9312, 76.2673, elevation_m=0.0)).at(t).observe(moon).apparent().ecliptic_latlon(epoch='date').  The observer's GCRS position uses Skyfield's builtin delta-T (skyfield_delta_t_s / skyfield_ut1_jd recorded per record) and no polar motion."
+  },
+  "targets": {
+   "sun": {
+    "skyfield_name": "sun",
+    "naif": 10
+   },
+   "moon": {
+    "skyfield_name": "moon",
+    "naif": 301
+   },
+   "mercury": {
+    "skyfield_name": "mercury",
+    "naif": 199
+   },
+   "venus": {
+    "skyfield_name": "venus",
+    "naif": 299
+   },
+   "mars_barycenter": {
+    "skyfield_name": "mars barycenter",
+    "naif": 4
+   },
+   "jupiter_barycenter": {
+    "skyfield_name": "jupiter barycenter",
+    "naif": 5
+   },
+   "saturn_barycenter": {
+    "skyfield_name": "saturn barycenter",
+    "naif": 6
+   },
+   "uranus_barycenter": {
+    "skyfield_name": "uranus barycenter",
+    "naif": 7
+   },
+   "neptune_barycenter": {
+    "skyfield_name": "neptune barycenter",
+    "naif": 8
+   },
+   "pluto_barycenter": {
+    "skyfield_name": "pluto barycenter",
+    "naif": 9
+   }
+  },
+  "versions": {
+   "python": "3.13.16",
+   "numpy": "2.5.4",
+   "pyerfa": "2.0.1.5",
+   "erfa_c_library": "2.0.1",
+   "sofa_release": "20231011",
+   "jplephem": "2.24",
+   "skyfield": "1.55",
+   "generated_on": "2026-10-15"
+  },
+  "count": 20
+ },
+ "records": [
+  {
+   "utc": "1950-01-01T00:00:00Z",
+   "tt_jd": [
+    2433282.5,
+    0.00037249999999999995
+   ],
+   "tai_utc_s": 0.0,
+   "skyfield_delta_t_s": 28.93200038312361,
+   "skyfield_ut1_jd": [
+    2433282.5,
+    3.7638884454587796e-05
+   ],
+   "skyfield_tdb_jd": [
+    2433282.5,
+    0.00037249919357046384
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 280.00489429112525,
+     "lat_deg": -2.052693473995565e-05,
+     "distance_km": 147091152.63306978,
+     "lon_j2000_deg": 280.70417718093665,
+     "lat_j2000_deg": -0.0062958802839160775,
+     "ra_date_hours": 18.725653571554805,
+     "dec_date_deg": -23.070738615359925
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 61.41589261993316,
+     "lat_deg": 3.781852071619927,
+     "distance_km": 399625.91815989406,
+     "lon_j2000_deg": 62.11500810221476,
+     "lat_j2000_deg": 3.7878623751125353,
+     "ra_date_hours": 3.896817796030076,
+     "dec_date_deg": 24.15260622491461
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 299.4473184867091,
+     "lat_deg": -1.2243690366363669,
+     "distance_km": 150043946.3443576,
+     "lon_j2000_deg": 300.14668180914674,
+     "lat_j2000_deg": -1.2296967229305644,
+     "ra_date_hours": 20.125435979253034,
+     "dec_date_deg": -21.471252760138757
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 316.9795166132638,
+     "lat_deg": 0.6307824769307038,
+     "distance_km": 56051800.42893921,
+     "lon_j2000_deg": 317.67874244376617,
+     "lat_j2000_deg": 0.626834861572334,
+     "ra_date_hours": 21.282326696107805,
+     "dec_date_deg": -15.151202575700216
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 182.2112366691053,
+     "lat_deg": 2.5124885284299867,
+     "distance_km": 181838744.8336834,
+     "lon_j2000_deg": 182.91080276864736,
+     "lat_j2000_deg": 2.511583871755359,
+     "ra_date_hours": 12.201864803088895,
+     "dec_date_deg": 1.4255908063475564
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 306.50536875164204,
+     "lat_deg": -0.584007962960841,
+     "distance_km": 887918432.5906987,
+     "lon_j2000_deg": 307.2046964349048,
+     "lat_j2000_deg": -0.588833299011494,
+     "ra_date_hours": 20.60323309171754,
+     "dec_date_deg": -19.219098804379605
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 169.43744094535228,
+     "lat_deg": 2.0062149355765753,
+     "distance_km": 1340768869.328035,
+     "lon_j2000_deg": 170.1369513849185,
+     "lat_j2000_deg": 2.006760480076993,
+     "ra_date_hours": 11.405565645319617,
+     "dec_date_deg": 6.027987378698601
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 92.68276892612506,
+     "lat_deg": 0.2689135743161719,
+     "distance_km": 2688253116.3412867,
+     "lon_j2000_deg": 93.38205626735999,
+     "lat_j2000_deg": 0.2753635891368682,
+     "ra_date_hours": 6.195320637478769,
+     "dec_date_deg": 23.68972028637724
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 197.2660563336159,
+     "lat_deg": 1.5917225318531818,
+     "distance_km": 4548330554.953934,
+     "lon_j2000_deg": 197.96550574916216,
+     "lat_j2000_deg": 1.589171594242785,
+     "ra_date_hours": 13.101805765130049,
+     "dec_date_deg": -5.311865121652532
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 137.7984120676273,
+     "lat_deg": 8.201472824435335,
+     "distance_km": 5318370497.299946,
+     "lon_j2000_deg": 138.49845112955506,
+     "lat_j2000_deg": 8.205345823929386,
+     "ra_date_hours": 9.531046163658763,
+     "dec_date_deg": 23.293313842649088
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 60.57446225901073,
+    "lat_deg": 3.639879465243173,
+    "distance_km": 401906.8164995636
+   }
+  },
+  {
+   "utc": "1955-04-18T12:00:00Z",
+   "tt_jd": [
+    2435215.5,
+    0.5003725
+   ],
+   "tai_utc_s": 0.0,
+   "skyfield_delta_t_s": 30.490900219647607,
+   "skyfield_ut1_jd": [
+    2435215.5,
+    0.5000195960622726
+   ],
+   "skyfield_tdb_jd": [
+    2435215.5,
+    0.5003725184174097
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 27.68133770911847,
+     "lat_deg": 0.00018245219954687205,
+     "distance_km": 150230246.84994885,
+     "lon_j2000_deg": 28.301230758518326,
+     "lat_j2000_deg": 0.003390025098178301,
+     "ra_date_hours": 1.7133865480918034,
+     "dec_date_deg": 10.651564491301276
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 333.64433583638373,
+     "lat_deg": 4.621656008059713,
+     "distance_km": 380108.09905102686,
+     "lon_j2000_deg": 334.2637881957459,
+     "lat_j2000_deg": 4.619600088837855,
+     "ra_date_hours": 22.258347530213374,
+     "dec_date_deg": -5.862092921467843
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 22.468582401481413,
+     "lat_deg": -1.1871940687684073,
+     "distance_km": 199439656.229954,
+     "lon_j2000_deg": 23.08858196852824,
+     "lat_j2000_deg": -1.184441973256077,
+     "ra_date_hours": 1.4149113341945632,
+     "dec_date_deg": 7.6439360103084555
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 352.6511184534492,
+     "lat_deg": -1.3551648459675543,
+     "distance_km": 189462763.70764515,
+     "lon_j2000_deg": 353.2711495041063,
+     "lat_j2000_deg": -1.3553321985424005,
+     "ra_date_hours": 23.585920929146074,
+     "dec_date_deg": -4.161916309060077
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 65.08644025260686,
+     "lat_deg": 0.8104752431085671,
+     "distance_km": 335283720.07741237,
+     "lon_j2000_deg": 65.70630622916391,
+     "lat_j2000_deg": 0.8159798448565598,
+     "ra_date_hours": 4.199418132804755,
+     "dec_date_deg": 21.94948636976952
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 111.52279571394334,
+     "lat_deg": 0.49730014614069584,
+     "distance_km": 790749588.2245227,
+     "lon_j2000_deg": 112.14271218370924,
+     "lat_j2000_deg": 0.5024834773630691,
+     "ra_date_hours": 7.556352409512166,
+     "dec_date_deg": 22.214688377667564
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 229.3820359598508,
+     "lat_deg": 2.5128466964596687,
+     "distance_km": 1339688024.7000268,
+     "lon_j2000_deg": 230.00207543816322,
+     "lat_j2000_deg": 2.5080667177339313,
+     "ra_date_hours": 15.175761389648546,
+     "dec_date_deg": -15.158943498582147
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 113.72299056727918,
+     "lat_deg": 0.5259543001445605,
+     "distance_km": 2793128945.256689,
+     "lon_j2000_deg": 114.34291018585064,
+     "lat_j2000_deg": 0.5310314246565849,
+     "ra_date_hours": 7.71276812916983,
+     "dec_date_deg": 21.879684824086134
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 206.85479118765915,
+     "lat_deg": 1.7772321953898798,
+     "distance_km": 4385529080.01756,
+     "lon_j2000_deg": 207.4748366994997,
+     "lat_j2000_deg": 1.774095162934335,
+     "ra_date_hours": 13.704343675079393,
+     "dec_date_deg": -8.695986507967081
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 144.3794972322992,
+     "lat_deg": 10.45194368480916,
+     "distance_km": 5166337060.389615,
+     "lon_j2000_deg": 145.0003226015984,
+     "lat_j2000_deg": 10.454850901093188,
+     "ra_date_hours": 10.029698240357943,
+     "dec_date_deg": 23.223258916749174
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 332.9175767381748,
+    "lat_deg": 4.789065951048581,
+    "distance_km": 384119.11919742986
+   }
+  },
+  {
+   "utc": "1960-09-01T03:30:00Z",
+   "tt_jd": [
+    2437178.5,
+    0.14622041545138892
+   ],
+   "tai_utc_s": 1.259895000000003,
+   "skyfield_delta_t_s": 33.27101722303272,
+   "skyfield_ut1_jd": [
+    2437178.5,
+    0.14583533423352973
+   ],
+   "skyfield_tdb_jd": [
+    2437178.5,
+    0.1462203989781741
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 158.69094336464354,
+     "lat_deg": 0.00015183023671748908,
+     "distance_km": 150952575.7384483,
+     "lon_j2000_deg": 159.2413090310272,
+     "lat_j2000_deg": 0.0015352108622013975,
+     "ra_date_hours": 10.687282531850581,
+     "dec_date_deg": 8.312365953469255
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 279.8626721260864,
+     "lat_deg": 4.815136644918026,
+     "distance_km": 366073.99501276616,
+     "lon_j2000_deg": 280.4129222203665,
+     "lat_j2000_deg": 4.81019632766465,
+     "ra_date_hours": 18.690334026986957,
+     "dec_date_deg": -18.27299347065397
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 159.81099543192067,
+     "lat_deg": 1.6880215015119828,
+     "distance_km": 205258746.67203122,
+     "lon_j2000_deg": 160.36150734687655,
+     "lat_j2000_deg": 1.6893081044620446,
+     "ra_date_hours": 10.800173004968455,
+     "dec_date_deg": 9.454330333400764
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 177.94925510666673,
+     "lat_deg": 1.194145229115958,
+     "distance_km": 238274256.2702637,
+     "lon_j2000_deg": 178.49972735065188,
+     "lat_j2000_deg": 1.1938228042877996,
+     "ra_date_hours": 11.90622827917732,
+     "dec_date_deg": 1.9113364183753099
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 78.87884444354769,
+     "lat_deg": -0.5219256862884717,
+     "distance_km": 183334938.53652328,
+     "lon_j2000_deg": 79.42921446380522,
+     "lat_j2000_deg": -0.5168217519346401,
+     "ra_date_hours": 5.196914741569545,
+     "dec_date_deg": 22.456157907526077
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 263.98178297561765,
+     "lat_deg": 0.13093327181750497,
+     "distance_km": 728819812.4157338,
+     "lon_j2000_deg": 264.5321486419191,
+     "lat_j2000_deg": 0.12580613382849282,
+     "ra_date_hours": 17.563424094716567,
+     "dec_date_deg": -23.174338837328314
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 281.9971678266862,
+     "lat_deg": 0.29997400767443294,
+     "distance_km": 1415137635.5170531,
+     "lon_j2000_deg": 282.54752534605547,
+     "lat_j2000_deg": 0.2950882132292582,
+     "ra_date_hours": 18.86745615033943,
+     "dec_date_deg": -22.601682229080733
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 142.5164473026642,
+     "lat_deg": 0.6799319799921225,
+     "distance_km": 2894427532.2208357,
+     "lon_j2000_deg": 143.0668646981545,
+     "lat_j2000_deg": 0.6826358949017598,
+     "ra_date_hours": 9.673290285117695,
+     "dec_date_deg": 14.652584206522965
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 216.89315239270547,
+     "lat_deg": 1.7415080858188134,
+     "distance_km": 4615139973.333243,
+     "lon_j2000_deg": 217.4436327160457,
+     "lat_j2000_deg": 1.738040920608115,
+     "ra_date_hours": 14.342534396041856,
+     "dec_date_deg": -12.170939757963039
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 155.98045886547945,
+     "lat_deg": 12.173297545579263,
+     "distance_km": 5184694506.133924,
+     "lon_j2000_deg": 156.5318742587559,
+     "lat_j2000_deg": 12.174912805141197,
+     "ra_date_hours": 10.834710437237623,
+     "dec_date_deg": 20.59474013625709
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 280.0193321045187,
+    "lat_deg": 4.944256994326542,
+    "distance_km": 372316.90751896176
+   }
+  },
+  {
+   "utc": "1966-02-20T20:00:00Z",
+   "tt_jd": [
+    2439176.5,
+    0.8337572792824075
+   ],
+   "tai_utc_s": 4.4449300000000065,
+   "skyfield_delta_t_s": 36.07868633973038,
+   "skyfield_ut1_jd": [
+    2439176.5,
+    0.8333397018942161
+   ],
+   "skyfield_tdb_jd": [
+    2439176.5,
+    0.8337572934768049
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 331.7381005597562,
+     "lat_deg": -0.00016625714754561584,
+     "distance_km": 147953672.1930716,
+     "lon_j2000_deg": 332.21475975320294,
+     "lat_j2000_deg": -0.0018658016454373332,
+     "ra_date_hours": 22.249821428023495,
+     "dec_date_deg": -10.859139281534643
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 335.8973574183404,
+     "lat_deg": -4.953099380890137,
+     "distance_km": 406403.1665923886,
+     "lon_j2000_deg": 336.37437924304635,
+     "lat_j2000_deg": -4.9544990955741595,
+     "ra_date_hours": 22.637412169150025,
+     "dec_date_deg": -13.95056199892988
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 343.6073735989309,
+     "lat_deg": -0.8468654796966951,
+     "distance_km": 184005967.62732324,
+     "lon_j2000_deg": 344.0840968230349,
+     "lat_j2000_deg": -0.8476911510788416,
+     "ra_date_hours": 23.014948261594572,
+     "dec_date_deg": -7.228899197674396
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 298.73764732783474,
+     "lat_deg": 6.8481810590265075,
+     "distance_km": 53421641.093755625,
+     "lon_j2000_deg": 299.2140075608143,
+     "lat_j2000_deg": 6.844537886290343,
+     "ra_date_hours": 19.962028751776856,
+     "dec_date_deg": -13.708409032527271
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 346.9621577015122,
+     "lat_deg": -0.8685506754901261,
+     "distance_km": 347076335.5604648,
+     "lon_j2000_deg": 347.4388831769518,
+     "lat_j2000_deg": -0.8691212811298221,
+     "ra_date_hours": 23.22305871556185,
+     "dec_date_deg": -5.949623575936232
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 81.30044243961395,
+     "lat_deg": -0.20673604465184212,
+     "distance_km": 706657597.1443491,
+     "lon_j2000_deg": 81.77710241044102,
+     "lat_j2000_deg": -0.2023299953938324,
+     "ra_date_hours": 5.369726264698669,
+     "dec_date_deg": 22.95322773204912
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 347.66229851885646,
+     "lat_deg": -1.875968311789001,
+     "distance_km": 1581799738.0338514,
+     "lon_j2000_deg": 348.13910118809565,
+     "lat_j2000_deg": -1.8764854065840357,
+     "ra_date_hours": 23.29265979158454,
+     "dec_date_deg": -6.603737370198002
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 168.26869802464088,
+     "lat_deg": 0.8132982229527544,
+     "distance_km": 2593234246.748912,
+     "lon_j2000_deg": 168.74541944456723,
+     "lat_j2000_deg": 0.8137689144056997,
+     "ra_date_hours": 11.302185412795085,
+     "dec_date_deg": 5.388590188508149
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 232.1796142120416,
+     "lat_deg": 1.7619154259389849,
+     "distance_km": 4509306918.520196,
+     "lon_j2000_deg": 232.65634561012396,
+     "lat_j2000_deg": 1.7581821408857858,
+     "ra_date_hours": 15.34918826164009,
+     "dec_date_deg": -16.614777477709463
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 167.56641177854124,
+     "lat_deg": 14.973992383842718,
+     "distance_km": 4716303718.8310175,
+     "lon_j2000_deg": 168.0442427294849,
+     "lat_j2000_deg": 14.97451677215969,
+     "ra_date_hours": 11.64462850709357,
+     "dec_date_deg": 18.65111823603561
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 336.0194252738478,
+    "lat_deg": -4.935853210147866,
+    "distance_km": 412720.01343618665
+   }
+  },
+  {
+   "utc": "1971-07-07T07:07:07Z",
+   "tt_jd": [
+    2441139.5,
+    0.29709045873622686
+   ],
+   "tai_utc_s": 9.43163481000001,
+   "skyfield_delta_t_s": 41.55616802460645,
+   "skyfield_ut1_jd": [
+    2441139.5,
+    0.2966094845692754
+   ],
+   "skyfield_tdb_jd": [
+    2441139.5,
+    0.29709045785516236
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 104.5340820167709,
+     "lat_deg": -0.00020370712640078176,
+     "distance_km": 152097480.15157977,
+     "lon_j2000_deg": 104.92857953196449,
+     "lat_j2000_deg": 0.003281245987152401,
+     "ra_date_hours": 7.051950042137057,
+     "dec_date_deg": 22.65166254124473
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 270.0374948769235,
+     "lat_deg": -3.6684946127473337,
+     "distance_km": 381061.55571588257,
+     "lon_j2000_deg": 270.43201555457847,
+     "lat_j2000_deg": -3.6721876634683515,
+     "ra_date_hours": 18.002802509190882,
+     "dec_date_deg": -27.113145726114464
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 121.67597495894897,
+     "lat_deg": 1.7889053064350011,
+     "distance_km": 179949693.64596203,
+     "lon_j2000_deg": 122.07054261750295,
+     "lat_j2000_deg": 1.7918597874593867,
+     "ra_date_hours": 8.290000727537779,
+     "dec_date_deg": 21.534968452831908
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 90.46236410630938,
+     "lat_deg": -0.1544006716916287,
+     "distance_km": 248839253.3213673,
+     "lon_j2000_deg": 90.85686055154608,
+     "lat_j2000_deg": -0.15071040391462923,
+     "ra_date_hours": 6.0335586053810655,
+     "dec_date_deg": 23.289447826784908
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 321.8568005873703,
+     "lat_deg": -5.207995365696912,
+     "distance_km": 68788252.37106937,
+     "lon_j2000_deg": 322.2515830982793,
+     "lat_j2000_deg": -5.209993940352024,
+     "ra_date_hours": 21.733681304652986,
+     "dec_date_deg": -19.147138915137013
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 237.06012848858296,
+     "lat_deg": 0.8705373569548035,
+     "distance_km": 690000342.8792591,
+     "lon_j2000_deg": 237.4546518551564,
+     "lat_j2000_deg": 0.8672424792917168,
+     "ra_date_hours": 15.665361788139263,
+     "dec_date_deg": -18.658440384675473
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 62.12614446882046,
+     "lat_deg": -1.9031399023392395,
+     "distance_km": 1469254199.171664,
+     "lon_j2000_deg": 62.52068873228586,
+     "lat_j2000_deg": -1.899707178946387,
+     "ra_date_hours": 4.02910938126843,
+     "dec_date_deg": 18.725851139195825
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 189.60347901050446,
+     "lat_deg": 0.6746380213749338,
+     "distance_km": 2753731898.116923,
+     "lon_j2000_deg": 189.9980186352316,
+     "lat_j2000_deg": 0.6736677096022456,
+     "ra_date_hours": 12.605955074999244,
+     "dec_date_deg": -3.1854525614472977
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 240.6386155113766,
+     "lat_deg": 1.7019206407141545,
+     "distance_km": 4425118343.987275,
+     "lon_j2000_deg": 241.03315745245598,
+     "lat_j2000_deg": 1.6985256557026638,
+     "ra_date_hours": 15.923771186031301,
+     "dec_date_deg": -18.62389293073475
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 177.2145198077534,
+     "lat_deg": 15.933606588203693,
+     "distance_km": 4738504041.786443,
+     "lon_j2000_deg": 177.6100754225059,
+     "lat_j2000_deg": 15.933427261351417,
+     "ra_date_hours": 12.263460929244102,
+     "dec_date_deg": 15.691161291965454
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 270.31945006189846,
+    "lat_deg": -3.408358485929524,
+    "distance_km": 386898.9167597535
+   }
+  },
+  {
+   "utc": "1976-12-12T00:00:00Z",
+   "tt_jd": [
+    2443124.5,
+    0.000546111111111111
+   ],
+   "tai_utc_s": 15.0,
+   "skyfield_delta_t_s": 47.4622186,
+   "skyfield_ut1_jd": [
+    2443124.5,
+    -3.220122685185212e-06
+   ],
+   "skyfield_tdb_jd": [
+    2443124.5,
+    0.0005461038826397928
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 260.09288795577936,
+     "lat_deg": -0.00012476420377953649,
+     "distance_km": 147278171.38308161,
+     "lon_j2000_deg": 260.41251204162165,
+     "lat_j2000_deg": -0.0031170170516454663,
+     "ra_date_hours": 17.281455094621673,
+     "dec_date_deg": -23.070132550059864
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 140.21821933110564,
+     "lat_deg": -4.890292404024319,
+     "distance_km": 386746.6374254373,
+     "lon_j2000_deg": 140.53763125359976,
+     "lat_j2000_deg": -4.8886027782631825,
+     "ra_date_hours": 9.40364071157818,
+     "dec_date_deg": 10.101388527809803
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 278.15421944746635,
+     "lat_deg": -2.2938544976636126,
+     "distance_km": 177239602.11388275,
+     "lon_j2000_deg": 278.4738719714295,
+     "lat_j2000_deg": -2.2967705190747263,
+     "ra_date_hours": 18.602157650291495,
+     "dec_date_deg": -25.478468425534604
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 302.9026590366372,
+     "lat_deg": -2.250178717449453,
+     "distance_km": 149867683.4938319,
+     "lon_j2000_deg": 303.2223564465607,
+     "lat_j2000_deg": -2.25252996336267,
+     "ra_date_hours": 20.38307431200719,
+     "dec_date_deg": -21.699922579302093
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 255.18489181425684,
+     "lat_deg": -0.42939779360288305,
+     "distance_km": 370011700.2432942,
+     "lon_j2000_deg": 255.50451226032368,
+     "lat_j2000_deg": -0.4323594237182088,
+     "ra_date_hours": 16.924479549092133,
+     "dec_date_deg": -23.04340976325296
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 53.13414434293438,
+     "lat_deg": -1.0634765443531584,
+     "distance_km": 616422060.0137752,
+     "lon_j2000_deg": 53.453797382527014,
+     "lat_j2000_deg": -1.0609135786669925,
+     "ra_date_hours": 3.401352413463977,
+     "dec_date_deg": 17.527496157262295
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 136.69051294954446,
+     "lat_deg": 0.8226110916168777,
+     "distance_km": 1278627655.144145,
+     "lon_j2000_deg": 137.01017113144047,
+     "lat_j2000_deg": 0.8244501217122625,
+     "ra_date_hours": 9.293506875747063,
+     "dec_date_deg": 16.618735869657442
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 219.97144519045725,
+     "lat_deg": 0.43576103532700516,
+     "distance_km": 2886228944.3893905,
+     "lon_j2000_deg": 220.29108524476035,
+     "lat_j2000_deg": 0.43362093178583794,
+     "ra_date_hours": 14.513658979543429,
+     "dec_date_deg": -14.392064813954239
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 253.92343391904595,
+     "lat_deg": 1.4529344373403672,
+     "distance_km": 4677932313.675896,
+     "lon_j2000_deg": 254.24307194568564,
+     "lat_j2000_deg": 1.449984198823445,
+     "ra_date_hours": 16.8498220111819,
+     "dec_date_deg": -21.029260448622864
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 193.82672973845294,
+     "lat_deg": 16.77899475377788,
+     "distance_km": 4624155187.635626,
+     "lon_j2000_deg": 194.1472075886879,
+     "lat_j2000_deg": 16.77800064776792,
+     "ra_date_hours": 13.283713261530867,
+     "dec_date_deg": 10.011146719324854
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 139.96987923291508,
+    "lat_deg": -4.973696141536681,
+    "distance_km": 380614.30215540726
+   }
+  },
+  {
+   "utc": "1982-05-25T16:45:00Z",
+   "tt_jd": [
+    2445114.5,
+    0.6985206481481481
+   ],
+   "tai_utc_s": 20.0,
+   "skyfield_delta_t_s": 52.5036163854173,
+   "skyfield_ut1_jd": [
+    2445114.5,
+    0.6979129674029465
+   ],
+   "skyfield_tdb_jd": [
+    2445114.5,
+    0.6985206600896791
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 64.1416867614331,
+     "lat_deg": -5.924110089039331e-05,
+     "distance_km": 151541480.23896205,
+     "lon_j2000_deg": 64.39245344528487,
+     "lat_j2000_deg": 0.0020870918216211428,
+     "ra_date_hours": 4.143583252221769,
+     "dec_date_deg": 20.975600265207348
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 99.40901428034603,
+     "lat_deg": -0.40483038536343474,
+     "distance_km": 360926.9938369335,
+     "lon_j2000_deg": 99.65977682745078,
+     "lat_j2000_deg": -0.4026181602006563,
+     "ra_date_hours": 6.680477272223564,
+     "dec_date_deg": 22.703158350564976
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 74.39266972388036,
+     "lat_deg": -0.2817701982682981,
+     "distance_km": 86679820.26083861,
+     "lon_j2000_deg": 74.64343838938468,
+     "lat_j2000_deg": -0.2795164043181607,
+     "ra_date_hours": 4.873422422132575,
+     "dec_date_deg": 22.248027317680826
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 24.023982779368456,
+     "lat_deg": -2.021404681128207,
+     "distance_km": 163917436.93783045,
+     "lon_j2000_deg": 24.27481976525241,
+     "lat_j2000_deg": -2.0202764772354667,
+     "ra_date_hours": 1.5328221316023731,
+     "dec_date_deg": 7.440105915972103
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 181.5409835227344,
+     "lat_deg": 0.8032632883878094,
+     "distance_km": 125241802.33277966,
+     "lon_j2000_deg": 181.7917820702387,
+     "lat_j2000_deg": 0.8029825992590425,
+     "ra_date_hours": 12.115553089519496,
+     "dec_date_deg": 0.1240766939846172
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 212.02736183979707,
+     "lat_deg": 1.3845624965677137,
+     "distance_km": 680347578.0133164,
+     "lon_j2000_deg": 212.27817239665734,
+     "lat_j2000_deg": 1.3831679315809193,
+     "ra_date_hours": 14.022554562988296,
+     "dec_date_deg": -10.878863489932575
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 195.95857278510616,
+     "lat_deg": 2.677326881169815,
+     "distance_km": 1342857665.6219425,
+     "lon_j2000_deg": 196.20943909880577,
+     "lat_j2000_deg": 2.676489322159772,
+     "ra_date_hours": 13.048873143298481,
+     "dec_date_deg": -3.8070535378965147
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 242.55639966806936,
+     "lat_deg": 0.1606724018899926,
+     "distance_km": 2672905390.0933127,
+     "lon_j2000_deg": 242.8071687490431,
+     "lat_j2000_deg": 0.1585489218659693,
+     "ra_date_hours": 16.034830062536578,
+     "dec_date_deg": -20.515465799072842
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 266.25651113516693,
+     "lat_deg": 1.3165841318890474,
+     "distance_km": 4387985988.663436,
+     "lon_j2000_deg": 266.50727622022606,
+     "lat_j2000_deg": 1.3142958990477651,
+     "ra_date_hours": 17.730737723735118,
+     "dec_date_deg": -22.071722305048684
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 204.53682264208632,
+     "lat_deg": 17.509167626094104,
+     "distance_km": 4370393100.867551,
+     "lon_j2000_deg": 204.78821453400639,
+     "lat_j2000_deg": 17.50802162807461,
+     "ra_date_hours": 13.940552768941291,
+     "dec_date_deg": 6.804670327558256
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 98.5001342678993,
+    "lat_deg": -0.7616511726832202,
+    "distance_km": 362563.484064176
+   }
+  },
+  {
+   "utc": "1987-10-03T09:15:00Z",
+   "tt_jd": [
+    2447071.5,
+    0.3860553703703704
+   ],
+   "tai_utc_s": 23.0,
+   "skyfield_delta_t_s": 55.669024690624724,
+   "skyfield_ut1_jd": [
+    2447071.5,
+    0.38541105295496964
+   ],
+   "skyfield_tdb_jd": [
+    2447071.5,
+    0.3860553512099408
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 189.63186264567204,
+     "lat_deg": -0.00010573615781722032,
+     "distance_km": 149691447.44876322,
+     "lon_j2000_deg": 189.80317037051887,
+     "lat_j2000_deg": -0.0005209731246517781,
+     "ra_date_hours": 12.589991389018865,
+     "dec_date_deg": -3.8168889374273935
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 318.8842724206655,
+     "lat_deg": -3.640597864361044,
+     "distance_km": 366270.9900467485,
+     "lon_j2000_deg": 319.0556624038071,
+     "lat_j2000_deg": -3.641523465907152,
+     "ra_date_hours": 21.50033223206643,
+     "dec_date_deg": -18.623268735107658
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 215.15182070996798,
+     "lat_deg": -2.7592298391225536,
+     "distance_km": 151205311.361568,
+     "lon_j2000_deg": 215.32307031023433,
+     "lat_j2000_deg": -2.760265705830213,
+     "ra_date_hours": 14.127054168162601,
+     "dec_date_deg": -15.840315874215444
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 200.6876386276601,
+     "lat_deg": 0.9491456596287889,
+     "distance_km": 251121129.89421782,
+     "lon_j2000_deg": 200.85896998510344,
+     "lat_j2000_deg": 0.9484438478309224,
+     "ra_date_hours": 13.297885493477937,
+     "dec_date_deg": -7.199883498987135
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 176.51985354877803,
+     "lat_deg": 1.0238788530223566,
+     "distance_km": 392005967.9245221,
+     "lon_j2000_deg": 176.6911896759378,
+     "lat_j2000_deg": 1.0238225728869625,
+     "ra_date_hours": 11.814235948876801,
+     "dec_date_deg": 2.3234352128606903
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 26.675786174125836,
+     "lat_deg": -1.5799440827699835,
+     "distance_km": 596806327.7701963,
+     "lon_j2000_deg": 26.84713100896933,
+     "lat_j2000_deg": -1.579097285227704,
+     "ra_date_hours": 1.6883134518516152,
+     "dec_date_deg": 8.815063457054185
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 256.1274797633266,
+     "lat_deg": 1.2792422718293228,
+     "distance_km": 1554669001.9348805,
+     "lon_j2000_deg": 256.29879265717625,
+     "lat_j2000_deg": 1.2776693978739493,
+     "ra_date_hours": 17.00506567980508,
+     "dec_date_deg": -21.44835462096687
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 263.1452954279838,
+     "lat_deg": -0.1588887079906858,
+     "distance_km": 2916134244.971897,
+     "lon_j2000_deg": 263.3166030571605,
+     "lat_j2000_deg": -0.16047805092154294,
+     "ra_date_hours": 17.50175121935903,
+     "dec_date_deg": -23.42475337450175
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 275.30093648231764,
+     "lat_deg": 1.0004468966565667,
+     "distance_km": 4531469743.323906,
+     "lon_j2000_deg": 275.47223901283735,
+     "lat_j2000_deg": 0.9988853257071776,
+     "ra_date_hours": 18.38209998047598,
+     "dec_date_deg": -22.33768700556162
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 218.7104202508123,
+     "lat_deg": 15.751530268982078,
+     "distance_km": 4564964138.202711,
+     "lon_j2000_deg": 218.88204933617718,
+     "lat_j2000_deg": 15.750421541482515,
+     "ra_date_hours": 14.754579408697197,
+     "dec_date_deg": 0.5497075413961464
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 319.77060265003604,
+    "lat_deg": -4.071020556118755,
+    "distance_km": 367290.2567039181
+   }
+  },
+  {
+   "utc": "1993-03-14T01:59:26Z",
+   "tt_jd": [
+    2449060.5,
+    0.0836248148148148
+   ],
+   "tai_utc_s": 27.0,
+   "skyfield_delta_t_s": 59.31081525121981,
+   "skyfield_ut1_jd": [
+    2449060.5,
+    0.08293834704570346
+   ],
+   "skyfield_tdb_jd": [
+    2449060.5,
+    0.08362483289472114
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 353.5022016526315,
+     "lat_deg": -0.0001429715639137457,
+     "distance_km": 148736170.0809336,
+     "lon_j2000_deg": 353.59241897194335,
+     "lat_j2000_deg": -0.00015618736725322066,
+     "ra_date_hours": 23.602294944030177,
+     "dec_date_deg": -2.580187181450416
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 250.32312270076247,
+     "lat_deg": -0.5081421018173928,
+     "distance_km": 381161.33888348244,
+     "lon_j2000_deg": 250.41333812511843,
+     "lat_j2000_deg": -0.5089947146296919,
+     "ra_date_hours": 16.575113602580025,
+     "dec_date_deg": -22.499673593246435
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 343.9315154252144,
+     "lat_deg": 2.909276154755129,
+     "distance_km": 92493880.9099856,
+     "lon_j2000_deg": 344.0216888174596,
+     "lat_j2000_deg": 2.909117014379212,
+     "ra_date_hours": 22.938410503687315,
+     "dec_date_deg": -3.6345835579653243
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 19.87506261508599,
+     "lat_deg": 7.442216165115669,
+     "distance_km": 49009582.778256126,
+     "lon_j2000_deg": 19.96517631883427,
+     "lat_j2000_deg": 7.442594683614322,
+     "ra_date_hours": 1.0301205577911503,
+     "dec_date_deg": 14.651149655913386
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 102.56347412184259,
+     "lat_deg": 2.944419287287043,
+     "distance_km": 155642901.20915797,
+     "lon_j2000_deg": 102.65370555965187,
+     "lat_j2000_deg": 2.9452541909719234,
+     "ra_date_hours": 6.93064700826853,
+     "dec_date_deg": 25.777351789996153
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 191.84811766371618,
+     "lat_deg": 1.5802559121114053,
+     "distance_km": 673153864.0008326,
+     "lon_j2000_deg": 191.9383581045932,
+     "lat_j2000_deg": 1.5799918600920813,
+     "ra_date_hours": 12.767532830770325,
+     "dec_date_deg": -3.229738158777457
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 324.7322418202402,
+     "lat_deg": -1.0867675201936424,
+     "distance_km": 1601921292.8000674,
+     "lon_j2000_deg": 324.8224736319422,
+     "lat_j2000_deg": -1.087202051800129,
+     "ra_date_hours": 21.82648328350239,
+     "dec_date_deg": -14.302420103750032
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 291.413074913277,
+     "lat_deg": -0.4313631971182493,
+     "distance_km": 2996454768.8837533,
+     "lon_j2000_deg": 291.5032952420955,
+     "lat_j2000_deg": -0.4321459328009133,
+     "ra_date_hours": 19.547745644856327,
+     "dec_date_deg": -22.16177173124847
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 290.7200894672157,
+     "lat_deg": 0.6725870917442092,
+     "distance_km": 4581917953.312464,
+     "lon_j2000_deg": 290.8103022064858,
+     "lat_j2000_deg": 0.6717995794209217,
+     "ra_date_hours": 19.48643992817747,
+     "dec_date_deg": -21.177591428632535
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 235.45365725950538,
+     "lat_deg": 14.656009179146531,
+     "distance_km": 4377374462.433321,
+     "lon_j2000_deg": 235.54398568954065,
+     "lat_j2000_deg": 14.655239834293946,
+     "ra_date_hours": 15.772756556423879,
+     "dec_date_deg": -4.867116846221859
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 249.93017749144826,
+    "lat_deg": -1.0437087958397169,
+    "distance_km": 376538.29899804486
+   }
+  },
+  {
+   "utc": "1998-08-27T22:00:00Z",
+   "tt_jd": [
+    2451052.5,
+    0.9173979629629629
+   ],
+   "tai_utc_s": 31.0,
+   "skyfield_delta_t_s": 63.310311841666575,
+   "skyfield_ut1_jd": [
+    2451052.5,
+    0.9166652047240548
+   ],
+   "skyfield_tdb_jd": [
+    2451052.5,
+    0.9173979478863951
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 154.42320971438068,
+     "lat_deg": 0.0002465865918995805,
+     "distance_km": 151131769.28786412,
+     "lon_j2000_deg": 154.44417777291184,
+     "lat_j2000_deg": 0.0002984377723270004,
+     "ra_date_hours": 10.419480457354638,
+     "dec_date_deg": 9.887766997599831
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 219.16962546108604,
+     "lat_deg": 4.893898571621779,
+     "distance_km": 404939.4610874934,
+     "lon_j2000_deg": 219.19060331883702,
+     "lat_j2000_deg": 4.89377746667758,
+     "ra_date_hours": 14.557227996415543,
+     "dec_date_deg": -9.906168289938766
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 137.00292354693704,
+     "lat_deg": -1.1912220176316874,
+     "distance_km": 124226714.68022506,
+     "lon_j2000_deg": 137.02388878573285,
+     "lat_j2000_deg": -1.191125134811927,
+     "ra_date_hours": 9.272085233613701,
+     "dec_date_deg": 14.60265669234053
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 137.8048465621692,
+     "lat_deg": 0.9124741677350491,
+     "distance_km": 243209910.6991399,
+     "lon_j2000_deg": 137.82581680074065,
+     "lat_j2000_deg": 0.9125691435970926,
+     "ra_date_hours": 9.369156337501378,
+     "dec_date_deg": 16.36325252574749
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 124.57020723033072,
+     "lat_deg": 1.0355747610057768,
+     "distance_km": 359460854.9238935,
+     "lon_j2000_deg": 124.59117730438646,
+     "lat_j2000_deg": 1.0356985600636437,
+     "ra_date_hours": 8.47812428929972,
+     "dec_date_deg": 20.12349378086678
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 355.49851735441905,
+     "lat_deg": -1.5258433231336426,
+     "distance_km": 600655443.1389208,
+     "lon_j2000_deg": 355.5194898449802,
+     "lat_j2000_deg": -1.5258347602251445,
+     "ra_date_hours": 23.76498426082789,
+     "dec_date_deg": -3.1894049194031155
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 33.49955885090974,
+     "lat_deg": -2.6359391427046877,
+     "distance_km": 1307908529.0688074,
+     "lon_j2000_deg": 33.520532703018965,
+     "lat_j2000_deg": -2.6358299385687594,
+     "ra_date_hours": 2.145278623973153,
+     "dec_date_deg": 10.200907846065148
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 309.8235326079976,
+     "lat_deg": -0.6798182998834271,
+     "distance_km": 2834768697.6928177,
+     "lon_j2000_deg": 309.84450211828795,
+     "lat_j2000_deg": -0.6799313666922808,
+     "ra_date_hours": 20.83051893328265,
+     "dec_date_deg": -18.441791935723195
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 299.892585104862,
+     "lat_deg": 0.3408817789249111,
+     "distance_km": 4383209842.956745,
+     "lon_j2000_deg": 299.9135525614353,
+     "lat_j2000_deg": 0.34074929645670815,
+     "ra_date_hours": 20.132833815669198,
+     "dec_date_deg": -19.838201533449165
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 245.3338475423541,
+     "lat_deg": 11.892351390844757,
+     "distance_km": 4496220578.213227,
+     "lon_j2000_deg": 245.35482598818064,
+     "lat_j2000_deg": 11.892192226031826,
+     "ra_date_hours": 16.369485360175275,
+     "dec_date_deg": -9.475359968855479
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 218.93887719400587,
+    "lat_deg": 4.812456924423213,
+    "distance_km": 411076.5774739946
+   }
+  },
+  {
+   "utc": "2000-01-01T12:00:00Z",
+   "tt_jd": [
+    2451544.5,
+    0.5007428703703704
+   ],
+   "tai_utc_s": 32.0,
+   "skyfield_delta_t_s": 63.8289604,
+   "skyfield_ut1_jd": [
+    2451544.5,
+    0.5000041092546296
+   ],
+   "skyfield_tdb_jd": [
+    2451544.5,
+    0.500742869262314
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 280.36892257238776,
+     "lat_deg": 0.00022742546183375124,
+     "distance_km": 147103719.13020247,
+     "lon_j2000_deg": 280.3727906565951,
+     "lat_j2000_deg": 0.00023809142345398006,
+     "ra_date_hours": 18.751892654013233,
+     "dec_date_deg": -23.032430139939514
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 223.32380023417372,
+     "lat_deg": 5.170739676652356,
+     "distance_km": 402416.6648490155,
+     "lon_j2000_deg": 223.32766731195306,
+     "lat_j2000_deg": 5.170742128218545,
+     "ra_date_hours": 14.830147682971988,
+     "dec_date_deg": -10.900653737681901
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 271.889283153479,
+     "lat_deg": -0.9948296035335965,
+     "distance_km": 211751218.43300277,
+     "lon_j2000_deg": 271.8931513335921,
+     "lat_j2000_deg": -0.9948196429618665,
+     "ra_date_hours": 18.138310134947776,
+     "dec_date_deg": -24.418902353370246
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 241.565793085013,
+     "lat_deg": 2.0663489498249374,
+     "distance_km": 170179432.42560083,
+     "lon_j2000_deg": 241.5696608158117,
+     "lat_j2000_deg": 2.066354759677272,
+     "ra_date_hours": 15.992851601949996,
+     "dec_date_deg": -18.448919225636615
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 327.9633055563098,
+     "lat_deg": -1.0677852457022512,
+     "distance_km": 276709365.72104955,
+     "lon_j2000_deg": 327.9671735439324,
+     "lat_j2000_deg": -1.0677751044910304,
+     "ra_date_hours": 22.03445426857803,
+     "dec_date_deg": -13.182481220116948
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 25.253086881938522,
+     "lat_deg": -1.2621928906292255,
+     "distance_km": 691317960.7421929,
+     "lon_j2000_deg": 25.256954716445936,
+     "lat_j2000_deg": -1.2621917713680413,
+     "ra_date_hours": 1.591190503676566,
+     "dec_date_deg": 8.594259062708636
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 40.39566304175009,
+     "lat_deg": -2.444854894223132,
+     "distance_km": 1294439913.4673865,
+     "lon_j2000_deg": 40.399530646378835,
+     "lat_j2000_deg": -2.444856774445138,
+     "ra_date_hours": 2.584360941326346,
+     "dec_date_deg": 12.614764113296502
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 314.809190849041,
+     "lat_deg": -0.6583280055723264,
+     "distance_km": 3100740570.014225,
+     "lon_j2000_deg": 314.8130589017917,
+     "lat_j2000_deg": -0.6583169509773507,
+     "ra_date_hours": 21.16498885278558,
+     "dec_date_deg": -17.02032092883313
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 303.1930147957124,
+     "lat_deg": 0.234996898935657,
+     "distance_km": 4641199069.257049,
+     "lon_j2000_deg": 303.1968828818105,
+     "lat_j2000_deg": 0.2350082786341501,
+     "ra_date_hours": 20.362189733752093,
+     "dec_date_deg": -19.213235308239028
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 251.45478064305726,
+     "lat_deg": 10.855229990824109,
+     "distance_km": 4647163042.366437,
+     "lon_j2000_deg": 251.4586470681412,
+     "lat_j2000_deg": 10.855237396634388,
+     "ra_date_hours": 16.761278844131446,
+     "dec_date_deg": -11.394297232821325
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 222.72638332944595,
+    "lat_deg": 4.951029942988797,
+    "distance_km": 406954.68934100453
+   }
+  },
+  {
+   "utc": "2004-06-08T08:20:00Z",
+   "tt_jd": [
+    2453164.5,
+    0.34796509259259256
+   ],
+   "tai_utc_s": 32.0,
+   "skyfield_delta_t_s": 64.6544496305555,
+   "skyfield_ut1_jd": [
+    2453164.5,
+    0.34721677720335004
+   ],
+   "skyfield_tdb_jd": [
+    2453164.5,
+    0.34796510059851415
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 77.87376882249923,
+     "lat_deg": -0.00015828740229891926,
+     "distance_km": 151854745.26226065,
+     "lon_j2000_deg": 77.81481662266785,
+     "lat_j2000_deg": -0.000741199838432932,
+     "ra_date_hours": 5.121307722363732,
+     "dec_date_deg": 22.887237381792776
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 329.249841429822,
+     "lat_deg": -4.9213419297103185,
+     "distance_km": 375012.3835809614,
+     "lon_j2000_deg": 329.19084383572095,
+     "lat_j2000_deg": -4.921081075929903,
+     "ra_date_hours": 22.210746644976524,
+     "dec_date_deg": -16.340814799644825
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 65.47679649504582,
+     "lat_deg": -0.7695546892918191,
+     "distance_km": 185390282.66506448,
+     "lon_j2000_deg": 65.41784157984624,
+     "lat_j2000_deg": -0.7701070878319405,
+     "ra_date_hours": 4.247101459160912,
+     "dec_date_deg": 20.46029318456096
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 77.89919458613362,
+     "lat_deg": -0.1724285515106622,
+     "distance_km": 43216295.58449459,
+     "lon_j2000_deg": 77.84024215007888,
+     "lat_j2000_deg": -0.1730114988689612,
+     "ra_date_hours": 5.124267089118183,
+     "dec_date_deg": 22.717977315839416
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 110.21876782073775,
+     "lat_deg": 1.2434608234258064,
+     "distance_km": 361028210.4508295,
+     "lon_j2000_deg": 110.15981029880793,
+     "lat_j2000_deg": 1.2429261818195025,
+     "ra_date_hours": 7.471489507836305,
+     "dec_date_deg": 23.14796026283661
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 160.61720378892932,
+     "lat_deg": 1.223206451614503,
+     "distance_km": 817917933.3079996,
+     "lon_j2000_deg": 160.5582394562793,
+     "lat_j2000_deg": 1.2230546285062291,
+     "ra_date_hours": 10.838613924949142,
+     "dec_date_deg": 8.718249949971142
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 102.97151234463428,
+     "lat_deg": -0.3132242561163687,
+     "distance_km": 1488475977.8290038,
+     "lon_j2000_deg": 102.91256110772346,
+     "lat_j2000_deg": -0.31378556795836177,
+     "ra_date_hours": 6.93738447863503,
+     "dec_date_deg": 22.496362989285736
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 336.7938034872019,
+     "lat_deg": -0.7687332179717832,
+     "distance_km": 2966137298.6805954,
+     "lon_j2000_deg": 336.73484381659733,
+     "lat_j2000_deg": -0.7685438386210937,
+     "ra_date_hours": 22.58777839882863,
+     "dec_date_deg": -9.732225340908098
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 315.2676219032932,
+     "lat_deg": -0.05681273177122218,
+     "distance_km": 4414896680.637691,
+     "lon_j2000_deg": 315.20866926078503,
+     "lat_j2000_deg": -0.05643222097817923,
+     "ra_date_hours": 21.183226555456397,
+     "dec_date_deg": -16.312603367763277
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 260.98903729127517,
+     "lat_deg": 8.92047796094213,
+     "distance_km": 4458350387.010832,
+     "lon_j2000_deg": 260.93007770982575,
+     "lat_j2000_deg": 8.921064295708824,
+     "ra_date_hours": 17.387641982040712,
+     "dec_date_deg": -14.233196239143552
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 328.5198402931057,
+    "lat_deg": -4.648510877983804,
+    "distance_km": 378826.5413348379
+   }
+  },
+  {
+   "utc": "2009-11-19T14:00:00Z",
+   "tt_jd": [
+    2455154.5,
+    0.5840993518518519
+   ],
+   "tai_utc_s": 34.0,
+   "skyfield_delta_t_s": 66.03063905000005,
+   "skyfield_ut1_jd": [
+    2455154.5,
+    0.5833351083443288
+   ],
+   "skyfield_tdb_jd": [
+    2455154.5,
+    0.5840993380724703
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 237.37517071008563,
+     "lat_deg": -2.816741155180686e-05,
+     "distance_km": 147840645.90772116,
+     "lon_j2000_deg": 237.23312210171042,
+     "lat_j2000_deg": 0.001120152387663062,
+     "ra_date_hours": 15.673076818606987,
+     "dec_date_deg": -19.573223602398958
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 269.4869688533562,
+     "lat_deg": -1.9908603190677265,
+     "distance_km": 399167.9264388023,
+     "lon_j2000_deg": 269.3449169442013,
+     "lat_j2000_deg": -1.9895643069034386,
+     "ra_date_hours": 17.96215170718714,
+     "dec_date_deg": -25.428800038269227
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 245.5342168977007,
+     "lat_deg": -1.3088789236613643,
+     "distance_km": 212718336.29077348,
+     "lon_j2000_deg": 245.3921783253616,
+     "lat_j2000_deg": -1.3076558923658297,
+     "ra_date_hours": 16.224771417954592,
+     "dec_date_deg": -22.514562874055382
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 224.50300295933718,
+     "lat_deg": 1.138322174080546,
+     "distance_km": 246927738.50269967,
+     "lon_j2000_deg": 224.3609374825528,
+     "lat_j2000_deg": 1.1393061146080194,
+     "ra_date_hours": 14.825959121194447,
+     "dec_date_deg": -15.101798995955752
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 134.28366779167226,
+     "lat_deg": 2.0789665115300258,
+     "distance_km": 155084094.58991867,
+     "lon_j2000_deg": 134.1415835968551,
+     "lat_j2000_deg": 2.0781138912176784,
+     "ra_date_hours": 9.158986466779115,
+     "dec_date_deg": 18.533405282221974
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 319.4184900326765,
+     "lat_deg": -0.9918763515869244,
+     "distance_km": 756110941.8672892,
+     "lon_j2000_deg": 319.2764232052654,
+     "lat_j2000_deg": -0.99111492395395,
+     "ra_date_hours": 21.477333688926755,
+     "dec_date_deg": -15.938509809802614
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 182.06387023349126,
+     "lat_deg": 2.1064115148560982,
+     "distance_km": 1494389260.6579678,
+     "lon_j2000_deg": 181.92177416690583,
+     "lat_j2000_deg": 2.1065648411841686,
+     "ra_date_hours": 12.182074037366458,
+     "dec_date_deg": 1.1120172027896034
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 352.7684658614572,
+     "lat_deg": -0.7745597320042471,
+     "distance_km": 2940187844.6957603,
+     "lon_j2000_deg": 352.6263997079853,
+     "lat_j2000_deg": -0.774502610065777,
+     "ra_date_hours": 23.57774914525777,
+     "dec_date_deg": -3.581563389723697
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 323.75298679290177,
+     "lat_deg": -0.4197137645322349,
+     "distance_km": 4498703066.48671,
+     "lon_j2000_deg": 323.61093008319693,
+     "lat_j2000_deg": -0.4190341039522061,
+     "ra_date_hours": 21.747724259365455,
+     "dec_date_deg": -13.998948178689568
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 271.8288013796369,
+     "lat_deg": 5.194449665687677,
+     "distance_km": 4869027464.1139765,
+     "lon_j2000_deg": 271.68676623620206,
+     "lat_j2000_deg": 5.195740707319632,
+     "ra_date_hours": 18.127839536651134,
+     "dec_date_deg": -18.232328701816332
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 268.6118098675286,
+    "lat_deg": -2.232828960264779,
+    "distance_km": 398272.363369947
+   }
+  },
+  {
+   "utc": "2015-04-04T11:00:00Z",
+   "tt_jd": [
+    2457116.5,
+    0.4591109259259259
+   ],
+   "tai_utc_s": 35.0,
+   "skyfield_delta_t_s": 67.76354710833353,
+   "skyfield_ut1_jd": [
+    2457116.5,
+    0.458326625612172
+   ],
+   "skyfield_tdb_jd": [
+    2457116.5,
+    0.4591109449900555
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 14.357721251859054,
+     "lat_deg": 3.0302508380429268e-05,
+     "distance_km": 149601139.32140535,
+     "lon_j2000_deg": 14.143929152341476,
+     "lat_j2000_deg": -0.000624814194771149,
+     "ra_date_hours": 0.8811133338414715,
+     "dec_date_deg": 5.659820762996763
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 193.85637203893344,
+     "lat_deg": 0.35608636379456404,
+     "distance_km": 402922.7276757411,
+     "lon_j2000_deg": 193.6425681553104,
+     "lat_j2000_deg": 0.3567249148961339,
+     "ra_date_hours": 12.85940233849099,
+     "dec_date_deg": -5.137280080547543
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 8.416739223700862,
+     "lat_deg": -1.591112595446193,
+     "distance_km": 201017124.91136205,
+     "lon_j2000_deg": 8.202893017179656,
+     "lat_j2000_deg": -1.5915685384876035,
+     "ra_date_hours": 0.557236106650344,
+     "dec_date_deg": 1.8747408896373268
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 51.55246509356082,
+     "lat_deg": 1.0928876078967031,
+     "distance_km": 177284048.66966608,
+     "lon_j2000_deg": 51.33869415828113,
+     "lat_j2000_deg": 1.0912230125904376,
+     "ra_date_hours": 3.255236883423857,
+     "dec_date_deg": 19.20315936204105
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 32.790695359753244,
+     "lat_deg": -0.0870075540944318,
+     "distance_km": 355370257.4161876,
+     "lon_j2000_deg": 32.576900844446634,
+     "lat_j2000_deg": -0.08822676465640852,
+     "ra_date_hours": 2.0411477146280816,
+     "dec_date_deg": 12.35647517174668
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 132.6189284050986,
+     "lat_deg": 0.9610455114636283,
+     "distance_km": 718514336.5801957,
+     "lon_j2000_deg": 132.40511163885643,
+     "lat_j2000_deg": 0.9596907263434915,
+     "ra_date_hours": 9.024461856543311,
+     "dec_date_deg": 17.939343485084706
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 244.57033080675208,
+     "lat_deg": 2.1461824698997956,
+     "distance_km": 1391433131.642579,
+     "lon_j2000_deg": 244.3565122374636,
+     "lat_j2000_deg": 2.1480542621078382,
+     "ra_date_hours": 16.201412902353322,
+     "dec_date_deg": -18.939064685477
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 16.333169707746634,
+     "lat_deg": -0.6212106337469626,
+     "distance_km": 3141291978.3129253,
+     "lon_j2000_deg": 16.119357367527794,
+     "lat_j2000_deg": -0.6219305219594105,
+     "ra_date_hours": 1.019291278449306,
+     "dec_date_deg": 5.848009372954708
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 338.60790226593645,
+     "lat_deg": -0.7427002913559927,
+     "distance_km": 4603460135.434168,
+     "lon_j2000_deg": 338.39408533678676,
+     "lat_j2000_deg": -0.742127562491206,
+     "ra_date_hours": 22.700788875335252,
+     "dec_date_deg": -9.029547513240017
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 285.5045064248982,
+     "lat_deg": 2.07409299166149,
+     "distance_km": 4914475155.515778,
+     "lon_j2000_deg": 285.29073943735614,
+     "lat_j2000_deg": 2.0759698066785166,
+     "ra_date_hours": 19.1045256086528,
+     "dec_date_deg": -20.473659704102147
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 194.61434985157027,
+    "lat_deg": 0.5502362710816175,
+    "distance_km": 406108.8949438526
+   }
+  },
+  {
+   "utc": "2020-09-09T05:45:30Z",
+   "tt_jd": [
+    2459101.5,
+    0.2407312962962963
+   ],
+   "tai_utc_s": 37.0,
+   "skyfield_delta_t_s": 69.36376426465306,
+   "skyfield_ut1_jd": [
+    2459101.5,
+    0.2399284749506406
+   ],
+   "skyfield_tdb_jd": [
+    2459101.5,
+    0.24073127869142677
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 167.00741368446495,
+     "lat_deg": -0.00012420816620492076,
+     "distance_km": 150670420.13997844,
+     "lon_j2000_deg": 166.72310222048432,
+     "lat_j2000_deg": -0.0005127198076197321,
+     "ra_date_hours": 11.20314194483056,
+     "dec_date_deg": 5.1302346500691804
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 64.14299032696192,
+     "lat_deg": -1.8136309470486358,
+     "distance_km": 400755.4820267032,
+     "lon_j2000_deg": 63.85864792644771,
+     "lat_j2000_deg": -1.8161589855657057,
+     "ra_date_hours": 4.167498587612034,
+     "dec_date_deg": 19.19010558685709
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 185.39953924064105,
+     "lat_deg": -0.05948021527741966,
+     "distance_km": 191298284.11309204,
+     "lon_j2000_deg": 185.1152305197839,
+     "lat_j2000_deg": -0.05900270641981041,
+     "ra_date_hours": 12.328853254151454,
+     "dec_date_deg": -2.1995471492624605
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 123.20310846924919,
+     "lat_deg": -1.276600182755169,
+     "distance_km": 137113134.70290047,
+     "lon_j2000_deg": 122.91883416069321,
+     "lat_j2000_deg": -1.2787369469328185,
+     "ra_date_hours": 8.34601499594786,
+     "dec_date_deg": 18.196640569923414
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 28.138161906370826,
+     "lat_deg": -4.240954525290614,
+     "distance_km": 69608509.75565565,
+     "lon_j2000_deg": 27.853681656156155,
+     "lat_j2000_deg": -4.24242595990651,
+     "ra_date_hours": 1.844028669642702,
+     "dec_date_deg": 6.84653138427375
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 287.4296362610716,
+     "lat_deg": -0.4170902853230725,
+     "distance_km": 680910279.9719875,
+     "lon_j2000_deg": 287.14531735753206,
+     "lat_j2000_deg": -0.41458094573200066,
+     "ra_date_hours": 19.26320819267657,
+     "dec_date_deg": -22.714956560910018
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 295.66070990003783,
+     "lat_deg": -0.29412533221722975,
+     "distance_km": 1397849569.38464,
+     "lon_j2000_deg": 295.3763914075102,
+     "lat_j2000_deg": -0.2917882984456577,
+     "ra_date_hours": 19.846389052067053,
+     "dec_date_deg": -21.29793996379738
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 40.445569285172766,
+     "lat_deg": -0.46860323045980634,
+     "distance_km": 2867839849.7650166,
+     "lon_j2000_deg": 40.1612421558056,
+     "lat_j2000_deg": -0.47052590160702634,
+     "ra_date_hours": 2.5454006597198986,
+     "dec_date_deg": 14.5077850694244
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 349.6180470138781,
+     "lat_deg": -1.1147257292050725,
+     "distance_km": 4326799336.996103,
+     "lon_j2000_deg": 349.3336830673195,
+     "lat_j2000_deg": -1.1144597736838788,
+     "ra_date_hours": 23.39314118794798,
+     "dec_date_deg": -5.135549051843727
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 292.63782606426525,
+     "lat_deg": -1.0752199885582756,
+     "distance_km": 5014548208.65793,
+     "lon_j2000_deg": 292.3534912159573,
+     "lat_j2000_deg": -1.0728138702032608,
+     "ra_date_hours": 19.64234024048747,
+     "dec_date_deg": -22.59711606063359
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 63.232758478310494,
+    "lat_deg": -1.787684829368859,
+    "distance_km": 400329.57712622377
+   }
+  },
+  {
+   "utc": "2026-02-02T02:02:02Z",
+   "tt_jd": [
+    2461073.5,
+    0.08554611111111111
+   ],
+   "tai_utc_s": 37.0,
+   "skyfield_delta_t_s": 69.11322177268516,
+   "skyfield_ut1_jd": [
+    2461073.5,
+    0.08474618956281614
+   ],
+   "skyfield_tdb_jd": [
+    2461073.5,
+    0.08554612038856704
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 313.22523040877144,
+     "lat_deg": 7.697681283020832e-05,
+     "distance_km": 147420625.1315035,
+     "lon_j2000_deg": 312.85874132578607,
+     "lat_j2000_deg": 0.002364545125088772,
+     "ra_date_hours": 21.046066880995017,
+     "dec_date_deg": -16.84801615986134
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 135.33989533717804,
+     "lat_deg": 2.106200366828027,
+     "distance_km": 371984.3618529633,
+     "lon_j2000_deg": 134.97330998762163,
+     "lat_j2000_deg": 2.1040078873786903,
+     "ra_date_hours": 9.230386258240989,
+     "dec_date_deg": 18.24714225012057
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 321.39259800732265,
+     "lat_deg": -1.8112017973245098,
+     "distance_km": 198026789.02762914,
+     "lon_j2000_deg": 321.0260192982057,
+     "lat_j2000_deg": -1.8092975371659956,
+     "ra_date_hours": 21.625175931305385,
+     "dec_date_deg": -16.085369764881914
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 319.538520050745,
+     "lat_deg": -1.37690976122744,
+     "distance_km": 254126845.85459176,
+     "lon_j2000_deg": 319.171964357887,
+     "lat_j2000_deg": -1.374914804327546,
+     "ra_date_hours": 21.493635392241288,
+     "dec_date_deg": -16.265793949399065
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 307.5769944347768,
+     "lat_deg": -1.046282013526068,
+     "distance_km": 355657634.21849823,
+     "lon_j2000_deg": 307.2104633915691,
+     "lat_j2000_deg": -1.043756072927635,
+     "ra_date_hours": 20.684586896373844,
+     "dec_date_deg": -19.386568427160768
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 107.24081520211205,
+     "lat_deg": 0.3070746319261885,
+     "distance_km": 646246163.6361384,
+     "lon_j2000_deg": 106.87431925988713,
+     "lat_j2000_deg": 0.3039077385750546,
+     "ra_date_hours": 7.248669849139201,
+     "dec_date_deg": 22.63133403728293
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 358.74811648174915,
+     "lat_deg": -2.170863215838098,
+     "distance_km": 1521790500.7421968,
+     "lon_j2000_deg": 358.3814981445231,
+     "lat_j2000_deg": -2.1710691498895036,
+     "ra_date_hours": 23.98102226002866,
+     "dec_date_deg": -2.4896035081256023
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 57.46157119734435,
+     "lat_deg": -0.18793630448648352,
+     "distance_km": 2875095493.005142,
+     "lon_j2000_deg": 57.09507679000386,
+     "lat_j2000_deg": -0.19095583313655773,
+     "ra_date_hours": 3.682056741486481,
+     "dec_date_deg": 19.40924739683415
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 0.1701159025855903,
+     "lat_deg": -1.3147851590177866,
+     "distance_km": 4569905933.940871,
+     "lon_j2000_deg": 359.8035486755488,
+     "lat_j2000_deg": -1.3150756091182743,
+     "ra_date_hours": 0.04527414951667559,
+     "dec_date_deg": -1.1386226903679344
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 303.7313943764322,
+     "lat_deg": -3.8070355848259134,
+     "distance_km": 5447273398.855189,
+     "lon_j2000_deg": 303.3647640329358,
+     "lat_j2000_deg": -3.804361250561698,
+     "ra_date_hours": 20.467530705312345,
+     "dec_date_deg": -23.01585144225816
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 134.4975221917257,
+    "lat_deg": 1.6178339835123503,
+    "distance_km": 372794.9460603018
+   }
+  },
+  {
+   "utc": "2031-07-23T19:00:00Z",
+   "tt_jd": [
+    2463070.5,
+    0.7924674074074074
+   ],
+   "tai_utc_s": 37.0,
+   "skyfield_delta_t_s": 69.10489024966948,
+   "skyfield_ut1_jd": [
+    2463070.5,
+    0.791667582288777
+   ],
+   "skyfield_tdb_jd": [
+    2463070.5,
+    0.7924674014819596
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 120.74908776780111,
+     "lat_deg": -9.580921616451175e-05,
+     "distance_km": 151986655.37274474,
+     "lon_j2000_deg": 120.30398163283563,
+     "lat_j2000_deg": -0.0034602572865325637,
+     "ra_date_hours": 8.197276047282273,
+     "dec_date_deg": 19.98513360480455
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 167.63671914490226,
+     "lat_deg": -4.68935066198694,
+     "distance_km": 397537.0909806625,
+     "lon_j2000_deg": 167.19194852737968,
+     "lat_j2000_deg": -4.689903734858465,
+     "ra_date_hours": 11.120138504693541,
+     "dec_date_deg": 0.5645496507057072
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 145.2051364342409,
+     "lat_deg": -2.3870345868926615,
+     "distance_km": 108578195.61807059,
+     "lon_j2000_deg": 144.76017912307034,
+     "lat_j2000_deg": -2.389106842189934,
+     "ra_date_hours": 9.777647414727983,
+     "dec_date_deg": 10.866700934778548
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 146.2420033411865,
+     "lat_deg": -3.9337861890306236,
+     "distance_km": 50332311.695207424,
+     "lon_j2000_deg": 145.7971452524563,
+     "lat_j2000_deg": -3.935793493415681,
+     "ra_date_hours": 9.808774369071745,
+     "dec_date_deg": 9.06316346791344
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 223.6421102411204,
+     "lat_deg": -1.8861571931698018,
+     "distance_km": 127518561.8531917,
+     "lon_j2000_deg": 223.19709438356264,
+     "lat_j2000_deg": -1.8830746640266254,
+     "ra_date_hours": 14.706290905491432,
+     "dec_date_deg": -17.72895856130475
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 259.9782188929583,
+     "lat_deg": 0.36167566999617085,
+     "distance_km": 666611667.2013592,
+     "lon_j2000_deg": 259.53311023654993,
+     "lat_j2000_deg": 0.36578579902369224,
+     "ra_date_hours": 17.275169635758992,
+     "dec_date_deg": -22.69460888015297
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 78.5959487692347,
+     "lat_deg": -1.4697519143330715,
+     "distance_km": 1461033489.512157,
+     "lon_j2000_deg": 78.15083011101271,
+     "lat_j2000_deg": -1.4738515482837442,
+     "ra_date_hours": 5.182407590918454,
+     "dec_date_deg": 21.479815934504035
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 85.2509921803743,
+     "lat_deg": 0.12004710177969304,
+     "distance_km": 2981752332.806258,
+     "lon_j2000_deg": 84.80588598382678,
+     "lat_j2000_deg": 0.11591893973528908,
+     "ra_date_hours": 5.654774539044922,
+     "dec_date_deg": 23.468390643840753
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 15.620858240516636,
+     "lat_deg": -1.5694115686260157,
+     "distance_km": 4423356086.374957,
+     "lon_j2000_deg": 15.175645892832813,
+     "lat_j2000_deg": -1.5708427320699663,
+     "ra_date_hours": 0.9996480000699556,
+     "dec_date_deg": 4.698711090519098
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 312.7291611548718,
+     "lat_deg": -6.672661856094127,
+     "distance_km": 5364485721.495863,
+     "lon_j2000_deg": 312.28369956325963,
+     "lat_j2000_deg": -6.6698672131664365,
+     "ra_date_hours": 21.14930854147241,
+     "dec_date_deg": -23.375960891566546
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 167.12222085904514,
+    "lat_deg": -5.081086146145082,
+    "distance_km": 402055.30200271204
+   }
+  },
+  {
+   "utc": "2037-01-01T00:00:00Z",
+   "tt_jd": [
+    2465059.5,
+    0.0008007407407407408
+   ],
+   "tai_utc_s": 37.0,
+   "skyfield_delta_t_s": 69.41471765509718,
+   "skyfield_ut1_jd": [
+    2465059.5,
+    -2.6703432302913836e-06
+   ],
+   "skyfield_tdb_jd": [
+    2465059.5,
+    0.0008007398770818226
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 280.9003901208643,
+     "lat_deg": -4.991326864310666e-05,
+     "distance_km": 147100266.89712247,
+     "lon_j2000_deg": 280.3871310551854,
+     "lat_j2000_deg": 0.004612069521319212,
+     "ra_date_hours": 18.790236869959823,
+     "dec_date_deg": -22.985425213823373
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 85.92230266112074,
+     "lat_deg": -3.5243876057892405,
+     "distance_km": 368186.31311393995,
+     "lon_j2000_deg": 85.40904637860238,
+     "lat_j2000_deg": -3.5292258564998544,
+     "ra_date_hours": 5.711502601033412,
+     "dec_date_deg": 19.8470678490263
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 265.44930505479596,
+     "lat_deg": 3.1548260952752165,
+     "distance_km": 111196564.34194249,
+     "lon_j2000_deg": 264.93604627135215,
+     "lat_j2000_deg": 3.1596645608137472,
+     "ra_date_hours": 17.67717952364577,
+     "dec_date_deg": -20.2014068135501
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 261.73344602470695,
+     "lat_deg": 0.5782081619283389,
+     "distance_km": 235938187.81505027,
+     "lon_j2000_deg": 261.22018379087484,
+     "lat_j2000_deg": 0.5830368478100277,
+     "ra_date_hours": 17.40273507424805,
+     "dec_date_deg": -22.59781300990017
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 247.8037667132116,
+     "lat_deg": 0.048254073077482695,
+     "distance_km": 342007662.17324173,
+     "lon_j2000_deg": 247.29050630681155,
+     "lat_j2000_deg": 0.052866723303831874,
+     "ra_date_hours": 16.402275687259213,
+     "dec_date_deg": -21.557147408094778
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 78.6455198171713,
+     "lat_deg": -0.4915941894325389,
+     "distance_km": 624550204.0314447,
+     "lon_j2000_deg": 78.13225580947308,
+     "lat_j2000_deg": -0.49639929782690356,
+     "ra_date_hours": 5.180013982341383,
+     "dec_date_deg": 22.457704532285046
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 152.5594503223954,
+     "lat_deg": 1.4853655905034306,
+     "distance_km": 1283634201.9020875,
+     "lon_j2000_deg": 152.0460756339261,
+     "lat_j2000_deg": 1.4834891871371794,
+     "ra_date_hours": 10.338045997578122,
+     "dec_date_deg": 11.945445083212991
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 107.85853874887184,
+     "lat_deg": 0.4476270117652851,
+     "distance_km": 2661161213.772269,
+     "lon_j2000_deg": 107.3452652494245,
+     "lat_j2000_deg": 0.44315623145302097,
+     "ra_date_hours": 7.294184970701535,
+     "dec_date_deg": 22.6851319353667
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 24.065441137558274,
+     "lat_deg": -1.709484377297663,
+     "distance_km": 4426398864.219767,
+     "lon_j2000_deg": 23.552055255906765,
+     "lat_j2000_deg": -1.711807015000386,
+     "ra_date_hours": 1.5277941627043594,
+     "dec_date_deg": 7.742352401618538
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 319.7692526582195,
+     "lat_deg": -8.571329236906138,
+     "distance_km": 5832636181.982743,
+     "lon_j2000_deg": 319.25540073160346,
+     "lat_j2000_deg": -8.568512055977594,
+     "ra_date_hours": 21.673087180562014,
+     "dec_date_deg": -22.999500377984763
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 84.93777060390025,
+    "lat_deg": -3.6635569980286404,
+    "distance_km": 368034.3284566885
+   }
+  },
+  {
+   "utc": "2043-05-30T10:10:10Z",
+   "tt_jd": [
+    2467399.5,
+    0.42452759259259254
+   ],
+   "tai_utc_s": 37.0,
+   "skyfield_delta_t_s": 70.1880529339749,
+   "skyfield_ut1_jd": [
+    2467399.5,
+    0.4237152308688197
+   ],
+   "skyfield_tdb_jd": [
+    2467399.5,
+    0.4245276036985281
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 68.92481908925579,
+     "lat_deg": -0.00017649566906921814,
+     "distance_km": 151637286.1235481,
+     "lon_j2000_deg": 68.31900750217467,
+     "lat_j2000_deg": -0.005616836294376219,
+     "ra_date_hours": 4.481109902861392,
+     "dec_date_deg": 21.784600673750717
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 322.01760783907963,
+     "lat_deg": -3.558531169944531,
+     "distance_km": 386705.2247742722,
+     "lon_j2000_deg": 321.41150194210775,
+     "lat_j2000_deg": -3.55540533184339,
+     "ra_date_hours": 21.705926045802,
+     "dec_date_deg": -17.532314081448746
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 44.7939239765492,
+     "lat_deg": -3.1373463753314925,
+     "distance_km": 138903544.43444988,
+     "lon_j2000_deg": 44.18790971757787,
+     "lat_j2000_deg": -3.141651709849494,
+     "ra_date_hours": 2.8852409230242992,
+     "dec_date_deg": 13.272706579424177
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 50.219068428199215,
+     "lat_deg": -1.231337100767218,
+     "distance_km": 240465048.48656762,
+     "lon_j2000_deg": 49.613186441247194,
+     "lat_j2000_deg": -1.2359726439108665,
+     "ra_date_hours": 3.208047821725274,
+     "dec_date_deg": 16.610462942093793
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 47.822480979789454,
+     "lat_deg": -0.3288244205737054,
+     "distance_km": 349214061.6558863,
+     "lon_j2000_deg": 47.21664945859941,
+     "lat_j2000_deg": -0.33331904936020806,
+     "ra_date_hours": 3.030435617708556,
+     "dec_date_deg": 16.82628804664866
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 271.2210551082213,
+     "lat_deg": 0.38219223617605863,
+     "distance_km": 646522099.4234256,
+     "lon_j2000_deg": 270.615247441631,
+     "lat_j2000_deg": 0.3878379394649414,
+     "ra_date_hours": 18.088464610522607,
+     "dec_date_deg": -23.048229532388973
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 223.45106779346648,
+     "lat_deg": 2.5417024425027868,
+     "distance_km": 1339627334.077009,
+     "lon_j2000_deg": 222.84508762406384,
+     "lat_j2000_deg": 2.54591996685253,
+     "ra_date_hours": 14.785409091702011,
+     "dec_date_deg": -13.448556680512178
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 133.99726593945454,
+     "lat_deg": 0.6720969714735854,
+     "distance_km": 2817059363.520017,
+     "lon_j2000_deg": 133.39140467591994,
+     "lat_j2000_deg": 0.6683409321662487,
+     "ra_date_hours": 9.111057735056026,
+     "dec_date_deg": 17.268829470768356
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 41.124607171426476,
+     "lat_deg": -1.7136771533225081,
+     "distance_km": 4592551807.833529,
+     "lon_j2000_deg": 40.51867691470683,
+     "lat_j2000_deg": -1.7177370940877459,
+     "ra_date_hours": 2.616315532178978,
+     "dec_date_deg": 13.534366231100824
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 331.3321267963941,
+     "lat_deg": -11.016206518389021,
+     "distance_km": 5940574869.217104,
+     "lon_j2000_deg": 330.7253070970842,
+     "lat_j2000_deg": -11.013888399031526,
+     "ra_date_hours": 22.502631852602036,
+     "dec_date_deg": -21.260470239511807
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 321.62674071273,
+    "lat_deg": -3.327666073626191,
+    "distance_km": 392288.370488231
+   }
+  },
+  {
+   "utc": "2050-12-31T23:00:00Z",
+   "tt_jd": [
+    2470171.5,
+    0.9591340740740741
+   ],
+   "tai_utc_s": 37.0,
+   "skyfield_delta_t_s": 71.67362302646458,
+   "skyfield_ut1_jd": [
+    2470171.5,
+    0.9583045182520086
+   ],
+   "skyfield_tdb_jd": [
+    2470171.5,
+    0.9591340731415798
+   ],
+   "geocentric": {
+    "sun": {
+     "naif": 10,
+     "lon_deg": 280.45490987188026,
+     "lat_deg": -0.00010287064175053856,
+     "distance_km": 147102539.07496807,
+     "lon_j2000_deg": 279.7391966204607,
+     "lat_j2000_deg": 0.006336983269856199,
+     "ra_date_hours": 18.75806430171033,
+     "dec_date_deg": -23.019006985545634
+    },
+    "moon": {
+     "naif": 301,
+     "lon_deg": 144.2963053961915,
+     "lat_deg": -4.90815799988146,
+     "distance_km": 399042.6944629114,
+     "lon_j2000_deg": 143.58108163487847,
+     "lat_j2000_deg": -4.911613369868956,
+     "ra_date_hours": 9.663455155994738,
+     "dec_date_deg": 8.783615545797007
+    },
+    "mercury": {
+     "naif": 199,
+     "lon_deg": 258.07335231943324,
+     "lat_deg": 1.8162068721308557,
+     "distance_km": 154652310.2603883,
+     "lon_j2000_deg": 257.3576115176181,
+     "lat_j2000_deg": 1.822815450033652,
+     "ra_date_hours": 17.14732911955117,
+     "dec_date_deg": -21.086501954900154
+    },
+    "venus": {
+     "naif": 299,
+     "lon_deg": 233.6694120964347,
+     "lat_deg": 3.218263972408324,
+     "distance_km": 106109973.26921828,
+     "lon_j2000_deg": 232.95350079074146,
+     "lat_j2000_deg": 3.2239249947480255,
+     "ra_date_hours": 15.474586511585526,
+     "dec_date_deg": -15.564608111461428
+    },
+    "mars_barycenter": {
+     "naif": 4,
+     "lon_deg": 5.442827311623183,
+     "lat_deg": -0.10183461443676067,
+     "distance_km": 175733378.1598962,
+     "lon_j2000_deg": 4.727102232258359,
+     "lat_j2000_deg": -0.1029825830720061,
+     "ra_date_hours": 0.33578447271195094,
+     "dec_date_deg": 2.068020481501207
+    },
+    "jupiter_barycenter": {
+     "naif": 5,
+     "lon_deg": 155.69109099217692,
+     "lat_deg": 1.0589983658756323,
+     "distance_km": 708644434.536646,
+     "lon_j2000_deg": 154.97526187843567,
+     "lat_j2000_deg": 1.056737049355214,
+     "ra_date_hours": 10.525568235704775,
+     "dec_date_deg": 10.405843599400413
+    },
+    "saturn_barycenter": {
+     "naif": 6,
+     "lon_deg": 307.7809914491566,
+     "lat_deg": -0.6425258972522304,
+     "distance_km": 1614187987.1323483,
+     "lon_j2000_deg": 307.0652280356645,
+     "lat_j2000_deg": -0.6375929436643305,
+     "ra_date_hours": 20.691048178871785,
+     "dec_date_deg": -18.937995521445956
+    },
+    "uranus_barycenter": {
+     "naif": 7,
+     "lon_deg": 175.5451587358834,
+     "lat_deg": 0.7764659886252472,
+     "distance_km": 2693601644.2834153,
+     "lon_j2000_deg": 174.82935506395404,
+     "lat_j2000_deg": 0.7764683721845629,
+     "ra_date_hours": 11.747962421888793,
+     "dec_date_deg": 2.482656185895525
+    },
+    "neptune_barycenter": {
+     "naif": 8,
+     "lon_deg": 55.898253670067035,
+     "lat_deg": -1.747957791763809,
+     "distance_km": 4354579566.810366,
+     "lon_j2000_deg": 55.18243961309253,
+     "lat_j2000_deg": -1.7537513346317952,
+     "ra_date_hours": 3.600498782550731,
+     "dec_date_deg": 17.52483669750576
+    },
+    "pluto_barycenter": {
+     "naif": 9,
+     "lon_deg": 338.80549475379104,
+     "lat_deg": -12.9450079189606,
+     "distance_km": 6306856154.441687,
+     "lon_j2000_deg": 338.08831432097867,
+     "lat_j2000_deg": -12.943090488672938,
+     "ra_date_hours": 23.03640560108184,
+     "dec_date_deg": -20.221483206750815
+    }
+   },
+   "moon_topocentric_kochi": {
+    "lon_deg": 144.05183286215617,
+    "lat_deg": -5.017259900509446,
+    "distance_km": 392938.49069463235
+   }
+  }
+ ]
+}

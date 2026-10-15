@@ -8,7 +8,7 @@ members = [
     "crates/kshana-houses",
     "crates/kshana-western",
     "crates/kshana-vedic",
-    "crates/kshana-ffi", "crates/kshana-sky", "crates/kshana-cli", "crates/kshana-events",
+    "crates/kshana-ffi", "crates/kshana-sky", "crates/kshana-cli", "crates/kshana-events", "crates/kshana-verify",
 ]
 
 [workspace.package]

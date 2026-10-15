@@ -4,9 +4,12 @@
 solver, SPK reader, frames, Asc/MC, four house systems, panchanga arithmetic, dasha
 layout, FFI surface, Android build script, CI.
 
-**M2 · Real sky (started).** Done: DE421 kernel in, light-time, aberration, IAU 2006
-bias-precession, ecliptic of date, daily motion, IERS loader, `kshana` CLI harness.
-Remaining: DE440s when NAIF is reachable; deflection; full IAU 2000A
+**M2 · Real sky (nearly done).** Done: DE421 kernel, light-time, aberration, IAU 2006
+bias-precession, full IAU 2000A nutation and CIO-based GAST from ERFA tables,
+ecliptic of date, daily motion, topocentric observer, true node, IERS loader,
+golden-vector verification against ERFA/jplephem/Skyfield, exact-event solver,
+`kshana chart` and `kshana next`. Remaining: DE440s when NAIF is reachable;
+deflection; full TDB series
 nutation and P03 precession from data tables; TDB from the kernel's own segment; IERS
 `finals2000A` loader for UT1 and polar motion; topocentric correction with WGS84 +
 geoid. Golden tests against JPL Horizons for Sun, Moon and planets at 50 epochs.

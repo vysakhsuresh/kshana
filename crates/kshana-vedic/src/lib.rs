@@ -5,10 +5,12 @@
 
 pub mod ayanamsa;
 pub mod dasha;
+pub mod kp;
 pub mod panchanga;
 
 pub use ayanamsa::{ayanamsa_degrees, Ayanamsa};
-pub use dasha::{vimshottari, DashaLord, DashaPeriod};
+pub use dasha::{subdivide, vimshottari, vimshottari_levels, DashaLord, DashaPeriod};
+pub use kp::{horary_longitude, kp_lords, sub_bounds, sub_of, sub_table, KpLords, Sub};
 pub use panchanga::{
     karana, nakshatra, tithi, yoga, Karana, Nakshatra, Tithi, Yoga, NAKSHATRA_SPAN,
 };

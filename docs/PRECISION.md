@@ -38,16 +38,26 @@ panchanga boundaries, where the relevant angular rate is well above the ephemeri
 For slow bodies the reported bracket is widened to the ephemeris-limited value rather
 than quoting a false microsecond.
 
-## What is verified today (milestone 2 in progress)
+## What is verified today, against independent reference implementations
 
-- Sky pipeline on DE421: apparent Sun longitude agrees with Meeus's independent
-  low-precision formula to < 0.01° at four epochs 2000–2040; Sun and Moon longitudes
-  agree to < 0.02° at the 2000-01-06 new moon; Mars has negative speed at its 2003
-  opposition. Next: Horizons golden files at 0.1″.
-- IERS Bulletin A loader reads `finals2000A.all`; UT1−UTC at 2000-01-01 = +0.3555 s.
-- Real-kernel reader: Earth–Sun at J2000 = 0.9833 au.
-- Nutation is still the 4-term truncation (≈1″). Full IAU 2000A/B is the next item.
-- Gravitational deflection not yet applied (< 0.01″ beyond 10° from the Sun).
+Golden vectors in `tests/golden/` are generated offline by `scripts/golden/generate.py`
+from ERFA 2.0.1 (the C port of SOFA), jplephem 2.24 and Skyfield 1.55, and replayed by
+`crates/kshana-verify`.
+
+| Quantity | Reference | Epochs | Agreement |
+|---|---|---|---|
+| ERA, GMST, GAST | ERFA `era00`, `gmst06`, `gst06a` | 24, 1950–2050 | ≤ 1e-12 rad |
+| Mean obliquity, FW precession angles | ERFA `obl06`, `pfw06` | 24 | ≤ 1e-15 rad |
+| Bias-precession-nutation matrix | ERFA `pnm06a` | 24 | ≤ 1e-14 |
+| Nutation IAU 2000A (+2006 rate), 2000B | ERFA `nut06a`, `nut00b` | 24 | ≤ 1e-13 rad |
+| SPK states, 12 segments | jplephem on DE421 | 12 | ≤ 1e-4 km, ≤ 1e-9 km/s (float noise) |
+| Apparent geocentric ecliptic lon/lat, 10 bodies | Skyfield `apparent().ecliptic_latlon(epoch='date')` | 20 | < 0.5″ |
+| Topocentric Moon from Kochi | Skyfield `wgs84.latlon` | 20 | < 0.5″ |
+| New Moon 2000-01-06, March equinox 2026, Mars stations 2003 | Astronomical Almanac dates | | < 1 min, < 2 min, exact dates |
+
+Remaining known omissions: gravitational light deflection (≤ 1.75″ at the solar limb,
+usually < 0.02″), the full TDB−TT series (≈ 30 µs in time, negligible in angle), and
+polar motion in the topocentric observer (< 0.3″).
 
 ## Earlier items
 

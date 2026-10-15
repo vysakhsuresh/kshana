@@ -1,0 +1,22 @@
+[package]
+name = "kshana-verify"
+description = "Golden-vector tests: Kshana against ERFA, jplephem and Skyfield (tests/golden/*.json)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = false
+
+[dependencies]
+
+[dev-dependencies]
+serde_json = "1.0"
+kshana-time = { workspace = true }
+kshana-ephem = { workspace = true }
+kshana-frames = { workspace = true }
+kshana-sky = { workspace = true }
+
+[lints]
+workspace = true
