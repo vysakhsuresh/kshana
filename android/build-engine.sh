@@ -23,7 +23,8 @@ if [ -z "${ANDROID_NDK_HOME:-}" ]; then
 fi
 echo "NDK: ${ANDROID_NDK_HOME:-<not set>}"
 
-cargo ndk -t "${ABIS[@]}" -o "$OUT" build --release -p kshana-ffi
+TARGETS=(); for a in "${ABIS[@]}"; do TARGETS+=(-t "$a"); done
+cargo ndk "${TARGETS[@]}" -o "$OUT" build --release -p kshana-ffi
 
 # Bindings are generated from the host build of the library (library mode reads the
 # UniFFI metadata embedded in the binary; the host artifact name differs per OS).
