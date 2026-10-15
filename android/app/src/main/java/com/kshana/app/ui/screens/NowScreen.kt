@@ -1,7 +1,10 @@
 package com.kshana.app.ui.screens
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,6 +13,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,42 +34,45 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kshana.app.data.EngineSettings
+import com.kshana.app.data.Place
+import com.kshana.app.data.ProfileStore
 import com.kshana.app.engine.EngineProvider
 import com.kshana.app.engine.Instants
 import com.kshana.app.ui.theme.KshanaColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import uniffi.kshana_ffi.AyanamsaChoice
 import uniffi.kshana_ffi.ChartRecord
-import uniffi.kshana_ffi.HouseSystem
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.cos
 import kotlin.math.sin
 
-/** Default place until the location picker lands. */
-private const val LAT = 9.9312
-private const val LON = 76.2673
-private const val PLACE = "Kochi · 9.9312°N 76.2673°E"
-
 private val SIGN_GLYPHS = listOf("♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓")
 
+/** The sky right now, from the profile's place (Kochi until a profile exists). */
 @Composable
-fun NowScreen() {
+fun NowScreen(
+    place: Place = ProfileStore.kochi,
+    settings: EngineSettings = EngineSettings(),
+    onAsk: () -> Unit = {},
+    onSettings: () -> Unit = {},
+) {
     val context = LocalContext.current
+    val placeLine = "${place.name} · ${"%.4f".format(place.latitude)}°${if (place.latitude >= 0) "N" else "S"} ${"%.4f".format(place.longitude)}°${if (place.longitude >= 0) "E" else "W"}"
     var chart by remember { mutableStateOf<ChartRecord?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var tick by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
     // The chart is recomputed every second on a background thread; the clock ticks at ~30 Hz.
-    LaunchedEffect(Unit) {
+    LaunchedEffect(place, settings) {
         while (true) {
             try {
                 val engine = EngineProvider.get(context)
                 chart = withContext(Dispatchers.Default) {
-                    engine.chart(Instants.now(), LAT, LON, 0.0, HouseSystem.PLACIDUS, AyanamsaChoice.LAHIRI, false)
+                    engine.chart(Instants.now(), place.latitude, place.longitude, 0.0, settings.houseSystem, settings.ayanamsa, settings.topocentricMoon)
                 }
                 error = null
             } catch (e: Exception) {
@@ -82,10 +92,23 @@ fun NowScreen() {
         modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp).padding(top = 48.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("KSHANA", color = KshanaColors.Gold, fontFamily = FontFamily.Serif, fontSize = 22.sp, letterSpacing = 7.sp)
-            Text(PLACE.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    "ASK",
+                    style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
+                    modifier = Modifier
+                        .border(1.dp, KshanaColors.Gold, RoundedCornerShape(22.dp))
+                        .clickable(onClick = onAsk)
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                )
+                Box(Modifier.size(44.dp).clickable(onClick = onSettings), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = KshanaColors.Muted)
+                }
+            }
         }
+        Text(placeLine.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
         Clock(tick)
         chart?.let { Wheel(it) } ?: Spacer(Modifier.height(300.dp))
         chart?.let { PanchangaRow(it) }

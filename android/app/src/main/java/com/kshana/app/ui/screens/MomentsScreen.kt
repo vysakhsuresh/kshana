@@ -35,15 +35,15 @@ private val DAY = DateTimeFormatter.ofPattern("EEE d MMM")
 private val TIME = DateTimeFormatter.ofPattern("HH:mm:ss")
 
 @Composable
-fun MomentsScreen() {
+fun MomentsScreen(ayanamsa: AyanamsaChoice = AyanamsaChoice.LAHIRI) {
     val context = LocalContext.current
     var events by remember { mutableStateOf<List<EventRecord>>(emptyList()) }
     var status by remember { mutableStateOf("solving the next 14 days to the microsecond…") }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(ayanamsa) {
         try {
             val engine = EngineProvider.get(context)
-            events = withContext(Dispatchers.Default) { engine.nextEvents(Instants.now(), 14u, AyanamsaChoice.LAHIRI) }
+            events = withContext(Dispatchers.Default) { engine.nextEvents(Instants.now(), 14u, ayanamsa) }
             status = "${events.size} exact instants · each solved to 1 µs"
         } catch (e: Exception) {
             status = e.message ?: e.toString()

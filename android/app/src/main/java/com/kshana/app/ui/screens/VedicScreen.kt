@@ -139,7 +139,7 @@ fun VedicScreen(profile: BirthProfile, settings: EngineSettings) {
         Text("RASI · SIDEREAL", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         Text(profile.name, style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         Text(
-            "${profile.birthLocal().format(DATE_TIME_S)} · ${profile.placeName} · ${settings.ayanamsa.name.lowercase().replaceFirstChar { it.uppercase() }}",
+            "${profile.birthLocal().format(DATE_TIME_S)} · ${profile.placeName} · ${settings.ayanamsa.name.lowercase().replace('_', '-').replaceFirstChar { it.uppercase() }}",
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
         )
         ErrorLine(error)
