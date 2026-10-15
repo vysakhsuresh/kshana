@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kshana.app.data.BirthProfile
+import com.kshana.app.data.CalibrationStore
 import com.kshana.app.data.EngineSettings
 import com.kshana.app.data.ProfileStore
 import com.kshana.app.engine.EngineProvider
@@ -53,6 +54,7 @@ fun ReadingScreen(profile: BirthProfile, settings: EngineSettings, onAreas: () -
     var now by remember { mutableStateOf<ExactInstant?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
+    var answersVersion by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(profile, settings) {
         loading = true
@@ -122,6 +124,16 @@ fun ReadingScreen(profile: BirthProfile, settings: EngineSettings, onAreas: () -
                 "cusp ${p.primaryCusp} · group ${p.group.joinToString(" ")} · sub lord ${p.subLord} · strength ${"%.2f".format(p.strength)}",
                 fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted, modifier = Modifier.padding(top = 4.dp),
             )
+            val ruleIds = remember(r) { (listOf(p.ruleId) + r.parashariHits.map { it.ruleId }).distinct() }
+            val calibration = remember(ruleIds, answersVersion) { ruleIds.map { it to CalibrationStore.stats(context, it) } }
+            for ((id, st) in calibration) {
+                if (st.second > 0) {
+                    Text(
+                        "rule $id · right ${st.first} of ${st.second} ${if (st.second == 1) "time" else "times"} for you",
+                        fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Sky, modifier = Modifier.padding(top = 2.dp),
+                    )
+                }
+            }
 
             SectionLabel("Parashari")
             Text("Parashari assessment ${"%.2f".format(r.parashariScore)}, lord ${r.parashariLord}", fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text)
@@ -134,7 +146,7 @@ fun ReadingScreen(profile: BirthProfile, settings: EngineSettings, onAreas: () -
             )
 
             SectionLabel("Did this happen?")
-            DidItHappen(area = p.area, antarStart = antar?.start ?: maha?.start)
+            DidItHappen(area = p.area, antarStart = antar?.start ?: maha?.start, ruleIds = ruleIds, onAnswered = { answersVersion++ })
 
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -182,15 +194,24 @@ private fun FactorRow(key: Int, factor: String, ruleId: String, source: String, 
     }
 }
 
-/** Yes / Not yet, remembered per area and antardasha start. */
+/**
+ * Yes / Not yet, remembered per area and antardasha start. The same answer is also
+ * recorded against every rule that supported this reading, for the calibration lines.
+ */
 @Composable
-private fun DidItHappen(area: String, antarStart: ExactInstant?) {
+private fun DidItHappen(area: String, antarStart: ExactInstant?, ruleIds: List<String>, onAnswered: () -> Unit) {
     val context = LocalContext.current
-    val key = "answer:$area:${antarStart?.taiSeconds ?: 0L}"
+    val window = "$area:${antarStart?.taiSeconds ?: 0L}"
+    val key = "answer:$window"
     var answer by remember(key) { mutableIntStateOf(ProfileStore.prefs(context).getInt(key, 0)) }
     fun set(v: Int) {
         answer = v
         ProfileStore.prefs(context).edit().putInt(key, v).apply()
+        for (id in ruleIds) {
+            if (v == 0) CalibrationStore.clear(context, id, window)
+            else CalibrationStore.record(context, id, window, happened = v == 1)
+        }
+        onAnswered()
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Chip("YES", selected = answer == 1, onClick = { set(if (answer == 1) 0 else 1) })

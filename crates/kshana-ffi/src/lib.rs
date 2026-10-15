@@ -1192,6 +1192,314 @@ impl Engine {
     }
 }
 
+/// One self-test check against a reference value.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct CheckRecord {
+    pub name: String,
+    pub expected: f64,
+    pub got: f64,
+    pub tolerance: f64,
+    pub unit: String,
+    pub pass: bool,
+}
+
+/// The self-test result.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct SelfTestRecord {
+    pub checks: Vec<CheckRecord>,
+    pub all_pass: bool,
+}
+
+/// One row of the error budget.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct BudgetRow {
+    pub layer: String,
+    pub method: String,
+    pub error: String,
+}
+
+/// Ashtakavarga tables.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct AshtakavargaRecord {
+    /// Sarvashtakavarga bindus per sign, 0 = Aries.
+    pub sarva: Vec<u8>,
+    /// Bhinnashtakavarga rows Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn.
+    pub bhinna: Vec<Vec<u8>>,
+    pub lagna_sign: u8,
+}
+
+/// The error budget, as documented in docs/PRECISION.md.
+#[uniffi::export]
+pub fn error_budget() -> Vec<BudgetRow> {
+    let row = |l: &str, m: &str, e: &str| BudgetRow {
+        layer: l.into(),
+        method: m.into(),
+        error: e.into(),
+    };
+    vec![
+        row("Civil time → TAI", "integer leap-second table (IERS Bulletin C)", "exact"),
+        row("TAI → TT", "+32.184 s by definition", "exact"),
+        row("TT → TDB", "truncated Fairhead–Bretagnon series", "about 30 µs in time; no visible effect on positions"),
+        row("UTC → UT1", "IERS finals2000A when bundled, else ΔT table", "0.1 ms measured; up to seconds for years beyond the table"),
+        row("Planet positions", "JPL DE421 kernel read directly (DE440 when fetched)", "Moon a few centimetres; planets under 0.01″"),
+        row("Frames", "IAU 2006 precession, IAU 2000A nutation, CIO-based sidereal time; matches ERFA to 1e-12 rad", "under 0.001″"),
+        row("Apparent places", "light-time, aberration; no gravitational deflection yet", "under 0.02″ except within 10° of the Sun (up to 1.75″)"),
+        row("Topocentric Moon", "WGS84 observer, no polar motion", "under 0.3″"),
+        row("Exact moments", "Brent root finding on the above", "1 µs in time; limited by the position errors above"),
+        row("Ayanamsa", "epoch value plus IAU 2006 precession; not yet checked against the Indian Astronomical Ephemeris", "unknown below 1″; comparison pending"),
+        row("Your birth time", "the window you entered", "the dominant error in every chart: 4 minutes moves the Ascendant about 1°"),
+        row("Interpretation", "rules with ids and sources (docs/RULES.md); no sentence without a rule", "not a measurement: a tradition's claim, calibrated by your own feedback"),
+    ]
+}
+
+#[uniffi::export]
+impl Engine {
+    /// Run the built-in checks against reference values from ERFA and Skyfield on the
+    /// device's own copy of the engine and kernel.
+    pub fn self_test(&self) -> SelfTestRecord {
+        let j2000 = Instant::j2000();
+        let tt = j2000.tt_jd();
+        let ut1 = kshana_time::TwoPartJd {
+            jd1: 2_451_544.5,
+            jd2: 0.500_004_109_254_629_7,
+        };
+        let t = tt.centuries_since_j2000();
+        let era = kshana_frames::earth_rotation_angle(ut1);
+        let (dpsi, _) = kshana_frames::nutation_iau2006a(t);
+        let mut checks = Vec::new();
+        let mut push = |name: &str, expected: f64, got: f64, tol: f64, unit: &str| {
+            checks.push(CheckRecord {
+                name: name.into(),
+                expected,
+                got,
+                tolerance: tol,
+                unit: unit.into(),
+                pass: (got - expected).abs() <= tol,
+            });
+        };
+        push(
+            "Earth rotation angle at J2000 (ERFA era00)",
+            4.894_987_102_720_204,
+            era,
+            1e-12,
+            "rad",
+        );
+        push(
+            "Mean obliquity at J2000 (ERFA obl06)",
+            0.409_092_600_595_964_53,
+            kshana_frames::mean_obliquity_iau2006(t),
+            1e-15,
+            "rad",
+        );
+        push(
+            "Nutation in longitude at J2000 (ERFA nut06a)",
+            -6.754_422_946_933_838e-5,
+            dpsi,
+            1e-13,
+            "rad",
+        );
+        push(
+            "Apparent sidereal time at J2000 (ERFA gst06a)",
+            4.894_925_213_091_799,
+            kshana_frames::gast(era, t),
+            1e-12,
+            "rad",
+        );
+        match self.spk.state(Body::Earth, Body::Sun, 0.0) {
+            Ok(st) => {
+                let r = (st.position[0].powi(2) + st.position[1].powi(2) + st.position[2].powi(2))
+                    .sqrt();
+                push(
+                    "Earth–Sun distance at J2000 (jplephem)",
+                    147_103_726.96,
+                    r,
+                    50.0,
+                    "km",
+                );
+            }
+            Err(_) => push(
+                "Earth–Sun distance at J2000 (jplephem)",
+                147_103_726.96,
+                f64::NAN,
+                50.0,
+                "km",
+            ),
+        }
+        match kshana_sky::apparent(&self.spk, Body::Sun, j2000) {
+            Ok(a) => push(
+                "Apparent Sun longitude at J2000 (Skyfield)",
+                280.368_922_572_387_76,
+                a.longitude,
+                0.5 / 3_600.0,
+                "deg",
+            ),
+            Err(_) => push(
+                "Apparent Sun longitude at J2000 (Skyfield)",
+                280.368_922_572_387_76,
+                f64::NAN,
+                0.5 / 3_600.0,
+                "deg",
+            ),
+        }
+        match kshana_sky::apparent(&self.spk, Body::Moon, j2000) {
+            Ok(a) => push(
+                "Apparent Moon longitude at J2000 (Skyfield)",
+                223.323_800_234_173_72,
+                a.longitude,
+                0.5 / 3_600.0,
+                "deg",
+            ),
+            Err(_) => push(
+                "Apparent Moon longitude at J2000 (Skyfield)",
+                223.323_800_234_173_72,
+                f64::NAN,
+                0.5 / 3_600.0,
+                "deg",
+            ),
+        }
+        // New Moon 2000-01-06 18:14 UTC (Astronomical Almanac), solved by the engine
+        let from = Utc::new(2000, 1, 1, 0, 0, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        let to = Utc::new(2000, 1, 31, 0, 0, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        let want = Utc::new(2000, 1, 6, 18, 14, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        let got = kshana_events::new_moons(&self.spk, from, to, kshana_events::MICROSECOND_NS)
+            .ok()
+            .and_then(|v| v.first().map(|e| e.root.t.ns_since(want) as f64 / 1e9))
+            .unwrap_or(f64::NAN);
+        push(
+            "New Moon 2000-01-06 18:14 UTC (Almanac), offset",
+            0.0,
+            got,
+            60.0,
+            "s",
+        );
+        let all_pass = checks.iter().all(|c| c.pass);
+        SelfTestRecord { checks, all_pass }
+    }
+
+    /// Ashtakavarga for a natal chart.
+    pub fn ashtakavarga(
+        &self,
+        birth: ExactInstant,
+        latitude_deg: f64,
+        longitude_deg: f64,
+        ayanamsa: AyanamsaChoice,
+    ) -> Result<AshtakavargaRecord, KshanaError> {
+        let input = ChartInput {
+            instant: birth.into(),
+            observer: Observer {
+                latitude_deg,
+                longitude_deg,
+                height_m: 0.0,
+            },
+            system: kshana_houses::HouseSystem::Placidus,
+            ayanamsa: ayanamsa.into(),
+            topocentric_moon: false,
+        };
+        let ch = compute(&self.spk, self.eop.as_ref(), &input)
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        let facts = kshana_rules::Facts::from_chart(&ch);
+        Ok(AshtakavargaRecord {
+            sarva: kshana_rules::sarva_for(&facts).to_vec(),
+            bhinna: kshana_rules::bhinna_for(&facts)
+                .iter()
+                .map(|r| r.to_vec())
+                .collect(),
+            lagna_sign: facts.lagna_sign,
+        })
+    }
+
+    /// A complete, self-describing report of a natal chart and its readings at `at`, as
+    /// JSON, for export: every input, every number, every rule that fired, and the
+    /// provenance. Anyone can check it against another ephemeris.
+    #[allow(clippy::too_many_arguments)]
+    pub fn reading_report_json(
+        &self,
+        birth: ExactInstant,
+        latitude_deg: f64,
+        longitude_deg: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        at: ExactInstant,
+    ) -> Result<String, KshanaError> {
+        use serde_json::{json, Value};
+        let ch = self.chart(
+            birth,
+            latitude_deg,
+            longitude_deg,
+            0.0,
+            system,
+            ayanamsa,
+            false,
+        )?;
+        let readings = self.area_readings(
+            birth,
+            latitude_deg,
+            longitude_deg,
+            0.0,
+            system,
+            ayanamsa,
+            at,
+            5,
+        )?;
+        let yogas = self.yogas(birth, latitude_deg, longitude_deg, ayanamsa)?;
+        let av = self.ashtakavarga(birth, latitude_deg, longitude_deg, ayanamsa)?;
+        let inst = |i: &ExactInstant| -> Value {
+            let u = utc_from_instant(*i);
+            json!({
+                "tai_seconds": i.tai_seconds, "nanos": i.nanos,
+                "utc": format!("{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:09}Z", u.year, u.month, u.day, u.hour, u.minute, u.second, u.nanos)
+            })
+        };
+        let hit = |h: &HitRecord| json!({"rule_id": h.rule_id, "source": h.source, "weight": h.weight, "factors": h.factors});
+        let report = json!({
+            "kshana_report": 1,
+            "engine": ch.provenance_engine,
+            "kernel": ch.provenance_kernel,
+            "ut1": ch.provenance_ut1,
+            "models": ch.provenance_models,
+            "input": {"birth": inst(&birth), "latitude_deg": latitude_deg, "longitude_deg": longitude_deg,
+                      "house_system": format!("{system:?}"), "ayanamsa": format!("{ayanamsa:?}"), "judged_at": inst(&at)},
+            "chart": {
+                "tt_jd": [ch.tt_jd1, ch.tt_jd2], "lst_deg": ch.lst_deg, "obliquity_deg": ch.obliquity_deg, "ayanamsa_deg": ch.ayanamsa_deg,
+                "bodies": ch.bodies.iter().map(|b| json!({"name": b.name, "tropical": b.tropical, "sidereal": b.sidereal, "latitude": b.latitude,
+                    "speed": b.speed, "distance_km": b.distance_km, "house": b.house, "nakshatra_index": b.nakshatra_index, "pada": b.pada,
+                    "kp": [b.kp_star, b.kp_sub, b.kp_sub_sub]})).collect::<Vec<_>>(),
+                "mean_node_tropical": ch.mean_node_tropical, "true_node_tropical": ch.true_node_tropical,
+                "cusps_tropical": ch.cusps_tropical, "cusps_sidereal": ch.cusps_sidereal,
+                "panchanga": {"tithi": ch.panchanga.tithi, "tithi_number": ch.panchanga.tithi_number, "is_shukla": ch.panchanga.is_shukla,
+                    "nakshatra": ch.panchanga.nakshatra, "pada": ch.panchanga.pada, "yoga": ch.panchanga.yoga, "karana": ch.panchanga.karana},
+            },
+            "ashtakavarga": {"sarva": av.sarva, "bhinna": av.bhinna, "lagna_sign": av.lagna_sign},
+            "yogas": yogas.iter().map(|y| json!({"name": y.name, "rule": hit(&y.hit)})).collect::<Vec<_>>(),
+            "areas": readings.iter().map(|r| json!({
+                "area": r.promise.area, "kp_promised": r.promise.promised, "kp_strength": r.promise.strength,
+                "kp_sub_lord": r.promise.sub_lord, "kp_rule": {"rule_id": r.promise.rule_id, "source": r.promise.source, "factors": r.promise.factors},
+                "parashari_score": r.parashari_score, "parashari_lord": r.parashari_lord,
+                "parashari_rules": r.parashari_hits.iter().map(hit).collect::<Vec<_>>(),
+                "traditions_agree": r.traditions_agree, "agreeing_levels": r.agreeing_levels,
+                "funnel": r.funnel.iter().map(|l| json!({"level": l.level, "lord": l.lord, "start": inst(&l.start), "end": inst(&l.end),
+                    "supports": l.supports.iter().map(|s| json!({"house": s.house, "level": s.level})).collect::<Vec<_>>()})).collect::<Vec<_>>(),
+            })).collect::<Vec<_>>(),
+            "error_budget": error_budget().iter().map(|b| json!({"layer": b.layer, "method": b.method, "error": b.error})).collect::<Vec<_>>(),
+            "statement": "Every number above is reproducible from the named kernel and models. Every sentence the app shows traces to a rule listed here. Nothing is computed on a server."
+        });
+        serde_json::to_string_pretty(&report).map_err(|e| KshanaError::Engine(e.to_string()))
+    }
+}
+
 /// Vimshottari chain containing `at`, from mahadasha down `depth` levels (max 5),
 /// for a birth with the Moon at `moon_sidereal` degrees.
 #[uniffi::export]

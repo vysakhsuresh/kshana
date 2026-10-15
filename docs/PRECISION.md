@@ -55,6 +55,10 @@ from ERFA 2.0.1 (the C port of SOFA), jplephem 2.24 and Skyfield 1.55, and repla
 | Topocentric Moon from Kochi | Skyfield `wgs84.latlon` | 20 | < 0.5″ |
 | New Moon 2000-01-06, March equinox 2026, Mars stations 2003 | Astronomical Almanac dates | | < 1 min, < 2 min, exact dates |
 | Sunrise and sunset, Kochi, 2026-03-20 | hand calculation (equation of time, −0°50′ altitude) | | < 3 min of the estimate; solver itself to 1 ms |
+| Ayanamsa, Lahiri, Raman, Krishnamurti, Fagan–Bradley, true equinox | Swiss Ephemeris 2.10.03 `get_ayanamsa_ex_ut` | 16, 1900–2050 | ≤ 0.002″ |
+| House cusps, ten systems, five latitudes | Swiss Ephemeris `houses_ex` | 12 charts | < 1″ (Placidus and Koch undefined inside the polar circle in both) |
+| Apparent positions, ten bodies | Swiss Ephemeris Moshier mode | 12, 1950–2050 | within Moshier's own accuracy (≤ 3″ planets, ≤ 15″ Moon); the Skyfield/DE comparison above is the tighter one |
+| Sunrise and sunset, Kochi and London | Swiss Ephemeris `rise_trans` (default convention) | 3 dates | < 20 s |
 | Solar return 2026 for a 1990-10-29 birth | Sun returns to the natal longitude | | < 1e-6° at the solved instant |
 
 ## The Android shell
@@ -68,6 +72,16 @@ verification step.
 Remaining known omissions: gravitational light deflection (≤ 1.75″ at the solar limb,
 usually < 0.02″), the full TDB−TT series (≈ 30 µs in time, negligible in angle), and
 polar motion in the topocentric observer (< 0.3″).
+
+## Ayanamsa, precisely
+
+Each ayanamsa is defined here as a fixed direction on the sky: the sidereal zero point,
+anchored at 2000-01-01T12:00 UTC to the Swiss Ephemeris true-equinox value and carried to
+the date with the same IAU 2006/2000A precession-nutation used for the planets. The
+result is on the true equinox of date, the frame of the apparent longitudes it is
+subtracted from. The earlier mean-equinox approximation differed from this by up to 17″
+depending on the year (the nutation in longitude); the comparison table above records
+the new agreement.
 
 ## Earlier items
 

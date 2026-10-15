@@ -2,6 +2,7 @@ package com.kshana.app.ui.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -50,6 +51,7 @@ import com.kshana.app.engine.Instants
 import com.kshana.app.ui.theme.KshanaColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import uniffi.kshana_ffi.AshtakavargaRecord
 import uniffi.kshana_ffi.ChartRecord
 import uniffi.kshana_ffi.DashaRecord
 import uniffi.kshana_ffi.DashaRow
@@ -71,7 +73,13 @@ private val LEVEL_NAMES = listOf("Maha", "Antar", "Pratyantar", "Sookshma", "Pra
 private data class VargaPlacement(val name: String, val longitude: Double)
 
 /** Everything the screen computes in one background pass. */
-private data class VedicLoad(val chart: ChartRecord, val chain: List<DashaRecord>, val table: List<DashaRow>, val detail: PanchangaDetail)
+private data class VedicLoad(
+    val chart: ChartRecord,
+    val chain: List<DashaRecord>,
+    val table: List<DashaRow>,
+    val detail: PanchangaDetail,
+    val ashtakavarga: AshtakavargaRecord,
+)
 
 /** Rasi (sidereal): North Indian chart, varga chooser, Vimshottari, birth panchanga. */
 @Composable
@@ -81,6 +89,7 @@ fun VedicScreen(profile: BirthProfile, settings: EngineSettings) {
     var chain by remember { mutableStateOf<List<DashaRecord>>(emptyList()) }
     var table by remember { mutableStateOf<List<DashaRow>>(emptyList()) }
     var detail by remember { mutableStateOf<PanchangaDetail?>(null) }
+    var ashtakavarga by remember { mutableStateOf<AshtakavargaRecord?>(null) }
     var now by remember { mutableStateOf<ExactInstant?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var vargaN by remember { mutableStateOf(1u) }
@@ -102,12 +111,14 @@ fun VedicScreen(profile: BirthProfile, settings: EngineSettings) {
                     chain = dashaChain(moon, birth, at, 3u),
                     table = dashaTable(moon, birth),
                     detail = engine.panchangaDetail(birth, profile.latitude, profile.longitude, settings.ayanamsa),
+                    ashtakavarga = engine.ashtakavarga(birth, profile.latitude, profile.longitude, settings.ayanamsa),
                 )
             }
             chart = r.chart
             chain = r.chain
             table = r.table
             detail = r.detail
+            ashtakavarga = r.ashtakavarga
             now = at
             error = null
         } catch (e: Exception) {
@@ -153,6 +164,7 @@ fun VedicScreen(profile: BirthProfile, settings: EngineSettings) {
             }
             Text("${VARGA_NAMES[vargaN] ?: "D$vargaN"} · lagna ${degMin(lagna)} ${signName(lagna)}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { NorthIndianChart(lagna, placements) }
+            ashtakavarga?.let { AshtakavargaRow(it) }
 
             SectionLabel("Vimshottari")
             val at = now
@@ -215,6 +227,38 @@ fun VedicScreen(profile: BirthProfile, settings: EngineSettings) {
                 style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(top = 12.dp),
             )
         }
+    }
+}
+
+/**
+ * Sarvashtakavarga: twelve cells from Aries, the lagna sign outlined in gold, a sign with
+ * 28 bindus or more (the mean is 28) in gold figures.
+ */
+@Composable
+private fun AshtakavargaRow(a: AshtakavargaRecord) {
+    val lagna = a.lagnaSign.toInt()
+    Column(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+        Text("SARVASHTAKAVARGA", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            for (i in 0 until 12) {
+                val bindus = a.sarva.getOrNull(i)?.toInt() ?: 0
+                val isLagna = i == lagna
+                val shape = RoundedCornerShape(4.dp)
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .clip(shape)
+                        .background(KshanaColors.Surface)
+                        .border(1.dp, if (isLagna) KshanaColors.Gold else KshanaColors.LineSoft, shape)
+                        .padding(vertical = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(SIGN_SHORT[i].take(2), fontFamily = FontFamily.SansSerif, fontSize = 8.sp, color = if (isLagna) KshanaColors.Gold else KshanaColors.Muted)
+                    Text(bindus.toString(), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = if (bindus >= 28) KshanaColors.Gold else KshanaColors.Sky)
+                }
+            }
+        }
+        Text("bindus per sign from Aries · 28 is the mean · lagna outlined", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(top = 4.dp))
     }
 }
 

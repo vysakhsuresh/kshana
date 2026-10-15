@@ -62,6 +62,7 @@ fun SettingsScreen(
     settings: EngineSettings,
     onSettingsChanged: (EngineSettings) -> Unit,
     onEditBirth: () -> Unit,
+    onTrust: () -> Unit,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -159,5 +160,9 @@ fun SettingsScreen(
         }
         Spacer(Modifier.height(8.dp))
         Text("Everything is computed on this phone. Nothing leaves it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+
+        SectionLabel("Trust")
+        Text("What the app does not know, a self-test on this phone, the error budget, and the full report to export.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+        QuietButton("TRUST & VERIFICATION", onClick = onTrust)
     }
 }

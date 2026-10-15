@@ -26,6 +26,7 @@ straddling a sign boundary split in two. Horary number n → start of sub n as t
 | KS-B-0002 | The lord in a kendra or trikona protects the house; in 6, 8 or 12 it harms it | BPHS, Bhava phala |
 | KS-B-0003 | Benefics in a house support it, malefics afflict it (Mercury benefic unless with malefics; Moon benefic when waxing) | BPHS |
 | KS-B-0004 | Aspects of benefics strengthen, of malefics weaken (graha drishti: all 7th; Mars 4, 8; Jupiter 5, 9; Saturn 3, 10; nodes 5, 7, 9 by convention) | BPHS, Drishti |
+| KS-B-0006 | A house with more than 28 bindus in Sarvashtakavarga gives; fewer than 25 withholds (table checked by the fixed row totals 48, 49, 39, 54, 56, 52, 39) | BPHS, Ashtakavargadhyaya |
 | KS-B-0005 | The natural karaka must be sound (Career Saturn, Marriage Venus, Children Jupiter, Wealth Jupiter, Health Sun, Property Mars, Education Mercury, Foreign Rahu) | BPHS, Karakadhyaya |
 | (period quality) | A dasha lord that owns a kendra or trikona or a house of the matter, well dignified and not in a dusthana, gives the matter | BPHS, Dasha phala |
 
@@ -40,7 +41,8 @@ straddling a sign boundary split in two. Horary number n → start of sub n as t
 | KS-Y-0020 | Raja yoga | A kendra lord and a trikona lord conjoined, in mutual aspect, or in exchange | BPHS, Raja yogadhyaya |
 | KS-Y-0030 | Dhana yoga | 2nd and 11th lords (or with 5th/9th) in association | BPHS, Dhana yogadhyaya |
 | KS-Y-0040 | Viparita Raja | Lord of 6, 8 or 12 in another of those houses | Uttara Kalamrita; Phaladeepika |
-| KS-Y-0050 | Kemadruma | No planet (Sun and nodes excluded) in the 2nd or 12th from the Moon; cancellations not yet applied | BPHS, Chandra yogas |
+| KS-Y-0050 | Kemadruma | No planet (Sun and nodes excluded) in the 2nd or 12th from the Moon, and no cancellation | BPHS, Chandra yogas |
+| KS-Y-0051 | Kemadruma (cancelled) | As above, but a planet stands in a kendra from the Moon, or the Moon is in a kendra from the lagna, or Jupiter is with or aspects the Moon | Phaladeepika 6; Jataka Parijata |
 | KS-Y-0060 | Neecha Bhanga | Debilitated planet whose dispositor is in a kendra from the lagna or the Moon | Phaladeepika 7 |
 | KS-Y-0070 | Kala Sarpa | All seven grahas on one side of the nodal axis | Later texts (not BPHS) |
 

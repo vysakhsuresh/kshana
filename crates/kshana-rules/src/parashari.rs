@@ -359,7 +359,9 @@ pub fn yogas(facts: &Facts) -> Vec<Yoga> {
             });
         }
     }
-    // Kemadruma: no graha (Sun and nodes excluded) in the 2nd or 12th from the Moon.
+    // Kemadruma: no graha (Sun and nodes excluded) in the 2nd or 12th from the Moon,
+    // cancelled (bhanga) when a planet is in a kendra from the Moon, the Moon is in a
+    // kendra from the lagna, or the Moon is conjoined with or aspected by Jupiter.
     let flanked = facts.planets.iter().any(|p| {
         !matches!(p.graha, Sun | Moon | Rahu | Ketu) && {
             let d = (p.sign as i32 - moon.sign as i32).rem_euclid(12);
@@ -367,15 +369,44 @@ pub fn yogas(facts: &Facts) -> Vec<Yoga> {
         }
     });
     if !flanked {
-        out.push(Yoga {
-            name: "Kemadruma",
-            hit: Hit {
-                rule_id: "KS-Y-0050",
-                source: "BPHS, Chandra yogas: no planet on either side of the Moon (cancellations not yet applied)",
-                weight: 0.4,
-                factors: vec!["no planet in the 2nd or 12th sign from the Moon".into()],
-            },
+        let kendra_from_moon = facts.planets.iter().any(|p| {
+            !matches!(p.graha, Moon | Rahu | Ketu)
+                && is_kendra(((p.sign as i32 - moon.sign as i32).rem_euclid(12) + 1) as u8)
         });
+        let moon_in_kendra = is_kendra(moon.rasi_house);
+        let jupiter_on_moon = same_sign(facts, Moon, Jupiter)
+            || aspected_houses(Jupiter, jup.rasi_house).contains(&moon.rasi_house);
+        let mut cancels = Vec::new();
+        if kendra_from_moon {
+            cancels.push("a planet stands in a kendra from the Moon");
+        }
+        if moon_in_kendra {
+            cancels.push("the Moon is in a kendra from the lagna");
+        }
+        if jupiter_on_moon {
+            cancels.push("Jupiter is with or aspects the Moon");
+        }
+        if cancels.is_empty() {
+            out.push(Yoga {
+                name: "Kemadruma",
+                hit: Hit {
+                    rule_id: "KS-Y-0050",
+                    source: "BPHS, Chandra yogas: no planet on either side of the Moon and no cancellation",
+                    weight: 0.4,
+                    factors: vec!["no planet in the 2nd or 12th sign from the Moon; none of the cancellations applies".into()],
+                },
+            });
+        } else {
+            out.push(Yoga {
+                name: "Kemadruma (cancelled)",
+                hit: Hit {
+                    rule_id: "KS-Y-0051",
+                    source: "Phaladeepika 6; Jataka Parijata: Kemadruma bhanga by a planet in a kendra from the Moon, the Moon in a kendra, or Jupiter's association",
+                    weight: 0.1,
+                    factors: cancels.iter().map(|c| format!("would be Kemadruma, but {c}")).collect(),
+                },
+            });
+        }
     }
     // Neecha Bhanga: a debilitated planet whose dispositor is in a kendra from the lagna or the Moon.
     for p in &facts.planets {
@@ -540,7 +571,21 @@ pub fn assess(facts: &Facts, area: Area) -> Assessment {
         weight += 1.0;
     }
 
-    // 5. Karaka
+    // 5. Ashtakavarga: bindus in the primary house (Sarvashtakavarga; 28 is the mean)
+    let sarva = sarva_for(facts);
+    let house_sign = (facts.lagna_sign as usize + h as usize - 1) % 12;
+    let bindus = sarva[house_sign];
+    let bs = ((bindus as f64 - 20.0) / 16.0).clamp(0.0, 1.0);
+    hits.push(Hit {
+        rule_id: "KS-B-0006",
+        source: "BPHS, Ashtakavargadhyaya: a house with more than 28 bindus in Sarvashtakavarga gives; fewer than 25 withholds",
+        weight: bs,
+        factors: vec![format!("the {h}th house carries {bindus} bindus in Sarvashtakavarga")],
+    });
+    score += bs * 0.8;
+    weight += 0.8;
+
+    // 6. Karaka
     let k = karaka(&area);
     let kp = facts.planet(k);
     let kd = dignity(k, kp.sidereal);
@@ -568,6 +613,44 @@ pub fn assess(facts: &Facts, area: Area) -> Assessment {
         score: (score / weight).clamp(0.0, 1.0),
         hits,
     }
+}
+
+/// Sarvashtakavarga bindus per sign (0 = Aries) for the chart.
+pub fn sarva_for(facts: &Facts) -> [u8; 12] {
+    use DashaLord::*;
+    let sign = |g: DashaLord| facts.planet(g).sign;
+    let p = kshana_vedic::AshtakavargaPositions {
+        signs: [
+            sign(Sun),
+            sign(Moon),
+            sign(Mars),
+            sign(Mercury),
+            sign(Jupiter),
+            sign(Venus),
+            sign(Saturn),
+            facts.lagna_sign,
+        ],
+    };
+    kshana_vedic::sarva(&p)
+}
+
+/// Bhinnashtakavarga tables, Sun through Saturn, bindus per sign.
+pub fn bhinna_for(facts: &Facts) -> [[u8; 12]; 7] {
+    use DashaLord::*;
+    let sign = |g: DashaLord| facts.planet(g).sign;
+    let p = kshana_vedic::AshtakavargaPositions {
+        signs: [
+            sign(Sun),
+            sign(Moon),
+            sign(Mars),
+            sign(Mercury),
+            sign(Jupiter),
+            sign(Venus),
+            sign(Saturn),
+            facts.lagna_sign,
+        ],
+    };
+    std::array::from_fn(|g| kshana_vedic::bhinna(&p, g))
 }
 
 /// Quality of a dasha period lord for an area: a functional benefic (kendra or trikona
@@ -695,8 +778,11 @@ mod tests {
         assert!(names.contains(&"Hamsa"), "{names:?}"); // Jupiter exalted in the 4th
         assert!(names.contains(&"Ruchaka"), "{names:?}"); // Mars exalted in the 10th
         assert!(names.contains(&"Sasa"), "{names:?}"); // Saturn exalted in the 7th
-        assert!(!names.contains(&"Kemadruma"), "{names:?}"); // Jupiter flanks the Moon? same sign; Mercury in 12th from Moon
-                                                             // Raja yoga: Sun (lord of 5, trikona) with ... Mars lord of 1 & 8 ; Jupiter lord of 9 & 12 conjoined with Moon lord of 4 (kendra) → Raja
+        assert!(
+            !names.iter().any(|n| n.starts_with("Kemadruma")),
+            "{names:?}"
+        ); // Mercury in Gemini, the 12th from Cancer
+           // Raja yoga: Sun (lord of 5, trikona) with ... Mars lord of 1 & 8 ; Jupiter lord of 9 & 12 conjoined with Moon lord of 4 (kendra) → Raja
         assert!(names.contains(&"Raja yoga"), "{names:?}");
     }
 
@@ -706,7 +792,8 @@ mod tests {
         for a in AREAS {
             let s = assess(&f, a);
             assert!((0.0..=1.0).contains(&s.score), "{}", s.score);
-            assert!(s.hits.len() >= 3);
+            assert!(s.hits.len() >= 4);
+            assert!(s.hits.iter().any(|h| h.rule_id == "KS-B-0006"));
             assert!(s.hits.iter().all(|h| !h.factors.is_empty()));
         }
         // Career: 10th lord Saturn exalted in the 7th (kendra) with Mars exalted in the 10th → strong

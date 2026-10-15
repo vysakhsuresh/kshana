@@ -32,12 +32,12 @@ a person can carry, and to be honest about how well it knows.
 | `kshana-solver` | Brent root finder on instants, angle wrapping | tested |
 | `kshana-ephem` | DAF/SPK reader, Chebyshev evaluation, body chaining | tested on synthetic kernel; real-kernel test behind `--ignored` |
 | `kshana-frames` | ERA, GMST, GAST via the CIO locator and equation of the origins, mean obliquity, full IAU 2000A/B nutation (tables generated from ERFA), IAU 2006 bias-precession matrix | matches ERFA to ≤ 1e-12 rad |
-| `kshana-houses` | Asc/MC, Whole Sign, Equal, Porphyry, Placidus (iterated), polar failure | tested; Koch, Regiomontanus, Campanus etc. pending |
-| `kshana-vedic` | Ayanamsa (Lahiri, Raman, KP, Fagan–Bradley), nakshatra, tithi, yoga, karana, Vimshottari to five levels on exact instants, KP 249 sub-lords and horary numbers, divisional charts D1–D60 | tested; ayanamsa values to be verified against IAE in milestone 3 |
+| `kshana-houses` | Asc/MC and ten house systems: Placidus, Koch, Regiomontanus, Campanus, Alcabitius, Morinus, Topocentric, Porphyry, Equal, Whole Sign; honest polar failure; horary cusps | match Swiss Ephemeris to < 1″ |
+| `kshana-vedic` | Ayanamsa as a fixed sky direction (Lahiri, Raman, KP, Fagan–Bradley, True Chitra), nakshatra, tithi, yoga, karana, Vimshottari to five levels, KP 249 sub-lords and horary numbers, divisional charts D1–D60, Ashtakavarga | ayanamsa within 0.002″ of Swiss Ephemeris over 1900–2050 |
 | `kshana-western` | Aspects with applying/separating, signs, traditional dignities, sect | tested |
 | `kshana-sky` | Apparent geocentric and topocentric ecliptic positions: light-time, aberration, IAU 2006 bias-precession, IAU 2000A nutation, ecliptic of date, daily motion, true lunar node | agrees with Skyfield to < 0.5″ on 200 geocentric and 20 topocentric checks |
 | `kshana-events` | Exact instants on the real sky: ingresses, aspects, lunations, tithi and nakshatra boundaries, stations, sunrise and sunset, planetary hours, Rahu kala, solved to 1 µs | tested against almanac dates and a hand calculation |
-| `kshana-verify` | Golden-vector tests against ERFA, jplephem and Skyfield (`tests/golden/`) | ERA, GMST, GAST, obliquity, precession angles, NPB matrix, 2000A/B nutation all match ERFA to ≤ 1e-12 rad |
+| `kshana-verify` | Golden-vector tests against ERFA, jplephem, Skyfield and Swiss Ephemeris (`tests/golden/`) | frames match ERFA to ≤ 1e-12 rad; positions, houses, ayanamsa and sunrise match the others as recorded in `docs/PRECISION.md` |
 | `kshana-cli` | `kshana` binary: full chart from the kernel for a UTC instant and a place | working |
 | `kshana-rules` | The prediction layer: facts from a chart; KP significators with node agency, cusp sub-lord promise, timing funnel; Prashna judgment with ruling planets and Moon windows; Parashari dignities, aspects, yogas, per-area assessment, period quality; Parihara remedies | tested on real and synthetic charts; catalogue in `docs/RULES.md` |
 | `kshana-chart` | One instant, one place, the whole chart: placements with KP lords and houses, cusps, nodes, panchanga, provenance stamp | tested; shared by the CLI and the FFI |

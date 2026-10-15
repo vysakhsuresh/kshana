@@ -41,6 +41,7 @@ import com.kshana.app.ui.screens.PariharaScreen
 import com.kshana.app.ui.screens.PrashnaScreen
 import com.kshana.app.ui.screens.ReadingScreen
 import com.kshana.app.ui.screens.SettingsScreen
+import com.kshana.app.ui.screens.TrustScreen
 import com.kshana.app.ui.screens.VedicScreen
 import com.kshana.app.ui.theme.KshanaColors
 import com.kshana.app.ui.theme.KshanaTheme
@@ -167,8 +168,12 @@ private fun App() {
                     settings = settings,
                     onSettingsChanged = { settings = it },
                     onEditBirth = { nav.navigate("birth") { launchSingleTop = true } },
+                    onTrust = { nav.navigate("trust") { launchSingleTop = true } },
                     onBack = { nav.popBackStack() },
                 )
+            }
+            composable("trust") {
+                TrustScreen(profile = profile, settings = settings, onBack = { nav.popBackStack() })
             }
         }
     }

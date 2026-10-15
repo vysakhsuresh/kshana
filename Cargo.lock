@@ -308,6 +308,7 @@ dependencies = [
  "kshana-time",
  "kshana-vedic",
  "kshana-western",
+ "serde_json",
  "uniffi",
 ]
 
@@ -358,6 +359,7 @@ version = "0.1.0"
 name = "kshana-vedic"
 version = "0.1.0"
 dependencies = [
+ "kshana-frames",
  "kshana-time",
 ]
 
@@ -366,9 +368,12 @@ name = "kshana-verify"
 version = "0.1.0"
 dependencies = [
  "kshana-ephem",
+ "kshana-events",
  "kshana-frames",
+ "kshana-houses",
  "kshana-sky",
  "kshana-time",
+ "kshana-vedic",
  "serde_json",
 ]
 

@@ -1,0 +1,6090 @@
+{
+ "meta": {
+  "generator": "scripts/golden/generate_swisseph.py",
+  "versions": {
+   "python": "3.13.16",
+   "pyswisseph": 20230604,
+   "swe_version": "2.10.03"
+  },
+  "ephemeris": {
+   "ephe_path": "",
+   "flags_positions": 260,
+   "flags_positions_names": "FLG_MOSEPH|FLG_SPEED",
+   "flags_sidereal": 65796,
+   "flags_sidereal_names": "FLG_MOSEPH|FLG_SPEED|FLG_SIDEREAL",
+   "tidal_acceleration": -25.8,
+   "note": "Built-in Moshier ephemeris; no Swiss Ephemeris data files (se*.se1) or JPL kernels are used."
+  },
+  "conventions": {
+   "time": "jd_tt, jd_ut = swe.utc_to_jd(y,m,d,h,mi,s,GREG_CAL). jd_ut is UT1 = UTC (no UT1-UTC); jd_tt = jd_ut + delta-T with swisseph's leap-second table (37 s carried forward after 2017). delta_t_s = deltat_ex(jd_ut, FLG_MOSEPH)*86400.",
+   "angles": "degrees; longitudes 0..360 east of the equinox; speeds in deg/day; distances in AU (AU/day).",
+   "ayanamsa": "get_ayanamsa_ut(jd_ut): ayanamsa relative to the mean equinox ('without nutation'). get_ayanamsa_ex_ut(jd_ut, FLG_MOSEPH): relative to the true equinox of date; equals tropical minus sidereal longitude when FLG_SIDEREAL is used. Both evaluated at jd_ut after set_sid_mode(mode,0,0).",
+   "houses": "swe.houses_ex(jd_ut, lat, lon, hsys, 0): tropical. ARMC = sidereal time at Greenwich (true equinox, with nutation) * 15 + lon; cusps are computed with the TRUE obliquity (mean + nutation in obliquity), recorded in 'obliquity.true_obliquity_deg' from calc_ut(jd_ut, ECL_NUT, FLG_MOSEPH). ascmc order: asc, mc, armc, vertex, equatorial asc, co-asc Koch, co-asc Munkasey, polar asc. pyswisseph raises swisseph.Error where the C library returns retc=-1 with Porphyry cusps (Placidus/Koch inside polar circles); recorded as 'error'.",
+   "positions": "swe.calc(jd_tt, ipl, FLG_MOSEPH|FLG_SPEED): geocentric apparent (light-time, gravitational deflection, aberration), true ecliptic and equinox of date, tropical. xx = [lon, lat, dist_au, dlon, dlat, ddist].",
+   "sunrise": "swe.rise_trans(jd0, SUN, rsmi, (lon, lat, 0), atpress=0 (->1013.25 mbar), attemp=0 (->15 C), FLG_MOSEPH); jd0 = 0h UT of the civil date; the first event after jd0 is returned. Default rsmi = CALC_RISE/CALC_SET: upper limb with refraction. |BIT_NO_REFRACTION: upper limb, geometric. |BIT_DISC_CENTER: centre with refraction. UTC via jdut1_to_utc and revjul (hour as decimal).",
+   "kp": "swisseph has no KP sub-lord tables; section left empty."
+  },
+  "counts": {
+   "ayanamsa": 16,
+   "houses": 12,
+   "positions": 12,
+   "kp": 0,
+   "sunrise": 3
+  }
+ },
+ "ayanamsa": [
+  {
+   "utc": "1900-01-01T00:00:00Z",
+   "jd_ut": 2415020.5,
+   "jd_tt": 2415020.4999769586,
+   "delta_t_s": -2.051326099946829,
+   "ayanamsa": {
+    "SIDM_FAGAN_BRADLEY": {
+     "sidmode": 0,
+     "name": "Fagan/Bradley",
+     "get_ayanamsa_ut_deg": 23.343738215046855,
+     "get_ayanamsa_ex_ut_deg": 23.348580846170634,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_LAHIRI": {
+     "sidmode": 1,
+     "name": "Lahiri",
+     "get_ayanamsa_ut_deg": 22.46053059238814,
+     "get_ayanamsa_ex_ut_deg": 22.465373223511918,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_RAMAN": {
+     "sidmode": 3,
+     "name": "Raman",
+     "get_ayanamsa_ut_deg": 21.014229125586326,
+     "get_ayanamsa_ex_ut_deg": 21.019071756710066,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_KRISHNAMURTI": {
+     "sidmode": 5,
+     "name": "Krishnamurti",
+     "get_ayanamsa_ut_deg": 22.36367812558632,
+     "get_ayanamsa_ex_ut_deg": 22.36852075671006,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_TRUE_CITRA": {
+     "sidmode": 27,
+     "name": "True Citra",
+     "get_ayanamsa_ut_deg": 22.444754613600537,
+     "get_ayanamsa_ex_ut_deg": 22.44959724460087,
+     "get_ayanamsa_ex_ut_retflags": 4
+    }
+   }
+  },
+  {
+   "utc": "1910-06-15T12:00:00Z",
+   "jd_ut": 2418838.0,
+   "jd_tt": 2418838.000135566,
+   "delta_t_s": 11.673172108677502,
+   "ayanamsa": {
+    "SIDM_FAGAN_BRADLEY": {
+     "sidmode": 0,
+     "name": "Fagan/Bradley",
+     "get_ayanamsa_ut_deg": 23.48967655776881,
+     "get_ayanamsa_ex_ut_deg": 23.485681126514663,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_LAHIRI": {
+     "sidmode": 1,
+     "name": "Lahiri",
+     "get_ayanamsa_ut_deg": 22.606468932878965,
+     "get_ayanamsa_ex_ut_deg": 22.602473501624814,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_RAMAN": {
+     "sidmode": 3,
+     "name": "Raman",
+     "get_ayanamsa_ut_deg": 21.160167485218665,
+     "get_ayanamsa_ex_ut_deg": 21.156172053964486,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_KRISHNAMURTI": {
+     "sidmode": 5,
+     "name": "Krishnamurti",
+     "get_ayanamsa_ut_deg": 22.509616485218658,
+     "get_ayanamsa_ex_ut_deg": 22.50562105396448,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_TRUE_CITRA": {
+     "sidmode": 27,
+     "name": "True Citra",
+     "get_ayanamsa_ut_deg": 22.594546197864105,
+     "get_ayanamsa_ex_ut_deg": 22.59055076665219,
+     "get_ayanamsa_ex_ut_retflags": 4
+    }
+   }
+  },
+  {
+   "utc": "1920-03-21T06:30:00Z",
+   "jd_ut": 2422404.7708333335,
+   "jd_tt": 2422404.7710849834,
+   "delta_t_s": 21.71830802046864,
+   "ayanamsa": {
+    "SIDM_FAGAN_BRADLEY": {
+     "sidmode": 0,
+     "name": "Fagan/Bradley",
+     "get_ayanamsa_ut_deg": 23.62603589284314,
+     "get_ayanamsa_ex_ut_deg": 23.629646851523344,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_LAHIRI": {
+     "sidmode": 1,
+     "name": "Lahiri",
+     "get_ayanamsa_ut_deg": 22.74282826594073,
+     "get_ayanamsa_ex_ut_deg": 22.746439224620932,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_RAMAN": {
+     "sidmode": 3,
+     "name": "Raman",
+     "get_ayanamsa_ut_deg": 21.296526835511827,
+     "get_ayanamsa_ex_ut_deg": 21.300137794192022,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_KRISHNAMURTI": {
+     "sidmode": 5,
+     "name": "Krishnamurti",
+     "get_ayanamsa_ut_deg": 22.64597583551182,
+     "get_ayanamsa_ex_ut_deg": 22.649586794192015,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_TRUE_CITRA": {
+     "sidmode": 27,
+     "name": "True Citra",
+     "get_ayanamsa_ut_deg": 22.73329517447459,
+     "get_ayanamsa_ex_ut_deg": 22.736906132910786,
+     "get_ayanamsa_ex_ut_retflags": 4
+    }
+   }
+  },
+  {
+   "utc": "1930-11-11T18:00:00Z",
+   "jd_ut": 2426292.25,
+   "jd_tt": 2426292.250282543,
+   "delta_t_s": 24.400032395252293,
+   "ayanamsa": {
+    "SIDM_FAGAN_BRADLEY": {
+     "sidmode": 0,
+     "name": "Fagan/Bradley",
+     "get_ayanamsa_ut_deg": 23.774662725405253,
+     "get_ayanamsa_ex_ut_deg": 23.77254246053529,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_LAHIRI": {
+     "sidmode": 1,
+     "name": "Lahiri",
+     "get_ayanamsa_ut_deg": 22.891455096388682,
+     "get_ayanamsa_ex_ut_deg": 22.889334831518724,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_RAMAN": {
+     "sidmode": 3,
+     "name": "Raman",
+     "get_ayanamsa_ut_deg": 21.445153684021193,
+     "get_ayanamsa_ex_ut_deg": 21.44303341915122,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_KRISHNAMURTI": {
+     "sidmode": 5,
+     "name": "Krishnamurti",
+     "get_ayanamsa_ut_deg": 22.794602684021186,
+     "get_ayanamsa_ex_ut_deg": 22.792482419151213,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_TRUE_CITRA": {
+     "sidmode": 27,
+     "name": "True Citra",
+     "get_ayanamsa_ut_deg": 22.87139041300938,
+     "get_ayanamsa_ex_ut_deg": 22.869270147915188,
+     "get_ayanamsa_ex_ut_retflags": 4
+    }
+   }
+  },
+  {
+   "utc": "1940-07-04T03:15:00Z",
+   "jd_ut": 2429814.6354166665,
+   "jd_tt": 2429814.635701528,
+   "delta_t_s": 24.60779903511887,
+   "ayanamsa": {
+    "SIDM_FAGAN_BRADLEY": {
+     "sidmode": 0,
+     "name": "Fagan/Bradley",
+     "get_ayanamsa_ut_deg": 23.909337231952687,
+     "get_ayanamsa_ex_ut_deg": 23.91079023194467,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_LAHIRI": {
+     "sidmode": 1,
+     "name": "Lahiri",
+     "get_ayanamsa_ut_deg": 23.026129601092105,
+     "get_ayanamsa_ex_ut_deg": 23.027582601084088,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_RAMAN": {
+     "sidmode": 3,
+     "name": "Raman",
+     "get_ayanamsa_ut_deg": 21.579828204440958,
+     "get_ayanamsa_ex_ut_deg": 21.581281204432933,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_KRISHNAMURTI": {
+     "sidmode": 5,
+     "name": "Krishnamurti",
+     "get_ayanamsa_ut_deg": 22.92927720444095,
+     "get_ayanamsa_ex_ut_deg": 22.930730204432926,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_TRUE_CITRA": {
+     "sidmode": 27,
+     "name": "True Citra",
+     "get_ayanamsa_ut_deg": 23.01217208230409,
+     "get_ayanamsa_ex_ut_deg": 23.013625082302603,
+     "get_ayanamsa_ex_ut_retflags": 4
+    }
+   }
+  },
+  {
+   "utc": "1950-01-01T00:00:00Z",
+   "jd_ut": 2433282.5,
+   "jd_tt": 2433282.50033486,
+   "delta_t_s": 28.931385497710192,
+   "ayanamsa": {
+    "SIDM_FAGAN_BRADLEY": {
+     "sidmode": 0,
+     "name": "Fagan/Bradley",
+     "get_ayanamsa_ut_deg": 24.041932776485737,
+     "get_ayanamsa_ex_ut_deg": 24.04101520880836,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_LAHIRI": {
+     "sidmode": 1,
+     "name": "Lahiri",
+     "get_ayanamsa_ut_deg": 23.158725143876293,
+     "get_ayanamsa_ex_ut_deg": 23.157807576198916,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_RAMAN": {
+     "sidmode": 3,
+     "name": "Raman",
+     "get_ayanamsa_ut_deg": 21.712423762094772,
+     "get_ayanamsa_ex_ut_deg": 21.711506194417396,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_KRISHNAMURTI": {
+     "sidmode": 5,
+     "name": "Krishnamurti",
+     "get_ayanamsa_ut_deg": 23.061872762094765,
+     "get_ayanamsa_ex_ut_deg": 23.06095519441739,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_TRUE_CITRA": {
+     "sidmode": 27,
+     "name": "True Citra",
+     "get_ayanamsa_ut_deg": 23.14227674830815,
+     "get_ayanamsa_ex_ut_deg": 23.141359180630005,
+     "get_ayanamsa_ex_ut_retflags": 4
+    }
+   }
+  },
+  {
+   "utc": "1960-09-23T09:00:00Z",
+   "jd_ut": 2437200.875,
+   "jd_tt": 2437200.875387438,
+   "delta_t_s": 33.474664578077224,
+   "ayanamsa": {
+    "SIDM_FAGAN_BRADLEY": {
+     "sidmode": 0,
+     "name": "Fagan/Bradley",
+     "get_ayanamsa_ut_deg": 24.191760474986268,
+     "get_ayanamsa_ex_ut_deg": 24.190356822503656,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_LAHIRI": {
+     "sidmode": 1,
+     "name": "Lahiri",
+     "get_ayanamsa_ut_deg": 23.308552840480274,
+     "get_ayanamsa_ex_ut_deg": 23.307149187997663,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_RAMAN": {
+     "sidmode": 3,
+     "name": "Raman",
+     "get_ayanamsa_ut_deg": 21.86225147477876,
+     "get_ayanamsa_ex_ut_deg": 21.860847822296147,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_KRISHNAMURTI": {
+     "sidmode": 5,
+     "name": "Krishnamurti",
+     "get_ayanamsa_ut_deg": 23.211700474778752,
+     "get_ayanamsa_ex_ut_deg": 23.21029682229614,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_TRUE_CITRA": {
+     "sidmode": 27,
+     "name": "True Citra",
+     "get_ayanamsa_ut_deg": 23.288023856681235,
+     "get_ayanamsa_ex_ut_deg": 23.286620204198623,
+     "get_ayanamsa_ex_ut_retflags": 4
+    }
+   }
+  },
+  {
+   "utc": "1970-12-25T21:45:00Z",
+   "jd_ut": 2440946.40625,
+   "jd_tt": 2440946.4067263175,
+   "delta_t_s": 41.15381589252763,
+   "ayanamsa": {
+    "SIDM_FAGAN_BRADLEY": {
+     "sidmode": 0,
+     "name": "Fagan/Bradley",
+     "get_ayanamsa_ut_deg": 24.334985721116993,
+     "get_ayanamsa_ex_ut_deg": 24.3375493493843,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_LAHIRI": {
+     "sidmode": 1,
+     "name": "Lahiri",
+     "get_ayanamsa_ut_deg": 23.451778084877276,
+     "get_ayanamsa_ex_ut_deg": 23.454341713144583,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_RAMAN": {
+     "sidmode": 3,
+     "name": "Raman",
+     "get_ayanamsa_ut_deg": 22.00547673383005,
+     "get_ayanamsa_ex_ut_deg": 22.008040362097358,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_KRISHNAMURTI": {
+     "sidmode": 5,
+     "name": "Krishnamurti",
+     "get_ayanamsa_ut_deg": 23.354925733830044,
+     "get_ayanamsa_ex_ut_deg": 23.35748936209735,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_TRUE_CITRA": {
+     "sidmode": 27,
+     "name": "True Citra",
+     "get_ayanamsa_ut_deg": 23.43444790703569,
+     "get_ayanamsa_ex_ut_deg": 23.437011535302997,
+     "get_ayanamsa_ex_ut_retflags": 4
+    }
+   }
+  },
+  {
+   "utc": "1980-05-05T05:05:05Z",
+   "jd_ut": 2444364.7118674326,
+   "jd_tt": 2444364.7124558333,
+   "delta_t_s": 50.83782026822669,
+   "ayanamsa": {
+    "SIDM_FAGAN_BRADLEY": {
+     "sidmode": 0,
+     "name": "Fagan/Bradley",
+     "get_ayanamsa_ut_deg": 24.465703835190368,
+     "get_ayanamsa_ex_ut_deg": 24.46259621222807,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_LAHIRI": {
+     "sidmode": 1,
+     "name": "Lahiri",
+     "get_ayanamsa_ut_deg": 23.58249619743583,
+     "get_ayanamsa_ex_ut_deg": 23.579388574473533,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_RAMAN": {
+     "sidmode": 3,
+     "name": "Raman",
+     "get_ayanamsa_ut_deg": 22.13619485915069,
+     "get_ayanamsa_ex_ut_deg": 22.133087236188395,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_KRISHNAMURTI": {
+     "sidmode": 5,
+     "name": "Krishnamurti",
+     "get_ayanamsa_ut_deg": 23.485643859150684,
+     "get_ayanamsa_ex_ut_deg": 23.482536236188388,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_TRUE_CITRA": {
+     "sidmode": 27,
+     "name": "True Citra",
+     "get_ayanamsa_ut_deg": 23.57228475619243,
+     "get_ayanamsa_ex_ut_deg": 23.569177133230134,
+     "get_ayanamsa_ex_ut_retflags": 4
+    }
+   }
+  },
+  {
+   "utc": "1990-02-14T14:00:00Z",
+   "jd_ut": 2447937.0833361945,
+   "jd_tt": 2447937.0839951853,
+   "delta_t_s": 56.93680121552887,
+   "ayanamsa": {
+    "SIDM_FAGAN_BRADLEY": {
+     "sidmode": 0,
+     "name": "Fagan/Bradley",
+     "get_ayanamsa_ut_deg": 24.602319269282702,
+     "get_ayanamsa_ex_ut_deg": 24.605908309101434,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_LAHIRI": {
+     "sidmode": 1,
+     "name": "Lahiri",
+     "get_ayanamsa_ut_deg": 23.71911163001414,
+     "get_ayanamsa_ex_ut_deg": 23.72270066983287,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_RAMAN": {
+     "sidmode": 3,
+     "name": "Raman",
+     "get_ayanamsa_ut_deg": 22.27281030444152,
+     "get_ayanamsa_ex_ut_deg": 22.276399344260252,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_KRISHNAMURTI": {
+     "sidmode": 5,
+     "name": "Krishnamurti",
+     "get_ayanamsa_ut_deg": 23.622259304441513,
+     "get_ayanamsa_ex_ut_deg": 23.625848344260245,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_TRUE_CITRA": {
+     "sidmode": 27,
+     "name": "True Citra",
+     "get_ayanamsa_ut_deg": 23.706489638101942,
+     "get_ayanamsa_ex_ut_deg": 23.710078677920674,
+     "get_ayanamsa_ex_ut_retflags": 4
+    }
+   }
+  },
+  {
+   "utc": "2000-01-01T12:00:00Z",
+   "jd_ut": 2451545.00000411,
+   "jd_tt": 2451545.0007428704,
+   "delta_t_s": 63.82891493563454,
+   "ayanamsa": {
+    "SIDM_FAGAN_BRADLEY": {
+     "sidmode": 0,
+     "name": "Fagan/Bradley",
+     "get_ayanamsa_ut_deg": 24.740299994592135,
+     "get_ayanamsa_ex_ut_deg": 24.736430126920492,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_LAHIRI": {
+     "sidmode": 1,
+     "name": "Lahiri",
+     "get_ayanamsa_ut_deg": 23.85709235386605,
+     "get_ayanamsa_ex_ut_deg": 23.853222486194408,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_RAMAN": {
+     "sidmode": 3,
+     "name": "Raman",
+     "get_ayanamsa_ut_deg": 22.41079104048373,
+     "get_ayanamsa_ex_ut_deg": 22.406921172812087,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_KRISHNAMURTI": {
+     "sidmode": 5,
+     "name": "Krishnamurti",
+     "get_ayanamsa_ut_deg": 23.760240040483723,
+     "get_ayanamsa_ex_ut_deg": 23.75637017281208,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_TRUE_CITRA": {
+     "sidmode": 27,
+     "name": "True Citra",
+     "get_ayanamsa_ut_deg": 23.8400150502344,
+     "get_ayanamsa_ex_ut_deg": 23.836145182562756,
+     "get_ayanamsa_ex_ut_retflags": 4
+    }
+   }
+  },
+  {
+   "utc": "2010-10-10T10:10:10Z",
+   "jd_ut": 2455479.9237258863,
+   "jd_tt": 2455479.9244928705,
+   "delta_t_s": 66.26744672775793,
+   "ayanamsa": {
+    "SIDM_FAGAN_BRADLEY": {
+     "sidmode": 0,
+     "name": "Fagan/Bradley",
+     "get_ayanamsa_ut_deg": 24.890793567876358,
+     "get_ayanamsa_ex_ut_deg": 24.895238886157436,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_LAHIRI": {
+     "sidmode": 1,
+     "name": "Lahiri",
+     "get_ayanamsa_ut_deg": 24.00758592564273,
+     "get_ayanamsa_ex_ut_deg": 24.012031243923808,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_RAMAN": {
+     "sidmode": 3,
+     "name": "Raman",
+     "get_ayanamsa_ut_deg": 22.56128462481138,
+     "get_ayanamsa_ex_ut_deg": 22.565729943092457,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_KRISHNAMURTI": {
+     "sidmode": 5,
+     "name": "Krishnamurti",
+     "get_ayanamsa_ut_deg": 23.91073362481137,
+     "get_ayanamsa_ex_ut_deg": 23.91517894309245,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_TRUE_CITRA": {
+     "sidmode": 27,
+     "name": "True Citra",
+     "get_ayanamsa_ut_deg": 23.986066985867012,
+     "get_ayanamsa_ex_ut_deg": 23.99051230414809,
+     "get_ayanamsa_ex_ut_retflags": 4
+    }
+   }
+  },
+  {
+   "utc": "2020-06-21T00:00:00Z",
+   "jd_ut": 2459021.4999978035,
+   "jd_tt": 2459021.500800741,
+   "delta_t_s": 69.37377892053604,
+   "ayanamsa": {
+    "SIDM_FAGAN_BRADLEY": {
+     "sidmode": 0,
+     "name": "Fagan/Bradley",
+     "get_ayanamsa_ut_deg": 25.0262494221393,
+     "get_ayanamsa_ex_ut_deg": 25.02145323341266,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_LAHIRI": {
+     "sidmode": 1,
+     "name": "Lahiri",
+     "get_ayanamsa_ut_deg": 24.143041778622205,
+     "get_ayanamsa_ex_ut_deg": 24.138245589895565,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_RAMAN": {
+     "sidmode": 3,
+     "name": "Raman",
+     "get_ayanamsa_ut_deg": 22.696740488422734,
+     "get_ayanamsa_ex_ut_deg": 22.691944299696093,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_KRISHNAMURTI": {
+     "sidmode": 5,
+     "name": "Krishnamurti",
+     "get_ayanamsa_ut_deg": 24.046189488422726,
+     "get_ayanamsa_ex_ut_deg": 24.041393299696086,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_TRUE_CITRA": {
+     "sidmode": 27,
+     "name": "True Citra",
+     "get_ayanamsa_ut_deg": 24.129365729747974,
+     "get_ayanamsa_ex_ut_deg": 24.124569541021334,
+     "get_ayanamsa_ex_ut_retflags": 4
+    }
+   }
+  },
+  {
+   "utc": "2026-10-15T09:30:00Z",
+   "jd_ut": 2461328.8958375994,
+   "jd_tt": 2461328.8966340744,
+   "delta_t_s": 68.81544964949248,
+   "ayanamsa": {
+    "SIDM_FAGAN_BRADLEY": {
+     "sidmode": 0,
+     "name": "Fagan/Bradley",
+     "get_ayanamsa_ut_deg": 25.11450426946209,
+     "get_ayanamsa_ex_ut_deg": 25.116737234922464,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_LAHIRI": {
+     "sidmode": 1,
+     "name": "Lahiri",
+     "get_ayanamsa_ut_deg": 24.231296625146285,
+     "get_ayanamsa_ex_ut_deg": 24.23352959060666,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_RAMAN": {
+     "sidmode": 3,
+     "name": "Raman",
+     "get_ayanamsa_ut_deg": 22.784995341534568,
+     "get_ayanamsa_ex_ut_deg": 22.787228306994944,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_KRISHNAMURTI": {
+     "sidmode": 5,
+     "name": "Krishnamurti",
+     "get_ayanamsa_ut_deg": 24.13444434153456,
+     "get_ayanamsa_ex_ut_deg": 24.136677306994937,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_TRUE_CITRA": {
+     "sidmode": 27,
+     "name": "True Citra",
+     "get_ayanamsa_ut_deg": 24.20956514663581,
+     "get_ayanamsa_ex_ut_deg": 24.211798112096186,
+     "get_ayanamsa_ex_ut_retflags": 4
+    }
+   }
+  },
+  {
+   "utc": "2040-04-01T16:20:00Z",
+   "jd_ut": 2466246.1805555555,
+   "jd_tt": 2466246.181387342,
+   "delta_t_s": 71.86635285748056,
+   "ayanamsa": {
+    "SIDM_FAGAN_BRADLEY": {
+     "sidmode": 0,
+     "name": "Fagan/Bradley",
+     "get_ayanamsa_ut_deg": 25.30259210357309,
+     "get_ayanamsa_ex_ut_deg": 25.29806438915648,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_LAHIRI": {
+     "sidmode": 1,
+     "name": "Lahiri",
+     "get_ayanamsa_ut_deg": 24.41938445765362,
+     "get_ayanamsa_ex_ut_deg": 24.41485674323701,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_RAMAN": {
+     "sidmode": 3,
+     "name": "Raman",
+     "get_ayanamsa_ut_deg": 22.97308318718791,
+     "get_ayanamsa_ex_ut_deg": 22.9685554727713,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_KRISHNAMURTI": {
+     "sidmode": 5,
+     "name": "Krishnamurti",
+     "get_ayanamsa_ut_deg": 24.322532187187903,
+     "get_ayanamsa_ex_ut_deg": 24.318004472771293,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_TRUE_CITRA": {
+     "sidmode": 27,
+     "name": "True Citra",
+     "get_ayanamsa_ut_deg": 24.408730119537267,
+     "get_ayanamsa_ex_ut_deg": 24.404202405120657,
+     "get_ayanamsa_ex_ut_retflags": 4
+    }
+   }
+  },
+  {
+   "utc": "2050-12-31T23:59:59Z",
+   "jd_ut": 2470172.499988426,
+   "jd_tt": 2470172.5008550193,
+   "delta_t_s": 74.87365435322191,
+   "ayanamsa": {
+    "SIDM_FAGAN_BRADLEY": {
+     "sidmode": 0,
+     "name": "Fagan/Bradley",
+     "get_ayanamsa_ut_deg": 25.452783167451514,
+     "get_ayanamsa_ex_ut_deg": 25.456013042400848,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_LAHIRI": {
+     "sidmode": 1,
+     "name": "Lahiri",
+     "get_ayanamsa_ut_deg": 24.569575520347996,
+     "get_ayanamsa_ex_ut_deg": 24.57280539529733,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_RAMAN": {
+     "sidmode": 3,
+     "name": "Raman",
+     "get_ayanamsa_ut_deg": 23.12327425950525,
+     "get_ayanamsa_ex_ut_deg": 23.126504134454585,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_KRISHNAMURTI": {
+     "sidmode": 5,
+     "name": "Krishnamurti",
+     "get_ayanamsa_ut_deg": 24.472723259505244,
+     "get_ayanamsa_ex_ut_deg": 24.475953134454578,
+     "get_ayanamsa_ex_ut_retflags": 4
+    },
+    "SIDM_TRUE_CITRA": {
+     "sidmode": 27,
+     "name": "True Citra",
+     "get_ayanamsa_ut_deg": 24.55183746564137,
+     "get_ayanamsa_ex_ut_deg": 24.555067340590703,
+     "get_ayanamsa_ex_ut_retflags": 4
+    }
+   }
+  }
+ ],
+ "houses": [
+  {
+   "place": "kochi",
+   "lat_deg": 9.9312,
+   "lon_deg": 76.2673,
+   "utc": "2000-01-01T12:00:00Z",
+   "jd_ut": 2451545.00000411,
+   "jd_tt": 2451545.0007428704,
+   "delta_t_s": 63.82891493563454,
+   "sidtime_hours": 18.697237070834635,
+   "obliquity": {
+    "true_obliquity_deg": 23.43767671602993,
+    "mean_obliquity_deg": 23.43927944390206,
+    "nutation_longitude_deg": -0.00386986767164329,
+    "nutation_obliquity_deg": -0.0016027278721304796
+   },
+   "systems": {
+    "P": {
+     "name": "Placidus",
+     "cusps_deg": [
+      90.98933483065433,
+      117.20190653177698,
+      145.2304886838142,
+      176.43215385820395,
+      209.45752234382113,
+      241.34190276937278,
+      270.98933483065434,
+      297.201906531777,
+      325.2304886838142,
+      356.43215385820395,
+      29.457522343821115,
+      61.34190276937277
+     ],
+     "ascendant_deg": 90.98933483065433,
+     "mc_deg": 356.43215385820395,
+     "armc_deg": 356.7258560625195,
+     "vertex_deg": 203.24691342558418,
+     "equatorial_ascendant_deg": 86.99547783858836,
+     "coascendant_koch_deg": 83.03058653534441,
+     "coascendant_munkasey_deg": 155.77912970265922,
+     "polar_ascendant_deg": 263.0305865353444,
+     "fell_back_to_porphyry": false
+    },
+    "K": {
+     "name": "Koch",
+     "cusps_deg": [
+      90.98933483065433,
+      118.29021838191537,
+      146.5852812311025,
+      176.43215385820395,
+      211.1389341228011,
+      242.6622348302763,
+      270.98933483065434,
+      298.29021838191534,
+      326.5852812311025,
+      356.43215385820395,
+      31.138934122801096,
+      62.662234830276304
+     ],
+     "ascendant_deg": 90.98933483065433,
+     "mc_deg": 356.43215385820395,
+     "armc_deg": 356.7258560625195,
+     "vertex_deg": 203.24691342558418,
+     "equatorial_ascendant_deg": 86.99547783858836,
+     "coascendant_koch_deg": 83.03058653534441,
+     "coascendant_munkasey_deg": 155.77912970265922,
+     "polar_ascendant_deg": 263.0305865353444,
+     "fell_back_to_porphyry": false
+    },
+    "R": {
+     "name": "Regiomontanus",
+     "cusps_deg": [
+      90.98933483065433,
+      117.9010165882961,
+      145.6206278771486,
+      176.43215385820395,
+      209.81901392053268,
+      242.0786689478149,
+      270.98933483065434,
+      297.9010165882961,
+      325.6206278771486,
+      356.43215385820395,
+      29.819013920532687,
+      62.078668947814904
+     ],
+     "ascendant_deg": 90.98933483065433,
+     "mc_deg": 356.43215385820395,
+     "armc_deg": 356.7258560625195,
+     "vertex_deg": 203.24691342558418,
+     "equatorial_ascendant_deg": 86.99547783858836,
+     "coascendant_koch_deg": 83.03058653534441,
+     "coascendant_munkasey_deg": 155.77912970265922,
+     "polar_ascendant_deg": 263.0305865353444,
+     "fell_back_to_porphyry": false
+    },
+    "C": {
+     "name": "Campanus",
+     "cusps_deg": [
+      90.98933483065433,
+      118.23734836169703,
+      145.98197080416844,
+      176.43215385820395,
+      209.40215420346456,
+      241.69474583052755,
+      270.98933483065434,
+      298.23734836169706,
+      325.98197080416844,
+      356.43215385820395,
+      29.40215420346455,
+      61.69474583052756
+     ],
+     "ascendant_deg": 90.98933483065433,
+     "mc_deg": 356.43215385820395,
+     "armc_deg": 356.7258560625195,
+     "vertex_deg": 203.24691342558418,
+     "equatorial_ascendant_deg": 86.99547783858836,
+     "coascendant_koch_deg": 83.03058653534441,
+     "coascendant_munkasey_deg": 155.77912970265922,
+     "polar_ascendant_deg": 263.0305865353444,
+     "fell_back_to_porphyry": false
+    },
+    "B": {
+     "name": "Alcabitius",
+     "cusps_deg": [
+      90.98933483065433,
+      117.55513800339011,
+      145.9256731757614,
+      176.43215385820395,
+      210.27817422703055,
+      241.73312934894727,
+      270.98933483065434,
+      297.5551380033901,
+      325.9256731757614,
+      356.43215385820395,
+      30.278174227030537,
+      61.73312934894727
+     ],
+     "ascendant_deg": 90.98933483065433,
+     "mc_deg": 356.43215385820395,
+     "armc_deg": 356.7258560625195,
+     "vertex_deg": 203.24691342558418,
+     "equatorial_ascendant_deg": 86.99547783858836,
+     "coascendant_koch_deg": 83.03058653534441,
+     "coascendant_munkasey_deg": 155.77912970265922,
+     "polar_ascendant_deg": 263.0305865353444,
+     "fell_back_to_porphyry": false
+    },
+    "M": {
+     "name": "Morinus",
+     "cusps_deg": [
+      86.43215385820396,
+      118.75763699990218,
+      148.94836229949559,
+      176.99547783858839,
+      204.79551739361568,
+      234.4259877550474,
+      266.43215385820395,
+      298.75763699990216,
+      328.94836229949556,
+      356.99547783858833,
+      24.795517393615675,
+      54.42598775504741
+     ],
+     "ascendant_deg": 90.98933483065433,
+     "mc_deg": 356.43215385820395,
+     "armc_deg": 356.7258560625195,
+     "vertex_deg": 203.24691342558418,
+     "equatorial_ascendant_deg": 86.99547783858836,
+     "coascendant_koch_deg": 83.03058653534441,
+     "coascendant_munkasey_deg": 155.77912970265922,
+     "polar_ascendant_deg": 263.0305865353444,
+     "fell_back_to_porphyry": false
+    },
+    "T": {
+     "name": "Polich/Page",
+     "cusps_deg": [
+      90.98933483065433,
+      117.2009480988341,
+      145.23029431634671,
+      176.43215385820395,
+      209.45739303759578,
+      241.34093633779608,
+      270.98933483065434,
+      297.2009480988341,
+      325.2302943163467,
+      356.43215385820395,
+      29.457393037595782,
+      61.34093633779609
+     ],
+     "ascendant_deg": 90.98933483065433,
+     "mc_deg": 356.43215385820395,
+     "armc_deg": 356.7258560625195,
+     "vertex_deg": 203.24691342558418,
+     "equatorial_ascendant_deg": 86.99547783858836,
+     "coascendant_koch_deg": 83.03058653534441,
+     "coascendant_munkasey_deg": 155.77912970265922,
+     "polar_ascendant_deg": 263.0305865353444,
+     "fell_back_to_porphyry": false
+    },
+    "O": {
+     "name": "Porphyry",
+     "cusps_deg": [
+      90.98933483065433,
+      119.4702745065042,
+      147.95121418235408,
+      176.43215385820395,
+      207.95121418235408,
+      239.4702745065042,
+      270.98933483065434,
+      299.4702745065042,
+      327.9512141823541,
+      356.43215385820395,
+      27.95121418235408,
+      59.47027450650421
+     ],
+     "ascendant_deg": 90.98933483065433,
+     "mc_deg": 356.43215385820395,
+     "armc_deg": 356.7258560625195,
+     "vertex_deg": 203.24691342558418,
+     "equatorial_ascendant_deg": 86.99547783858836,
+     "coascendant_koch_deg": 83.03058653534441,
+     "coascendant_munkasey_deg": 155.77912970265922,
+     "polar_ascendant_deg": 263.0305865353444
+    },
+    "E": {
+     "name": "equal",
+     "cusps_deg": [
+      90.98933483065433,
+      120.98933483065433,
+      150.98933483065434,
+      180.98933483065434,
+      210.98933483065434,
+      240.98933483065434,
+      270.98933483065434,
+      300.98933483065434,
+      330.98933483065434,
+      0.989334830654343,
+      30.989334830654343,
+      60.98933483065434
+     ],
+     "ascendant_deg": 90.98933483065433,
+     "mc_deg": 356.43215385820395,
+     "armc_deg": 356.7258560625195,
+     "vertex_deg": 203.24691342558418,
+     "equatorial_ascendant_deg": 86.99547783858836,
+     "coascendant_koch_deg": 83.03058653534441,
+     "coascendant_munkasey_deg": 155.77912970265922,
+     "polar_ascendant_deg": 263.0305865353444,
+     "fell_back_to_porphyry": false
+    },
+    "W": {
+     "name": "equal/ whole sign",
+     "cusps_deg": [
+      90.0,
+      120.0,
+      150.0,
+      180.0,
+      210.0,
+      240.0,
+      270.0,
+      300.0,
+      330.0,
+      0.0,
+      30.0,
+      60.0
+     ],
+     "ascendant_deg": 90.98933483065433,
+     "mc_deg": 356.43215385820395,
+     "armc_deg": 356.7258560625195,
+     "vertex_deg": 203.24691342558418,
+     "equatorial_ascendant_deg": 86.99547783858836,
+     "coascendant_koch_deg": 83.03058653534441,
+     "coascendant_munkasey_deg": 155.77912970265922,
+     "polar_ascendant_deg": 263.0305865353444,
+     "fell_back_to_porphyry": false
+    }
+   }
+  },
+  {
+   "place": "kochi",
+   "lat_deg": 9.9312,
+   "lon_deg": 76.2673,
+   "utc": "2026-03-20T06:00:00Z",
+   "jd_ut": 2461119.750003585,
+   "jd_tt": 2461119.750800741,
+   "delta_t_s": 68.87424878547084,
+   "sidtime_hours": 17.852709372355232,
+   "obliquity": {
+    "true_obliquity_deg": 23.43841050016426,
+    "mean_obliquity_deg": 23.4358689224874,
+    "nutation_longitude_deg": 0.001741090616833783,
+    "nutation_obliquity_deg": 0.002541577676856672
+   },
+   "systems": {
+    "P": {
+     "name": "Placidus",
+     "cusps_deg": [
+      79.26127509878614,
+      105.51611533525545,
+      132.6177900744285,
+      162.70651508523292,
+      195.65454477059723,
+      228.60769921713006,
+      259.26127509878614,
+      285.51611533525545,
+      312.6177900744285,
+      342.7065150852329,
+      15.65454477059723,
+      48.607699217130076
+     ],
+     "ascendant_deg": 79.26127509878614,
+     "mc_deg": 342.7065150852329,
+     "armc_deg": 344.05794058532854,
+     "vertex_deg": 200.85646348795194,
+     "equatorial_ascendant_deg": 75.31412073451534,
+     "coascendant_koch_deg": 71.50432825381603,
+     "coascendant_munkasey_deg": 154.5425893131855,
+     "polar_ascendant_deg": 251.50432825381603,
+     "fell_back_to_porphyry": false
+    },
+    "K": {
+     "name": "Koch",
+     "cusps_deg": [
+      79.26127509878614,
+      106.41747896988808,
+      133.80306588455042,
+      162.70651508523292,
+      197.4174773642294,
+      230.11675177807518,
+      259.26127509878614,
+      286.41747896988807,
+      313.8030658845504,
+      342.7065150852329,
+      17.417477364229384,
+      50.1167517780752
+     ],
+     "ascendant_deg": 79.26127509878614,
+     "mc_deg": 342.7065150852329,
+     "armc_deg": 344.05794058532854,
+     "vertex_deg": 200.85646348795194,
+     "equatorial_ascendant_deg": 75.31412073451534,
+     "coascendant_koch_deg": 71.50432825381603,
+     "coascendant_munkasey_deg": 154.5425893131855,
+     "polar_ascendant_deg": 251.50432825381603,
+     "fell_back_to_porphyry": false
+    },
+    "R": {
+     "name": "Regiomontanus",
+     "cusps_deg": [
+      79.26127509878614,
+      106.27341262463248,
+      133.11450604890217,
+      162.70651508523292,
+      195.85638211573695,
+      229.25732960706299,
+      259.26127509878614,
+      286.2734126246325,
+      313.1145060489022,
+      342.7065150852329,
+      15.856382115736952,
+      49.25732960706298
+     ],
+     "ascendant_deg": 79.26127509878614,
+     "mc_deg": 342.7065150852329,
+     "armc_deg": 344.05794058532854,
+     "vertex_deg": 200.85646348795194,
+     "equatorial_ascendant_deg": 75.31412073451534,
+     "coascendant_koch_deg": 71.50432825381603,
+     "coascendant_munkasey_deg": 154.5425893131855,
+     "polar_ascendant_deg": 251.50432825381603,
+     "fell_back_to_porphyry": false
+    },
+    "C": {
+     "name": "Campanus",
+     "cusps_deg": [
+      79.26127509878614,
+      106.60415859507422,
+      133.46063250228406,
+      162.70651508523292,
+      195.43225689640065,
+      228.8560687481443,
+      259.26127509878614,
+      286.60415859507424,
+      313.46063250228406,
+      342.7065150852329,
+      15.432256896400645,
+      48.856068748144295
+     ],
+     "ascendant_deg": 79.26127509878614,
+     "mc_deg": 342.7065150852329,
+     "armc_deg": 344.05794058532854,
+     "vertex_deg": 200.85646348795194,
+     "equatorial_ascendant_deg": 75.31412073451534,
+     "coascendant_koch_deg": 71.50432825381603,
+     "coascendant_munkasey_deg": 154.5425893131855,
+     "polar_ascendant_deg": 251.50432825381603,
+     "fell_back_to_porphyry": false
+    },
+    "B": {
+     "name": "Alcabitius",
+     "cusps_deg": [
+      79.26127509878614,
+      105.5760155958267,
+      133.01354535085872,
+      162.70651508523292,
+      196.79559857466396,
+      229.35157063036038,
+      259.26127509878614,
+      285.5760155958267,
+      313.01354535085875,
+      342.7065150852329,
+      16.795598574663945,
+      49.351570630360385
+     ],
+     "ascendant_deg": 79.26127509878614,
+     "mc_deg": 342.7065150852329,
+     "armc_deg": 344.05794058532854,
+     "vertex_deg": 200.85646348795194,
+     "equatorial_ascendant_deg": 75.31412073451534,
+     "coascendant_koch_deg": 71.50432825381603,
+     "coascendant_munkasey_deg": 154.5425893131855,
+     "polar_ascendant_deg": 251.50432825381603,
+     "fell_back_to_porphyry": false
+    },
+    "M": {
+     "name": "Morinus",
+     "cusps_deg": [
+      72.70651508523292,
+      105.26548447915263,
+      136.52408114911873,
+      165.3141207345153,
+      192.93868241492237,
+      221.59875972033737,
+      252.70651508523292,
+      285.26548447915263,
+      316.52408114911873,
+      345.3141207345153,
+      12.938682414922365,
+      41.59875972033736
+     ],
+     "ascendant_deg": 79.26127509878614,
+     "mc_deg": 342.7065150852329,
+     "armc_deg": 344.05794058532854,
+     "vertex_deg": 200.85646348795194,
+     "equatorial_ascendant_deg": 75.31412073451534,
+     "coascendant_koch_deg": 71.50432825381603,
+     "coascendant_munkasey_deg": 154.5425893131855,
+     "polar_ascendant_deg": 251.50432825381603,
+     "fell_back_to_porphyry": false
+    },
+    "T": {
+     "name": "Polich/Page",
+     "cusps_deg": [
+      79.26127509878614,
+      105.51486808837281,
+      132.61736296203395,
+      162.70651508523292,
+      195.6545236639338,
+      228.60710108563828,
+      259.26127509878614,
+      285.5148680883728,
+      312.61736296203395,
+      342.7065150852329,
+      15.654523663933789,
+      48.607101085638284
+     ],
+     "ascendant_deg": 79.26127509878614,
+     "mc_deg": 342.7065150852329,
+     "armc_deg": 344.05794058532854,
+     "vertex_deg": 200.85646348795194,
+     "equatorial_ascendant_deg": 75.31412073451534,
+     "coascendant_koch_deg": 71.50432825381603,
+     "coascendant_munkasey_deg": 154.5425893131855,
+     "polar_ascendant_deg": 251.50432825381603,
+     "fell_back_to_porphyry": false
+    },
+    "O": {
+     "name": "Porphyry",
+     "cusps_deg": [
+      79.26127509878614,
+      107.07635509426841,
+      134.89143508975067,
+      162.70651508523292,
+      194.89143508975064,
+      227.07635509426842,
+      259.26127509878614,
+      287.0763550942684,
+      314.89143508975064,
+      342.7065150852329,
+      14.891435089750644,
+      47.07635509426842
+     ],
+     "ascendant_deg": 79.26127509878614,
+     "mc_deg": 342.7065150852329,
+     "armc_deg": 344.05794058532854,
+     "vertex_deg": 200.85646348795194,
+     "equatorial_ascendant_deg": 75.31412073451534,
+     "coascendant_koch_deg": 71.50432825381603,
+     "coascendant_munkasey_deg": 154.5425893131855,
+     "polar_ascendant_deg": 251.50432825381603
+    },
+    "E": {
+     "name": "equal",
+     "cusps_deg": [
+      79.26127509878614,
+      109.26127509878614,
+      139.26127509878614,
+      169.2612750987862,
+      199.26127509878614,
+      229.26127509878614,
+      259.26127509878614,
+      289.26127509878614,
+      319.26127509878614,
+      349.26127509878614,
+      19.261275098786143,
+      49.26127509878614
+     ],
+     "ascendant_deg": 79.26127509878614,
+     "mc_deg": 342.7065150852329,
+     "armc_deg": 344.05794058532854,
+     "vertex_deg": 200.85646348795194,
+     "equatorial_ascendant_deg": 75.31412073451534,
+     "coascendant_koch_deg": 71.50432825381603,
+     "coascendant_munkasey_deg": 154.5425893131855,
+     "polar_ascendant_deg": 251.50432825381603,
+     "fell_back_to_porphyry": false
+    },
+    "W": {
+     "name": "equal/ whole sign",
+     "cusps_deg": [
+      60.0,
+      90.0,
+      120.0,
+      150.0,
+      180.0,
+      210.0,
+      240.0,
+      270.0,
+      300.0,
+      330.0,
+      0.0,
+      30.0
+     ],
+     "ascendant_deg": 79.26127509878614,
+     "mc_deg": 342.7065150852329,
+     "armc_deg": 344.05794058532854,
+     "vertex_deg": 200.85646348795194,
+     "equatorial_ascendant_deg": 75.31412073451534,
+     "coascendant_koch_deg": 71.50432825381603,
+     "coascendant_munkasey_deg": 154.5425893131855,
+     "polar_ascendant_deg": 251.50432825381603,
+     "fell_back_to_porphyry": false
+    }
+   }
+  },
+  {
+   "place": "kochi",
+   "lat_deg": 9.9312,
+   "lon_deg": 76.2673,
+   "utc": "1985-07-15T18:30:00Z",
+   "jd_ut": 2446262.270839721,
+   "jd_tt": 2446262.2714720373,
+   "delta_t_s": 54.632150884576426,
+   "sidtime_hours": 14.070135370188748,
+   "obliquity": {
+    "true_obliquity_deg": 23.44283796124961,
+    "mean_obliquity_deg": 23.44116115067636,
+    "nutation_longitude_deg": -0.0030818727348450817,
+    "nutation_obliquity_deg": 0.0016768105732476084
+   },
+   "systems": {
+    "P": {
+     "name": "Placidus",
+     "cusps_deg": [
+      20.26705397178958,
+      51.944568776552856,
+      79.65103066067871,
+      105.96560154881377,
+      133.8501739783389,
+      165.49723409474495,
+      200.26705397178958,
+      231.94456877655284,
+      259.6510306606787,
+      285.96560154881377,
+      313.8501739783389,
+      345.49723409474495
+     ],
+     "ascendant_deg": 20.26705397178958,
+     "mc_deg": 285.96560154881377,
+     "armc_deg": 287.3193305528312,
+     "vertex_deg": 185.40215714596053,
+     "equatorial_ascendant_deg": 18.772431624040006,
+     "coascendant_koch_deg": 17.476666008448092,
+     "coascendant_munkasey_deg": 167.96466616890405,
+     "polar_ascendant_deg": 197.4766660084481,
+     "fell_back_to_porphyry": false
+    },
+    "K": {
+     "name": "Koch",
+     "cusps_deg": [
+      20.26705397178958,
+      51.65296206142727,
+      79.72213620073771,
+      105.96560154881377,
+      134.66343888937917,
+      166.7227218851781,
+      200.26705397178958,
+      231.65296206142727,
+      259.72213620073774,
+      285.96560154881377,
+      314.66343888937917,
+      346.7227218851781
+     ],
+     "ascendant_deg": 20.26705397178958,
+     "mc_deg": 285.96560154881377,
+     "armc_deg": 287.3193305528312,
+     "vertex_deg": 185.40215714596053,
+     "equatorial_ascendant_deg": 18.772431624040006,
+     "coascendant_koch_deg": 17.476666008448092,
+     "coascendant_munkasey_deg": 167.96466616890405,
+     "polar_ascendant_deg": 197.4766660084481,
+     "fell_back_to_porphyry": false
+    },
+    "R": {
+     "name": "Regiomontanus",
+     "cusps_deg": [
+      20.26705397178958,
+      52.62108853187756,
+      80.31109747652887,
+      105.96560154881377,
+      133.3359199810173,
+      165.2664105268824,
+      200.26705397178958,
+      232.62108853187755,
+      260.31109747652886,
+      285.96560154881377,
+      313.3359199810173,
+      345.2664105268824
+     ],
+     "ascendant_deg": 20.26705397178958,
+     "mc_deg": 285.96560154881377,
+     "armc_deg": 287.3193305528312,
+     "vertex_deg": 185.40215714596053,
+     "equatorial_ascendant_deg": 18.772431624040006,
+     "coascendant_koch_deg": 17.476666008448092,
+     "coascendant_munkasey_deg": 167.96466616890405,
+     "polar_ascendant_deg": 197.4766660084481,
+     "fell_back_to_porphyry": false
+    },
+    "C": {
+     "name": "Campanus",
+     "cusps_deg": [
+      20.26705397178958,
+      52.99451624753834,
+      80.63510203599728,
+      105.96560154881377,
+      132.9707661728687,
+      164.83724285071162,
+      200.26705397178958,
+      232.99451624753834,
+      260.6351020359973,
+      285.96560154881377,
+      312.9707661728687,
+      344.83724285071156
+     ],
+     "ascendant_deg": 20.26705397178958,
+     "mc_deg": 285.96560154881377,
+     "armc_deg": 287.3193305528312,
+     "vertex_deg": 185.40215714596053,
+     "equatorial_ascendant_deg": 18.772431624040006,
+     "coascendant_koch_deg": 17.476666008448092,
+     "coascendant_munkasey_deg": 167.96466616890405,
+     "polar_ascendant_deg": 197.4766660084481,
+     "fell_back_to_porphyry": false
+    },
+    "B": {
+     "name": "Alcabitius",
+     "cusps_deg": [
+      20.26705397178958,
+      50.68720482340702,
+      78.76618193649908,
+      105.96560154881377,
+      135.32103927203661,
+      167.2261325522145,
+      200.26705397178958,
+      230.68720482340703,
+      258.7661819364991,
+      285.96560154881377,
+      315.3210392720366,
+      347.22613255221455
+     ],
+     "ascendant_deg": 20.26705397178958,
+     "mc_deg": 285.96560154881377,
+     "armc_deg": 287.3193305528312,
+     "vertex_deg": 185.40215714596053,
+     "equatorial_ascendant_deg": 18.772431624040006,
+     "coascendant_koch_deg": 17.476666008448092,
+     "coascendant_munkasey_deg": 167.96466616890405,
+     "polar_ascendant_deg": 197.4766660084481,
+     "fell_back_to_porphyry": false
+    },
+    "M": {
+     "name": "Morinus",
+     "cusps_deg": [
+      15.965601548813797,
+      44.85387935792048,
+      76.22025751792262,
+      108.77243162404,
+      139.76769599423477,
+      168.33611710382365,
+      195.9656015488138,
+      224.85387935792048,
+      256.2202575179226,
+      288.77243162404,
+      319.76769599423477,
+      348.3361171038236
+     ],
+     "ascendant_deg": 20.26705397178958,
+     "mc_deg": 285.96560154881377,
+     "armc_deg": 287.3193305528312,
+     "vertex_deg": 185.40215714596053,
+     "equatorial_ascendant_deg": 18.772431624040006,
+     "coascendant_koch_deg": 17.476666008448092,
+     "coascendant_munkasey_deg": 167.96466616890405,
+     "polar_ascendant_deg": 197.4766660084481,
+     "fell_back_to_porphyry": false
+    },
+    "T": {
+     "name": "Polich/Page",
+     "cusps_deg": [
+      20.26705397178958,
+      51.943874701866754,
+      79.64994402581812,
+      105.96560154881377,
+      133.85059022624978,
+      165.49725572859825,
+      200.26705397178958,
+      231.94387470186675,
+      259.6499440258181,
+      285.96560154881377,
+      313.8505902262498,
+      345.4972557285982
+     ],
+     "ascendant_deg": 20.26705397178958,
+     "mc_deg": 285.96560154881377,
+     "armc_deg": 287.3193305528312,
+     "vertex_deg": 185.40215714596053,
+     "equatorial_ascendant_deg": 18.772431624040006,
+     "coascendant_koch_deg": 17.476666008448092,
+     "coascendant_munkasey_deg": 167.96466616890405,
+     "polar_ascendant_deg": 197.4766660084481,
+     "fell_back_to_porphyry": false
+    },
+    "O": {
+     "name": "Porphyry",
+     "cusps_deg": [
+      20.26705397178958,
+      48.83323649746431,
+      77.39941902313905,
+      105.96560154881377,
+      137.39941902313905,
+      168.8332364974642,
+      200.26705397178958,
+      228.83323649746433,
+      257.39941902313905,
+      285.96560154881377,
+      317.39941902313905,
+      348.83323649746427
+     ],
+     "ascendant_deg": 20.26705397178958,
+     "mc_deg": 285.96560154881377,
+     "armc_deg": 287.3193305528312,
+     "vertex_deg": 185.40215714596053,
+     "equatorial_ascendant_deg": 18.772431624040006,
+     "coascendant_koch_deg": 17.476666008448092,
+     "coascendant_munkasey_deg": 167.96466616890405,
+     "polar_ascendant_deg": 197.4766660084481
+    },
+    "E": {
+     "name": "equal",
+     "cusps_deg": [
+      20.26705397178958,
+      50.26705397178958,
+      80.26705397178958,
+      110.26705397178955,
+      140.26705397178955,
+      170.26705397178955,
+      200.26705397178958,
+      230.26705397178958,
+      260.26705397178955,
+      290.26705397178955,
+      320.26705397178955,
+      350.26705397178955
+     ],
+     "ascendant_deg": 20.26705397178958,
+     "mc_deg": 285.96560154881377,
+     "armc_deg": 287.3193305528312,
+     "vertex_deg": 185.40215714596053,
+     "equatorial_ascendant_deg": 18.772431624040006,
+     "coascendant_koch_deg": 17.476666008448092,
+     "coascendant_munkasey_deg": 167.96466616890405,
+     "polar_ascendant_deg": 197.4766660084481,
+     "fell_back_to_porphyry": false
+    },
+    "W": {
+     "name": "equal/ whole sign",
+     "cusps_deg": [
+      0.0,
+      30.0,
+      60.0,
+      90.0,
+      120.0,
+      150.0,
+      180.0,
+      210.0,
+      240.0,
+      270.0,
+      300.0,
+      330.0
+     ],
+     "ascendant_deg": 20.26705397178958,
+     "mc_deg": 285.96560154881377,
+     "armc_deg": 287.3193305528312,
+     "vertex_deg": 185.40215714596053,
+     "equatorial_ascendant_deg": 18.772431624040006,
+     "coascendant_koch_deg": 17.476666008448092,
+     "coascendant_munkasey_deg": 167.96466616890405,
+     "polar_ascendant_deg": 197.4766660084481,
+     "fell_back_to_porphyry": false
+    }
+   }
+  },
+  {
+   "place": "london",
+   "lat_deg": 51.5074,
+   "lon_deg": -0.1278,
+   "utc": "2026-06-21T12:00:00Z",
+   "jd_ut": 2461213.000003916,
+   "jd_tt": 2461213.000800741,
+   "delta_t_s": 68.84563344805582,
+   "sidtime_hours": 5.9801844409614064,
+   "obliquity": {
+    "true_obliquity_deg": 23.437976341048454,
+    "mean_obliquity_deg": 23.435835707047662,
+    "nutation_longitude_deg": 0.0021654396864996253,
+    "nutation_obliquity_deg": 0.0021406340007882885
+   },
+   "systems": {
+    "P": {
+     "name": "Placidus",
+     "cusps_deg": [
+      179.7001892836087,
+      203.54478376759002,
+      233.57949390234035,
+      269.6100344817143,
+      305.68204682869657,
+      335.78374155282944,
+      359.70018928360867,
+      23.544783767590047,
+      53.579493902340346,
+      89.6100344817143,
+      125.68204682869657,
+      155.78374155282944
+     ],
+     "ascendant_deg": 179.7001892836087,
+     "mc_deg": 89.6100344817143,
+     "armc_deg": 89.5749666144211,
+     "vertex_deg": 359.2930206793347,
+     "equatorial_ascendant_deg": 179.53674550221263,
+     "coascendant_koch_deg": 178.98154903959744,
+     "coascendant_munkasey_deg": 179.6555080560735,
+     "polar_ascendant_deg": 358.98154903959744,
+     "fell_back_to_porphyry": false
+    },
+    "K": {
+     "name": "Koch",
+     "cusps_deg": [
+      179.7001892836087,
+      208.5261310104527,
+      237.3351762403554,
+      269.6100344817143,
+      302.0544675784885,
+      330.87971672577567,
+      359.70018928360867,
+      28.526131010452673,
+      57.335176240355395,
+      89.6100344817143,
+      122.05446757848853,
+      150.87971672577564
+     ],
+     "ascendant_deg": 179.7001892836087,
+     "mc_deg": 89.6100344817143,
+     "armc_deg": 89.5749666144211,
+     "vertex_deg": 359.2930206793347,
+     "equatorial_ascendant_deg": 179.53674550221263,
+     "coascendant_koch_deg": 178.98154903959744,
+     "coascendant_munkasey_deg": 179.6555080560735,
+     "polar_ascendant_deg": 358.98154903959744,
+     "fell_back_to_porphyry": false
+    },
+    "R": {
+     "name": "Regiomontanus",
+     "cusps_deg": [
+      179.7001892836087,
+      201.84607174100287,
+      230.34611185955455,
+      269.6100344817143,
+      308.94629243299596,
+      337.52865600586057,
+      359.70018928360867,
+      21.846071741002902,
+      50.346111859554526,
+      89.6100344817143,
+      128.946292432996,
+      157.52865600586057
+     ],
+     "ascendant_deg": 179.7001892836087,
+     "mc_deg": 89.6100344817143,
+     "armc_deg": 89.5749666144211,
+     "vertex_deg": 359.2930206793347,
+     "equatorial_ascendant_deg": 179.53674550221263,
+     "coascendant_koch_deg": 178.98154903959744,
+     "coascendant_munkasey_deg": 179.6555080560735,
+     "polar_ascendant_deg": 358.98154903959744,
+     "fell_back_to_porphyry": false
+    },
+    "C": {
+     "name": "Campanus",
+     "cusps_deg": [
+      179.7001892836087,
+      212.87033455368714,
+      242.6324534031953,
+      269.6100344817143,
+      296.62476893170924,
+      326.4759907423006,
+      359.70018928360867,
+      32.870334553687144,
+      62.63245340319531,
+      89.6100344817143,
+      116.62476893170923,
+      146.47599074230058
+     ],
+     "ascendant_deg": 179.7001892836087,
+     "mc_deg": 89.6100344817143,
+     "armc_deg": 89.5749666144211,
+     "vertex_deg": 359.2930206793347,
+     "equatorial_ascendant_deg": 179.53674550221263,
+     "coascendant_koch_deg": 178.98154903959744,
+     "coascendant_munkasey_deg": 179.6555080560735,
+     "polar_ascendant_deg": 358.98154903959744,
+     "fell_back_to_porphyry": false
+    },
+    "B": {
+     "name": "Alcabitius",
+     "cusps_deg": [
+      179.7001892836087,
+      211.84246022519386,
+      241.73077377822273,
+      269.6100344817143,
+      297.55267946102566,
+      327.4807542282962,
+      359.70018928360867,
+      31.84246022519386,
+      61.730773778222726,
+      89.6100344817143,
+      117.55267946102568,
+      147.48075422829615
+     ],
+     "ascendant_deg": 179.7001892836087,
+     "mc_deg": 89.6100344817143,
+     "armc_deg": 89.5749666144211,
+     "vertex_deg": 359.2930206793347,
+     "equatorial_ascendant_deg": 179.53674550221263,
+     "coascendant_koch_deg": 178.98154903959744,
+     "coascendant_munkasey_deg": 179.6555080560735,
+     "polar_ascendant_deg": 358.98154903959744,
+     "fell_back_to_porphyry": false
+    },
+    "M": {
+     "name": "Morinus",
+     "cusps_deg": [
+      179.6100344817143,
+      207.5049760087418,
+      237.3767871318716,
+      269.5367455022126,
+      301.7382813237128,
+      331.6829752059415,
+      359.6100344817143,
+      27.504976008741778,
+      57.376787131871595,
+      89.53674550221264,
+      121.73828132371277,
+      151.6829752059415
+     ],
+     "ascendant_deg": 179.7001892836087,
+     "mc_deg": 89.6100344817143,
+     "armc_deg": 89.5749666144211,
+     "vertex_deg": 359.2930206793347,
+     "equatorial_ascendant_deg": 179.53674550221263,
+     "coascendant_koch_deg": 178.98154903959744,
+     "coascendant_munkasey_deg": 179.6555080560735,
+     "polar_ascendant_deg": 358.98154903959744,
+     "fell_back_to_porphyry": false
+    },
+    "T": {
+     "name": "Polich/Page",
+     "cusps_deg": [
+      179.7001892836087,
+      203.5686515203106,
+      233.7891249965246,
+      269.6100344817143,
+      305.46535895869147,
+      335.75781704804393,
+      359.70018928360867,
+      23.568651520310596,
+      53.789124996524606,
+      89.6100344817143,
+      125.4653589586915,
+      155.75781704804393
+     ],
+     "ascendant_deg": 179.7001892836087,
+     "mc_deg": 89.6100344817143,
+     "armc_deg": 89.5749666144211,
+     "vertex_deg": 359.2930206793347,
+     "equatorial_ascendant_deg": 179.53674550221263,
+     "coascendant_koch_deg": 178.98154903959744,
+     "coascendant_munkasey_deg": 179.6555080560735,
+     "polar_ascendant_deg": 358.98154903959744,
+     "fell_back_to_porphyry": false
+    },
+    "O": {
+     "name": "Porphyry",
+     "cusps_deg": [
+      179.7001892836087,
+      209.6701376829772,
+      239.64008608234576,
+      269.6100344817143,
+      299.64008608234576,
+      329.6701376829772,
+      359.70018928360867,
+      29.670137682977213,
+      59.64008608234576,
+      89.6100344817143,
+      119.64008608234576,
+      149.6701376829772
+     ],
+     "ascendant_deg": 179.7001892836087,
+     "mc_deg": 89.6100344817143,
+     "armc_deg": 89.5749666144211,
+     "vertex_deg": 359.2930206793347,
+     "equatorial_ascendant_deg": 179.53674550221263,
+     "coascendant_koch_deg": 178.98154903959744,
+     "coascendant_munkasey_deg": 179.6555080560735,
+     "polar_ascendant_deg": 358.98154903959744
+    },
+    "E": {
+     "name": "equal",
+     "cusps_deg": [
+      179.7001892836087,
+      209.7001892836087,
+      239.7001892836087,
+      269.70018928360867,
+      299.70018928360867,
+      329.70018928360867,
+      359.70018928360867,
+      29.700189283608665,
+      59.700189283608665,
+      89.70018928360867,
+      119.70018928360867,
+      149.70018928360867
+     ],
+     "ascendant_deg": 179.7001892836087,
+     "mc_deg": 89.6100344817143,
+     "armc_deg": 89.5749666144211,
+     "vertex_deg": 359.2930206793347,
+     "equatorial_ascendant_deg": 179.53674550221263,
+     "coascendant_koch_deg": 178.98154903959744,
+     "coascendant_munkasey_deg": 179.6555080560735,
+     "polar_ascendant_deg": 358.98154903959744,
+     "fell_back_to_porphyry": false
+    },
+    "W": {
+     "name": "equal/ whole sign",
+     "cusps_deg": [
+      150.0,
+      180.0,
+      210.0,
+      240.0,
+      270.0,
+      300.0,
+      330.0,
+      0.0,
+      30.0,
+      60.0,
+      90.0,
+      120.0
+     ],
+     "ascendant_deg": 179.7001892836087,
+     "mc_deg": 89.6100344817143,
+     "armc_deg": 89.5749666144211,
+     "vertex_deg": 359.2930206793347,
+     "equatorial_ascendant_deg": 179.53674550221263,
+     "coascendant_koch_deg": 178.98154903959744,
+     "coascendant_munkasey_deg": 179.6555080560735,
+     "polar_ascendant_deg": 358.98154903959744,
+     "fell_back_to_porphyry": false
+    }
+   }
+  },
+  {
+   "place": "london",
+   "lat_deg": 51.5074,
+   "lon_deg": -0.1278,
+   "utc": "1962-11-05T04:00:00Z",
+   "jd_ut": 2437973.6666666665,
+   "jd_tt": 2437973.66706472,
+   "delta_t_s": 34.39182136641654,
+   "sidtime_hours": 6.927180907919386,
+   "obliquity": {
+    "true_obliquity_deg": 23.44270946059523,
+    "mean_obliquity_deg": 23.444113521427436,
+    "nutation_longitude_deg": -0.004397117922813807,
+    "nutation_obliquity_deg": -0.0014040608322086756
+   },
+   "systems": {
+    "P": {
+     "name": "Placidus",
+     "cusps_deg": [
+      189.7147628997635,
+      214.71469564742196,
+      245.8905956540495,
+      282.68083981401986,
+      318.09969695516156,
+      347.05116865516345,
+      9.714762899763514,
+      34.71469564742199,
+      65.89059565404949,
+      102.68083981401985,
+      138.0996969551616,
+      167.05116865516348
+     ],
+     "ascendant_deg": 189.7147628997635,
+     "mc_deg": 102.68083981401985,
+     "armc_deg": 103.77991361879079,
+     "vertex_deg": 22.512784999016446,
+     "equatorial_ascendant_deg": 194.96617921316852,
+     "coascendant_koch_deg": 211.36390953167984,
+     "coascendant_munkasey_deg": 191.15971187715294,
+     "polar_ascendant_deg": 31.36390953167983,
+     "fell_back_to_porphyry": false
+    },
+    "K": {
+     "name": "Koch",
+     "cusps_deg": [
+      189.7147628997635,
+      218.19819227054842,
+      247.19774813897317,
+      282.68083981401986,
+      312.6340212706748,
+      341.07467936103455,
+      9.714762899763514,
+      38.19819227054842,
+      67.19774813897317,
+      102.68083981401985,
+      132.63402127067482,
+      161.07467936103458
+     ],
+     "ascendant_deg": 189.7147628997635,
+     "mc_deg": 102.68083981401985,
+     "armc_deg": 103.77991361879079,
+     "vertex_deg": 22.512784999016446,
+     "equatorial_ascendant_deg": 194.96617921316852,
+     "coascendant_koch_deg": 211.36390953167984,
+     "coascendant_munkasey_deg": 191.15971187715294,
+     "polar_ascendant_deg": 31.36390953167983,
+     "fell_back_to_porphyry": false
+    },
+    "R": {
+     "name": "Regiomontanus",
+     "cusps_deg": [
+      189.7147628997635,
+      212.27171448464975,
+      242.1927323888213,
+      282.68083981401986,
+      320.7890713072938,
+      348.00051014923736,
+      9.714762899763514,
+      32.27171448464975,
+      62.1927323888213,
+      102.68083981401985,
+      140.7890713072938,
+      168.00051014923736
+     ],
+     "ascendant_deg": 189.7147628997635,
+     "mc_deg": 102.68083981401985,
+     "armc_deg": 103.77991361879079,
+     "vertex_deg": 22.512784999016446,
+     "equatorial_ascendant_deg": 194.96617921316852,
+     "coascendant_koch_deg": 211.36390953167984,
+     "coascendant_munkasey_deg": 191.15971187715294,
+     "polar_ascendant_deg": 31.36390953167983,
+     "fell_back_to_porphyry": false
+    },
+    "C": {
+     "name": "Campanus",
+     "cusps_deg": [
+      189.7147628997635,
+      223.781175506181,
+      255.08753220000142,
+      282.68083981401986,
+      309.0524461111927,
+      337.4253135952291,
+      9.714762899763514,
+      43.781175506181,
+      75.08753220000142,
+      102.68083981401985,
+      129.05244611119272,
+      157.42531359522914
+     ],
+     "ascendant_deg": 189.7147628997635,
+     "mc_deg": 102.68083981401985,
+     "armc_deg": 103.77991361879079,
+     "vertex_deg": 22.512784999016446,
+     "equatorial_ascendant_deg": 194.96617921316852,
+     "coascendant_koch_deg": 211.36390953167984,
+     "coascendant_munkasey_deg": 191.15971187715294,
+     "polar_ascendant_deg": 31.36390953167983,
+     "fell_back_to_porphyry": false
+    },
+    "B": {
+     "name": "Alcabitius",
+     "cusps_deg": [
+      189.7147628997635,
+      222.99574009188206,
+      253.55161577170537,
+      282.68083981401986,
+      309.71960585181114,
+      338.94172450718014,
+      9.714762899763514,
+      42.995740091882055,
+      73.55161577170537,
+      102.68083981401985,
+      129.71960585181114,
+      158.94172450718014
+     ],
+     "ascendant_deg": 189.7147628997635,
+     "mc_deg": 102.68083981401985,
+     "armc_deg": 103.77991361879079,
+     "vertex_deg": 22.512784999016446,
+     "equatorial_ascendant_deg": 194.96617921316852,
+     "coascendant_koch_deg": 211.36390953167984,
+     "coascendant_munkasey_deg": 191.15971187715294,
+     "polar_ascendant_deg": 31.36390953167983,
+     "fell_back_to_porphyry": false
+    },
+    "M": {
+     "name": "Morinus",
+     "cusps_deg": [
+      192.68083981401983,
+      221.3217310014312,
+      252.4072554958533,
+      284.9661792131685,
+      316.2471123379644,
+      345.05636394246244,
+      12.680839814019805,
+      41.3217310014312,
+      72.40725549585329,
+      104.96617921316852,
+      136.24711233796435,
+      165.05636394246247
+     ],
+     "ascendant_deg": 189.7147628997635,
+     "mc_deg": 102.68083981401985,
+     "armc_deg": 103.77991361879079,
+     "vertex_deg": 22.512784999016446,
+     "equatorial_ascendant_deg": 194.96617921316852,
+     "coascendant_koch_deg": 211.36390953167984,
+     "coascendant_munkasey_deg": 191.15971187715294,
+     "polar_ascendant_deg": 31.36390953167983,
+     "fell_back_to_porphyry": false
+    },
+    "T": {
+     "name": "Polich/Page",
+     "cusps_deg": [
+      189.7147628997635,
+      214.7885305318639,
+      246.22331438576447,
+      282.68083981401986,
+      317.9883991308957,
+      347.04711633316174,
+      9.714762899763514,
+      34.7885305318639,
+      66.22331438576447,
+      102.68083981401985,
+      137.98839913089566,
+      167.04711633316174
+     ],
+     "ascendant_deg": 189.7147628997635,
+     "mc_deg": 102.68083981401985,
+     "armc_deg": 103.77991361879079,
+     "vertex_deg": 22.512784999016446,
+     "equatorial_ascendant_deg": 194.96617921316852,
+     "coascendant_koch_deg": 211.36390953167984,
+     "coascendant_munkasey_deg": 191.15971187715294,
+     "polar_ascendant_deg": 31.36390953167983,
+     "fell_back_to_porphyry": false
+    },
+    "O": {
+     "name": "Porphyry",
+     "cusps_deg": [
+      189.7147628997635,
+      220.70345520451562,
+      251.69214750926773,
+      282.68083981401986,
+      311.6921475092677,
+      340.70345520451565,
+      9.714762899763514,
+      40.70345520451565,
+      71.69214750926773,
+      102.68083981401985,
+      131.69214750926773,
+      160.70345520451562
+     ],
+     "ascendant_deg": 189.7147628997635,
+     "mc_deg": 102.68083981401985,
+     "armc_deg": 103.77991361879079,
+     "vertex_deg": 22.512784999016446,
+     "equatorial_ascendant_deg": 194.96617921316852,
+     "coascendant_koch_deg": 211.36390953167984,
+     "coascendant_munkasey_deg": 191.15971187715294,
+     "polar_ascendant_deg": 31.36390953167983
+    },
+    "E": {
+     "name": "equal",
+     "cusps_deg": [
+      189.7147628997635,
+      219.7147628997635,
+      249.7147628997635,
+      279.7147628997635,
+      309.7147628997635,
+      339.7147628997635,
+      9.714762899763514,
+      39.714762899763514,
+      69.71476289976351,
+      99.71476289976351,
+      129.7147628997635,
+      159.7147628997635
+     ],
+     "ascendant_deg": 189.7147628997635,
+     "mc_deg": 102.68083981401985,
+     "armc_deg": 103.77991361879079,
+     "vertex_deg": 22.512784999016446,
+     "equatorial_ascendant_deg": 194.96617921316852,
+     "coascendant_koch_deg": 211.36390953167984,
+     "coascendant_munkasey_deg": 191.15971187715294,
+     "polar_ascendant_deg": 31.36390953167983,
+     "fell_back_to_porphyry": false
+    },
+    "W": {
+     "name": "equal/ whole sign",
+     "cusps_deg": [
+      180.0,
+      210.0,
+      240.0,
+      270.0,
+      300.0,
+      330.0,
+      0.0,
+      30.0,
+      60.0,
+      90.0,
+      120.0,
+      150.0
+     ],
+     "ascendant_deg": 189.7147628997635,
+     "mc_deg": 102.68083981401985,
+     "armc_deg": 103.77991361879079,
+     "vertex_deg": 22.512784999016446,
+     "equatorial_ascendant_deg": 194.96617921316852,
+     "coascendant_koch_deg": 211.36390953167984,
+     "coascendant_munkasey_deg": 191.15971187715294,
+     "polar_ascendant_deg": 31.36390953167983,
+     "fell_back_to_porphyry": false
+    }
+   }
+  },
+  {
+   "place": "reykjavik",
+   "lat_deg": 64.1466,
+   "lon_deg": -21.9426,
+   "utc": "2010-12-21T15:00:00Z",
+   "jd_ut": 2455552.1249984545,
+   "jd_tt": 2455552.1257660184,
+   "delta_t_s": 66.31752265130152,
+   "sidtime_hours": 21.00510860864197,
+   "obliquity": {
+    "true_obliquity_deg": 23.43781683640217,
+    "mean_obliquity_deg": 23.43785210520385,
+    "nutation_longitude_deg": 0.00475913488619228,
+    "nutation_obliquity_deg": -3.526880167798527e-05
+   },
+   "systems": {
+    "P": {
+     "name": "Placidus",
+     "cusps_deg": [
+      86.66770441994791,
+      94.71655127883342,
+      102.24727139371679,
+      111.4045758871739,
+      125.88544272606902,
+      161.63657162518075,
+      266.6677044199479,
+      274.71655127883344,
+      282.2472713937168,
+      291.4045758871739,
+      305.885442726069,
+      341.6365716251807
+     ],
+     "ascendant_deg": 86.66770441994791,
+     "mc_deg": 291.4045758871739,
+     "armc_deg": 293.13402912962954,
+     "vertex_deg": 200.75995442035267,
+     "equatorial_ascendant_deg": 24.96945231689492,
+     "coascendant_koch_deg": 13.280415744578988,
+     "coascendant_munkasey_deg": 31.112225640477995,
+     "polar_ascendant_deg": 193.280415744579,
+     "fell_back_to_porphyry": false
+    },
+    "K": {
+     "name": "Koch",
+     "cusps_deg": [
+      86.66770441994791,
+      96.65197734455704,
+      104.45452247666668,
+      111.4045758871739,
+      180.40364203186422,
+      248.78685151395706,
+      266.6677044199479,
+      276.65197734455705,
+      284.4545224766667,
+      291.4045758871739,
+      0.4036420318642277,
+      68.78685151395707
+     ],
+     "ascendant_deg": 86.66770441994791,
+     "mc_deg": 291.4045758871739,
+     "armc_deg": 293.13402912962954,
+     "vertex_deg": 200.75995442035267,
+     "equatorial_ascendant_deg": 24.96945231689492,
+     "coascendant_koch_deg": 13.280415744578988,
+     "coascendant_munkasey_deg": 31.112225640477995,
+     "polar_ascendant_deg": 193.280415744579,
+     "fell_back_to_porphyry": false
+    },
+    "R": {
+     "name": "Regiomontanus",
+     "cusps_deg": [
+      86.66770441994791,
+      101.33847644894334,
+      106.85200210836537,
+      111.4045758871739,
+      118.34252659946537,
+      149.13735408620408,
+      266.6677044199479,
+      281.3384764489433,
+      286.85200210836535,
+      291.4045758871739,
+      298.3425265994654,
+      329.1373540862041
+     ],
+     "ascendant_deg": 86.66770441994791,
+     "mc_deg": 291.4045758871739,
+     "armc_deg": 293.13402912962954,
+     "vertex_deg": 200.75995442035267,
+     "equatorial_ascendant_deg": 24.96945231689492,
+     "coascendant_koch_deg": 13.280415744578988,
+     "coascendant_munkasey_deg": 31.112225640477995,
+     "polar_ascendant_deg": 193.280415744579,
+     "fell_back_to_porphyry": false
+    },
+    "C": {
+     "name": "Campanus",
+     "cusps_deg": [
+      86.66770441994791,
+      105.75648475067136,
+      109.20140433300664,
+      111.4045758871739,
+      114.04887506913997,
+      121.23611708248438,
+      266.6677044199479,
+      285.75648475067135,
+      289.2014043330066,
+      291.4045758871739,
+      294.04887506913997,
+      301.2361170824844
+     ],
+     "ascendant_deg": 86.66770441994791,
+     "mc_deg": 291.4045758871739,
+     "armc_deg": 293.13402912962954,
+     "vertex_deg": 200.75995442035267,
+     "equatorial_ascendant_deg": 24.96945231689492,
+     "coascendant_koch_deg": 13.280415744578988,
+     "coascendant_munkasey_deg": 31.112225640477995,
+     "polar_ascendant_deg": 193.280415744579,
+     "fell_back_to_porphyry": false
+    },
+    "B": {
+     "name": "Alcabitius",
+     "cusps_deg": [
+      86.66770441994791,
+      94.85621831541766,
+      103.08170089544451,
+      111.4045758871739,
+      162.8724865574875,
+      217.64809329173977,
+      266.6677044199479,
+      274.85621831541766,
+      283.0817008954445,
+      291.4045758871739,
+      342.87248655748755,
+      37.64809329173978
+     ],
+     "ascendant_deg": 86.66770441994791,
+     "mc_deg": 291.4045758871739,
+     "armc_deg": 293.13402912962954,
+     "vertex_deg": 200.75995442035267,
+     "equatorial_ascendant_deg": 24.96945231689492,
+     "coascendant_koch_deg": 13.280415744578988,
+     "coascendant_munkasey_deg": 31.112225640477995,
+     "polar_ascendant_deg": 193.280415744579,
+     "fell_back_to_porphyry": false
+    },
+    "M": {
+     "name": "Morinus",
+     "cusps_deg": [
+      21.404575887173884,
+      50.739880049962046,
+      82.52329230783617,
+      114.96945231689489,
+      145.47121259259302,
+      173.69576126286518,
+      201.40457588717388,
+      230.73988004996204,
+      262.5232923078362,
+      294.9694523168949,
+      325.471212592593,
+      353.6957612628652
+     ],
+     "ascendant_deg": 86.66770441994791,
+     "mc_deg": 291.4045758871739,
+     "armc_deg": 293.13402912962954,
+     "vertex_deg": 200.75995442035267,
+     "equatorial_ascendant_deg": 24.96945231689492,
+     "coascendant_koch_deg": 13.280415744578988,
+     "coascendant_munkasey_deg": 31.112225640477995,
+     "polar_ascendant_deg": 193.280415744579,
+     "fell_back_to_porphyry": false
+    },
+    "T": {
+     "name": "Polich/Page",
+     "cusps_deg": [
+      86.66770441994791,
+      89.76948736157162,
+      99.3757234139636,
+      111.4045758871739,
+      127.50386367869908,
+      161.80380135294172,
+      266.6677044199479,
+      269.76948736157163,
+      279.3757234139636,
+      291.4045758871739,
+      307.5038636786991,
+      341.8038013529418
+     ],
+     "ascendant_deg": 86.66770441994791,
+     "mc_deg": 291.4045758871739,
+     "armc_deg": 293.13402912962954,
+     "vertex_deg": 200.75995442035267,
+     "equatorial_ascendant_deg": 24.96945231689492,
+     "coascendant_koch_deg": 13.280415744578988,
+     "coascendant_munkasey_deg": 31.112225640477995,
+     "polar_ascendant_deg": 193.280415744579,
+     "fell_back_to_porphyry": false
+    },
+    "O": {
+     "name": "Porphyry",
+     "cusps_deg": [
+      86.66770441994791,
+      94.91332824235657,
+      103.15895206476524,
+      111.4045758871739,
+      163.15895206476523,
+      214.91332824235656,
+      266.6677044199479,
+      274.91332824235656,
+      283.15895206476523,
+      291.4045758871739,
+      343.15895206476523,
+      34.913328242356556
+     ],
+     "ascendant_deg": 86.66770441994791,
+     "mc_deg": 291.4045758871739,
+     "armc_deg": 293.13402912962954,
+     "vertex_deg": 200.75995442035267,
+     "equatorial_ascendant_deg": 24.96945231689492,
+     "coascendant_koch_deg": 13.280415744578988,
+     "coascendant_munkasey_deg": 31.112225640477995,
+     "polar_ascendant_deg": 193.280415744579
+    },
+    "E": {
+     "name": "equal",
+     "cusps_deg": [
+      86.66770441994791,
+      116.66770441994791,
+      146.6677044199479,
+      176.66770441994788,
+      206.66770441994788,
+      236.66770441994788,
+      266.6677044199479,
+      296.6677044199479,
+      326.6677044199479,
+      356.6677044199479,
+      26.66770441994788,
+      56.66770441994788
+     ],
+     "ascendant_deg": 86.66770441994791,
+     "mc_deg": 291.4045758871739,
+     "armc_deg": 293.13402912962954,
+     "vertex_deg": 200.75995442035267,
+     "equatorial_ascendant_deg": 24.96945231689492,
+     "coascendant_koch_deg": 13.280415744578988,
+     "coascendant_munkasey_deg": 31.112225640477995,
+     "polar_ascendant_deg": 193.280415744579,
+     "fell_back_to_porphyry": false
+    },
+    "W": {
+     "name": "equal/ whole sign",
+     "cusps_deg": [
+      60.0,
+      90.0,
+      120.0,
+      150.0,
+      180.0,
+      210.0,
+      240.0,
+      270.0,
+      300.0,
+      330.0,
+      0.0,
+      30.0
+     ],
+     "ascendant_deg": 86.66770441994791,
+     "mc_deg": 291.4045758871739,
+     "armc_deg": 293.13402912962954,
+     "vertex_deg": 200.75995442035267,
+     "equatorial_ascendant_deg": 24.96945231689492,
+     "coascendant_koch_deg": 13.280415744578988,
+     "coascendant_munkasey_deg": 31.112225640477995,
+     "polar_ascendant_deg": 193.280415744579,
+     "fell_back_to_porphyry": false
+    }
+   }
+  },
+  {
+   "place": "sydney",
+   "lat_deg": -33.8688,
+   "lon_deg": 151.2093,
+   "utc": "2026-10-15T20:00:00Z",
+   "jd_ut": 2461329.3333376003,
+   "jd_tt": 2461329.3341340744,
+   "delta_t_s": 68.81535053373385,
+   "sidtime_hours": 21.62444041679249,
+   "obliquity": {
+    "true_obliquity_deg": 23.4380102562857,
+    "mean_obliquity_deg": 23.435794269383834,
+    "nutation_longitude_deg": 0.002240696918087987,
+    "nutation_obliquity_deg": 0.002215986901867059
+   },
+   "systems": {
+    "P": {
+     "name": "Placidus",
+     "cusps_deg": [
+      217.5980018223409,
+      247.62939612443105,
+      271.1132971944834,
+      293.7069369460575,
+      319.73412558678115,
+      354.0229967753479,
+      37.598001822340905,
+      67.62939612443108,
+      91.11329719448338,
+      113.70693694605751,
+      139.73412558678118,
+      174.02299677534788
+     ],
+     "ascendant_deg": 217.5980018223409,
+     "mc_deg": 113.70693694605751,
+     "armc_deg": 115.57590625188732,
+     "vertex_deg": 16.90788086004646,
+     "equatorial_ascendant_deg": 207.54848424058522,
+     "coascendant_koch_deg": 201.5248755518566,
+     "coascendant_munkasey_deg": 241.44148781705016,
+     "polar_ascendant_deg": 21.524875551856603,
+     "fell_back_to_porphyry": false
+    },
+    "K": {
+     "name": "Koch",
+     "cusps_deg": [
+      217.5980018223409,
+      247.69375486005416,
+      272.1412460377343,
+      293.7069369460575,
+      324.16346471830553,
+      0.9960986892765504,
+      37.598001822340905,
+      67.69375486005413,
+      92.14124603773428,
+      113.70693694605751,
+      144.16346471830553,
+      180.99609868927655
+     ],
+     "ascendant_deg": 217.5980018223409,
+     "mc_deg": 113.70693694605751,
+     "armc_deg": 115.57590625188732,
+     "vertex_deg": 16.90788086004646,
+     "equatorial_ascendant_deg": 207.54848424058522,
+     "coascendant_koch_deg": 201.5248755518566,
+     "coascendant_munkasey_deg": 241.44148781705016,
+     "polar_ascendant_deg": 21.524875551856603,
+     "fell_back_to_porphyry": false
+    },
+    "R": {
+     "name": "Regiomontanus",
+     "cusps_deg": [
+      217.5980018223409,
+      250.7864984169845,
+      273.59900677523797,
+      293.7069369460575,
+      317.7944287803848,
+      353.56150227848354,
+      37.598001822340905,
+      70.7864984169845,
+      93.59900677523797,
+      113.70693694605751,
+      137.79442878038478,
+      173.56150227848354
+     ],
+     "ascendant_deg": 217.5980018223409,
+     "mc_deg": 113.70693694605751,
+     "armc_deg": 115.57590625188732,
+     "vertex_deg": 16.90788086004646,
+     "equatorial_ascendant_deg": 207.54848424058522,
+     "coascendant_koch_deg": 201.5248755518566,
+     "coascendant_munkasey_deg": 241.44148781705016,
+     "polar_ascendant_deg": 21.524875551856603,
+     "fell_back_to_porphyry": false
+    },
+    "C": {
+     "name": "Campanus",
+     "cusps_deg": [
+      217.5980018223409,
+      254.92560951849015,
+      276.5501269152738,
+      293.7069369460575,
+      313.7269074308263,
+      346.83848580398467,
+      37.598001822340905,
+      74.92560951849015,
+      96.55012691527378,
+      113.70693694605751,
+      133.72690743082632,
+      166.83848580398467
+     ],
+     "ascendant_deg": 217.5980018223409,
+     "mc_deg": 113.70693694605751,
+     "armc_deg": 115.57590625188732,
+     "vertex_deg": 16.90788086004646,
+     "equatorial_ascendant_deg": 207.54848424058522,
+     "coascendant_koch_deg": 201.5248755518566,
+     "coascendant_munkasey_deg": 241.44148781705016,
+     "polar_ascendant_deg": 21.524875551856603,
+     "fell_back_to_porphyry": false
+    },
+    "B": {
+     "name": "Alcabitius",
+     "cusps_deg": [
+      217.5980018223409,
+      244.0138680296295,
+      268.8969923856996,
+      293.7069369460575,
+      326.56956409729867,
+      2.2012123434452633,
+      37.598001822340905,
+      64.01386802962952,
+      88.8969923856996,
+      113.70693694605751,
+      146.56956409729864,
+      182.20121234344526
+     ],
+     "ascendant_deg": 217.5980018223409,
+     "mc_deg": 113.70693694605751,
+     "armc_deg": 115.57590625188732,
+     "vertex_deg": 16.90788086004646,
+     "equatorial_ascendant_deg": 207.54848424058522,
+     "coascendant_koch_deg": 201.5248755518566,
+     "coascendant_munkasey_deg": 241.44148781705016,
+     "polar_ascendant_deg": 21.524875551856603,
+     "fell_back_to_porphyry": false
+    },
+    "M": {
+     "name": "Morinus",
+     "cusps_deg": [
+      203.7069369460575,
+      233.24161584231337,
+      265.1798496558965,
+      297.54848424058525,
+      327.8388920015216,
+      355.93965853415335,
+      23.70693694605751,
+      53.241615842313365,
+      85.17984965589648,
+      117.54848424058522,
+      147.8388920015216,
+      175.93965853415335
+     ],
+     "ascendant_deg": 217.5980018223409,
+     "mc_deg": 113.70693694605751,
+     "armc_deg": 115.57590625188732,
+     "vertex_deg": 16.90788086004646,
+     "equatorial_ascendant_deg": 207.54848424058522,
+     "coascendant_koch_deg": 201.5248755518566,
+     "coascendant_munkasey_deg": 241.44148781705016,
+     "polar_ascendant_deg": 21.524875551856603,
+     "fell_back_to_porphyry": false
+    },
+    "T": {
+     "name": "Polich/Page",
+     "cusps_deg": [
+      217.5980018223409,
+      247.55826935835614,
+      271.0466646526275,
+      293.7069369460575,
+      319.7521713392863,
+      354.0230995496073,
+      37.598001822340905,
+      67.55826935835614,
+      91.0466646526275,
+      113.70693694605751,
+      139.7521713392863,
+      174.02309954960734
+     ],
+     "ascendant_deg": 217.5980018223409,
+     "mc_deg": 113.70693694605751,
+     "armc_deg": 115.57590625188732,
+     "vertex_deg": 16.90788086004646,
+     "equatorial_ascendant_deg": 207.54848424058522,
+     "coascendant_koch_deg": 201.5248755518566,
+     "coascendant_munkasey_deg": 241.44148781705016,
+     "polar_ascendant_deg": 21.524875551856603,
+     "fell_back_to_porphyry": false
+    },
+    "O": {
+     "name": "Porphyry",
+     "cusps_deg": [
+      217.5980018223409,
+      242.96764686357977,
+      268.33729190481864,
+      293.7069369460575,
+      328.33729190481864,
+      2.9676468635797733,
+      37.598001822340905,
+      62.96764686357977,
+      88.33729190481864,
+      113.70693694605751,
+      148.33729190481864,
+      182.96764686357977
+     ],
+     "ascendant_deg": 217.5980018223409,
+     "mc_deg": 113.70693694605751,
+     "armc_deg": 115.57590625188732,
+     "vertex_deg": 16.90788086004646,
+     "equatorial_ascendant_deg": 207.54848424058522,
+     "coascendant_koch_deg": 201.5248755518566,
+     "coascendant_munkasey_deg": 241.44148781705016,
+     "polar_ascendant_deg": 21.524875551856603
+    },
+    "E": {
+     "name": "equal",
+     "cusps_deg": [
+      217.5980018223409,
+      247.5980018223409,
+      277.5980018223409,
+      307.5980018223409,
+      337.59800182234085,
+      7.598001822340848,
+      37.598001822340905,
+      67.5980018223409,
+      97.5980018223409,
+      127.5980018223409,
+      157.59800182234085,
+      187.59800182234085
+     ],
+     "ascendant_deg": 217.5980018223409,
+     "mc_deg": 113.70693694605751,
+     "armc_deg": 115.57590625188732,
+     "vertex_deg": 16.90788086004646,
+     "equatorial_ascendant_deg": 207.54848424058522,
+     "coascendant_koch_deg": 201.5248755518566,
+     "coascendant_munkasey_deg": 241.44148781705016,
+     "polar_ascendant_deg": 21.524875551856603,
+     "fell_back_to_porphyry": false
+    },
+    "W": {
+     "name": "equal/ whole sign",
+     "cusps_deg": [
+      210.0,
+      240.0,
+      270.0,
+      300.0,
+      330.0,
+      0.0,
+      30.0,
+      60.0,
+      90.0,
+      120.0,
+      150.0,
+      180.0
+     ],
+     "ascendant_deg": 217.5980018223409,
+     "mc_deg": 113.70693694605751,
+     "armc_deg": 115.57590625188732,
+     "vertex_deg": 16.90788086004646,
+     "equatorial_ascendant_deg": 207.54848424058522,
+     "coascendant_koch_deg": 201.5248755518566,
+     "coascendant_munkasey_deg": 241.44148781705016,
+     "polar_ascendant_deg": 21.524875551856603,
+     "fell_back_to_porphyry": false
+    }
+   }
+  },
+  {
+   "place": "sydney",
+   "lat_deg": -33.8688,
+   "lon_deg": 151.2093,
+   "utc": "1975-02-28T09:45:00Z",
+   "jd_ut": 2442471.906256408,
+   "jd_tt": 2442471.9067845372,
+   "delta_t_s": 45.6303769443327,
+   "sidtime_hours": 20.256419491207932,
+   "obliquity": {
+    "true_obliquity_deg": 23.441608739628524,
+    "mean_obliquity_deg": 23.442511270789595,
+    "nutation_longitude_deg": 0.004657704656524985,
+    "nutation_obliquity_deg": -0.0009025311610723445
+   },
+   "systems": {
+    "P": {
+     "name": "Placidus",
+     "cusps_deg": [
+      187.75732924253936,
+      225.09957373142458,
+      251.86901334226718,
+      274.6402374252074,
+      298.1008842048483,
+      327.1641800655115,
+      7.757329242539356,
+      45.099573731424584,
+      71.86901334226718,
+      94.64023742520736,
+      118.10088420484831,
+      147.16418006551152
+     ],
+     "ascendant_deg": 187.75732924253936,
+     "mc_deg": 94.64023742520736,
+     "armc_deg": 95.05559236811905,
+     "vertex_deg": 3.3474552600777763,
+     "equatorial_ascendant_deg": 185.5077046361259,
+     "coascendant_koch_deg": 184.26766305490233,
+     "coascendant_munkasey_deg": 195.34226622579624,
+     "polar_ascendant_deg": 4.267663054902322,
+     "fell_back_to_porphyry": false
+    },
+    "K": {
+     "name": "Koch",
+     "cusps_deg": [
+      187.75732924253936,
+      222.73320221497573,
+      251.21307876464437,
+      274.6402374252074,
+      299.82723422730135,
+      331.0683194965328,
+      7.757329242539356,
+      42.733202214975734,
+      71.21307876464437,
+      94.64023742520736,
+      119.82723422730135,
+      151.06831949653284
+     ],
+     "ascendant_deg": 187.75732924253936,
+     "mc_deg": 94.64023742520736,
+     "armc_deg": 95.05559236811905,
+     "vertex_deg": 3.3474552600777763,
+     "equatorial_ascendant_deg": 185.5077046361259,
+     "coascendant_koch_deg": 184.26766305490233,
+     "coascendant_munkasey_deg": 195.34226622579624,
+     "polar_ascendant_deg": 4.267663054902322,
+     "fell_back_to_porphyry": false
+    },
+    "R": {
+     "name": "Regiomontanus",
+     "cusps_deg": [
+      187.75732924253936,
+      227.8552512948894,
+      254.3842925164545,
+      274.6402374252074,
+      295.6715611285152,
+      324.9258170483505,
+      7.757329242539356,
+      47.8552512948894,
+      74.38429251645448,
+      94.64023742520736,
+      115.6715611285152,
+      144.92581704835047
+     ],
+     "ascendant_deg": 187.75732924253936,
+     "mc_deg": 94.64023742520736,
+     "armc_deg": 95.05559236811905,
+     "vertex_deg": 3.3474552600777763,
+     "equatorial_ascendant_deg": 185.5077046361259,
+     "coascendant_koch_deg": 184.26766305490233,
+     "coascendant_munkasey_deg": 195.34226622579624,
+     "polar_ascendant_deg": 4.267663054902322,
+     "fell_back_to_porphyry": false
+    },
+    "C": {
+     "name": "Campanus",
+     "cusps_deg": [
+      187.75732924253936,
+      232.89099839236047,
+      257.54935052886077,
+      274.6402374252074,
+      292.2870978851938,
+      319.3120849916303,
+      7.757329242539356,
+      52.89099839236047,
+      77.54935052886077,
+      94.64023742520736,
+      112.28709788519382,
+      139.31208499163031
+     ],
+     "ascendant_deg": 187.75732924253936,
+     "mc_deg": 94.64023742520736,
+     "armc_deg": 95.05559236811905,
+     "vertex_deg": 3.3474552600777763,
+     "equatorial_ascendant_deg": 185.5077046361259,
+     "coascendant_koch_deg": 184.26766305490233,
+     "coascendant_munkasey_deg": 195.34226622579624,
+     "polar_ascendant_deg": 4.267663054902322,
+     "fell_back_to_porphyry": false
+    },
+    "B": {
+     "name": "Alcabitius",
+     "cusps_deg": [
+      187.75732924253936,
+      218.82016798550524,
+      247.54059605864788,
+      274.6402374252074,
+      303.4391992974411,
+      334.57312477789407,
+      7.757329242539356,
+      38.820167985505236,
+      67.5405960586479,
+      94.64023742520736,
+      123.43919929744112,
+      154.57312477789407
+     ],
+     "ascendant_deg": 187.75732924253936,
+     "mc_deg": 94.64023742520736,
+     "armc_deg": 95.05559236811905,
+     "vertex_deg": 3.3474552600777763,
+     "equatorial_ascendant_deg": 185.5077046361259,
+     "coascendant_koch_deg": 184.26766305490233,
+     "coascendant_munkasey_deg": 195.34226622579624,
+     "polar_ascendant_deg": 4.267663054902322,
+     "fell_back_to_porphyry": false
+    },
+    "M": {
+     "name": "Morinus",
+     "cusps_deg": [
+      184.64023742520735,
+      212.77117158402464,
+      243.1163978027803,
+      275.50770463612594,
+      307.4078344450491,
+      336.89020863318945,
+      4.640237425207374,
+      32.771171584024614,
+      63.116397802780284,
+      95.50770463612594,
+      127.40783444504909,
+      156.89020863318942
+     ],
+     "ascendant_deg": 187.75732924253936,
+     "mc_deg": 94.64023742520736,
+     "armc_deg": 95.05559236811905,
+     "vertex_deg": 3.3474552600777763,
+     "equatorial_ascendant_deg": 185.5077046361259,
+     "coascendant_koch_deg": 184.26766305490233,
+     "coascendant_munkasey_deg": 195.34226622579624,
+     "polar_ascendant_deg": 4.267663054902322,
+     "fell_back_to_porphyry": false
+    },
+    "T": {
+     "name": "Polich/Page",
+     "cusps_deg": [
+      187.75732924253936,
+      225.06699456219707,
+      251.8105238168642,
+      274.6402374252074,
+      298.1476244624105,
+      327.1787853873294,
+      7.757329242539356,
+      45.06699456219707,
+      71.81052381686419,
+      94.64023742520736,
+      118.14762446241049,
+      147.17878538732938
+     ],
+     "ascendant_deg": 187.75732924253936,
+     "mc_deg": 94.64023742520736,
+     "armc_deg": 95.05559236811905,
+     "vertex_deg": 3.3474552600777763,
+     "equatorial_ascendant_deg": 185.5077046361259,
+     "coascendant_koch_deg": 184.26766305490233,
+     "coascendant_munkasey_deg": 195.34226622579624,
+     "polar_ascendant_deg": 4.267663054902322,
+     "fell_back_to_porphyry": false
+    },
+    "O": {
+     "name": "Porphyry",
+     "cusps_deg": [
+      187.75732924253936,
+      216.71829863676203,
+      245.6792680309847,
+      274.6402374252074,
+      305.6792680309847,
+      336.71829863676203,
+      7.757329242539356,
+      36.71829863676203,
+      65.6792680309847,
+      94.64023742520736,
+      125.67926803098469,
+      156.71829863676203
+     ],
+     "ascendant_deg": 187.75732924253936,
+     "mc_deg": 94.64023742520736,
+     "armc_deg": 95.05559236811905,
+     "vertex_deg": 3.3474552600777763,
+     "equatorial_ascendant_deg": 185.5077046361259,
+     "coascendant_koch_deg": 184.26766305490233,
+     "coascendant_munkasey_deg": 195.34226622579624,
+     "polar_ascendant_deg": 4.267663054902322
+    },
+    "E": {
+     "name": "equal",
+     "cusps_deg": [
+      187.75732924253936,
+      217.75732924253936,
+      247.75732924253936,
+      277.75732924253936,
+      307.75732924253936,
+      337.7573292425393,
+      7.757329242539356,
+      37.757329242539356,
+      67.75732924253936,
+      97.75732924253936,
+      127.75732924253936,
+      157.7573292425393
+     ],
+     "ascendant_deg": 187.75732924253936,
+     "mc_deg": 94.64023742520736,
+     "armc_deg": 95.05559236811905,
+     "vertex_deg": 3.3474552600777763,
+     "equatorial_ascendant_deg": 185.5077046361259,
+     "coascendant_koch_deg": 184.26766305490233,
+     "coascendant_munkasey_deg": 195.34226622579624,
+     "polar_ascendant_deg": 4.267663054902322,
+     "fell_back_to_porphyry": false
+    },
+    "W": {
+     "name": "equal/ whole sign",
+     "cusps_deg": [
+      180.0,
+      210.0,
+      240.0,
+      270.0,
+      300.0,
+      330.0,
+      0.0,
+      30.0,
+      60.0,
+      90.0,
+      120.0,
+      150.0
+     ],
+     "ascendant_deg": 187.75732924253936,
+     "mc_deg": 94.64023742520736,
+     "armc_deg": 95.05559236811905,
+     "vertex_deg": 3.3474552600777763,
+     "equatorial_ascendant_deg": 185.5077046361259,
+     "coascendant_koch_deg": 184.26766305490233,
+     "coascendant_munkasey_deg": 195.34226622579624,
+     "polar_ascendant_deg": 4.267663054902322,
+     "fell_back_to_porphyry": false
+    }
+   }
+  },
+  {
+   "place": "quito",
+   "lat_deg": -0.1807,
+   "lon_deg": -78.4678,
+   "utc": "2020-06-21T00:00:00Z",
+   "jd_ut": 2459021.4999978035,
+   "jd_tt": 2459021.500800741,
+   "delta_t_s": 69.37377892053604,
+   "sidtime_hours": 17.976530953099697,
+   "obliquity": {
+    "true_obliquity_deg": 23.436494587838066,
+    "mean_obliquity_deg": 23.436616315642617,
+    "nutation_longitude_deg": -0.004796188726639314,
+    "nutation_obliquity_deg": -0.00012172780454920586
+   },
+   "systems": {
+    "P": {
+     "name": "Placidus",
+     "cusps_deg": [
+      280.3492420274231,
+      308.79099857813935,
+      339.6310360176249,
+      12.15672505866064,
+      43.65325728678215,
+      72.68179108914387,
+      100.34924202742309,
+      128.79099857813935,
+      159.63103601762487,
+      192.1567250586606,
+      223.65325728678215,
+      252.68179108914387
+     ],
+     "ascendant_deg": 280.3492420274231,
+     "mc_deg": 192.1567250586606,
+     "armc_deg": 191.18016429649543,
+     "vertex_deg": 180.44632563497706,
+     "equatorial_ascendant_deg": 280.2783296111429,
+     "coascendant_koch_deg": 280.20738534991176,
+     "coascendant_munkasey_deg": 359.55493175771215,
+     "polar_ascendant_deg": 100.20738534991179,
+     "fell_back_to_porphyry": false
+    },
+    "K": {
+     "name": "Koch",
+     "cusps_deg": [
+      280.3492420274231,
+      308.8153144191678,
+      339.65982557524296,
+      12.15672505866064,
+      43.67774056892881,
+      72.7001368092258,
+      100.34924202742309,
+      128.8153144191678,
+      159.65982557524296,
+      192.1567250586606,
+      223.67774056892878,
+      252.7001368092258
+     ],
+     "ascendant_deg": 280.3492420274231,
+     "mc_deg": 192.1567250586606,
+     "armc_deg": 191.18016429649543,
+     "vertex_deg": 180.44632563497706,
+     "equatorial_ascendant_deg": 280.2783296111429,
+     "coascendant_koch_deg": 280.20738534991176,
+     "coascendant_munkasey_deg": 359.55493175771215,
+     "polar_ascendant_deg": 100.20738534991179,
+     "fell_back_to_porphyry": false
+    },
+    "R": {
+     "name": "Regiomontanus",
+     "cusps_deg": [
+      280.3492420274231,
+      308.80256203277895,
+      339.6355335146137,
+      12.15672505866064,
+      43.6619274105625,
+      72.69558804993477,
+      100.34924202742309,
+      128.80256203277895,
+      159.6355335146137,
+      192.1567250586606,
+      223.66192741056247,
+      252.69558804993477
+     ],
+     "ascendant_deg": 280.3492420274231,
+     "mc_deg": 192.1567250586606,
+     "armc_deg": 191.18016429649543,
+     "vertex_deg": 180.44632563497706,
+     "equatorial_ascendant_deg": 280.2783296111429,
+     "coascendant_koch_deg": 280.20738534991176,
+     "coascendant_munkasey_deg": 359.55493175771215,
+     "polar_ascendant_deg": 100.20738534991179,
+     "fell_back_to_porphyry": false
+    },
+    "C": {
+     "name": "Campanus",
+     "cusps_deg": [
+      280.3492420274231,
+      308.80268343595003,
+      339.63566528285077,
+      12.15672505866064,
+      43.66180290965002,
+      72.69547284262057,
+      100.34924202742309,
+      128.80268343595003,
+      159.63566528285082,
+      192.1567250586606,
+      223.66180290965002,
+      252.6954728426206
+     ],
+     "ascendant_deg": 280.3492420274231,
+     "mc_deg": 192.1567250586606,
+     "armc_deg": 191.18016429649543,
+     "vertex_deg": 180.44632563497706,
+     "equatorial_ascendant_deg": 280.2783296111429,
+     "coascendant_koch_deg": 280.20738534991176,
+     "coascendant_munkasey_deg": 359.55493175771215,
+     "polar_ascendant_deg": 100.20738534991179,
+     "fell_back_to_porphyry": false
+    },
+    "B": {
+     "name": "Alcabitius",
+     "cusps_deg": [
+      280.3492420274231,
+      308.802758148422,
+      339.64941188913866,
+      12.15672505866064,
+      43.661732959106814,
+      72.68344463905811,
+      100.34924202742309,
+      128.80275814842201,
+      159.64941188913872,
+      192.1567250586606,
+      223.6617329591068,
+      252.6834446390581
+     ],
+     "ascendant_deg": 280.3492420274231,
+     "mc_deg": 192.1567250586606,
+     "armc_deg": 191.18016429649543,
+     "vertex_deg": 180.44632563497706,
+     "equatorial_ascendant_deg": 280.2783296111429,
+     "coascendant_koch_deg": 280.20738534991176,
+     "coascendant_munkasey_deg": 359.55493175771215,
+     "polar_ascendant_deg": 100.20738534991179,
+     "fell_back_to_porphyry": false
+    },
+    "M": {
+     "name": "Morinus",
+     "cusps_deg": [
+      282.1567250586606,
+      313.6359252803814,
+      342.635668309664,
+      10.278329611142908,
+      38.752302465683215,
+      69.62203531413411,
+      102.15672505866058,
+      133.6359252803814,
+      162.63566830966397,
+      190.27832961114294,
+      218.7523024656832,
+      249.6220353141341
+     ],
+     "ascendant_deg": 280.3492420274231,
+     "mc_deg": 192.1567250586606,
+     "armc_deg": 191.18016429649543,
+     "vertex_deg": 180.44632563497706,
+     "equatorial_ascendant_deg": 280.2783296111429,
+     "coascendant_koch_deg": 280.20738534991176,
+     "coascendant_munkasey_deg": 359.55493175771215,
+     "polar_ascendant_deg": 100.20738534991179,
+     "fell_back_to_porphyry": false
+    },
+    "T": {
+     "name": "Polich/Page",
+     "cusps_deg": [
+      280.3492420274231,
+      308.7909985743522,
+      339.6310360173659,
+      12.15672505866064,
+      43.65325728469941,
+      72.68179108198615,
+      100.34924202742309,
+      128.79099857435222,
+      159.6310360173659,
+      192.1567250586606,
+      223.6532572846994,
+      252.68179108198615
+     ],
+     "ascendant_deg": 280.3492420274231,
+     "mc_deg": 192.1567250586606,
+     "armc_deg": 191.18016429649543,
+     "vertex_deg": 180.44632563497706,
+     "equatorial_ascendant_deg": 280.2783296111429,
+     "coascendant_koch_deg": 280.20738534991176,
+     "coascendant_munkasey_deg": 359.55493175771215,
+     "polar_ascendant_deg": 100.20738534991179,
+     "fell_back_to_porphyry": false
+    },
+    "O": {
+     "name": "Porphyry",
+     "cusps_deg": [
+      280.3492420274231,
+      310.9517363711689,
+      341.55423071491475,
+      12.15672505866064,
+      41.55423071491475,
+      70.95173637116892,
+      100.34924202742309,
+      130.95173637116892,
+      161.55423071491475,
+      192.1567250586606,
+      221.55423071491478,
+      250.95173637116892
+     ],
+     "ascendant_deg": 280.3492420274231,
+     "mc_deg": 192.1567250586606,
+     "armc_deg": 191.18016429649543,
+     "vertex_deg": 180.44632563497706,
+     "equatorial_ascendant_deg": 280.2783296111429,
+     "coascendant_koch_deg": 280.20738534991176,
+     "coascendant_munkasey_deg": 359.55493175771215,
+     "polar_ascendant_deg": 100.20738534991179
+    },
+    "E": {
+     "name": "equal",
+     "cusps_deg": [
+      280.3492420274231,
+      310.3492420274231,
+      340.3492420274231,
+      10.349242027423088,
+      40.34924202742309,
+      70.34924202742309,
+      100.34924202742309,
+      130.3492420274231,
+      160.3492420274231,
+      190.3492420274231,
+      220.3492420274231,
+      250.3492420274231
+     ],
+     "ascendant_deg": 280.3492420274231,
+     "mc_deg": 192.1567250586606,
+     "armc_deg": 191.18016429649543,
+     "vertex_deg": 180.44632563497706,
+     "equatorial_ascendant_deg": 280.2783296111429,
+     "coascendant_koch_deg": 280.20738534991176,
+     "coascendant_munkasey_deg": 359.55493175771215,
+     "polar_ascendant_deg": 100.20738534991179,
+     "fell_back_to_porphyry": false
+    },
+    "W": {
+     "name": "equal/ whole sign",
+     "cusps_deg": [
+      270.0,
+      300.0,
+      330.0,
+      0.0,
+      30.0,
+      60.0,
+      90.0,
+      120.0,
+      150.0,
+      180.0,
+      210.0,
+      240.0
+     ],
+     "ascendant_deg": 280.3492420274231,
+     "mc_deg": 192.1567250586606,
+     "armc_deg": 191.18016429649543,
+     "vertex_deg": 180.44632563497706,
+     "equatorial_ascendant_deg": 280.2783296111429,
+     "coascendant_koch_deg": 280.20738534991176,
+     "coascendant_munkasey_deg": 359.55493175771215,
+     "polar_ascendant_deg": 100.20738534991179,
+     "fell_back_to_porphyry": false
+    }
+   }
+  },
+  {
+   "place": "christchurch",
+   "lat_deg": -43.5321,
+   "lon_deg": 172.6362,
+   "utc": "2033-09-23T06:00:00Z",
+   "jd_ut": 2463863.75,
+   "jd_tt": 2463863.7508123666,
+   "delta_t_s": 70.18849115858863,
+   "sidtime_hours": 6.160338727100256,
+   "obliquity": {
+    "true_obliquity_deg": 23.432555774803287,
+    "mean_obliquity_deg": 23.4348915182257,
+    "nutation_longitude_deg": 0.0010321824822708795,
+    "nutation_obliquity_deg": -0.002335743422414821
+   },
+   "systems": {
+    "P": {
+     "name": "Placidus",
+     "cusps_deg": [
+      356.1721576800171,
+      21.33634344841437,
+      51.430000504981294,
+      85.44843734591484,
+      119.69696598665337,
+      150.30372114078108,
+      176.1721576800171,
+      201.33634344841437,
+      231.4300005049813,
+      265.44843734591484,
+      299.69696598665337,
+      330.3037211407811
+     ],
+     "ascendant_deg": 356.1721576800171,
+     "mc_deg": 265.44843734591484,
+     "armc_deg": 265.04128090650386,
+     "vertex_deg": 170.1047272100724,
+     "equatorial_ascendant_deg": 354.5981000480401,
+     "coascendant_koch_deg": 350.84406112579734,
+     "coascendant_munkasey_deg": 356.28898104034494,
+     "polar_ascendant_deg": 170.84406112579737,
+     "fell_back_to_porphyry": false
+    },
+    "K": {
+     "name": "Koch",
+     "cusps_deg": [
+      356.1721576800171,
+      25.481574265575546,
+      54.560221167715895,
+      85.44843734591484,
+      117.74475941522911,
+      146.9423182224965,
+      176.1721576800171,
+      205.48157426557555,
+      234.5602211677159,
+      265.44843734591484,
+      297.7447594152291,
+      326.9423182224965
+     ],
+     "ascendant_deg": 356.1721576800171,
+     "mc_deg": 265.44843734591484,
+     "armc_deg": 265.04128090650386,
+     "vertex_deg": 170.1047272100724,
+     "equatorial_ascendant_deg": 354.5981000480401,
+     "coascendant_koch_deg": 350.84406112579734,
+     "coascendant_munkasey_deg": 356.28898104034494,
+     "polar_ascendant_deg": 170.84406112579737,
+     "fell_back_to_porphyry": false
+    },
+    "R": {
+     "name": "Regiomontanus",
+     "cusps_deg": [
+      356.1721576800171,
+      20.070886877125808,
+      48.91278842522225,
+      85.44843734591484,
+      122.50336111847486,
+      152.0336144855603,
+      176.1721576800171,
+      200.07088687712582,
+      228.91278842522226,
+      265.44843734591484,
+      302.50336111847486,
+      332.03361448556024
+     ],
+     "ascendant_deg": 356.1721576800171,
+     "mc_deg": 265.44843734591484,
+     "armc_deg": 265.04128090650386,
+     "vertex_deg": 170.1047272100724,
+     "equatorial_ascendant_deg": 354.5981000480401,
+     "coascendant_koch_deg": 350.84406112579734,
+     "coascendant_munkasey_deg": 356.28898104034494,
+     "polar_ascendant_deg": 170.84406112579737,
+     "fell_back_to_porphyry": false
+    },
+    "C": {
+     "name": "Campanus",
+     "cusps_deg": [
+      356.1721576800171,
+      27.551349330063847,
+      57.14384490888424,
+      85.44843734591484,
+      114.08193554024785,
+      144.39605192285273,
+      176.1721576800171,
+      207.55134933006386,
+      237.14384490888423,
+      265.44843734591484,
+      294.08193554024785,
+      324.39605192285273
+     ],
+     "ascendant_deg": 356.1721576800171,
+     "mc_deg": 265.44843734591484,
+     "armc_deg": 265.04128090650386,
+     "vertex_deg": 170.1047272100724,
+     "equatorial_ascendant_deg": 354.5981000480401,
+     "coascendant_koch_deg": 350.84406112579734,
+     "coascendant_munkasey_deg": 356.28898104034494,
+     "polar_ascendant_deg": 170.84406112579737,
+     "fell_back_to_porphyry": false
+    },
+    "B": {
+     "name": "Alcabitius",
+     "cusps_deg": [
+      356.1721576800171,
+      27.999229936325985,
+      57.786882930228,
+      85.44843734591484,
+      113.65797594832492,
+      143.6843087506756,
+      176.1721576800171,
+      207.99922993632597,
+      237.786882930228,
+      265.44843734591484,
+      293.6579759483249,
+      323.6843087506756
+     ],
+     "ascendant_deg": 356.1721576800171,
+     "mc_deg": 265.44843734591484,
+     "armc_deg": 265.04128090650386,
+     "vertex_deg": 170.1047272100724,
+     "equatorial_ascendant_deg": 354.5981000480401,
+     "coascendant_koch_deg": 350.84406112579734,
+     "coascendant_munkasey_deg": 356.28898104034494,
+     "polar_ascendant_deg": 170.84406112579737,
+     "fell_back_to_porphyry": false
+    },
+    "M": {
+     "name": "Morinus",
+     "cusps_deg": [
+      355.44843734591484,
+      23.202674241979274,
+      52.69349276443932,
+      84.59810004804018,
+      116.98417452023466,
+      147.32080620593234,
+      175.44843734591484,
+      203.20267424197928,
+      232.69349276443933,
+      264.5981000480402,
+      296.98417452023466,
+      327.32080620593234
+     ],
+     "ascendant_deg": 356.1721576800171,
+     "mc_deg": 265.44843734591484,
+     "armc_deg": 265.04128090650386,
+     "vertex_deg": 170.1047272100724,
+     "equatorial_ascendant_deg": 354.5981000480401,
+     "coascendant_koch_deg": 350.84406112579734,
+     "coascendant_munkasey_deg": 356.28898104034494,
+     "polar_ascendant_deg": 170.84406112579737,
+     "fell_back_to_porphyry": false
+    },
+    "T": {
+     "name": "Polich/Page",
+     "cusps_deg": [
+      356.1721576800171,
+      21.344478804167924,
+      51.51060646679362,
+      85.44843734591484,
+      119.58157358289861,
+      150.28251749265047,
+      176.1721576800171,
+      201.34447880416792,
+      231.5106064667936,
+      265.44843734591484,
+      299.5815735828986,
+      330.28251749265047
+     ],
+     "ascendant_deg": 356.1721576800171,
+     "mc_deg": 265.44843734591484,
+     "armc_deg": 265.04128090650386,
+     "vertex_deg": 170.1047272100724,
+     "equatorial_ascendant_deg": 354.5981000480401,
+     "coascendant_koch_deg": 350.84406112579734,
+     "coascendant_munkasey_deg": 356.28898104034494,
+     "polar_ascendant_deg": 170.84406112579737,
+     "fell_back_to_porphyry": false
+    },
+    "O": {
+     "name": "Porphyry",
+     "cusps_deg": [
+      356.1721576800171,
+      25.930917568649704,
+      55.689677457282244,
+      85.44843734591484,
+      115.68967745728224,
+      145.9309175686497,
+      176.1721576800171,
+      205.9309175686497,
+      235.68967745728224,
+      265.44843734591484,
+      295.68967745728224,
+      325.9309175686497
+     ],
+     "ascendant_deg": 356.1721576800171,
+     "mc_deg": 265.44843734591484,
+     "armc_deg": 265.04128090650386,
+     "vertex_deg": 170.1047272100724,
+     "equatorial_ascendant_deg": 354.5981000480401,
+     "coascendant_koch_deg": 350.84406112579734,
+     "coascendant_munkasey_deg": 356.28898104034494,
+     "polar_ascendant_deg": 170.84406112579737
+    },
+    "E": {
+     "name": "equal",
+     "cusps_deg": [
+      356.1721576800171,
+      26.172157680017108,
+      56.17215768001711,
+      86.17215768001711,
+      116.17215768001711,
+      146.1721576800171,
+      176.1721576800171,
+      206.1721576800171,
+      236.1721576800171,
+      266.1721576800171,
+      296.1721576800171,
+      326.1721576800171
+     ],
+     "ascendant_deg": 356.1721576800171,
+     "mc_deg": 265.44843734591484,
+     "armc_deg": 265.04128090650386,
+     "vertex_deg": 170.1047272100724,
+     "equatorial_ascendant_deg": 354.5981000480401,
+     "coascendant_koch_deg": 350.84406112579734,
+     "coascendant_munkasey_deg": 356.28898104034494,
+     "polar_ascendant_deg": 170.84406112579737,
+     "fell_back_to_porphyry": false
+    },
+    "W": {
+     "name": "equal/ whole sign",
+     "cusps_deg": [
+      330.0,
+      0.0,
+      30.0,
+      60.0,
+      90.0,
+      120.0,
+      150.0,
+      180.0,
+      210.0,
+      240.0,
+      270.0,
+      300.0
+     ],
+     "ascendant_deg": 356.1721576800171,
+     "mc_deg": 265.44843734591484,
+     "armc_deg": 265.04128090650386,
+     "vertex_deg": 170.1047272100724,
+     "equatorial_ascendant_deg": 354.5981000480401,
+     "coascendant_koch_deg": 350.84406112579734,
+     "coascendant_munkasey_deg": 356.28898104034494,
+     "polar_ascendant_deg": 170.84406112579737,
+     "fell_back_to_porphyry": false
+    }
+   }
+  },
+  {
+   "place": "new_york",
+   "lat_deg": 40.7128,
+   "lon_deg": -74.006,
+   "utc": "1999-12-31T23:59:59Z",
+   "jd_ut": 2451544.4999925406,
+   "jd_tt": 2451544.5007312964,
+   "delta_t_s": 63.82849999378776,
+   "sidtime_hours": 6.664103741866518,
+   "obliquity": {
+    "true_obliquity_deg": 23.437679625633102,
+    "mean_obliquity_deg": 23.439279622006293,
+    "nutation_longitude_deg": -0.0038697382801004794,
+    "nutation_obliquity_deg": -0.001599996373192663
+   },
+   "systems": {
+    "P": {
+     "name": "Placidus",
+     "cusps_deg": [
+      129.60035422903138,
+      150.48876713423445,
+      176.08010983668936,
+      207.9480249014547,
+      244.36566925296358,
+      279.4760115141059,
+      309.6003542290314,
+      330.4887671342344,
+      356.08010983668936,
+      27.948024901454698,
+      64.36566925296357,
+      99.47601151410588
+     ],
+     "ascendant_deg": 129.60035422903138,
+     "mc_deg": 27.948024901454698,
+     "armc_deg": 25.95555612799778,
+     "vertex_deg": 266.1405885986113,
+     "equatorial_ascendant_deg": 114.06604989678779,
+     "coascendant_koch_deg": 93.77256727301108,
+     "coascendant_munkasey_deg": 133.85121543084165,
+     "polar_ascendant_deg": 273.7725672730111,
+     "fell_back_to_porphyry": false
+    },
+    "K": {
+     "name": "Koch",
+     "cusps_deg": [
+      129.60035422903138,
+      155.54182097236858,
+      181.76242756508074,
+      207.9480249014547,
+      251.76311615785366,
+      282.9227454905937,
+      309.6003542290314,
+      335.54182097236855,
+      1.7624275650807704,
+      27.948024901454698,
+      71.76311615785366,
+      102.92274549059368
+     ],
+     "ascendant_deg": 129.60035422903138,
+     "mc_deg": 27.948024901454698,
+     "armc_deg": 25.95555612799778,
+     "vertex_deg": 266.1405885986113,
+     "equatorial_ascendant_deg": 114.06604989678779,
+     "coascendant_koch_deg": 93.77256727301108,
+     "coascendant_munkasey_deg": 133.85121543084165,
+     "polar_ascendant_deg": 273.7725672730111,
+     "fell_back_to_porphyry": false
+    },
+    "R": {
+     "name": "Regiomontanus",
+     "cusps_deg": [
+      129.60035422903138,
+      152.0845513756752,
+      176.2853241399137,
+      207.9480249014547,
+      247.5419551322953,
+      283.07710426215374,
+      309.6003542290314,
+      332.08455137567523,
+      356.2853241399137,
+      27.948024901454698,
+      67.5419551322953,
+      103.07710426215371
+     ],
+     "ascendant_deg": 129.60035422903138,
+     "mc_deg": 27.948024901454698,
+     "armc_deg": 25.95555612799778,
+     "vertex_deg": 266.1405885986113,
+     "equatorial_ascendant_deg": 114.06604989678779,
+     "coascendant_koch_deg": 93.77256727301108,
+     "coascendant_munkasey_deg": 133.85121543084165,
+     "polar_ascendant_deg": 273.7725672730111,
+     "fell_back_to_porphyry": false
+    },
+    "C": {
+     "name": "Campanus",
+     "cusps_deg": [
+      129.60035422903138,
+      157.59332588001666,
+      182.19969174789247,
+      207.9480249014547,
+      238.99910324786217,
+      275.3529208690227,
+      309.6003542290314,
+      337.59332588001666,
+      2.199691747892473,
+      27.948024901454698,
+      58.99910324786217,
+      95.35292086902271
+     ],
+     "ascendant_deg": 129.60035422903138,
+     "mc_deg": 27.948024901454698,
+     "armc_deg": 25.95555612799778,
+     "vertex_deg": 266.1405885986113,
+     "equatorial_ascendant_deg": 114.06604989678779,
+     "coascendant_koch_deg": 93.77256727301108,
+     "coascendant_munkasey_deg": 133.85121543084165,
+     "polar_ascendant_deg": 273.7725672730111,
+     "fell_back_to_porphyry": false
+    },
+    "B": {
+     "name": "Alcabitius",
+     "cusps_deg": [
+      129.60035422903138,
+      154.83223854416545,
+      181.43551589822403,
+      207.9480249014547,
+      243.3453339309832,
+      276.1320312998648,
+      309.6003542290314,
+      334.8322385441654,
+      1.4355158982240255,
+      27.948024901454698,
+      63.34533393098321,
+      96.13203129986485
+     ],
+     "ascendant_deg": 129.60035422903138,
+     "mc_deg": 27.948024901454698,
+     "armc_deg": 25.95555612799778,
+     "vertex_deg": 266.1405885986113,
+     "equatorial_ascendant_deg": 114.06604989678779,
+     "coascendant_koch_deg": 93.77256727301108,
+     "coascendant_munkasey_deg": 133.85121543084165,
+     "polar_ascendant_deg": 273.7725672730111,
+     "fell_back_to_porphyry": false
+    },
+    "M": {
+     "name": "Morinus",
+     "cusps_deg": [
+      117.9480249014547,
+      148.205514197155,
+      176.28827548970145,
+      204.0660498967878,
+      233.6322437772668,
+      265.5932282331401,
+      297.9480249014547,
+      328.205514197155,
+      356.28827548970145,
+      24.066049896787806,
+      53.63224377726682,
+      85.59322823314012
+     ],
+     "ascendant_deg": 129.60035422903138,
+     "mc_deg": 27.948024901454698,
+     "armc_deg": 25.95555612799778,
+     "vertex_deg": 266.1405885986113,
+     "equatorial_ascendant_deg": 114.06604989678779,
+     "coascendant_koch_deg": 93.77256727301108,
+     "coascendant_munkasey_deg": 133.85121543084165,
+     "polar_ascendant_deg": 273.7725672730111,
+     "fell_back_to_porphyry": false
+    },
+    "T": {
+     "name": "Polich/Page",
+     "cusps_deg": [
+      129.60035422903138,
+      150.47304929998896,
+      176.08007467033556,
+      207.9480249014547,
+      244.25655923602773,
+      279.3069180609786,
+      309.6003542290314,
+      330.47304929998893,
+      356.08007467033553,
+      27.948024901454698,
+      64.25655923602774,
+      99.30691806097859
+     ],
+     "ascendant_deg": 129.60035422903138,
+     "mc_deg": 27.948024901454698,
+     "armc_deg": 25.95555612799778,
+     "vertex_deg": 266.1405885986113,
+     "equatorial_ascendant_deg": 114.06604989678779,
+     "coascendant_koch_deg": 93.77256727301108,
+     "coascendant_munkasey_deg": 133.85121543084165,
+     "polar_ascendant_deg": 273.7725672730111,
+     "fell_back_to_porphyry": false
+    },
+    "O": {
+     "name": "Porphyry",
+     "cusps_deg": [
+      129.60035422903138,
+      155.7162444531725,
+      181.8321346773136,
+      207.9480249014547,
+      241.8321346773136,
+      275.7162444531725,
+      309.6003542290314,
+      335.7162444531725,
+      1.8321346773136042,
+      27.948024901454698,
+      61.83213467731359,
+      95.7162444531725
+     ],
+     "ascendant_deg": 129.60035422903138,
+     "mc_deg": 27.948024901454698,
+     "armc_deg": 25.95555612799778,
+     "vertex_deg": 266.1405885986113,
+     "equatorial_ascendant_deg": 114.06604989678779,
+     "coascendant_koch_deg": 93.77256727301108,
+     "coascendant_munkasey_deg": 133.85121543084165,
+     "polar_ascendant_deg": 273.7725672730111
+    },
+    "E": {
+     "name": "equal",
+     "cusps_deg": [
+      129.60035422903138,
+      159.60035422903138,
+      189.60035422903138,
+      219.60035422903138,
+      249.60035422903138,
+      279.6003542290314,
+      309.6003542290314,
+      339.6003542290314,
+      9.600354229031382,
+      39.60035422903138,
+      69.60035422903138,
+      99.60035422903138
+     ],
+     "ascendant_deg": 129.60035422903138,
+     "mc_deg": 27.948024901454698,
+     "armc_deg": 25.95555612799778,
+     "vertex_deg": 266.1405885986113,
+     "equatorial_ascendant_deg": 114.06604989678779,
+     "coascendant_koch_deg": 93.77256727301108,
+     "coascendant_munkasey_deg": 133.85121543084165,
+     "polar_ascendant_deg": 273.7725672730111,
+     "fell_back_to_porphyry": false
+    },
+    "W": {
+     "name": "equal/ whole sign",
+     "cusps_deg": [
+      120.0,
+      150.0,
+      180.0,
+      210.0,
+      240.0,
+      270.0,
+      300.0,
+      330.0,
+      0.0,
+      30.0,
+      60.0,
+      90.0
+     ],
+     "ascendant_deg": 129.60035422903138,
+     "mc_deg": 27.948024901454698,
+     "armc_deg": 25.95555612799778,
+     "vertex_deg": 266.1405885986113,
+     "equatorial_ascendant_deg": 114.06604989678779,
+     "coascendant_koch_deg": 93.77256727301108,
+     "coascendant_munkasey_deg": 133.85121543084165,
+     "polar_ascendant_deg": 273.7725672730111,
+     "fell_back_to_porphyry": false
+    }
+   }
+  },
+  {
+   "place": "tromso",
+   "lat_deg": 69.6492,
+   "lon_deg": 18.9553,
+   "utc": "2026-06-21T12:00:00Z",
+   "jd_ut": 2461213.000003916,
+   "jd_tt": 2461213.000800741,
+   "delta_t_s": 68.84563344805582,
+   "sidtime_hours": 5.9801844409614064,
+   "obliquity": {
+    "true_obliquity_deg": 23.437976341048454,
+    "mean_obliquity_deg": 23.435835707047662,
+    "nutation_longitude_deg": 0.0021654396864996253,
+    "nutation_obliquity_deg": 0.0021406340007882885
+   },
+   "systems": {
+    "P": {
+     "name": "Placidus",
+     "error": "swisseph.houses_ex: error",
+     "undefined_at_latitude": true
+    },
+    "K": {
+     "name": "Koch",
+     "error": "swisseph.houses_ex: error",
+     "undefined_at_latitude": true
+    },
+    "R": {
+     "name": "Regiomontanus",
+     "cusps_deg": [
+      189.35650799529822,
+      206.06755428720393,
+      233.83743339009175,
+      287.2132633033058,
+      331.6655262060673,
+      353.8603588739252,
+      9.356507995298216,
+      26.06755428720396,
+      53.837433390091746,
+      107.21326330330575,
+      151.66552620606726,
+      173.8603588739252
+     ],
+     "ascendant_deg": 189.35650799529822,
+     "mc_deg": 107.21326330330575,
+     "armc_deg": 108.6580666144211,
+     "vertex_deg": 23.905972307989384,
+     "equatorial_ascendant_deg": 200.2052125444113,
+     "coascendant_koch_deg": 302.40666256597694,
+     "coascendant_munkasey_deg": 197.46521521061433,
+     "polar_ascendant_deg": 122.40666256597696,
+     "fell_back_to_porphyry": false
+    },
+    "C": {
+     "name": "Campanus",
+     "cusps_deg": [
+      189.35650799529822,
+      232.46372585173364,
+      264.5612423577291,
+      287.2132633033058,
+      307.73032301850037,
+      332.71240422115284,
+      9.356507995298216,
+      52.46372585173367,
+      84.5612423577291,
+      107.21326330330575,
+      127.73032301850034,
+      152.71240422115287
+     ],
+     "ascendant_deg": 189.35650799529822,
+     "mc_deg": 107.21326330330575,
+     "armc_deg": 108.6580666144211,
+     "vertex_deg": 23.905972307989384,
+     "equatorial_ascendant_deg": 200.2052125444113,
+     "coascendant_koch_deg": 302.40666256597694,
+     "coascendant_munkasey_deg": 197.46521521061433,
+     "polar_ascendant_deg": 122.40666256597696,
+     "fell_back_to_porphyry": false
+    },
+    "B": {
+     "name": "Alcabitius",
+     "cusps_deg": [
+      189.35650799529822,
+      224.41159165655944,
+      256.47030716281523,
+      287.2132633033058,
+      312.8393499169865,
+      340.4458293324011,
+      9.356507995298216,
+      44.41159165655944,
+      76.47030716281523,
+      107.21326330330575,
+      132.83934991698655,
+      160.44582933240108
+     ],
+     "ascendant_deg": 189.35650799529822,
+     "mc_deg": 107.21326330330575,
+     "armc_deg": 108.6580666144211,
+     "vertex_deg": 23.905972307989384,
+     "equatorial_ascendant_deg": 200.2052125444113,
+     "coascendant_koch_deg": 302.40666256597694,
+     "coascendant_munkasey_deg": 197.46521521061433,
+     "polar_ascendant_deg": 122.40666256597696,
+     "fell_back_to_porphyry": false
+    },
+    "M": {
+     "name": "Morinus",
+     "cusps_deg": [
+      197.21326330330572,
+      226.20076059236746,
+      257.66808063173005,
+      290.2052125444113,
+      321.0886218181911,
+      349.57246054435643,
+      17.213263303305723,
+      46.20076059236749,
+      77.66808063173005,
+      110.2052125444113,
+      141.08862181819106,
+      169.5724605443564
+     ],
+     "ascendant_deg": 189.35650799529822,
+     "mc_deg": 107.21326330330575,
+     "armc_deg": 108.6580666144211,
+     "vertex_deg": 23.905972307989384,
+     "equatorial_ascendant_deg": 200.2052125444113,
+     "coascendant_koch_deg": 302.40666256597694,
+     "coascendant_munkasey_deg": 197.46521521061433,
+     "polar_ascendant_deg": 122.40666256597696,
+     "fell_back_to_porphyry": false
+    },
+    "T": {
+     "name": "Polich/Page",
+     "cusps_deg": [
+      189.35650799529822,
+      209.6123370458226,
+      241.2507641210755,
+      287.2132633033058,
+      327.73455377427126,
+      353.05485311718155,
+      9.356507995298216,
+      29.612337045822642,
+      61.25076412107546,
+      107.21326330330575,
+      147.7345537742713,
+      173.05485311718155
+     ],
+     "ascendant_deg": 189.35650799529822,
+     "mc_deg": 107.21326330330575,
+     "armc_deg": 108.6580666144211,
+     "vertex_deg": 23.905972307989384,
+     "equatorial_ascendant_deg": 200.2052125444113,
+     "coascendant_koch_deg": 302.40666256597694,
+     "coascendant_munkasey_deg": 197.46521521061433,
+     "polar_ascendant_deg": 122.40666256597696,
+     "fell_back_to_porphyry": false
+    },
+    "O": {
+     "name": "Porphyry",
+     "cusps_deg": [
+      189.35650799529822,
+      221.97542643130072,
+      254.59434486730322,
+      287.2132633033058,
+      314.5943448673032,
+      341.9754264313007,
+      9.356507995298216,
+      41.97542643130072,
+      74.59434486730322,
+      107.21326330330575,
+      134.59434486730325,
+      161.97542643130072
+     ],
+     "ascendant_deg": 189.35650799529822,
+     "mc_deg": 107.21326330330575,
+     "armc_deg": 108.6580666144211,
+     "vertex_deg": 23.905972307989384,
+     "equatorial_ascendant_deg": 200.2052125444113,
+     "coascendant_koch_deg": 302.40666256597694,
+     "coascendant_munkasey_deg": 197.46521521061433,
+     "polar_ascendant_deg": 122.40666256597696
+    },
+    "E": {
+     "name": "equal",
+     "cusps_deg": [
+      189.35650799529822,
+      219.35650799529822,
+      249.35650799529822,
+      279.3565079952982,
+      309.3565079952982,
+      339.3565079952982,
+      9.356507995298216,
+      39.356507995298216,
+      69.35650799529822,
+      99.35650799529822,
+      129.35650799529822,
+      159.35650799529822
+     ],
+     "ascendant_deg": 189.35650799529822,
+     "mc_deg": 107.21326330330575,
+     "armc_deg": 108.6580666144211,
+     "vertex_deg": 23.905972307989384,
+     "equatorial_ascendant_deg": 200.2052125444113,
+     "coascendant_koch_deg": 302.40666256597694,
+     "coascendant_munkasey_deg": 197.46521521061433,
+     "polar_ascendant_deg": 122.40666256597696,
+     "fell_back_to_porphyry": false
+    },
+    "W": {
+     "name": "equal/ whole sign",
+     "cusps_deg": [
+      180.0,
+      210.0,
+      240.0,
+      270.0,
+      300.0,
+      330.0,
+      0.0,
+      30.0,
+      60.0,
+      90.0,
+      120.0,
+      150.0
+     ],
+     "ascendant_deg": 189.35650799529822,
+     "mc_deg": 107.21326330330575,
+     "armc_deg": 108.6580666144211,
+     "vertex_deg": 23.905972307989384,
+     "equatorial_ascendant_deg": 200.2052125444113,
+     "coascendant_koch_deg": 302.40666256597694,
+     "coascendant_munkasey_deg": 197.46521521061433,
+     "polar_ascendant_deg": 122.40666256597696,
+     "fell_back_to_porphyry": false
+    }
+   }
+  }
+ ],
+ "positions": [
+  {
+   "utc": "1950-01-01T00:00:00Z",
+   "jd_ut": 2433282.5,
+   "jd_tt": 2433282.50033486,
+   "delta_t_s": 28.931385497710192,
+   "bodies": {
+    "sun": {
+     "ipl": 0,
+     "lon_deg": 280.0048577536758,
+     "lat_deg": -2.3821684325851703e-05,
+     "dist_au": 0.9832436737800441,
+     "lon_speed_deg_per_day": 1.0190645139428158,
+     "lat_speed_deg_per_day": 3.241715660842331e-05,
+     "dist_speed_au_per_day": -1.418599640190148e-05,
+     "retflags": 260
+    },
+    "moon": {
+     "ipl": 1,
+     "lon_deg": 61.415329837323384,
+     "lat_deg": 3.781838136886492,
+     "dist_au": 0.002671326219376949,
+     "lon_speed_deg_per_day": 12.19892754289957,
+     "lat_speed_deg_per_day": 0.7014015105044753,
+     "dist_speed_au_per_day": -2.016877808386152e-05,
+     "retflags": 260
+    },
+    "mercury": {
+     "ipl": 2,
+     "lon_deg": 299.44728278410844,
+     "lat_deg": -1.2243795722088535,
+     "dist_au": 1.0029828822329616,
+     "lon_speed_deg_per_day": 1.0712596735038684,
+     "lat_speed_deg_per_day": 0.17221315837326315,
+     "dist_speed_au_per_day": -0.02551036611475411,
+     "retflags": 260
+    },
+    "venus": {
+     "ipl": 3,
+     "lon_deg": 316.9794795200761,
+     "lat_deg": 0.630776969914451,
+     "dist_au": 0.3746834714501583,
+     "lon_speed_deg_per_day": 0.35410363201258055,
+     "lat_speed_deg_per_day": 0.19330135377798638,
+     "dist_speed_au_per_day": -0.006072825099575004,
+     "retflags": 260
+    },
+    "mars": {
+     "ipl": 4,
+     "lon_deg": 182.21120165797197,
+     "lat_deg": 2.5124937245628285,
+     "dist_au": 1.215517327783332,
+     "lon_speed_deg_per_day": 0.36783943090318866,
+     "lat_speed_deg_per_day": 0.017984351927538493,
+     "dist_speed_au_per_day": -0.00970899419234719,
+     "retflags": 260
+    },
+    "jupiter": {
+     "ipl": 5,
+     "lon_deg": 306.5053478882852,
+     "lat_deg": -0.5840096313338106,
+     "dist_au": 5.935369033645042,
+     "lon_speed_deg_per_day": 0.22519244770962285,
+     "lat_speed_deg_per_day": -0.0007320968101241972,
+     "dist_speed_au_per_day": 0.006805104010361361,
+     "retflags": 260
+    },
+    "saturn": {
+     "ipl": 6,
+     "lon_deg": 169.43743795034038,
+     "lat_deg": 2.0061951711429495,
+     "dist_au": 8.962481189405592,
+     "lon_speed_deg_per_day": -0.0033407531585526763,
+     "lat_speed_deg_per_day": 0.004538047321265933,
+     "dist_speed_au_per_day": -0.015519085234718325,
+     "retflags": 260
+    },
+    "uranus": {
+     "ipl": 7,
+     "lon_deg": 92.68272596868748,
+     "lat_deg": 0.26892457488996846,
+     "dist_au": 17.969858587397823,
+     "lon_speed_deg_per_day": -0.04258588744281174,
+     "lat_speed_deg_per_day": 0.00012060652377957875,
+     "dist_speed_au_per_day": 0.0020105463461579046,
+     "retflags": 260
+    },
+    "neptune": {
+     "ipl": 8,
+     "lon_deg": 197.26600762869916,
+     "lat_deg": 1.5916679809742122,
+     "dist_au": 30.40371658830428,
+     "lon_speed_deg_per_day": 0.010170132975816188,
+     "lat_speed_deg_per_day": 0.000985298076962319,
+     "dist_speed_au_per_day": -0.017227043355066533,
+     "retflags": 260
+    },
+    "pluto": {
+     "ipl": 9,
+     "lon_deg": 137.79852899272734,
+     "lat_deg": 8.201542594629007,
+     "dist_au": 35.55107502522854,
+     "lon_speed_deg_per_day": -0.01784415532816493,
+     "lat_speed_deg_per_day": 0.003678151862037397,
+     "dist_speed_au_per_day": -0.011296290361378239,
+     "retflags": 260
+    },
+    "mean_node": {
+     "ipl": 10,
+     "lon_deg": 12.112295179422183,
+     "lat_deg": 0.0,
+     "dist_au": 0.00256955528979999,
+     "lon_speed_deg_per_day": -0.052924651780413286,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": 0.0,
+     "retflags": 260
+    },
+    "true_node": {
+     "ipl": 11,
+     "lon_deg": 12.557198669191303,
+     "lat_deg": 0.0,
+     "dist_au": 0.002703927662241911,
+     "lon_speed_deg_per_day": -0.15040917838320714,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": 1.4370425247482495e-06,
+     "retflags": 260
+    }
+   },
+   "sidereal_lahiri": {
+    "sidmode": 1,
+    "flags": 65796,
+    "get_ayanamsa_ex_ut_deg": 23.157807576198916,
+    "bodies": {
+     "sun": {
+      "lon_deg": 256.84705017747655,
+      "lat_deg": -2.3821684330166428e-05,
+      "dist_au": 0.9832436737800437,
+      "lon_speed_deg_per_day": 1.0189971129523872,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 23.157807576199275
+     },
+     "moon": {
+      "lon_deg": 38.25752226112407,
+      "lat_deg": 3.781838136886497,
+      "dist_au": 0.0026713262193769484,
+      "lon_speed_deg_per_day": 12.19885985365055,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 23.15780757619931
+     }
+    }
+   }
+  },
+  {
+   "utc": "1962-11-05T04:00:00Z",
+   "jd_ut": 2437973.6666666665,
+   "jd_tt": 2437973.66706472,
+   "delta_t_s": 34.39182136641654,
+   "bodies": {
+    "sun": {
+     "ipl": 0,
+     "lon_deg": 222.2590031094766,
+     "lat_deg": 2.2376456866283954e-06,
+     "dist_au": 0.9914697883368108,
+     "lon_speed_deg_per_day": 1.0025276473375995,
+     "lat_speed_deg_per_day": -4.225202587690105e-05,
+     "dist_speed_au_per_day": -0.00025570244743187384,
+     "retflags": 260
+    },
+    "moon": {
+     "ipl": 1,
+     "lon_deg": 310.56600295252287,
+     "lat_deg": -0.634955935993278,
+     "dist_au": 0.002525864229299178,
+     "lon_speed_deg_per_day": 13.508090261108563,
+     "lat_speed_deg_per_day": -1.1823759679150763,
+     "dist_speed_au_per_day": -3.289130273166854e-05,
+     "retflags": 260
+    },
+    "mercury": {
+     "ipl": 2,
+     "lon_deg": 210.11236664972063,
+     "lat_deg": 1.6177897307126714,
+     "dist_au": 1.2906654471385017,
+     "lon_speed_deg_per_day": 1.6193523097090798,
+     "lat_speed_deg_per_day": -0.08857787260899369,
+     "dist_speed_au_per_day": 0.01579715563930096,
+     "retflags": 260
+    },
+    "venus": {
+     "ipl": 3,
+     "lon_deg": 234.31902605190425,
+     "lat_deg": -5.529045083012661,
+     "dist_au": 0.2780822926984308,
+     "lon_speed_deg_per_day": -0.4888821397637481,
+     "lat_speed_deg_per_day": 0.14656302570798532,
+     "dist_speed_au_per_day": -0.0023924788288220236,
+     "retflags": 260
+    },
+    "mars": {
+     "ipl": 4,
+     "lon_deg": 131.79229061096058,
+     "lat_deg": 1.6509524499592152,
+     "dist_au": 1.2201737752769257,
+     "lon_speed_deg_per_day": 0.436781278908349,
+     "lat_speed_deg_per_day": 0.02674964747283931,
+     "dist_speed_au_per_day": -0.008024363010989221,
+     "retflags": 260
+    },
+    "jupiter": {
+     "ipl": 5,
+     "lon_deg": 332.89447880706354,
+     "lat_deg": -1.28185352280912,
+     "dist_au": 4.545109713619844,
+     "lon_speed_deg_per_day": 0.022982427726861834,
+     "lat_speed_deg_per_day": 0.0031671164352982226,
+     "dist_speed_au_per_day": 0.014675025539292313,
+     "retflags": 260
+    },
+    "saturn": {
+     "ipl": 6,
+     "lon_deg": 305.34516602940977,
+     "lat_deg": -0.7507336804555752,
+     "dist_au": 10.00937393639597,
+     "lon_speed_deg_per_day": 0.04370394150875668,
+     "lat_speed_deg_per_day": -2.6390335724029824e-05,
+     "dist_speed_au_per_day": 0.016465479035567915,
+     "retflags": 260
+    },
+    "uranus": {
+     "ipl": 7,
+     "lon_deg": 154.7059846468794,
+     "lat_deg": 0.7412908533222448,
+     "dist_au": 18.676286246072447,
+     "lon_speed_deg_per_day": 0.03230545948850397,
+     "lat_speed_deg_per_day": 0.0006678159784666147,
+     "dist_speed_au_per_day": -0.015969878126463673,
+     "retflags": 260
+    },
+    "neptune": {
+     "ipl": 8,
+     "lon_deg": 223.18554062463963,
+     "lat_deg": 1.71626485890003,
+     "dist_au": 31.317266132078323,
+     "lon_speed_deg_per_day": 0.03747179094189481,
+     "lat_speed_deg_per_day": 1.0731331915339326e-05,
+     "dist_speed_au_per_day": 7.132430508719848e-05,
+     "retflags": 260
+    },
+    "pluto": {
+     "ipl": 9,
+     "lon_deg": 161.74950781408666,
+     "lat_deg": 13.185316987777306,
+     "dist_au": 33.62996914079197,
+     "lon_speed_deg_per_day": 0.020133219595411613,
+     "lat_speed_deg_per_day": 0.006882312760413787,
+     "dist_speed_au_per_day": -0.01534016198159583,
+     "retflags": 260
+    },
+    "mean_node": {
+     "ipl": 10,
+     "lon_deg": 123.6936370073081,
+     "lat_deg": 0.0,
+     "dist_au": 0.0025695552897999907,
+     "lon_speed_deg_per_day": -0.052946622124548974,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": 0.0,
+     "retflags": 260
+    },
+    "true_node": {
+     "ipl": 11,
+     "lon_deg": 123.35090024651139,
+     "lat_deg": 0.0,
+     "dist_au": 0.002522005675437476,
+     "lon_speed_deg_per_day": 0.0015318616487210897,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": -1.481736535610941e-06,
+     "retflags": 260
+    }
+   },
+   "sidereal_lahiri": {
+    "sidmode": 1,
+    "flags": 65796,
+    "get_ayanamsa_ex_ut_deg": 23.333705948177148,
+    "bodies": {
+     "sun": {
+      "lon_deg": 198.92529716129943,
+      "lat_deg": 2.2376456830214445e-06,
+      "dist_au": 0.9914697883368109,
+      "lon_speed_deg_per_day": 1.0024822290023188,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 23.33370594817717
+     },
+     "moon": {
+      "lon_deg": 287.23229700434575,
+      "lat_deg": -0.6349559359932788,
+      "dist_au": 0.002525864229299178,
+      "lon_speed_deg_per_day": 13.508044786703655,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 23.333705948177112
+     }
+    }
+   }
+  },
+  {
+   "utc": "1975-02-28T09:45:00Z",
+   "jd_ut": 2442471.906256408,
+   "jd_tt": 2442471.9067845372,
+   "delta_t_s": 45.6303769443327,
+   "bodies": {
+    "sun": {
+     "ipl": 0,
+     "lon_deg": 339.177974671954,
+     "lat_deg": -0.00019750541148521737,
+     "dist_au": 0.9905613737394484,
+     "lon_speed_deg_per_day": 1.0039457371289737,
+     "lat_speed_deg_per_day": 2.3433910322804778e-05,
+     "dist_speed_au_per_day": 0.00024317781230483399,
+     "retflags": 260
+    },
+    "moon": {
+     "ipl": 1,
+     "lon_deg": 192.5495915429288,
+     "lat_deg": -3.97871617515829,
+     "dist_au": 0.002422964250767478,
+     "lon_speed_deg_per_day": 14.812015667720823,
+     "lat_speed_deg_per_day": 0.7874641578802638,
+     "dist_speed_au_per_day": 3.009903892790567e-05,
+     "retflags": 260
+    },
+    "mercury": {
+     "ipl": 2,
+     "lon_deg": 312.79025179312106,
+     "lat_deg": 0.6055159981303105,
+     "dist_au": 0.8540125947014143,
+     "lon_speed_deg_per_day": 0.6842775091945295,
+     "lat_speed_deg_per_day": -0.19738343981873815,
+     "dist_speed_au_per_day": 0.015671816656420954,
+     "retflags": 260
+    },
+    "venus": {
+     "ipl": 3,
+     "lon_deg": 6.156777508384807,
+     "lat_deg": -0.8945901256918086,
+     "dist_au": 1.4488691159165834,
+     "lon_speed_deg_per_day": 1.2307954780151296,
+     "lat_speed_deg_per_day": 0.037591056356682216,
+     "dist_speed_au_per_day": -0.004572512609781723,
+     "retflags": 260
+    },
+    "mars": {
+     "ipl": 4,
+     "lon_deg": 297.8782331345276,
+     "lat_deg": -0.8767278515963879,
+     "dist_au": 2.0406051847211337,
+     "lon_speed_deg_per_day": 0.7506204036327869,
+     "lat_speed_deg_per_day": -0.011594951796898779,
+     "dist_speed_au_per_day": -0.005769560795818783,
+     "retflags": 260
+    },
+    "jupiter": {
+     "ipl": 5,
+     "lon_deg": 355.60006980312335,
+     "lat_deg": -1.0757887186305535,
+     "dist_au": 5.902539181384546,
+     "lon_speed_deg_per_day": 0.23751481642655428,
+     "lat_speed_deg_per_day": 0.0005199167541030895,
+     "dist_speed_au_per_day": 0.004608189074160583,
+     "retflags": 260
+    },
+    "saturn": {
+     "ipl": 6,
+     "lon_deg": 102.12425985120335,
+     "lat_deg": -0.28127900144851536,
+     "dist_au": 8.455811685166076,
+     "lon_speed_deg_per_day": -0.025757106418351473,
+     "lat_speed_deg_per_day": 0.0021764336306387246,
+     "dist_speed_au_per_day": 0.013969041888053169,
+     "retflags": 260
+    },
+    "uranus": {
+     "ipl": 7,
+     "lon_deg": 212.2488306538544,
+     "lat_deg": 0.5563724432801557,
+     "dist_au": 17.855740259522676,
+     "lon_speed_deg_per_day": -0.019725827255467853,
+     "lat_speed_deg_per_day": 0.0003102588755167494,
+     "dist_speed_au_per_day": -0.013747273156530447,
+     "retflags": 260
+    },
+    "neptune": {
+     "ipl": 8,
+     "lon_deg": 251.74021559091875,
+     "lat_deg": 1.558123945906131,
+     "dist_au": 30.32996163130629,
+     "lon_speed_deg_per_day": 0.007902341637274117,
+     "lat_speed_deg_per_day": 0.0008061119166057586,
+     "dist_speed_au_per_day": -0.01723476315044225,
+     "retflags": 260
+    },
+    "pluto": {
+     "ipl": 9,
+     "lon_deg": 188.65201388588278,
+     "lat_deg": 17.25065465226454,
+     "dist_au": 29.96720945974941,
+     "lon_speed_deg_per_day": -0.023162757391076146,
+     "lat_speed_deg_per_day": 0.005370489890063642,
+     "dist_speed_au_per_day": -0.008751570389147043,
+     "retflags": 260
+    },
+    "mean_node": {
+     "ipl": 10,
+     "lon_deg": 245.50379866663673,
+     "lat_deg": 0.0,
+     "dist_au": 0.0025695552897999903,
+     "lon_speed_deg_per_day": -0.05298756337232016,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": 0.0,
+     "retflags": 260
+    },
+    "true_node": {
+     "ipl": 11,
+     "lon_deg": 245.02331271579823,
+     "lat_deg": 0.0,
+     "dist_au": 0.002573981011134719,
+     "lon_speed_deg_per_day": -0.13984321296266128,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": -7.49405151383532e-07,
+     "retflags": 260
+    }
+   },
+   "sidereal_lahiri": {
+    "sidmode": 1,
+    "flags": 65796,
+    "get_ayanamsa_ex_ut_deg": 23.514771184906834,
+    "bodies": {
+     "sun": {
+      "lon_deg": 315.6632034870472,
+      "lat_deg": -0.0001975054114851443,
+      "dist_au": 0.9905613737394484,
+      "lon_speed_deg_per_day": 1.0039412225182556,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 23.514771184906806
+     },
+     "moon": {
+      "lon_deg": 169.03482035802196,
+      "lat_deg": -3.978716175158289,
+      "dist_au": 0.0024229642507674785,
+      "lon_speed_deg_per_day": 14.81201066988752,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 23.514771184906834
+     }
+    }
+   }
+  },
+  {
+   "utc": "1985-07-15T18:30:00Z",
+   "jd_ut": 2446262.270839721,
+   "jd_tt": 2446262.2714720373,
+   "delta_t_s": 54.632150884576426,
+   "bodies": {
+    "sun": {
+     "ipl": 0,
+     "lon_deg": 113.19350453017964,
+     "lat_deg": 8.598527413383283e-05,
+     "dist_au": 1.0164496610405096,
+     "lon_speed_deg_per_day": 0.9543064748420556,
+     "lat_speed_deg_per_day": 2.7970680077505695e-05,
+     "dist_speed_au_per_day": -5.0183328640355446e-05,
+     "retflags": 260
+    },
+    "moon": {
+     "ipl": 1,
+     "lon_deg": 86.6409673123057,
+     "lat_deg": 3.296608108178227,
+     "dist_au": 0.0026340285070076347,
+     "lon_speed_deg_per_day": 12.551741329358931,
+     "lat_speed_deg_per_day": 0.8405684415199183,
+     "dist_speed_au_per_day": -2.5732059029449145e-05,
+     "retflags": 260
+    },
+    "mercury": {
+     "ipl": 2,
+     "lon_deg": 139.65238435900272,
+     "lat_deg": -0.8760834756928991,
+     "dist_au": 0.8198763817114855,
+     "lon_speed_deg_per_day": 0.8596314855002956,
+     "lat_speed_deg_per_day": -0.20733682895125397,
+     "dist_speed_au_per_day": -0.01484109175565711,
+     "retflags": 260
+    },
+    "venus": {
+     "ipl": 3,
+     "lon_deg": 70.2499308661756,
+     "lat_deg": -2.5179188910780246,
+     "dist_au": 0.9612445528395652,
+     "lon_speed_deg_per_day": 1.1002715577137159,
+     "lat_speed_deg_per_day": 0.03390570349325553,
+     "dist_speed_au_per_day": 0.007601872316345397,
+     "retflags": 260
+    },
+    "mars": {
+     "ipl": 4,
+     "lon_deg": 113.9069776979602,
+     "lat_deg": 1.0305843386903115,
+     "dist_au": 2.6401646051877616,
+     "lon_speed_deg_per_day": 0.6501371284059191,
+     "lat_speed_deg_per_day": 0.004079023660972656,
+     "dist_speed_au_per_day": 0.0009251743497420412,
+     "retflags": 260
+    },
+    "jupiter": {
+     "ipl": 5,
+     "lon_deg": 314.4762512816679,
+     "lat_deg": -0.8038907870407689,
+     "dist_au": 4.127161929263172,
+     "lon_speed_deg_per_day": -0.11212192187926283,
+     "lat_speed_deg_per_day": -0.0031976863522853853,
+     "dist_speed_au_per_day": -0.0058701914872924,
+     "retflags": 260
+    },
+    "saturn": {
+     "ipl": 6,
+     "lon_deg": 231.54936216823705,
+     "lat_deg": 2.1966352259248922,
+     "dist_au": 9.42253117403382,
+     "lon_speed_deg_per_day": -0.016198593517378332,
+     "lat_speed_deg_per_day": -0.00413529646679278,
+     "dist_speed_au_per_day": 0.014590104579682276,
+     "retflags": 260
+    },
+    "uranus": {
+     "ipl": 7,
+     "lon_deg": 254.54792927643166,
+     "lat_deg": -0.03472951146149943,
+     "dist_au": 18.283291630150657,
+     "lon_speed_deg_per_day": -0.028916430583871625,
+     "lat_speed_deg_per_day": -0.0001478146014157531,
+     "dist_speed_au_per_day": 0.010638414484300916,
+     "retflags": 260
+    },
+    "neptune": {
+     "ipl": 8,
+     "lon_deg": 271.66462698984583,
+     "lat_deg": 1.1572476500884628,
+     "dist_au": 29.305385802428006,
+     "lon_speed_deg_per_day": -0.024601944446055277,
+     "lat_speed_deg_per_day": -0.00039114037729708377,
+     "dist_speed_au_per_day": 0.006153350023414372,
+     "retflags": 260
+    },
+    "pluto": {
+     "ipl": 9,
+     "lon_deg": 211.92768623274316,
+     "lat_deg": 16.767557068378192,
+     "dist_au": 29.59515910511535,
+     "lon_speed_deg_per_day": 0.0019775568752927746,
+     "lat_speed_deg_per_day": -0.009752394211196712,
+     "dist_speed_au_per_day": 0.015766597124366104,
+     "retflags": 260
+    },
+    "mean_node": {
+     "ipl": 10,
+     "lon_deg": 44.78188861245779,
+     "lat_deg": 0.0,
+     "dist_au": 0.0025695552897999903,
+     "lon_speed_deg_per_day": -0.052915890979678706,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": 0.0,
+     "retflags": 260
+    },
+    "true_node": {
+     "ipl": 11,
+     "lon_deg": 46.03570204228292,
+     "lat_deg": 0.0,
+     "dist_au": 0.002696690820779798,
+     "lon_speed_deg_per_day": -0.11978354613598781,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": -1.1557000227627363e-06,
+     "retflags": 260
+    }
+   },
+   "sidereal_lahiri": {
+    "sidmode": 1,
+    "flags": 65796,
+    "get_ayanamsa_ex_ut_deg": 23.651980470053694,
+    "bodies": {
+     "sun": {
+      "lon_deg": 89.54152406012594,
+      "lat_deg": 8.598527413287505e-05,
+      "dist_au": 1.0164496610405096,
+      "lon_speed_deg_per_day": 0.9542303224507556,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 23.6519804700537
+     },
+     "moon": {
+      "lon_deg": 62.988986842252025,
+      "lat_deg": 3.2966081081782246,
+      "dist_au": 0.0026340285070076343,
+      "lon_speed_deg_per_day": 12.551665183713432,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 23.65198047005368
+     }
+    }
+   }
+  },
+  {
+   "utc": "1999-12-31T23:59:59Z",
+   "jd_ut": 2451544.4999925406,
+   "jd_tt": 2451544.5007312964,
+   "delta_t_s": 63.82849999378776,
+   "bodies": {
+    "sun": {
+     "ipl": 0,
+     "lon_deg": 279.8592080259786,
+     "lat_deg": 0.00023467662723614338,
+     "dist_au": 0.9833318781018173,
+     "lon_speed_deg_per_day": 1.0193807070525247,
+     "lat_speed_deg_per_day": 2.798066660027904e-06,
+     "dist_speed_au_per_day": -9.57071609381459e-06,
+     "retflags": 260
+    },
+    "moon": {
+     "ipl": 1,
+     "lon_deg": 217.29327626815694,
+     "lat_deg": 5.231384866471505,
+     "dist_au": 0.002679818329926885,
+     "lon_speed_deg_per_day": 12.102998022800247,
+     "lat_speed_deg_per_day": -0.06364330602704535,
+     "dist_speed_au_per_day": 2.2052693146645805e-05,
+     "retflags": 260
+    },
+    "mercury": {
+     "ipl": 2,
+     "lon_deg": 271.11179326312094,
+     "lat_deg": -0.9456857041658208,
+     "dist_au": 1.4130923581999273,
+     "lon_speed_deg_per_day": 1.5536306667516895,
+     "lat_speed_deg_per_day": -0.09904592342678577,
+     "dist_speed_au_per_day": 0.0048937922550250776,
+     "retflags": 260
+    },
+    "venus": {
+     "ipl": 3,
+     "lon_deg": 240.96141189646895,
+     "lat_deg": 2.0802278510268,
+     "dist_au": 1.1343336946685885,
+     "lon_speed_deg_per_day": 1.208463650050875,
+     "lat_speed_deg_per_day": -0.027433425305266435,
+     "dist_speed_au_per_day": 0.006499886637520692,
+     "retflags": 260
+    },
+    "mars": {
+     "ipl": 4,
+     "lon_deg": 327.57547447301306,
+     "lat_deg": -1.0740140153309903,
+     "dist_au": 1.8469764208309767,
+     "lon_speed_deg_per_day": 0.7756563775456334,
+     "lat_speed_deg_per_day": 0.012454420818132807,
+     "dist_speed_au_per_day": 0.005423457712511905,
+     "retflags": 260
+    },
+    "jupiter": {
+     "ipl": 5,
+     "lon_deg": 25.233071953046878,
+     "lat_deg": -1.264762609794374,
+     "dist_au": 4.613428646646618,
+     "lon_speed_deg_per_day": 0.039069660124429556,
+     "lat_speed_deg_per_day": 0.005180522389223528,
+     "dist_speed_au_per_day": 0.015484873535508611,
+     "retflags": 260
+    },
+    "saturn": {
+     "ipl": 6,
+     "lon_deg": 40.40583974121559,
+     "lat_deg": -2.44719271125059,
+     "dist_au": 8.645621387613643,
+     "lon_speed_deg_per_day": -0.020857627566947055,
+     "lat_speed_deg_per_day": 0.004729681896360999,
+     "dist_speed_au_per_day": 0.014302659451997188,
+     "retflags": 260
+    },
+    "uranus": {
+     "ipl": 7,
+     "lon_deg": 314.7841067352278,
+     "lat_deg": -0.65845676432609,
+     "dist_au": 20.72219979856063,
+     "lon_speed_deg_per_day": 0.050119763381637074,
+     "lat_speed_deg_per_day": 0.0002536845353856688,
+     "dist_speed_au_per_day": 0.010027668537848523,
+     "retflags": 260
+    },
+    "neptune": {
+     "ipl": 8,
+     "lon_deg": 303.1752231127728,
+     "lat_deg": 0.23510577404214614,
+     "dist_au": 31.02114093906753,
+     "lon_speed_deg_per_day": 0.03546053120800843,
+     "lat_speed_deg_per_day": -0.00022506381372463597,
+     "dist_speed_au_per_day": 0.006890135815276195,
+     "retflags": 260
+    },
+    "pluto": {
+     "ipl": 9,
+     "lon_deg": 251.43710107957355,
+     "lat_deg": 10.854482905900037,
+     "dist_au": 31.068339400775113,
+     "lon_speed_deg_per_day": 0.03527571923896259,
+     "lat_speed_deg_per_day": 0.0014217036514849219,
+     "dist_speed_au_per_day": -0.007787031861332822,
+     "retflags": 260
+    },
+    "mean_node": {
+     "ipl": 10,
+     "lon_deg": 125.06712346443815,
+     "lat_deg": 0.0,
+     "dist_au": 0.0025695552897999903,
+     "lon_speed_deg_per_day": -0.05295622715240256,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": 0.0,
+     "retflags": 260
+    },
+    "true_node": {
+     "ipl": 11,
+     "lon_deg": 123.97879635266428,
+     "lat_deg": 0.0,
+     "dist_au": 0.0024399051291310006,
+     "lon_speed_deg_per_day": -0.04890988623309589,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": 1.0258902664617031e-05,
+     "retflags": 260
+    }
+   },
+   "sidereal_lahiri": {
+    "sidmode": 1,
+    "flags": 65796,
+    "get_ayanamsa_ex_ut_deg": 23.85320349278966,
+    "bodies": {
+     "sun": {
+      "lon_deg": 256.00600453318896,
+      "lat_deg": 0.00023467662723136498,
+      "dist_au": 0.9833318781018172,
+      "lon_speed_deg_per_day": 1.019344914557347,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 23.853203492789646
+     },
+     "moon": {
+      "lon_deg": 193.44007277536727,
+      "lat_deg": 5.231384866471505,
+      "dist_au": 0.0026798183299268845,
+      "lon_speed_deg_per_day": 12.102962605314158,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 23.853203492789675
+     }
+    }
+   }
+  },
+  {
+   "utc": "2000-01-01T12:00:00Z",
+   "jd_ut": 2451545.00000411,
+   "jd_tt": 2451545.0007428704,
+   "delta_t_s": 63.82891493563454,
+   "bodies": {
+    "sun": {
+     "ipl": 0,
+     "lon_deg": 280.3689238651328,
+     "lat_deg": 0.0002323264860602005,
+     "dist_au": 0.9833276447899747,
+     "lon_speed_deg_per_day": 1.0194320960759964,
+     "lat_speed_deg_per_day": -8.922540305454229e-07,
+     "dist_speed_au_per_day": -7.339392804610341e-06,
+     "retflags": 260
+    },
+    "moon": {
+     "ipl": 1,
+     "lon_deg": 223.32382484474917,
+     "lat_deg": 5.170814737161284,
+     "dist_au": 0.0026899773180392383,
+     "lon_speed_deg_per_day": 12.021182111328633,
+     "lat_speed_deg_per_day": -0.17806428688664416,
+     "dist_speed_au_per_day": 1.857749850747989e-05,
+     "retflags": 260
+    },
+    "mercury": {
+     "ipl": 2,
+     "lon_deg": 271.8892814035699,
+     "lat_deg": -0.9948255825787484,
+     "dist_au": 1.4154695009953797,
+     "lon_speed_deg_per_day": 1.5562541123490177,
+     "lat_speed_deg_per_day": -0.09749182083061297,
+     "dist_speed_au_per_day": 0.004619834774347037,
+     "retflags": 260
+    },
+    "venus": {
+     "ipl": 3,
+     "lon_deg": 241.5658032952332,
+     "lat_deg": 2.0663478754619966,
+     "dist_au": 1.1375794059909379,
+     "lon_speed_deg_per_day": 1.209039736972286,
+     "lat_speed_deg_per_day": -0.028073575519586207,
+     "dist_speed_au_per_day": 0.006485874437637892,
+     "retflags": 260
+    },
+    "mars": {
+     "ipl": 4,
+     "lon_deg": 327.9633165065077,
+     "lat_deg": -1.067782897014795,
+     "dist_au": 1.8496874555933314,
+     "lon_speed_deg_per_day": 0.7756727705263342,
+     "lat_speed_deg_per_day": 0.012475505065244695,
+     "dist_speed_au_per_day": 0.005424806620065144,
+     "retflags": 260
+    },
+    "jupiter": {
+     "ipl": 5,
+     "lon_deg": 25.253030476953455,
+     "lat_deg": -1.2621728142466617,
+     "dist_au": 4.621181401415442,
+     "lon_speed_deg_per_day": 0.040761316407126796,
+     "lat_speed_deg_per_day": 0.005173355826744151,
+     "dist_speed_au_per_day": 0.015520829807419673,
+     "retflags": 260
+    },
+    "saturn": {
+     "ipl": 6,
+     "lon_deg": 40.39563887401931,
+     "lat_deg": -2.4448225351097244,
+     "dist_au": 8.652796036107745,
+     "lon_speed_deg_per_day": -0.019944768167150965,
+     "lat_speed_deg_per_day": 0.004743165782951988,
+     "dist_speed_au_per_day": 0.014379429038439112,
+     "retflags": 260
+    },
+    "uranus": {
+     "ipl": 7,
+     "lon_deg": 314.8092233733761,
+     "lat_deg": -0.6583328765997833,
+     "dist_au": 20.727169246227923,
+     "lon_speed_deg_per_day": 0.05034356185843848,
+     "lat_speed_deg_per_day": 0.000250009901887377,
+     "dist_speed_au_per_day": 0.009909697706799241,
+     "retflags": 260
+    },
+    "neptune": {
+     "ipl": 8,
+     "lon_deg": 303.19298136938824,
+     "lat_deg": 0.23499118181804993,
+     "dist_au": 31.024527175272766,
+     "lon_speed_deg_per_day": 0.03557012031284205,
+     "lat_speed_deg_per_day": -0.00022365640201413027,
+     "dist_speed_au_per_day": 0.006755280681058121,
+     "retflags": 260
+    },
+    "pluto": {
+     "ipl": 9,
+     "lon_deg": 251.45470899112797,
+     "lat_deg": 10.85520246766563,
+     "dist_au": 31.064390155715337,
+     "lon_speed_deg_per_day": 0.03515290546204302,
+     "lat_speed_deg_per_day": 0.0014673987630412467,
+     "dist_speed_au_per_day": -0.007914270038557226,
+     "retflags": 260
+    },
+    "mean_node": {
+     "ipl": 10,
+     "lon_deg": 125.04064583898813,
+     "lat_deg": 0.0,
+     "dist_au": 0.0025695552897999903,
+     "lon_speed_deg_per_day": -0.05295180109900147,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": 0.0,
+     "retflags": 260
+    },
+    "true_node": {
+     "ipl": 11,
+     "lon_deg": 123.95289520034021,
+     "lat_deg": 0.0,
+     "dist_au": 0.0024453796746337804,
+     "lon_speed_deg_per_day": -0.05438214699506169,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": 1.1591023068138247e-05,
+     "retflags": 260
+    }
+   },
+   "sidereal_lahiri": {
+    "sidmode": 1,
+    "flags": 65796,
+    "get_ayanamsa_ex_ut_deg": 23.853222486194408,
+    "bodies": {
+     "sun": {
+      "lon_deg": 256.51570137893833,
+      "lat_deg": 0.0002323264860593936,
+      "dist_au": 0.9833276447899749,
+      "lon_speed_deg_per_day": 1.0193918774281074,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 23.853222486194454
+     },
+     "moon": {
+      "lon_deg": 199.47060235855474,
+      "lat_deg": 5.170814737161281,
+      "dist_au": 0.0026899773180392374,
+      "lon_speed_deg_per_day": 12.0211422683593,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 23.853222486194426
+     }
+    }
+   }
+  },
+  {
+   "utc": "2010-12-21T15:00:00Z",
+   "jd_ut": 2455552.1249984545,
+   "jd_tt": 2455552.1257660184,
+   "delta_t_s": 66.31752265130152,
+   "bodies": {
+    "sun": {
+     "ipl": 0,
+     "lon_deg": 269.633492537548,
+     "lat_deg": 0.00011435722136326851,
+     "dist_au": 0.9837326711453678,
+     "lon_speed_deg_per_day": 1.0179592590338722,
+     "lat_speed_deg_per_day": -4.102395830332124e-05,
+     "dist_speed_au_per_day": -6.67953416832187e-05,
+     "retflags": 260
+    },
+    "moon": {
+     "ipl": 1,
+     "lon_deg": 93.23087492651464,
+     "lat_deg": -0.04577555647251507,
+     "dist_au": 0.0025098486948749686,
+     "lon_speed_deg_per_day": 13.797732206159154,
+     "lat_speed_deg_per_day": -1.276345550923053,
+     "dist_speed_au_per_day": -2.437274448634227e-05,
+     "retflags": 260
+    },
+    "mercury": {
+     "ipl": 2,
+     "lon_deg": 265.89471112286725,
+     "lat_deg": 2.4356212236493278,
+     "dist_au": 0.6794762965669583,
+     "lon_speed_deg_per_day": -1.3327096394809272,
+     "lat_speed_deg_per_day": 0.22573525596452026,
+     "dist_speed_au_per_day": 0.004140657279665907,
+     "retflags": 260
+    },
+    "venus": {
+     "ipl": 3,
+     "lon_deg": 224.14741167609563,
+     "lat_deg": 3.2144761038818706,
+     "dist_au": 0.5379996508935131,
+     "lon_speed_deg_per_day": 0.8470841147629187,
+     "lat_speed_deg_per_day": 0.046137538530382195,
+     "dist_speed_au_per_day": 0.0074180803563068,
+     "retflags": 260
+    },
+    "mars": {
+     "ipl": 4,
+     "lon_deg": 280.3807363591265,
+     "lat_deg": -0.9403275344125086,
+     "dist_au": 2.376759826089127,
+     "lon_speed_deg_per_day": 0.7665677704836811,
+     "lat_speed_deg_per_day": -0.0053515898330111986,
+     "dist_speed_au_per_day": 0.0003066644977594151,
+     "retflags": 260
+    },
+    "jupiter": {
+     "ipl": 5,
+     "lon_deg": 355.30245846894366,
+     "lat_deg": -1.3068520537643258,
+     "dist_au": 4.926789488129054,
+     "lon_speed_deg_per_day": 0.1063195240732429,
+     "lat_speed_deg_per_day": 0.004055194038743235,
+     "dist_speed_au_per_day": 0.015798275347912706,
+     "retflags": 260
+    },
+    "saturn": {
+     "ipl": 6,
+     "lon_deg": 196.11419965656344,
+     "lat_deg": 2.362962110430693,
+     "dist_au": 9.814199969379644,
+     "lon_speed_deg_per_day": 0.06075556998451893,
+     "lat_speed_deg_per_day": 0.0042259946932292495,
+     "dist_speed_au_per_day": -0.015915451186308823,
+     "retflags": 260
+    },
+    "uranus": {
+     "ipl": 7,
+     "lon_deg": 356.7757290116519,
+     "lat_deg": -0.7432844543980716,
+     "dist_au": 20.11482141030921,
+     "lon_speed_deg_per_day": 0.013344485878211597,
+     "lat_speed_deg_per_day": 0.0006746444894411906,
+     "dist_speed_au_per_day": 0.017239842435974415,
+     "retflags": 260
+    },
+    "neptune": {
+     "ipl": 8,
+     "lon_deg": 326.46278500941014,
+     "lat_deg": -0.4830720891235922,
+     "dist_au": 30.5411570144468,
+     "lon_speed_deg_per_day": 0.023951566175793988,
+     "lat_speed_deg_per_day": 5.270056548124942e-05,
+     "dist_speed_au_per_day": 0.014503456526370466,
+     "retflags": 260
+    },
+    "pluto": {
+     "ipl": 9,
+     "lon_deg": 274.9574959548892,
+     "lat_deg": 4.524002338618822,
+     "dist_au": 32.92606678953059,
+     "lon_speed_deg_per_day": 0.03595285566002456,
+     "lat_speed_deg_per_day": -0.001838649774159579,
+     "dist_speed_au_per_day": 0.002136219622742026,
+     "retflags": 260
+    },
+    "mean_node": {
+     "ipl": 10,
+     "lon_deg": 272.8569376005486,
+     "lat_deg": 0.0,
+     "dist_au": 0.0025695552897999916,
+     "lon_speed_deg_per_day": -0.052906117045873856,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": 0.0,
+     "retflags": 260
+    },
+    "true_node": {
+     "ipl": 11,
+     "lon_deg": 272.73603973002037,
+     "lat_deg": 0.0,
+     "dist_au": 0.002652575272693597,
+     "lon_speed_deg_per_day": 0.00018997483062697108,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": -2.5419489039665533e-06,
+     "retflags": 260
+    }
+   },
+   "sidereal_lahiri": {
+    "sidmode": 1,
+    "flags": 65796,
+    "get_ayanamsa_ex_ut_deg": 24.015106509096334,
+    "bodies": {
+     "sun": {
+      "lon_deg": 245.61838602845174,
+      "lat_deg": 0.00011435722135580053,
+      "dist_au": 0.9837326711453673,
+      "lon_speed_deg_per_day": 1.0178733738575076,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 24.015106509096285
+     },
+     "moon": {
+      "lon_deg": 69.21576841741832,
+      "lat_deg": -0.0457755564725113,
+      "dist_au": 0.0025098486948749677,
+      "lon_speed_deg_per_day": 13.797646321057046,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 24.015106509096327
+     }
+    }
+   }
+  },
+  {
+   "utc": "2020-06-21T00:00:00Z",
+   "jd_ut": 2459021.4999978035,
+   "jd_tt": 2459021.500800741,
+   "delta_t_s": 69.37377892053604,
+   "bodies": {
+    "sun": {
+     "ipl": 0,
+     "lon_deg": 90.09036227863736,
+     "lat_deg": -5.745904248441342e-07,
+     "dist_au": 1.016305029640324,
+     "lon_speed_deg_per_day": 0.9546162847975341,
+     "lat_speed_deg_per_day": 3.37037842539135e-05,
+     "dist_speed_au_per_day": 6.538136563694805e-05,
+     "retflags": 260
+    },
+    "moon": {
+     "ipl": 1,
+     "lon_deg": 86.76247230523337,
+     "lat_deg": -0.21797968826934538,
+     "dist_au": 0.002600521037727432,
+     "lon_speed_deg_per_day": 12.856215879030058,
+     "lat_speed_deg_per_day": 1.186923266773415,
+     "dist_speed_au_per_day": -2.560833809911964e-05,
+     "retflags": 260
+    },
+    "mercury": {
+     "ipl": 2,
+     "lon_deg": 104.47533614581174,
+     "lat_deg": -2.1629804659763483,
+     "dist_au": 0.5937795341912605,
+     "lon_speed_deg_per_day": -0.20428210189028423,
+     "lat_speed_deg_per_day": -0.2756970648581088,
+     "dist_speed_au_per_day": -0.00814665716703322,
+     "retflags": 260
+    },
+    "venus": {
+     "ipl": 3,
+     "lon_deg": 65.69508409420777,
+     "lat_deg": -3.0398856322988053,
+     "dist_au": 0.33208235347295106,
+     "lon_speed_deg_per_day": -0.16853033943434542,
+     "lat_speed_deg_per_day": -0.14515332546426765,
+     "dist_speed_au_per_day": 0.004670727663616711,
+     "retflags": 260
+    },
+    "mars": {
+     "ipl": 4,
+     "lon_deg": 355.63915130939336,
+     "lat_deg": -2.882264204853739,
+     "dist_au": 0.8795346682456812,
+     "lon_speed_deg_per_day": 0.6262199063853653,
+     "lat_speed_deg_per_day": -0.025200154691558514,
+     "dist_speed_au_per_day": -0.006270482155184681,
+     "retflags": 260
+    },
+    "jupiter": {
+     "ipl": 5,
+     "lon_deg": 295.14992743982503,
+     "lat_deg": -0.2678205736404555,
+     "dist_au": 4.225843430219801,
+     "lon_speed_deg_per_day": -0.1044964727988572,
+     "lat_speed_deg_per_day": -0.002719889872551501,
+     "dist_speed_au_per_day": -0.006965731076726632,
+     "retflags": 260
+    },
+    "saturn": {
+     "ipl": 6,
+     "lon_deg": 300.6910143780236,
+     "lat_deg": -0.18576069274532683,
+     "dist_au": 9.126497988479725,
+     "lon_speed_deg_per_day": -0.057858475117681385,
+     "lat_speed_deg_per_day": -0.0016081808350484831,
+     "dist_speed_au_per_day": -0.0085391076162464,
+     "retflags": 260
+    },
+    "uranus": {
+     "ipl": 7,
+     "lon_deg": 39.4826841029231,
+     "lat_deg": -0.4492642165098032,
+     "dist_au": 20.426502443720743,
+     "lon_speed_deg_per_day": 0.04110038360243398,
+     "lat_speed_deg_per_day": -0.0001676873865581079,
+     "dist_speed_au_per_day": -0.012997531122492204,
+     "retflags": 260
+    },
+    "neptune": {
+     "ipl": 8,
+     "lon_deg": 350.9587916873579,
+     "lat_deg": -1.0715876470843089,
+     "dist_au": 29.751994552103955,
+     "lon_speed_deg_per_day": 0.0011979027586959084,
+     "lat_speed_deg_per_day": -0.0007472566570487704,
+     "dist_speed_au_per_day": -0.016642135205841242,
+     "retflags": 260
+    },
+    "pluto": {
+     "ipl": 9,
+     "lon_deg": 294.315639718569,
+     "lat_deg": -0.9605597035147121,
+     "dist_au": 33.13423899302768,
+     "lon_speed_deg_per_day": -0.021456667333192785,
+     "lat_speed_deg_per_day": -0.0017661964860128296,
+     "dist_speed_au_per_day": -0.006357865204945852,
+     "retflags": 260
+    },
+    "mean_node": {
+     "ipl": 10,
+     "lon_deg": 89.13096921452899,
+     "lat_deg": 0.0,
+     "dist_au": 0.0025695552897999916,
+     "lon_speed_deg_per_day": -0.05291548492972499,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": 0.0,
+     "retflags": 260
+    },
+    "true_node": {
+     "ipl": 11,
+     "lon_deg": 89.12214433863987,
+     "lat_deg": 0.0,
+     "dist_au": 0.002595817577097119,
+     "lon_speed_deg_per_day": 6.479579876180463e-05,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": 2.760428750563948e-07,
+     "retflags": 260
+    }
+   },
+   "sidereal_lahiri": {
+    "sidmode": 1,
+    "flags": 65796,
+    "get_ayanamsa_ex_ut_deg": 24.138245589895565,
+    "bodies": {
+     "sun": {
+      "lon_deg": 65.9521166887418,
+      "lat_deg": -5.745904317981837e-07,
+      "dist_au": 1.016305029640324,
+      "lon_speed_deg_per_day": 0.9545397684178878,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 24.13824558989556
+     },
+     "moon": {
+      "lon_deg": 62.624226715337805,
+      "lat_deg": -0.21797968826935152,
+      "dist_au": 0.0026005210377274316,
+      "lon_speed_deg_per_day": 12.856139363016426,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 24.13824558989557
+     }
+    }
+   }
+  },
+  {
+   "utc": "2026-10-15T09:30:00Z",
+   "jd_ut": 2461328.8958375994,
+   "jd_tt": 2461328.8966340744,
+   "delta_t_s": 68.81544964949248,
+   "bodies": {
+    "sun": {
+     "ipl": 0,
+     "lon_deg": 202.04920956976966,
+     "lat_deg": -0.00012408256064492672,
+     "dist_au": 0.9972487964966518,
+     "lon_speed_deg_per_day": 0.9912209424662538,
+     "lat_speed_deg_per_day": 1.3980452046039993e-05,
+     "dist_speed_au_per_day": -0.0002883389659341873,
+     "retflags": 260
+    },
+    "moon": {
+     "ipl": 1,
+     "lon_deg": 256.3778205765581,
+     "lat_deg": -4.845958519086801,
+     "dist_au": 0.0026954077977113106,
+     "lon_speed_deg_per_day": 11.97770466542671,
+     "lat_speed_deg_per_day": 0.33117072428332,
+     "dist_speed_au_per_day": 1.2031343308425606e-05,
+     "retflags": 260
+    },
+    "mercury": {
+     "ipl": 2,
+     "lon_deg": 226.8073021033122,
+     "lat_deg": -3.0847598034472847,
+     "dist_au": 0.950075716688942,
+     "lon_speed_deg_per_day": 0.8269937869511385,
+     "lat_speed_deg_per_day": -0.04934890326273247,
+     "dist_speed_au_per_day": -0.018129025244284613,
+     "retflags": 260
+    },
+    "venus": {
+     "ipl": 3,
+     "lon_deg": 215.63800269197654,
+     "lat_deg": -7.4817571322136,
+     "dist_au": 0.2862715954608383,
+     "lon_speed_deg_per_day": -0.45820686163001423,
+     "lat_speed_deg_per_day": 0.04982945295413101,
+     "dist_speed_au_per_day": -0.0027143907409282303,
+     "retflags": 260
+    },
+    "mars": {
+     "ipl": 4,
+     "lon_deg": 129.85512783741524,
+     "lat_deg": 1.2726985253061973,
+     "dist_au": 1.5621570879754139,
+     "lon_speed_deg_per_day": 0.5504365966864095,
+     "lat_speed_deg_per_day": 0.0186599559101945,
+     "dist_speed_au_per_day": -0.00748790097047306,
+     "retflags": 260
+    },
+    "jupiter": {
+     "ipl": 5,
+     "lon_deg": 142.0096282963487,
+     "lat_deg": 0.6372138476328045,
+     "dist_au": 5.738801478874112,
+     "lon_speed_deg_per_day": 0.15584263314021268,
+     "lat_speed_deg_per_day": 0.0029633009123422,
+     "dist_speed_au_per_day": -0.01356716587273743,
+     "retflags": 260
+    },
+    "saturn": {
+     "ipl": 6,
+     "lon_deg": 10.455228597844263,
+     "lat_deg": -2.710888815651015,
+     "dist_au": 8.452272423955499,
+     "lon_speed_deg_per_day": -0.07613242414275294,
+     "lat_speed_deg_per_day": 0.0007977149583037588,
+     "dist_speed_au_per_day": 0.003310975611463822,
+     "retflags": 260
+    },
+    "uranus": {
+     "ipl": 7,
+     "lon_deg": 65.20816108931484,
+     "lat_deg": -0.15264577286208725,
+     "dist_au": 18.699154633365044,
+     "lon_speed_deg_per_day": -0.02714646265401117,
+     "lat_speed_deg_per_day": 5.559424638458437e-05,
+     "dist_speed_au_per_day": -0.011656607735215496,
+     "retflags": 260
+    },
+    "neptune": {
+     "ipl": 8,
+     "lon_deg": 2.4750288076837146,
+     "lat_deg": -1.4191069772721896,
+     "dist_au": 28.936616830999736,
+     "lon_speed_deg_per_day": -0.025730012243248463,
+     "lat_speed_deg_per_day": 0.00017126538728904058,
+     "dist_speed_au_per_day": 0.0059466533304144194,
+     "retflags": 260
+    },
+    "pluto": {
+     "ipl": 9,
+     "lon_deg": 303.0686105735054,
+     "lat_deg": -4.28433238725278,
+     "dist_au": 35.41664229975725,
+     "lon_speed_deg_per_day": -0.00034263880516753115,
+     "lat_speed_deg_per_day": 0.0006907368604521123,
+     "dist_speed_au_per_day": 0.01754721044479957,
+     "retflags": 260
+    },
+    "mean_node": {
+     "ipl": 10,
+     "lon_deg": 326.9527604140935,
+     "lat_deg": 0.0,
+     "dist_au": 0.00256955528979999,
+     "lon_speed_deg_per_day": -0.05293683909221005,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": 0.0,
+     "retflags": 260
+    },
+    "true_node": {
+     "ipl": 11,
+     "lon_deg": 328.1944075452051,
+     "lat_deg": 0.0,
+     "dist_au": 0.002642708621141087,
+     "lon_speed_deg_per_day": -0.1119386029552043,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": -7.28116183004749e-06,
+     "retflags": 260
+    }
+   },
+   "sidereal_lahiri": {
+    "sidmode": 1,
+    "flags": 65796,
+    "get_ayanamsa_ex_ut_deg": 24.23352959060666,
+    "bodies": {
+     "sun": {
+      "lon_deg": 177.81567997916295,
+      "lat_deg": -0.00012408256064727366,
+      "dist_au": 0.9972487964966515,
+      "lon_speed_deg_per_day": 0.9911658359948621,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 24.233529590606707
+     },
+     "moon": {
+      "lon_deg": 232.14429098595153,
+      "lat_deg": -4.845958519086801,
+      "dist_au": 0.0026954077977113106,
+      "lon_speed_deg_per_day": 11.97764936643998,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 24.233529590606594
+     }
+    }
+   }
+  },
+  {
+   "utc": "2033-09-23T06:00:00Z",
+   "jd_ut": 2463863.75,
+   "jd_tt": 2463863.7508123666,
+   "delta_t_s": 70.18849115858863,
+   "bodies": {
+    "sun": {
+     "ipl": 0,
+     "lon_deg": 180.5358592597792,
+     "lat_deg": 2.315790607722043e-05,
+     "dist_au": 1.0035235233259776,
+     "lon_speed_deg_per_day": 0.9789812482908151,
+     "lat_speed_deg_per_day": 3.470640325619938e-05,
+     "dist_speed_au_per_day": -0.0002788702588698955,
+     "retflags": 260
+    },
+    "moon": {
+     "ipl": 1,
+     "lon_deg": 177.06686676901938,
+     "lat_deg": -1.3862846258788488,
+     "dist_au": 0.0027094879715854536,
+     "lon_speed_deg_per_day": 11.855091680726224,
+     "lat_speed_deg_per_day": 1.0580498319980212,
+     "dist_speed_au_per_day": 8.00056012986465e-06,
+     "retflags": 260
+    },
+    "mercury": {
+     "ipl": 2,
+     "lon_deg": 203.88389993886898,
+     "lat_deg": -1.5713563553112997,
+     "dist_au": 1.163067145790151,
+     "lon_speed_deg_per_day": 1.3253175559904489,
+     "lat_speed_deg_per_day": -0.1274613633181859,
+     "dist_speed_au_per_day": -0.012836584305669679,
+     "retflags": 260
+    },
+    "venus": {
+     "ipl": 3,
+     "lon_deg": 155.19420968327276,
+     "lat_deg": 1.0901345785584062,
+     "dist_au": 1.482560858895763,
+     "lon_speed_deg_per_day": 1.2259272526921836,
+     "lat_speed_deg_per_day": 0.03152770320964977,
+     "dist_speed_au_per_day": 0.004541414878044947,
+     "retflags": 260
+    },
+    "mars": {
+     "ipl": 4,
+     "lon_deg": 285.71637240470005,
+     "lat_deg": -3.476390472331432,
+     "dist_au": 0.7235051332055589,
+     "lon_speed_deg_per_day": 0.5225285717960676,
+     "lat_speed_deg_per_day": 0.035289257830426995,
+     "dist_speed_au_per_day": 0.005776620843521701,
+     "retflags": 260
+    },
+    "jupiter": {
+     "ipl": 5,
+     "lon_deg": 328.9208084308364,
+     "lat_deg": -1.2814333340446087,
+     "dist_au": 4.1239186537472365,
+     "lon_speed_deg_per_day": -0.09303505727988638,
+     "lat_speed_deg_per_day": 0.001156814888627759,
+     "dist_speed_au_per_day": 0.008166259485636013,
+     "retflags": 260
+    },
+    "saturn": {
+     "ipl": 6,
+     "lon_deg": 109.88163750815022,
+     "lat_deg": -0.42300824863795805,
+     "dist_au": 9.306416485919312,
+     "lon_speed_deg_per_day": 0.0693434817682666,
+     "lat_speed_deg_per_day": 0.0008378948462623087,
+     "dist_speed_au_per_day": -0.015589771696402598,
+     "retflags": 260
+    },
+    "uranus": {
+     "ipl": 7,
+     "lon_deg": 95.95347191875118,
+     "lat_deg": 0.2475498951669906,
+     "dist_au": 19.03832686738801,
+     "lon_speed_deg_per_day": 0.016081189972827797,
+     "lat_speed_deg_per_day": 0.0003735591928285167,
+     "dist_speed_au_per_day": -0.017061320150717516,
+     "retflags": 260
+    },
+    "neptune": {
+     "ipl": 8,
+     "lon_deg": 19.202062896591485,
+     "lat_deg": -1.6729230526434211,
+     "dist_au": 28.89078955819885,
+     "lon_speed_deg_per_day": -0.026091894044553594,
+     "lat_speed_deg_per_day": -0.0003791879327319429,
+     "dist_speed_au_per_day": -0.005239861332051439,
+     "retflags": 260
+    },
+    "pluto": {
+     "ipl": 9,
+     "lon_deg": 314.66623044832045,
+     "lat_deg": -7.5701563926406585,
+     "dist_au": 36.70577238230767,
+     "lon_speed_deg_per_day": -0.014279751226541728,
+     "lat_speed_deg_per_day": 0.0013866852903891202,
+     "dist_speed_au_per_day": 0.013000990228654566,
+     "retflags": 260
+    },
+    "mean_node": {
+     "ipl": 10,
+     "lon_deg": 192.72157079624517,
+     "lat_deg": 0.0,
+     "dist_au": 0.0025695552897999903,
+     "lon_speed_deg_per_day": -0.05299452878828814,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": 0.0,
+     "retflags": 260
+    },
+    "true_node": {
+     "ipl": 11,
+     "lon_deg": 192.22951414529908,
+     "lat_deg": 0.0,
+     "dist_au": 0.002714933857785917,
+     "lon_speed_deg_per_day": -0.015687972974884647,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": 2.0686133791680762e-06,
+     "retflags": 260
+    }
+   },
+   "sidereal_lahiri": {
+    "sidmode": 1,
+    "flags": 65796,
+    "get_ayanamsa_ex_ut_deg": 24.329286461309884,
+    "bodies": {
+     "sun": {
+      "lon_deg": 156.2065727984693,
+      "lat_deg": 2.315790607717279e-05,
+      "dist_au": 1.0035235233259778,
+      "lon_speed_deg_per_day": 0.9789837720158745,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 24.32928646130989
+     },
+     "moon": {
+      "lon_deg": 152.7375803077095,
+      "lat_deg": -1.3862846258788484,
+      "dist_au": 0.0027094879715854536,
+      "lon_speed_deg_per_day": 11.85509420050209,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 24.32928646130989
+     }
+    }
+   }
+  },
+  {
+   "utc": "2042-03-20T21:15:00Z",
+   "jd_ut": 2466964.3854166665,
+   "jd_tt": 2466964.3862545523,
+   "delta_t_s": 72.39333614207484,
+   "bodies": {
+    "sun": {
+     "ipl": 0,
+     "lon_deg": 0.387743020737984,
+     "lat_deg": -0.00014667698817684758,
+     "dist_au": 0.995956649200111,
+     "lon_speed_deg_per_day": 0.9939469015519885,
+     "lat_speed_deg_per_day": 2.98611898530172e-05,
+     "dist_speed_au_per_day": 0.00028040350389953075,
+     "retflags": 260
+    },
+    "moon": {
+     "ipl": 1,
+     "lon_deg": 348.43236945256666,
+     "lat_deg": -3.2696068681407513,
+     "dist_au": 0.002390785300507883,
+     "lon_speed_deg_per_day": 15.214476848790602,
+     "lat_speed_deg_per_day": 1.0847345770722387,
+     "dist_speed_au_per_day": -1.1192213471646519e-05,
+     "retflags": 260
+    },
+    "mercury": {
+     "ipl": 2,
+     "lon_deg": 352.15375170979144,
+     "lat_deg": -1.998384539494125,
+     "dist_au": 1.351798741827665,
+     "lon_speed_deg_per_day": 1.8578473294476725,
+     "lat_speed_deg_per_day": 0.05986591981737179,
+     "dist_speed_au_per_day": 0.002346212037058526,
+     "retflags": 260
+    },
+    "venus": {
+     "ipl": 3,
+     "lon_deg": 19.240439876859025,
+     "lat_deg": -0.8043774864185966,
+     "dist_au": 1.5897025189676772,
+     "lon_speed_deg_per_day": 1.2366653908467895,
+     "lat_speed_deg_per_day": 0.035390770324827424,
+     "dist_speed_au_per_day": -0.00325802656066555,
+     "retflags": 260
+    },
+    "mars": {
+     "ipl": 4,
+     "lon_deg": 128.20637265456335,
+     "lat_deg": 3.4424516795041473,
+     "dist_au": 0.8586362798982432,
+     "lon_speed_deg_per_day": 0.025018029918316507,
+     "lat_speed_deg_per_day": -0.037718897367232974,
+     "dist_speed_au_per_day": 0.007474356774219586,
+     "retflags": 260
+    },
+    "jupiter": {
+     "ipl": 5,
+     "lon_deg": 242.0580332806418,
+     "lat_deg": 1.0799865911672428,
+     "dist_au": 4.8542796269882125,
+     "lon_speed_deg_per_day": -0.008791743472872818,
+     "lat_speed_deg_per_day": 0.001854761034846332,
+     "dist_speed_au_per_day": -0.014375350536485261,
+     "retflags": 260
+    },
+    "saturn": {
+     "ipl": 6,
+     "lon_deg": 215.59009423309308,
+     "lat_deg": 2.6865145155672763,
+     "dist_au": 8.9460557849702,
+     "lon_speed_deg_per_day": -0.054721175225757084,
+     "lat_speed_deg_per_day": 0.0027413287038975187,
+     "dist_speed_au_per_day": -0.00961186532637361,
+     "retflags": 260
+    },
+    "uranus": {
+     "ipl": 7,
+     "lon_deg": 128.91091159145734,
+     "lat_deg": 0.6726614302473802,
+     "dist_au": 17.842142253601967,
+     "lon_speed_deg_per_day": -0.022279239941528122,
+     "lat_speed_deg_per_day": -0.00039057946770610865,
+     "dist_speed_au_per_day": 0.013025039303223183,
+     "retflags": 260
+    },
+    "neptune": {
+     "ipl": 8,
+     "lon_deg": 36.42460210858042,
+     "lat_deg": -1.7144500078853437,
+     "dist_au": 30.6059801310554,
+     "lon_speed_deg_per_day": 0.03171378780098601,
+     "lat_speed_deg_per_day": 0.0005725925909644041,
+     "dist_speed_au_per_day": 0.010364990980278077,
+     "retflags": 260
+    },
+    "pluto": {
+     "ipl": 9,
+     "lon_deg": 328.95920368682965,
+     "lat_deg": -10.37223570678257,
+     "dist_au": 40.38799743086633,
+     "lon_speed_deg_per_day": 0.02522500305161089,
+     "lat_speed_deg_per_day": -0.0031028820024333876,
+     "dist_speed_au_per_day": -0.007847924603060602,
+     "retflags": 260
+    },
+    "mean_node": {
+     "ipl": 10,
+     "lon_deg": 28.52817896790825,
+     "lat_deg": 0.0,
+     "dist_au": 0.0025695552897999903,
+     "lon_speed_deg_per_day": -0.05299265025582406,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": 0.0,
+     "retflags": 260
+    },
+    "true_node": {
+     "ipl": 11,
+     "lon_deg": 27.045305962065477,
+     "lat_deg": 0.0,
+     "dist_au": 0.0024001585069070614,
+     "lon_speed_deg_per_day": -0.04983015025657527,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": 3.811981012010607e-06,
+     "retflags": 260
+    }
+   },
+   "sidereal_lahiri": {
+    "sidmode": 1,
+    "flags": 65796,
+    "get_ayanamsa_ex_ut_deg": 24.444688427014952,
+    "bodies": {
+     "sun": {
+      "lon_deg": 335.94305459372305,
+      "lat_deg": -0.00014667698817683538,
+      "dist_au": 0.9959566492001108,
+      "lon_speed_deg_per_day": 0.9939475880787076,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 24.44468842701491
+     },
+     "moon": {
+      "lon_deg": 323.9876810255517,
+      "lat_deg": -3.2696068681407544,
+      "dist_au": 0.0023907853005078823,
+      "lon_speed_deg_per_day": 15.21447697780347,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 24.444688427014967
+     }
+    }
+   }
+  },
+  {
+   "utc": "2050-12-31T23:00:00Z",
+   "jd_ut": 2470172.4583333335,
+   "jd_tt": 2470172.4591999264,
+   "delta_t_s": 74.87362076403689,
+   "bodies": {
+    "sun": {
+     "ipl": 0,
+     "lon_deg": 280.45500076140314,
+     "lat_deg": -9.522323997516975e-05,
+     "dist_au": 0.9833197871780999,
+     "lon_speed_deg_per_day": 1.0189005557973707,
+     "lat_speed_deg_per_day": -1.4773522417887521e-06,
+     "dist_speed_au_per_day": -1.3127642673964588e-05,
+     "retflags": 260
+    },
+    "moon": {
+     "ipl": 1,
+     "lon_deg": 144.29722967505415,
+     "lat_deg": -4.908116015434262,
+     "dist_au": 0.0026674468402630687,
+     "lon_speed_deg_per_day": 12.253744775897713,
+     "lat_speed_deg_per_day": 0.2731424936246281,
+     "dist_speed_au_per_day": 2.156936057129839e-05,
+     "retflags": 260
+    },
+    "mercury": {
+     "ipl": 2,
+     "lon_deg": 258.0734417731349,
+     "lat_deg": 1.8162033463258433,
+     "dist_au": 1.0337880321950046,
+     "lon_speed_deg_per_day": 1.0555291116511922,
+     "lat_speed_deg_per_day": -0.14131601003550376,
+     "dist_speed_au_per_day": 0.02007054856225623,
+     "retflags": 260
+    },
+    "venus": {
+     "ipl": 3,
+     "lon_deg": 233.669520057653,
+     "lat_deg": 3.2182774172731703,
+     "dist_au": 0.7093018450060199,
+     "lon_speed_deg_per_day": 1.047218318446291,
+     "lat_speed_deg_per_day": 7.55280271488675e-05,
+     "dist_speed_au_per_day": 0.0075893335484360685,
+     "retflags": 260
+    },
+    "mars": {
+     "ipl": 4,
+     "lon_deg": 5.442847644423022,
+     "lat_deg": -0.10184624393755858,
+     "dist_au": 1.1747059932857031,
+     "lon_speed_deg_per_day": 0.6386082482734357,
+     "lat_speed_deg_per_day": 0.02337480842404606,
+     "dist_speed_au_per_day": 0.00868544409041822,
+     "retflags": 260
+    },
+    "jupiter": {
+     "ipl": 5,
+     "lon_deg": 155.69105262790626,
+     "lat_deg": 1.0590080058325901,
+     "dist_au": 4.736992355478619,
+     "lon_speed_deg_per_day": -0.033648237015760064,
+     "lat_speed_deg_per_day": 0.0043592482110329615,
+     "dist_speed_au_per_day": -0.012982638463313215,
+     "retflags": 260
+    },
+    "saturn": {
+     "ipl": 6,
+     "lon_deg": 307.78105733874025,
+     "lat_deg": -0.6425185968069902,
+     "dist_au": 10.790177609853101,
+     "lon_speed_deg_per_day": 0.11076890060242951,
+     "lat_speed_deg_per_day": -0.0007220660668093741,
+     "dist_speed_au_per_day": 0.0076065459440342945,
+     "retflags": 260
+    },
+    "uranus": {
+     "ipl": 7,
+     "lon_deg": 175.545206983371,
+     "lat_deg": 0.7764512378779483,
+     "dist_au": 18.00561384644692,
+     "lon_speed_deg_per_day": -0.0011211926242264238,
+     "lat_speed_deg_per_day": 0.0006950854630213576,
+     "dist_speed_au_per_day": -0.0166803675023998,
+     "retflags": 260
+    },
+    "neptune": {
+     "ipl": 8,
+     "lon_deg": 55.89795339309716,
+     "lat_deg": -1.7479012841836254,
+     "dist_au": 29.10861119424412,
+     "lon_speed_deg_per_day": -0.018318792048553276,
+     "lat_speed_deg_per_day": 0.0007875510702185193,
+     "dist_speed_au_per_day": 0.012164712376028475,
+     "retflags": 260
+    },
+    "pluto": {
+     "ipl": 9,
+     "lon_deg": 338.8056269622059,
+     "lat_deg": -12.945020390865563,
+     "dist_au": 42.15860396602613,
+     "lon_speed_deg_per_day": 0.016207083034544247,
+     "lat_speed_deg_per_day": 0.0038592079248110506,
+     "dist_speed_au_per_day": 0.015115936547641456,
+     "retflags": 260
+    },
+    "mean_node": {
+     "ipl": 10,
+     "lon_deg": 218.65420207846697,
+     "lat_deg": 0.0,
+     "dist_au": 0.0025695552897999903,
+     "lon_speed_deg_per_day": -0.05295681651698269,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": 0.0,
+     "retflags": 260
+    },
+    "true_node": {
+     "ipl": 11,
+     "lon_deg": 219.643424032799,
+     "lat_deg": 0.0,
+     "dist_au": 0.0026794344777917155,
+     "lon_speed_deg_per_day": -0.15386037195469726,
+     "lat_speed_deg_per_day": 0.0,
+     "dist_speed_au_per_day": -6.590159467322327e-06,
+     "retflags": 260
+    }
+   },
+   "sidereal_lahiri": {
+    "sidmode": 1,
+    "flags": 65796,
+    "get_ayanamsa_ex_ut_deg": 24.572803940928594,
+    "bodies": {
+     "sun": {
+      "lon_deg": 255.88219682047455,
+      "lat_deg": -9.522323997334956e-05,
+      "dist_au": 0.9833197871780998,
+      "lon_speed_deg_per_day": 1.0188654502141605,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 24.572803940928594
+     },
+     "moon": {
+      "lon_deg": 119.72442573412556,
+      "lat_deg": -4.9081160154342625,
+      "dist_au": 0.002667446840263069,
+      "lon_speed_deg_per_day": 12.253710316612016,
+      "retflags": 65860,
+      "ayanamsa_applied_deg": 24.572803940928594
+     }
+    }
+   }
+  }
+ ],
+ "kp": [],
+ "sunrise": [
+  {
+   "place": "kochi",
+   "lat_deg": 9.9312,
+   "lon_deg": 76.2673,
+   "alt_m": 0.0,
+   "date_utc": "2026-03-20",
+   "search_start_jd_ut": 2461119.5,
+   "events": {
+    "rise_default": {
+     "rsmi": 1,
+     "convention": "upper limb, with refraction (swisseph default; ~ Sun's centre at -0deg50' = 34' refraction + 16' semi-diameter)",
+     "result_code": 0,
+     "jd_ut": 2461119.541039815,
+     "utc": "2026-03-20T00:59:05.530316Z",
+     "revjul": [
+      2026,
+      3,
+      20,
+      0.9849555641412735
+     ]
+    },
+    "rise_no_refraction": {
+     "rsmi": 513,
+     "convention": "upper limb, geometric (no refraction)",
+     "result_code": 0,
+     "jd_ut": 2461119.542765909,
+     "utc": "2026-03-20T01:01:34.664812Z",
+     "revjul": [
+      2026,
+      3,
+      20,
+      1.0263818129897118
+     ]
+    },
+    "rise_disc_center": {
+     "rsmi": 257,
+     "convention": "disc centre, with refraction (~ centre at -34')",
+     "result_code": 0,
+     "jd_ut": 2461119.541794447,
+     "utc": "2026-03-20T01:00:10.730526Z",
+     "revjul": [
+      2026,
+      3,
+      20,
+      1.0030667334794998
+     ]
+    },
+    "set_default": {
+     "rsmi": 2,
+     "convention": "upper limb, with refraction (swisseph default; ~ Sun's centre at -0deg50' = 34' refraction + 16' semi-diameter)",
+     "result_code": 0,
+     "jd_ut": 2461120.045762541,
+     "utc": "2026-03-20T13:05:53.573647Z",
+     "revjul": [
+      2026,
+      3,
+      20,
+      13.098300978541374
+     ]
+    },
+    "set_no_refraction": {
+     "rsmi": 514,
+     "convention": "upper limb, geometric (no refraction)",
+     "result_code": 0,
+     "jd_ut": 2461120.044035797,
+     "utc": "2026-03-20T13:03:24.382986Z",
+     "revjul": [
+      2026,
+      3,
+      20,
+      13.056859128177166
+     ]
+    },
+    "set_disc_center": {
+     "rsmi": 258,
+     "convention": "disc centre, with refraction (~ centre at -34')",
+     "result_code": 0,
+     "jd_ut": 2461120.0450077285,
+     "utc": "2026-03-20T13:04:48.357867Z",
+     "revjul": [
+      2026,
+      3,
+      20,
+      13.080185484141111
+     ]
+    }
+   }
+  },
+  {
+   "place": "kochi",
+   "lat_deg": 9.9312,
+   "lon_deg": 76.2673,
+   "alt_m": 0.0,
+   "date_utc": "2026-10-15",
+   "search_start_jd_ut": 2461328.5,
+   "events": {
+    "rise_default": {
+     "rsmi": 1,
+     "convention": "upper limb, with refraction (swisseph default; ~ Sun's centre at -0deg50' = 34' refraction + 16' semi-diameter)",
+     "result_code": 0,
+     "jd_ut": 2461328.5299866614,
+     "utc": "2026-10-15T00:43:10.479049Z",
+     "revjul": [
+      2026,
+      10,
+      15,
+      0.7196798734366894
+     ]
+    },
+    "rise_no_refraction": {
+     "rsmi": 513,
+     "convention": "upper limb, geometric (no refraction)",
+     "result_code": 0,
+     "jd_ut": 2461328.531732571,
+     "utc": "2026-10-15T00:45:41.325626Z",
+     "revjul": [
+      2026,
+      10,
+      15,
+      0.7615817002952099
+     ]
+    },
+    "rise_disc_center": {
+     "rsmi": 257,
+     "convention": "disc centre, with refraction (~ centre at -34')",
+     "result_code": 0,
+     "jd_ut": 2461328.5307486765,
+     "utc": "2026-10-15T00:44:16.317155Z",
+     "revjul": [
+      2026,
+      10,
+      15,
+      0.737968236207962
+     ]
+    },
+    "set_default": {
+     "rsmi": 2,
+     "convention": "upper limb, with refraction (swisseph default; ~ Sun's centre at -0deg50' = 34' refraction + 16' semi-diameter)",
+     "result_code": 0,
+     "jd_ut": 2461329.026539186,
+     "utc": "2026-10-15T12:38:12.617096Z",
+     "revjul": [
+      2026,
+      10,
+      15,
+      12.636940464377403
+     ]
+    },
+    "set_no_refraction": {
+     "rsmi": 514,
+     "convention": "upper limb, geometric (no refraction)",
+     "result_code": 0,
+     "jd_ut": 2461329.0247930572,
+     "utc": "2026-10-15T12:35:41.751570Z",
+     "revjul": [
+      2026,
+      10,
+      15,
+      12.595033373683691
+     ]
+    },
+    "set_disc_center": {
+     "rsmi": 258,
+     "convention": "disc centre, with refraction (~ centre at -34')",
+     "result_code": 0,
+     "jd_ut": 2461329.025776966,
+     "utc": "2026-10-15T12:37:06.761287Z",
+     "revjul": [
+      2026,
+      10,
+      15,
+      12.618647184222937
+     ]
+    }
+   }
+  },
+  {
+   "place": "london",
+   "lat_deg": 51.5074,
+   "lon_deg": -0.1278,
+   "alt_m": 0.0,
+   "date_utc": "2026-06-21",
+   "search_start_jd_ut": 2461212.5,
+   "events": {
+    "rise_default": {
+     "rsmi": 1,
+     "convention": "upper limb, with refraction (swisseph default; ~ Sun's centre at -0deg50' = 34' refraction + 16' semi-diameter)",
+     "result_code": 0,
+     "jd_ut": 2461212.6546848435,
+     "utc": "2026-06-21T03:42:44.432198Z",
+     "revjul": [
+      2026,
+      6,
+      21,
+      3.712436243891716
+     ]
+    },
+    "rise_no_refraction": {
+     "rsmi": 513,
+     "convention": "upper limb, geometric (no refraction)",
+     "result_code": 0,
+     "jd_ut": 2461212.6582873473,
+     "utc": "2026-06-21T03:47:55.688526Z",
+     "revjul": [
+      2026,
+      6,
+      21,
+      3.798896335065365
+     ]
+    },
+    "rise_disc_center": {
+     "rsmi": 257,
+     "convention": "disc centre, with refraction (~ centre at -34')",
+     "result_code": 0,
+     "jd_ut": 2461212.6562348907,
+     "utc": "2026-06-21T03:44:58.356275Z",
+     "revjul": [
+      2026,
+      6,
+      21,
+      3.7496373765170574
+     ]
+    },
+    "set_default": {
+     "rsmi": 2,
+     "convention": "upper limb, with refraction (swisseph default; ~ Sun's centre at -0deg50' = 34' refraction + 16' semi-diameter)",
+     "result_code": 0,
+     "jd_ut": 2461213.348545995,
+     "utc": "2026-06-21T20:21:54.035493Z",
+     "revjul": [
+      2026,
+      6,
+      21,
+      20.365103881806135
+     ]
+    },
+    "set_no_refraction": {
+     "rsmi": 514,
+     "convention": "upper limb, geometric (no refraction)",
+     "result_code": 0,
+     "jd_ut": 2461213.344943312,
+     "utc": "2026-06-21T20:16:42.763675Z",
+     "revjul": [
+      2026,
+      6,
+      21,
+      20.27863948792219
+     ]
+    },
+    "set_disc_center": {
+     "rsmi": 258,
+     "convention": "disc centre, with refraction (~ centre at -34')",
+     "result_code": 0,
+     "jd_ut": 2461213.3469959013,
+     "utc": "2026-06-21T20:19:40.107392Z",
+     "revjul": [
+      2026,
+      6,
+      21,
+      20.327901631593704
+     ]
+    }
+   }
+  }
+ ]
+}
