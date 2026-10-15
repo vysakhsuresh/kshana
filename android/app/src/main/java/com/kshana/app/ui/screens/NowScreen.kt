@@ -141,9 +141,9 @@ private fun Wheel(chart: ChartRecord) {
     Canvas(modifier = Modifier.size(320.dp)) {
         val c = Offset(size.width / 2, size.height / 2)
         val rOuter = size.minDimension / 2 - 4.dp.toPx()
-        val rSign = rOuter * 0.89
-        val rPlanet = rOuter * 0.70
-        val rInner = rOuter * 0.59
+        val rSign = rOuter * 0.89f
+        val rPlanet = rOuter * 0.70f
+        val rInner = rOuter * 0.59f
         fun at(lon: Double, r: Float): Offset {
             val phi = Math.toRadians(180.0 + (lon - asc))
             return Offset(c.x + (r * cos(phi)).toFloat(), c.y - (r * sin(phi)).toFloat())
