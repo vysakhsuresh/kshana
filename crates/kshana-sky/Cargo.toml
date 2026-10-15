@@ -1,0 +1,17 @@
+[package]
+name = "kshana-sky"
+description = "Apparent geocentric ecliptic positions from a JPL kernel: light-time, aberration, precession-nutation, ecliptic of date"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+kshana-time = { workspace = true }
+kshana-ephem = { workspace = true }
+kshana-frames = { workspace = true }
+
+[lints]
+workspace = true

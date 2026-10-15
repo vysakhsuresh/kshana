@@ -1,0 +1,24 @@
+[package]
+name = "kshana-cli"
+description = "Command-line harness: print a chart from the kernel for a UTC instant and a place"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "kshana"
+path = "src/main.rs"
+
+[dependencies]
+kshana-time = { workspace = true }
+kshana-ephem = { workspace = true }
+kshana-frames = { workspace = true }
+kshana-houses = { workspace = true }
+kshana-vedic = { workspace = true }
+kshana-sky = { workspace = true }
+
+[lints]
+workspace = true

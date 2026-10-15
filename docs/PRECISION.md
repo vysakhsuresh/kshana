@@ -38,7 +38,18 @@ panchanga boundaries, where the relevant angular rate is well above the ephemeri
 For slow bodies the reported bracket is widened to the ephemeris-limited value rather
 than quoting a false microsecond.
 
-## What is verified today
+## What is verified today (milestone 2 in progress)
+
+- Sky pipeline on DE421: apparent Sun longitude agrees with Meeus's independent
+  low-precision formula to < 0.01° at four epochs 2000–2040; Sun and Moon longitudes
+  agree to < 0.02° at the 2000-01-06 new moon; Mars has negative speed at its 2003
+  opposition. Next: Horizons golden files at 0.1″.
+- IERS Bulletin A loader reads `finals2000A.all`; UT1−UTC at 2000-01-01 = +0.3555 s.
+- Real-kernel reader: Earth–Sun at J2000 = 0.9833 au.
+- Nutation is still the 4-term truncation (≈1″). Full IAU 2000A/B is the next item.
+- Gravitational deflection not yet applied (< 0.01″ beyond 10° from the Sun).
+
+## Earlier items
 
 - Time layer: J2000 identity, leap-second day 2016-12-31, 3 000-step round trips.
 - Solver: exact-nanosecond root on a linear function, microsecond root on a sine.

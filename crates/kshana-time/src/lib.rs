@@ -30,12 +30,14 @@
 
 mod civil;
 mod delta_t;
+mod eop;
 mod instant;
 mod leap;
 mod tdb;
 
 pub use civil::{days_from_civil, Utc, UtcError};
 pub use delta_t::{delta_t_for_year, ut1_jd_from_delta_t, DeltaT, Ut1};
+pub use eop::{EopRow, EopTable};
 pub use instant::{Instant, TwoPartJd, NS_PER_DAY, NS_PER_SEC, TT_MINUS_TAI_NS};
 pub use leap::{tai_minus_utc_at_utc_day, LEAP_SECONDS};
 pub use tdb::tdb_minus_tt_seconds;

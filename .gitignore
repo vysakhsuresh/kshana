@@ -1,8 +1,7 @@
 /target
 **/*.rs.bk
-/data/*.bsp
-/data/*.bpc
-/data/*.tls
+/data/*
+!/data/README.md
 /android/**/build/
 /android/**/.gradle/
 /android/local.properties

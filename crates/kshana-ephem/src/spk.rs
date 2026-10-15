@@ -244,7 +244,14 @@ mod tests {
     #[ignore]
     fn real_kernel_earth_sun_distance_is_one_au() {
         let path = std::env::var("KSHANA_SPK").expect("KSHANA_SPK");
-        let spk = Spk::open(std::path::Path::new(&path)).unwrap();
+        let mut p = std::path::PathBuf::from(&path);
+        if p.is_relative() {
+            // cargo runs tests from the crate directory; resolve against the workspace root
+            p = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../..")
+                .join(&path);
+        }
+        let spk = Spk::open(&p).unwrap_or_else(|e| panic!("open {}: {e:?}", p.display()));
         let st = spk.state(Body::Earth, Body::Sun, 0.0).unwrap();
         let r = (st.position[0].powi(2) + st.position[1].powi(2) + st.position[2].powi(2)).sqrt();
         // Earth–Sun distance on 2000-01-01 ≈ 0.9833 au (perihelion is Jan 3)

@@ -35,6 +35,8 @@ a person can carry, and to be honest about how well it knows.
 | `kshana-houses` | Asc/MC, Whole Sign, Equal, Porphyry, Placidus (iterated), polar failure | tested; Koch, Regiomontanus, Campanus etc. pending |
 | `kshana-vedic` | Ayanamsa (Lahiri, Raman, KP, Fagan–Bradley), nakshatra, tithi, yoga, karana, Vimshottari on exact instants | tested; values to be verified against IAE in milestone 3 |
 | `kshana-western` | Aspects with applying/separating, signs, traditional dignities, sect | tested |
+| `kshana-sky` | Apparent geocentric ecliptic positions: light-time, aberration, IAU 2006 bias-precession, nutation, ecliptic of date, daily motion | tested against the real kernel: Sun within 0.01° of an independent formula, equal longitudes at a known new moon, Mars retrograde at opposition |
+| `kshana-cli` | `kshana` binary: full chart from the kernel for a UTC instant and a place | working |
 | `kshana-ffi` | UniFFI surface for Kotlin/Swift/Python | builds; Kotlin generation via `android/build-engine.sh` |
 
 See `docs/ARCHITECTURE.md`, `docs/PRECISION.md` and `docs/ROADMAP.md`.
@@ -42,9 +44,11 @@ See `docs/ARCHITECTURE.md`, `docs/PRECISION.md` and `docs/ROADMAP.md`.
 ## Build
 
 ```sh
-cargo test --workspace            # all unit tests
-./scripts/fetch-ephemeris.sh      # downloads de440s.bsp into data/
-KSHANA_SPK=data/de440s.bsp cargo test -p kshana-ephem -- --ignored
+cargo test --workspace            # all unit tests (sky tests run only when data/de421.bsp exists)
+./scripts/fetch-ephemeris.sh      # de440s.bsp from NAIF into data/
+./scripts/fetch-ephemeris.sh pypi # fallback: de421.bsp + finals2000A.all from PyPI when NAIF is blocked
+KSHANA_SPK=data/de421.bsp cargo test --workspace -- --ignored
+cargo run -p kshana-cli -- --spk data/de421.bsp --utc 2026-10-15T09:02:07.418263 --lat 9.9312 --lon 76.2673
 ./android/build-engine.sh         # Android .so files + Kotlin bindings
 ```
 
