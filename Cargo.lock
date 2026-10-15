@@ -252,6 +252,7 @@ name = "kshana-cli"
 version = "0.1.0"
 dependencies = [
  "kshana-ephem",
+ "kshana-events",
  "kshana-frames",
  "kshana-houses",
  "kshana-sky",
@@ -264,6 +265,17 @@ name = "kshana-ephem"
 version = "0.1.0"
 dependencies = [
  "kshana-time",
+]
+
+[[package]]
+name = "kshana-events"
+version = "0.1.0"
+dependencies = [
+ "kshana-ephem",
+ "kshana-sky",
+ "kshana-solver",
+ "kshana-time",
+ "kshana-vedic",
 ]
 
 [[package]]

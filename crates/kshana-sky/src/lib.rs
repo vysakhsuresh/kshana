@@ -131,6 +131,218 @@ pub fn meeus_sun_longitude(t: f64) -> f64 {
     (l0 + c - 0.005_69 - 0.004_78 * omega.sin()).rem_euclid(360.0)
 }
 
+/// Geodetic observer on the WGS84 ellipsoid.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Observer {
+    /// Geodetic latitude, degrees north.
+    pub latitude_deg: f64,
+    /// Longitude, degrees east.
+    pub longitude_deg: f64,
+    /// Height above the ellipsoid, metres.
+    pub height_m: f64,
+}
+
+const WGS84_A_KM: f64 = 6_378.137;
+const WGS84_F: f64 = 1.0 / 298.257_223_563;
+/// Earth rotation rate, rad/s.
+const OMEGA_EARTH: f64 = 7.292_115e-5;
+
+impl Observer {
+    /// Geocentric position (km) and velocity (km/s) of the observer in the ICRF at `t`,
+    /// given Greenwich apparent sidereal time `gast` (radians). Polar motion is ignored
+    /// (< 0.3″ on the ground, far below the Moon's parallax this is used for).
+    pub fn icrf_state(&self, t: Instant, gast: f64) -> ([f64; 3], [f64; 3]) {
+        let phi = self.latitude_deg.to_radians();
+        let lam = self.longitude_deg.to_radians();
+        let h = self.height_m / 1_000.0;
+        let (sp, cp) = phi.sin_cos();
+        let one_f2 = (1.0 - WGS84_F) * (1.0 - WGS84_F);
+        let c = 1.0 / (cp * cp + one_f2 * sp * sp).sqrt();
+        let s = one_f2 * c;
+        // Earth-fixed
+        let r_ef = [
+            (WGS84_A_KM * c + h) * cp * lam.cos(),
+            (WGS84_A_KM * c + h) * cp * lam.sin(),
+            (WGS84_A_KM * s + h) * sp,
+        ];
+        // rotate by GAST about z into the true equator and equinox of date
+        let (sg, cg) = gast.sin_cos();
+        let r_tod = [
+            r_ef[0] * cg - r_ef[1] * sg,
+            r_ef[0] * sg + r_ef[1] * cg,
+            r_ef[2],
+        ];
+        let v_tod = [-OMEGA_EARTH * r_tod[1], OMEGA_EARTH * r_tod[0], 0.0];
+        // true-of-date → ICRF is the transpose of the bias-precession-nutation matrix
+        let tc = t.tt_centuries_since_j2000();
+        let (dpsi, deps) = nutation_truncated(tc);
+        let m = bias_precession_nutation_matrix(tc, dpsi, deps);
+        (
+            precession::apply_transpose(&m, r_tod),
+            precession::apply_transpose(&m, v_tod),
+        )
+    }
+}
+
+/// Apparent topocentric ecliptic position of date: as [`apparent`], but seen from an
+/// observer on the Earth's surface. For the Moon this differs from the geocentric
+/// value by up to about one degree (parallax); for the Sun by up to 9″.
+pub fn apparent_topocentric(
+    spk: &Spk,
+    body: Body,
+    t: Instant,
+    obs: &Observer,
+    gast: f64,
+) -> Result<Apparent, SpkError> {
+    let et = Spk::et_of(t);
+    let tc = t.tt_centuries_since_j2000();
+    let (r_obs, v_obs) = obs.icrf_state(t, gast);
+    let dir_at = |et: f64| -> Result<([f64; 3], f64), SpkError> {
+        let earth = spk.state(Body::Earth, Body::SolarSystemBarycenter, et)?;
+        let o_pos = [
+            earth.position[0] + r_obs[0],
+            earth.position[1] + r_obs[1],
+            earth.position[2] + r_obs[2],
+        ];
+        let o_vel = [
+            earth.velocity[0] + v_obs[0],
+            earth.velocity[1] + v_obs[1],
+            earth.velocity[2] + v_obs[2],
+        ];
+        let mut tau = 0.0;
+        let mut p = [0.0; 3];
+        let mut dist = 0.0;
+        for _ in 0..3 {
+            let tgt = spk.state(body, Body::SolarSystemBarycenter, et - tau)?;
+            p = [
+                tgt.position[0] - o_pos[0],
+                tgt.position[1] - o_pos[1],
+                tgt.position[2] - o_pos[2],
+            ];
+            dist = norm(p);
+            tau = dist / C_KM_S;
+        }
+        let mut u = [p[0] / dist, p[1] / dist, p[2] / dist];
+        for k in 0..3 {
+            u[k] += o_vel[k] / C_KM_S;
+        }
+        let n = norm(u);
+        Ok(([u[0] / n, u[1] / n, u[2] / n], dist))
+    };
+    let (dir, dist) = dir_at(et)?;
+    let (lon, lat) = to_ecliptic_of_date(dir, tc);
+    let h = 1_800.0;
+    let (d1, _) = dir_at(et - h)?;
+    let (d2, _) = dir_at(et + h)?;
+    let (l1, _) = to_ecliptic_of_date(d1, tc - h / 3_155_760_000.0);
+    let (l2, _) = to_ecliptic_of_date(d2, tc + h / 3_155_760_000.0);
+    let mut dl = l2 - l1;
+    if dl > 180.0 {
+        dl -= 360.0;
+    } else if dl < -180.0 {
+        dl += 360.0;
+    }
+    Ok(Apparent {
+        longitude: lon,
+        latitude: lat,
+        distance_km: dist,
+        speed: dl * 86_400.0 / (2.0 * h),
+    })
+}
+
+/// True (osculating) ascending node of the Moon's geocentric orbit, tropical longitude
+/// of date in degrees. Computed from the instantaneous position and velocity in the
+/// ecliptic of date: the node line is `ẑ × (r × v)`.
+pub fn true_node_longitude(spk: &Spk, t: Instant) -> Result<f64, SpkError> {
+    let et = Spk::et_of(t);
+    let tc = t.tt_centuries_since_j2000();
+    let st = spk.state(Body::Moon, Body::Earth, et)?;
+    let (dpsi, deps) = nutation_truncated(tc);
+    let m = bias_precession_nutation_matrix(tc, dpsi, deps);
+    let eps = mean_obliquity_iau2006(tc) + deps;
+    let r = rotate_x(eps, apply(&m, st.position));
+    let v = rotate_x(eps, apply(&m, st.velocity));
+    let h = [
+        r[1] * v[2] - r[2] * v[1],
+        r[2] * v[0] - r[0] * v[2],
+        r[0] * v[1] - r[1] * v[0],
+    ];
+    // n = ẑ × h = (−h_y, h_x, 0)
+    Ok((h[0]).atan2(-h[1]).to_degrees().rem_euclid(360.0))
+}
+
+#[cfg(test)]
+mod more_tests {
+    use super::*;
+    use kshana_time::Utc;
+
+    fn kernel() -> Option<Spk> {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/de421.bsp");
+        Spk::open(&p).ok()
+    }
+
+    #[test]
+    fn true_node_stays_within_two_degrees_of_the_mean_node() {
+        let Some(spk) = kernel() else { return };
+        let mut max = 0.0f64;
+        for i in 0..40 {
+            let t = Utc::new(2000 + i, 3, 1, 0, 0, 0, 0)
+                .unwrap()
+                .to_instant()
+                .unwrap();
+            let tn = true_node_longitude(&spk, t).unwrap();
+            let mn = mean_node_longitude(t.tt_centuries_since_j2000());
+            let d = ((tn - mn + 180.0).rem_euclid(360.0) - 180.0).abs();
+            max = max.max(d);
+            assert!(d < 2.0, "year {}: true {tn} mean {mn} diff {d}", 2000 + i);
+        }
+        assert!(
+            max > 0.2,
+            "true node never departed from the mean node: suspicious ({max})"
+        );
+    }
+
+    #[test]
+    fn topocentric_moon_parallax_is_under_a_degree_and_sun_under_ten_arcsec() {
+        let Some(spk) = kernel() else { return };
+        let obs = Observer {
+            latitude_deg: 9.9312,
+            longitude_deg: 76.2673,
+            height_m: 0.0,
+        };
+        for d in [1u32, 8, 15, 22] {
+            let t = Utc::new(2026, 10, d, 9, 0, 0, 0)
+                .unwrap()
+                .to_instant()
+                .unwrap();
+            // GAST from UT1 ≈ UTC (error < 1 s → < 0.01″ here), via ΔT-free shortcut
+            let ut1 = kshana_time::TwoPartJd {
+                jd1: t.tt_jd().jd1,
+                jd2: t.tt_jd().jd2 - 69.2 / 86_400.0,
+            };
+            let g = kshana_frames::gast(
+                kshana_frames::earth_rotation_angle(ut1),
+                t.tt_centuries_since_j2000(),
+            );
+            let geo = apparent(&spk, Body::Moon, t).unwrap();
+            let topo = apparent_topocentric(&spk, Body::Moon, t, &obs, g).unwrap();
+            let dl = ((topo.longitude - geo.longitude + 180.0).rem_euclid(360.0) - 180.0).abs();
+            let db = (topo.latitude - geo.latitude).abs();
+            let sep = (dl * dl + db * db).sqrt();
+            assert!(sep > 0.05 && sep < 1.05, "day {d}: parallax {sep}°");
+            assert!(
+                topo.distance_km < geo.distance_km + 6_400.0
+                    && topo.distance_km > geo.distance_km - 6_400.0
+            );
+            let sg = apparent(&spk, Body::Sun, t).unwrap();
+            let st = apparent_topocentric(&spk, Body::Sun, t, &obs, g).unwrap();
+            let ds =
+                ((st.longitude - sg.longitude + 180.0).rem_euclid(360.0) - 180.0).abs() * 3_600.0;
+            assert!(ds < 10.0, "sun parallax {ds}″");
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

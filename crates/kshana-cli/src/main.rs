@@ -1,8 +1,11 @@
-//! `kshana --spk data/de421.bsp --utc 2026-10-15T09:02:07.418263 --lat 9.9312 --lon 76.2673`
+//! `kshana chart --spk data/de421.bsp --utc 2026-10-15T09:02:07.418263 --lat 9.9312 --lon 76.2673`
+//! `kshana next  --spk data/de421.bsp --utc 2026-10-15T00:00:00 --days 30 --tz +05:30`
 //!
 //! Prints the instant on every time scale, apparent tropical and sidereal longitudes,
 //! Ascendant, Midheaven, Placidus cusps and the panchanga. This is the verification
 //! harness: its output is what gets compared against Horizons and other ephemerides.
+
+mod next;
 
 use kshana_ephem::{Body, Spk};
 use kshana_frames::{
@@ -56,12 +59,34 @@ fn dms(deg: f64) -> String {
     format!("{:>2}°{:02}′{:05.2}″ {}", d, m, s, SIGNS[idx])
 }
 
+fn parse_tz(s: &str) -> Option<i64> {
+    let (sign, rest) = match s.chars().next()? {
+        '+' => (1, &s[1..]),
+        '-' => (-1, &s[1..]),
+        _ => (1, s),
+    };
+    let (h, m) = rest.split_once(':').unwrap_or((rest, "0"));
+    Some(sign * (h.parse::<i64>().ok()? * 60 + m.parse::<i64>().ok()?))
+}
+
 fn main() {
+    let sub = std::env::args().nth(1).unwrap_or_default();
     let spk_path = arg("--spk").unwrap_or_else(|| "data/de421.bsp".into());
     let utc = arg("--utc").and_then(|s| parse_utc(&s)).unwrap_or_else(|| {
-        eprintln!("usage: kshana --spk <file.bsp> --utc YYYY-MM-DDTHH:MM:SS.ffffff --lat <deg> --lon <deg east>");
+        eprintln!("usage: kshana chart --spk <file.bsp> --utc YYYY-MM-DDTHH:MM:SS.ffffff --lat <deg> --lon <deg east>");
+        eprintln!("       kshana next  --spk <file.bsp> --utc YYYY-MM-DDTHH:MM:SS --days <n> [--tz +05:30]");
         std::process::exit(2);
     });
+    if sub == "next" {
+        let spk = Spk::open(std::path::Path::new(&spk_path)).unwrap_or_else(|e| {
+            eprintln!("cannot open {spk_path}: {e:?}");
+            std::process::exit(1);
+        });
+        let days: i64 = arg("--days").and_then(|s| s.parse().ok()).unwrap_or(30);
+        let tz = arg("--tz").and_then(|s| parse_tz(&s)).unwrap_or(0);
+        next::run(&spk, utc.to_instant().expect("instant"), days, tz);
+        return;
+    }
     let lat: f64 = arg("--lat").and_then(|s| s.parse().ok()).unwrap_or(0.0);
     let lon: f64 = arg("--lon").and_then(|s| s.parse().ok()).unwrap_or(0.0);
 

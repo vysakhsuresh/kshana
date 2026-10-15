@@ -9,7 +9,9 @@ pub mod panchanga;
 
 pub use ayanamsa::{ayanamsa_degrees, Ayanamsa};
 pub use dasha::{vimshottari, DashaLord, DashaPeriod};
-pub use panchanga::{karana, nakshatra, tithi, yoga, Karana, Nakshatra, Tithi, Yoga};
+pub use panchanga::{
+    karana, nakshatra, tithi, yoga, Karana, Nakshatra, Tithi, Yoga, NAKSHATRA_SPAN,
+};
 
 /// Normalise a longitude into `[0, 360)`.
 pub fn norm360(d: f64) -> f64 {
