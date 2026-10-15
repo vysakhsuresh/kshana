@@ -501,8 +501,31 @@ pub struct TimingRecord {
 #[allow(missing_docs)]
 pub struct AreaReading {
     pub promise: PromiseRecord,
+    /// Parashari assessment score in [0, 1] and its rules.
+    pub parashari_score: f64,
+    pub parashari_lord: String,
+    pub parashari_hits: Vec<HitRecord>,
+    /// True when KP's promise and the Parashari score (≥ 0.5) agree.
+    pub traditions_agree: bool,
     pub funnel: Vec<TimingRecord>,
     pub agreeing_levels: u8,
+}
+
+/// A detected yoga.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct YogaRecord {
+    pub name: String,
+    pub hit: HitRecord,
+}
+
+fn hit_record(h: &kshana_rules::Hit) -> HitRecord {
+    HitRecord {
+        rule_id: h.rule_id.to_string(),
+        source: h.source.to_string(),
+        weight: h.weight,
+        factors: h.factors.clone(),
+    }
 }
 
 fn sig_records(v: &[kshana_rules::Significance]) -> Vec<SignificanceRecord> {
@@ -562,6 +585,7 @@ impl Engine {
             .iter()
             .map(|&area| {
                 let p = kshana_rules::promise(&facts, area);
+                let b = kshana_rules::assess(&facts, area);
                 let funnel = kshana_rules::timing(
                     &facts,
                     area,
@@ -572,6 +596,10 @@ impl Engine {
                 );
                 let agreeing = kshana_rules::agreeing_levels(&funnel) as u8;
                 AreaReading {
+                    parashari_score: b.score,
+                    parashari_lord: lord_name(b.lord),
+                    parashari_hits: b.hits.iter().map(hit_record).collect(),
+                    traditions_agree: p.promised == (b.score >= 0.5),
                     promise: PromiseRecord {
                         area: area.name.to_string(),
                         primary_cusp: area.primary,
@@ -599,6 +627,272 @@ impl Engine {
                 }
             })
             .collect())
+    }
+}
+
+/// Question shapes from the picker.
+#[derive(Clone, Copy, Debug, uniffi::Enum)]
+#[allow(missing_docs)]
+pub enum QuestionShape {
+    WillItHappen,
+    When,
+    Choice,
+    WillItReturn,
+    WillTheyRecover,
+}
+
+/// A supportive Moon transit window.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct MoonWindowRecord {
+    pub start: ExactInstant,
+    pub end: ExactInstant,
+    pub star: String,
+    pub sub: String,
+}
+
+/// One fired rule.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct HitRecord {
+    pub rule_id: String,
+    pub source: String,
+    pub weight: f64,
+    pub factors: Vec<String>,
+}
+
+/// The Prashna answer.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct PrashnaRecord {
+    /// "Yes", "Delayed", "No" or "Unclear".
+    pub verdict: String,
+    pub question_genuine: bool,
+    pub moon_sub_lord: String,
+    pub lagna_sidereal: f64,
+    pub moon_sidereal: f64,
+    pub cusps_sidereal: Vec<f64>,
+    pub ruling_planets: Vec<String>,
+    pub agents: Vec<String>,
+    pub promise: PromiseRecord,
+    pub hits: Vec<HitRecord>,
+    pub windows: Vec<MoonWindowRecord>,
+}
+
+#[uniffi::export]
+impl Engine {
+    /// Judge a question asked at `at` from a place. With a KP number (1–249) the lagna
+    /// is fixed by the number; without one the lagna of the moment is used. Timing
+    /// windows cover the next `window_days` days.
+    #[allow(clippy::too_many_arguments)]
+    pub fn prashna(
+        &self,
+        at: ExactInstant,
+        latitude_deg: f64,
+        longitude_deg: f64,
+        number: Option<u16>,
+        area: String,
+        shape: QuestionShape,
+        ayanamsa: AyanamsaChoice,
+        window_days: u32,
+    ) -> Result<PrashnaRecord, KshanaError> {
+        let a = kshana_rules::areas::area(&area)
+            .ok_or_else(|| KshanaError::Engine(format!("unknown area {area}")))?;
+        let input = ChartInput {
+            instant: at.into(),
+            observer: Observer {
+                latitude_deg,
+                longitude_deg,
+                height_m: 0.0,
+            },
+            system: kshana_houses::HouseSystem::Placidus,
+            ayanamsa: ayanamsa.into(),
+            topocentric_moon: false,
+        };
+        let ch = match number {
+            Some(n) => kshana_chart::compute_horary(&self.spk, self.eop.as_ref(), &input, n),
+            None => compute(&self.spk, self.eop.as_ref(), &input),
+        }
+        .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        let facts = kshana_rules::Facts::from_chart(&ch);
+        let sh = match shape {
+            QuestionShape::WillItHappen => kshana_rules::QuestionShape::WillItHappen,
+            QuestionShape::When => kshana_rules::QuestionShape::When,
+            QuestionShape::Choice => kshana_rules::QuestionShape::Choice,
+            QuestionShape::WillItReturn => kshana_rules::QuestionShape::WillItReturn,
+            QuestionShape::WillTheyRecover => kshana_rules::QuestionShape::WillTheyRecover,
+        };
+        let v = kshana_rules::prashna(&facts, a, sh, at.into(), longitude_deg);
+        let windows = kshana_rules::prashna_windows(
+            &self.spk,
+            ayanamsa.into(),
+            &v.agents,
+            at.into(),
+            window_days as i64,
+        );
+        Ok(PrashnaRecord {
+            verdict: format!("{:?}", v.verdict),
+            question_genuine: v.question_genuine,
+            moon_sub_lord: lord_name(v.moon_sub_lord),
+            lagna_sidereal: ch.cusps_sidereal[0],
+            moon_sidereal: ch.bodies[1].sidereal,
+            cusps_sidereal: ch.cusps_sidereal.to_vec(),
+            ruling_planets: v.ruling.all().into_iter().map(lord_name).collect(),
+            agents: v.agents.iter().copied().map(lord_name).collect(),
+            promise: PromiseRecord {
+                area: a.name.to_string(),
+                primary_cusp: a.primary,
+                group: a.group.to_vec(),
+                sub_lord: lord_name(v.promise.sub_lord),
+                promised: v.promise.promised,
+                strength: v.promise.strength,
+                fulfilling: sig_records(&v.promise.fulfilling),
+                denying: sig_records(&v.promise.denying),
+                rule_id: v.promise.hit.rule_id.to_string(),
+                source: v.promise.hit.source.to_string(),
+                factors: v.promise.hit.factors.clone(),
+            },
+            hits: v
+                .hits
+                .iter()
+                .map(|h| HitRecord {
+                    rule_id: h.rule_id.to_string(),
+                    source: h.source.to_string(),
+                    weight: h.weight,
+                    factors: h.factors.clone(),
+                })
+                .collect(),
+            windows: windows
+                .iter()
+                .map(|w| MoonWindowRecord {
+                    start: w.start.into(),
+                    end: w.end.into(),
+                    star: lord_name(w.star),
+                    sub: lord_name(w.sub),
+                })
+                .collect(),
+        })
+    }
+}
+
+#[uniffi::export]
+impl Engine {
+    /// Classical yogas present in a natal chart.
+    pub fn yogas(
+        &self,
+        birth: ExactInstant,
+        latitude_deg: f64,
+        longitude_deg: f64,
+        ayanamsa: AyanamsaChoice,
+    ) -> Result<Vec<YogaRecord>, KshanaError> {
+        let input = ChartInput {
+            instant: birth.into(),
+            observer: Observer {
+                latitude_deg,
+                longitude_deg,
+                height_m: 0.0,
+            },
+            system: kshana_houses::HouseSystem::Placidus,
+            ayanamsa: ayanamsa.into(),
+            topocentric_moon: false,
+        };
+        let ch = compute(&self.spk, self.eop.as_ref(), &input)
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        let facts = kshana_rules::Facts::from_chart(&ch);
+        Ok(kshana_rules::yogas(&facts)
+            .iter()
+            .map(|y| YogaRecord {
+                name: y.name.to_string(),
+                hit: hit_record(&y.hit),
+            })
+            .collect())
+    }
+}
+
+/// One remedy.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct RemedyRecord {
+    /// "Karma", "Seva", "Discipline", "Daana", "Mantra" or "Pooja".
+    pub kind: String,
+    pub title: String,
+    pub why: String,
+    pub fit: f64,
+    pub effort: String,
+    pub optional: bool,
+}
+
+/// The remedy plan.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct PariharaRecord {
+    pub planet: String,
+    pub cause: String,
+    pub severity: f64,
+    pub remedies: Vec<RemedyRecord>,
+}
+
+#[uniffi::export]
+impl Engine {
+    /// Remedy plan for the running period at `at` (maha and antar lords), optionally
+    /// narrowed to a life area.
+    #[allow(clippy::too_many_arguments)]
+    pub fn parihara(
+        &self,
+        birth: ExactInstant,
+        latitude_deg: f64,
+        longitude_deg: f64,
+        ayanamsa: AyanamsaChoice,
+        at: ExactInstant,
+        area: Option<String>,
+    ) -> Result<PariharaRecord, KshanaError> {
+        let input = ChartInput {
+            instant: birth.into(),
+            observer: Observer {
+                latitude_deg,
+                longitude_deg,
+                height_m: 0.0,
+            },
+            system: kshana_houses::HouseSystem::Placidus,
+            ayanamsa: ayanamsa.into(),
+            topocentric_moon: false,
+        };
+        let ch = compute(&self.spk, self.eop.as_ref(), &input)
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        let facts = kshana_rules::Facts::from_chart(&ch);
+        let chain = kshana_vedic::vimshottari_levels(
+            ch.bodies[1].sidereal,
+            birth.into(),
+            kshana_vedic::dasha::YEAR_365_25_NS,
+            at.into(),
+            2,
+        );
+        let lords: Vec<DashaLord> = chain.iter().map(|p| p.lord).collect();
+        let a = match area {
+            Some(name) => Some(
+                kshana_rules::areas::area(&name)
+                    .ok_or_else(|| KshanaError::Engine(format!("unknown area {name}")))?,
+            ),
+            None => None,
+        };
+        let p = kshana_rules::parihara(&facts, a, &lords);
+        Ok(PariharaRecord {
+            planet: lord_name(p.planet),
+            cause: p.cause,
+            severity: p.severity,
+            remedies: p
+                .remedies
+                .iter()
+                .map(|r| RemedyRecord {
+                    kind: format!("{:?}", r.kind),
+                    title: r.title.clone(),
+                    why: r.why.clone(),
+                    fit: r.fit,
+                    effort: r.effort.to_string(),
+                    optional: r.optional,
+                })
+                .collect(),
+        })
     }
 }
 

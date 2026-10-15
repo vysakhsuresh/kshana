@@ -1,13 +1,14 @@
 //! `kshana chart --spk data/de421.bsp --utc 2026-10-15T09:02:07.418263 --lat 9.9312 --lon 76.2673`
 //! `kshana next  --spk data/de421.bsp --utc 2026-10-15T00:00:00 --days 30 --tz +05:30`
 //! `kshana areas --spk data/de421.bsp --utc <birth UTC> --lat .. --lon ..`
+//! `kshana prashna --spk data/de421.bsp --utc <now UTC> --lat .. --lon .. --area Career [--number 1..249] [--tz +05:30]`
 //!
 //! The verification harness. `chart` prints everything `kshana-chart` computes; `next`
 //! lists upcoming exact instants from `kshana-events`. Nothing here does astronomy.
 
 mod next;
 
-use kshana_chart::{compute, Chart, ChartInput};
+use kshana_chart::{compute, compute_horary, Chart, ChartInput};
 use kshana_ephem::Spk;
 use kshana_houses::HouseSystem;
 use kshana_sky::Observer;
@@ -57,10 +58,13 @@ fn parse_tz(s: &str) -> Option<i64> {
 }
 
 fn dms(deg: f64) -> String {
-    let sign = deg.rem_euclid(30.0);
+    // round to 0.01″ first so 59.999″ never prints as 60.00″
+    let total = (deg.rem_euclid(360.0) * 360_000.0).round() / 360_000.0;
+    let sign = total.rem_euclid(30.0);
     let d = sign.floor();
     let m = ((sign - d) * 60.0).floor();
     let s = ((sign - d) * 60.0 - m) * 60.0;
+    let deg = total;
     const SIGNS: [&str; 12] = [
         "Ari", "Tau", "Gem", "Can", "Leo", "Vir", "Lib", "Sco", "Sag", "Cap", "Aqu", "Pis",
     ];
@@ -151,30 +155,57 @@ fn print_chart(utc: &Utc, ch: &Chart, lat: f64, lon: f64) {
 }
 
 fn print_areas(ch: &Chart) {
-    use kshana_rules::{promise, Facts, AREAS};
+    use kshana_rules::{assess, promise, yogas, Facts, AREAS};
     let facts = Facts::from_chart(ch);
-    println!("KSHANA · life areas · KP cusp sub-lord promise (rule KS-K-0001)");
+    println!("KSHANA · life areas · KP promise (KS-K-0001) and Parashari assessment (KS-B-*)");
     for a in AREAS {
         let p = promise(&facts, a);
+        let b = assess(&facts, a);
+        let agree = p.promised == (b.score >= 0.5);
         println!();
         println!(
-            "{:<10} {}  strength {:.2}  sub-lord of {} cusp: {:?}",
+            "{:<10} KP {} ({:.2}) · Parashari {:.2} · {}",
             a.name,
             if p.promised {
-                "PROMISED"
+                "promised"
             } else {
                 "not promised"
             },
             p.strength,
-            a.primary,
-            p.sub_lord
+            b.score,
+            if agree {
+                "both traditions agree"
+            } else {
+                "traditions disagree"
+            }
         );
         for f in &p.hit.factors {
-            println!("           · {f}");
+            println!("    KP · {f}");
+        }
+        for h in &b.hits {
+            for f in &h.factors {
+                println!("    {} · {f}", h.rule_id);
+            }
         }
     }
     println!();
-    println!("Significators (house: level 1 star-of-occupant … 4 owner)");
+    let ys = yogas(&facts);
+    if ys.is_empty() {
+        println!("Yogas: none of the detected set");
+    } else {
+        println!("Yogas:");
+        for y in ys {
+            println!(
+                "  {:<18} {}  [{}] {}",
+                y.name,
+                y.hit.factors.join("; "),
+                y.hit.rule_id,
+                y.hit.source
+            );
+        }
+    }
+    println!();
+    println!("Significators (house: level 1 star-of-occupant … 4 owner) · dignity · rasi house");
     for pl in &facts.planets {
         let sig = kshana_rules::significators(&facts, pl.graha);
         let list: Vec<String> = sig
@@ -182,12 +213,72 @@ fn print_areas(ch: &Chart) {
             .map(|s| format!("{}:{}", s.house, s.level as u8))
             .collect();
         println!(
-            "  {:<8} house {:>2} · star {:?} · sub {:?} · {}",
+            "  {:<8} {:?} · rasi {:>2} · star {:?} · sub {:?} · {}",
             format!("{:?}", pl.graha),
-            pl.house,
+            kshana_rules::dignity(pl.graha, pl.sidereal),
+            pl.rasi_house,
             pl.star_lord,
             pl.sub_lord,
             list.join(" ")
+        );
+    }
+}
+
+fn print_prashna(spk: &Spk, ch: &Chart, area_name: &str, number: Option<u16>, lon: f64, tz: i64) {
+    use kshana_rules::{area, prashna, prashna_windows, Facts, QuestionShape};
+    let Some(a) = area(area_name) else {
+        eprintln!("unknown area {area_name}; one of Career, Marriage, Children, Wealth, Health, Property, Education, Foreign");
+        std::process::exit(2);
+    };
+    let facts = Facts::from_chart(ch);
+    let v = prashna(&facts, a, QuestionShape::WillItHappen, ch.instant, lon);
+    println!(
+        "KSHANA · prashna · {} · {}",
+        a.name,
+        match number {
+            Some(n) => format!("KP number {n}"),
+            None => "lagna of the moment".into(),
+        }
+    );
+    println!(
+        "lagna {} sidereal · Moon {} sidereal",
+        dms(ch.cusps_sidereal[0]),
+        dms(ch.bodies[1].sidereal)
+    );
+    println!();
+    println!(
+        "VERDICT: {:?}{}",
+        v.verdict,
+        if v.question_genuine {
+            ""
+        } else {
+            "  (question not shown by the Moon's sub-lord)"
+        }
+    );
+    for h in &v.hits {
+        println!("  [{}] {}", h.rule_id, h.source);
+        for f in &h.factors {
+            println!("      · {f}");
+        }
+    }
+    println!();
+    let agents = v.agents.clone();
+    if agents.is_empty() {
+        println!("No ruling planet signifies the matter: no timing window from this chart.");
+        return;
+    }
+    let windows = prashna_windows(spk, Ayanamsa::Lahiri, &agents, ch.instant, 45);
+    println!(
+        "Moon transits through stars and subs of {:?} in the next 45 days:",
+        agents
+    );
+    for w in windows.iter().take(12) {
+        println!(
+            "  {} → {}   star {:?} · sub {:?}",
+            next::fmt_local(w.start, tz),
+            next::fmt_local(w.end, tz),
+            w.star,
+            w.sub
         );
     }
 }
@@ -232,6 +323,23 @@ fn main() {
         ayanamsa: Ayanamsa::Lahiri,
         topocentric_moon: std::env::args().any(|a| a == "--topo"),
     };
+    if sub == "prashna" {
+        let number: Option<u16> = arg("--number").and_then(|s| s.parse().ok());
+        let tz = arg("--tz").and_then(|s| parse_tz(&s)).unwrap_or(0);
+        let area_name = arg("--area").unwrap_or_else(|| "Career".into());
+        let ch = match number {
+            Some(n) => compute_horary(&spk, eop.as_ref(), &input, n),
+            None => compute(&spk, eop.as_ref(), &input),
+        };
+        match ch {
+            Ok(ch) => print_prashna(&spk, &ch, &area_name, number, lon, tz),
+            Err(e) => {
+                eprintln!("prashna: {e:?}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
     match compute(&spk, eop.as_ref(), &input) {
         Ok(ch) if sub == "areas" => print_areas(&ch),
         Ok(ch) => print_chart(&utc, &ch, lat, lon),

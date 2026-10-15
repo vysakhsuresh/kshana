@@ -15,7 +15,7 @@ struct Line {
     detail: String,
 }
 
-fn fmt_local(t: Instant, tz_minutes: i64) -> String {
+pub fn fmt_local(t: Instant, tz_minutes: i64) -> String {
     let u = Utc::from_instant(t.add_ns(tz_minutes as i128 * 60 * NS_PER_SEC));
     format!(
         "{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:06}",

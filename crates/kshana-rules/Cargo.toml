@@ -12,11 +12,11 @@ authors.workspace = true
 kshana-time = { workspace = true }
 kshana-chart = { workspace = true }
 kshana-vedic = { workspace = true }
+kshana-ephem = { workspace = true }
+kshana-sky = { workspace = true }
 
 [dev-dependencies]
-kshana-ephem = { workspace = true }
 kshana-houses = { workspace = true }
-kshana-sky = { workspace = true }
 
 [lints]
 workspace = true

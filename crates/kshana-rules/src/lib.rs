@@ -14,12 +14,20 @@
 pub mod areas;
 pub mod facts;
 pub mod kp;
+pub mod parashari;
+pub mod parihara;
+pub mod prashna;
 
-pub use areas::{Area, AREAS};
+pub use areas::{area, Area, AREAS};
 pub use facts::{Facts, PlanetFact};
 pub use kp::{
     agreeing_levels, node_agents, period_supports, promise, significators, timing, Level, Promise,
     Significance, TimingLevel,
+};
+pub use parashari::{assess, dignity, period_quality, yogas, Assessment, Dignity, Yoga};
+pub use parihara::{parihara, Parihara, Remedy, RemedyKind};
+pub use prashna::{
+    prashna, prashna_windows, MoonWindow, PrashnaVerdict, QuestionShape, RulingPlanets, Verdict,
 };
 
 /// One fired rule.

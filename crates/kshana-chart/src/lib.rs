@@ -7,13 +7,14 @@ use kshana_ephem::{Body, Spk, SpkError};
 use kshana_frames::{
     earth_rotation_angle, gast, local_sidereal_time, mean_obliquity_iau2006, nutation_iau2006a,
 };
-use kshana_houses::{cusps, HouseError, HouseSystem};
+use kshana_houses::{cusps, horary_cusps, HouseError, HouseSystem};
 use kshana_sky::{
     apparent, apparent_topocentric, mean_node_longitude, true_node_longitude, Observer,
 };
 use kshana_time::{delta_t_for_year, ut1_jd_from_delta_t, EopTable, Instant, TwoPartJd, Utc};
 use kshana_vedic::{
-    ayanamsa_degrees, karana, kp_lords, nakshatra, sidereal, tithi, yoga, Ayanamsa, DashaLord,
+    ayanamsa_degrees, horary_longitude, karana, kp_lords, nakshatra, sidereal, tithi, yoga,
+    Ayanamsa, DashaLord,
 };
 
 /// What to compute.
@@ -194,6 +195,29 @@ fn house_of(lon: f64, cusps: &[f64; 12]) -> u8 {
 
 /// Compute the chart.
 pub fn compute(spk: &Spk, eop: Option<&EopTable>, input: &ChartInput) -> Result<Chart, ChartError> {
+    compute_with_lagna(spk, eop, input, None)
+}
+
+/// A KP horary chart: the lagna is the start of sub `number` (1–249) in the sidereal
+/// zodiac, and the other cusps are those of the moment that lagna rises at the place.
+/// Planets are for the instant of the question as usual.
+pub fn compute_horary(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    input: &ChartInput,
+    number: u16,
+) -> Result<Chart, ChartError> {
+    let lagna_sid =
+        horary_longitude(number).ok_or(ChartError::Houses(HouseError::NotImplemented))?;
+    compute_with_lagna(spk, eop, input, Some(lagna_sid))
+}
+
+fn compute_with_lagna(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    input: &ChartInput,
+    lagna_sidereal: Option<f64>,
+) -> Result<Chart, ChartError> {
     let t = input.instant;
     let tt = t.tt_jd();
     let tc = t.tt_centuries_since_j2000();
@@ -206,7 +230,10 @@ pub fn compute(spk: &Spk, eop: Option<&EopTable>, input: &ChartInput) -> Result<
     let ay = ayanamsa_degrees(input.ayanamsa, tc);
     let lat = input.observer.latitude_deg.to_radians();
 
-    let c = cusps(input.system, lst, eps, lat)?;
+    let c = match lagna_sidereal {
+        Some(ls) => horary_cusps(input.system, (ls + ay).rem_euclid(360.0), eps, lat)?,
+        None => cusps(input.system, lst, eps, lat)?,
+    };
     let cs: [f64; 12] = std::array::from_fn(|i| sidereal(c[i], ay));
 
     let mut bodies = Vec::with_capacity(10);
@@ -277,6 +304,38 @@ mod tests {
         assert_eq!(house_of(305.0, &c), 1);
         assert_eq!(house_of(5.0, &c), 3);
         assert_eq!(house_of(299.0, &c), 12);
+    }
+
+    #[test]
+    fn horary_chart_fixes_the_lagna() {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/de421.bsp");
+        let Ok(spk) = Spk::open(&p) else { return };
+        let t = Utc::new(2026, 10, 15, 9, 2, 7, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        let input = ChartInput {
+            instant: t,
+            observer: Observer {
+                latitude_deg: 9.9312,
+                longitude_deg: 76.2673,
+                height_m: 0.0,
+            },
+            system: HouseSystem::Placidus,
+            ayanamsa: Ayanamsa::Lahiri,
+            topocentric_moon: false,
+        };
+        let ch = compute_horary(&spk, None, &input, 100).unwrap();
+        let want = horary_longitude(100).unwrap();
+        assert!(
+            (ch.cusps_sidereal[0] - want).abs() < 1e-6,
+            "{} vs {want}",
+            ch.cusps_sidereal[0]
+        );
+        assert!(((ch.cusps[6] - ch.cusps[0]).rem_euclid(360.0) - 180.0).abs() < 1e-9);
+        // planets unchanged from the natal computation at the same instant
+        let natal = compute(&spk, None, &input).unwrap();
+        assert_eq!(ch.bodies[0].tropical, natal.bodies[0].tropical);
     }
 
     #[test]
