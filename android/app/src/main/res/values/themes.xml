@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.Kshana" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#080A14</item>
+        <item name="android:statusBarColor">#080A14</item>
+        <item name="android:navigationBarColor">#080A14</item>
+    </style>
+</resources>
