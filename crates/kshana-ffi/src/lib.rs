@@ -64,6 +64,8 @@ pub enum KshanaError {
     PolarLatitude,
     /// Not implemented yet.
     NotImplemented,
+    /// Engine failure (kernel missing, instant out of range).
+    Engine(String),
 }
 
 impl std::fmt::Display for KshanaError {
@@ -72,6 +74,7 @@ impl std::fmt::Display for KshanaError {
             KshanaError::InvalidUtc(s) => write!(f, "invalid UTC: {s}"),
             KshanaError::PolarLatitude => write!(f, "house system undefined at this latitude"),
             KshanaError::NotImplemented => write!(f, "not implemented"),
+            KshanaError::Engine(s) => write!(f, "engine: {s}"),
         }
     }
 }
@@ -187,9 +190,359 @@ pub fn house_cusps(
         })
 }
 
+// ---------------------------------------------------------------------------------
+// The engine object: holds the kernel and the Earth-orientation table, computes charts.
+// ---------------------------------------------------------------------------------
+
+use kshana_chart::{compute, ChartInput};
+use kshana_ephem::{Body, Spk};
+use kshana_sky::Observer;
+use kshana_time::{EopTable, NS_PER_DAY};
+use kshana_vedic::{Ayanamsa, DashaLord};
+use std::sync::Arc;
+
+/// Ayanamsa choices exposed to the app.
+#[derive(Clone, Copy, Debug, uniffi::Enum)]
+#[allow(missing_docs)]
+pub enum AyanamsaChoice {
+    Lahiri,
+    Raman,
+    Krishnamurti,
+    FaganBradley,
+}
+
+impl From<AyanamsaChoice> for Ayanamsa {
+    fn from(a: AyanamsaChoice) -> Self {
+        match a {
+            AyanamsaChoice::Lahiri => Ayanamsa::Lahiri,
+            AyanamsaChoice::Raman => Ayanamsa::Raman,
+            AyanamsaChoice::Krishnamurti => Ayanamsa::Krishnamurti,
+            AyanamsaChoice::FaganBradley => Ayanamsa::FaganBradley,
+        }
+    }
+}
+
+fn lord_name(l: DashaLord) -> String {
+    format!("{l:?}")
+}
+
+/// A body's placement, as the app receives it.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct PlacementRecord {
+    pub name: String,
+    pub tropical: f64,
+    pub sidereal: f64,
+    pub latitude: f64,
+    pub speed: f64,
+    pub distance_km: f64,
+    pub nakshatra_index: u32,
+    pub pada: u8,
+    pub kp_star: String,
+    pub kp_sub: String,
+    pub kp_sub_sub: String,
+    pub house: u8,
+}
+
+/// The chart, as the app receives it.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct ChartRecord {
+    pub instant: ExactInstant,
+    pub tt_jd1: f64,
+    pub tt_jd2: f64,
+    pub lst_deg: f64,
+    pub obliquity_deg: f64,
+    pub ayanamsa_deg: f64,
+    pub bodies: Vec<PlacementRecord>,
+    pub mean_node_tropical: f64,
+    pub true_node_tropical: f64,
+    pub cusps_tropical: Vec<f64>,
+    pub cusps_sidereal: Vec<f64>,
+    pub panchanga: Panchanga,
+    pub provenance_engine: String,
+    pub provenance_kernel: String,
+    pub provenance_ut1: String,
+    pub provenance_models: String,
+}
+
+/// One exact instant found by the event solver.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct EventRecord {
+    pub kind: String,
+    pub body: String,
+    pub instant: ExactInstant,
+    pub half_width_ns: u64,
+}
+
+/// One dasha period at some level.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct DashaRecord {
+    pub level: u8,
+    pub lord: String,
+    pub start: ExactInstant,
+    pub end: ExactInstant,
+}
+
+/// The engine: one kernel, loaded once, shared across calls.
+#[derive(uniffi::Object)]
+pub struct Engine {
+    spk: Spk,
+    eop: Option<EopTable>,
+}
+
+#[uniffi::export]
+impl Engine {
+    /// Open a kernel (and optionally an IERS finals2000A file) from paths on the device.
+    #[uniffi::constructor]
+    pub fn open(spk_path: String, eop_path: Option<String>) -> Result<Arc<Self>, KshanaError> {
+        let spk = Spk::open(std::path::Path::new(&spk_path))
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        let eop = eop_path
+            .and_then(|p| std::fs::read_to_string(p).ok())
+            .map(|s| EopTable::parse(&s));
+        Ok(Arc::new(Self { spk, eop }))
+    }
+
+    /// Full chart for an instant and a place.
+    #[allow(clippy::too_many_arguments)]
+    pub fn chart(
+        &self,
+        at: ExactInstant,
+        latitude_deg: f64,
+        longitude_deg: f64,
+        height_m: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        topocentric_moon: bool,
+    ) -> Result<ChartRecord, KshanaError> {
+        let sys = match system {
+            HouseSystem::WholeSign => kshana_houses::HouseSystem::WholeSign,
+            HouseSystem::Equal => kshana_houses::HouseSystem::Equal,
+            HouseSystem::Porphyry => kshana_houses::HouseSystem::Porphyry,
+            HouseSystem::Placidus => kshana_houses::HouseSystem::Placidus,
+        };
+        let input = ChartInput {
+            instant: at.into(),
+            observer: Observer {
+                latitude_deg,
+                longitude_deg,
+                height_m,
+            },
+            system: sys,
+            ayanamsa: ayanamsa.into(),
+            topocentric_moon,
+        };
+        let ch = compute(&self.spk, self.eop.as_ref(), &input).map_err(|e| match e {
+            kshana_chart::ChartError::Houses(kshana_houses::HouseError::PolarLatitude) => {
+                KshanaError::PolarLatitude
+            }
+            other => KshanaError::Engine(format!("{other:?}")),
+        })?;
+        let moon = &ch.bodies[1];
+        let sun = &ch.bodies[0];
+        let n = kshana_vedic::nakshatra(moon.sidereal);
+        let t = kshana_vedic::tithi(moon.sidereal, sun.sidereal);
+        let y = kshana_vedic::yoga(moon.sidereal, sun.sidereal);
+        let k = kshana_vedic::karana(moon.sidereal, sun.sidereal);
+        Ok(ChartRecord {
+            instant: ch.instant.into(),
+            tt_jd1: ch.tt.jd1,
+            tt_jd2: ch.tt.jd2,
+            lst_deg: ch.lst_deg,
+            obliquity_deg: ch.obliquity_deg,
+            ayanamsa_deg: ch.ayanamsa_deg,
+            bodies: ch
+                .bodies
+                .iter()
+                .map(|b| PlacementRecord {
+                    name: b.name.to_string(),
+                    tropical: b.tropical,
+                    sidereal: b.sidereal,
+                    latitude: b.latitude,
+                    speed: b.speed,
+                    distance_km: b.distance_km,
+                    nakshatra_index: b.nakshatra.0 as u32,
+                    pada: b.nakshatra.1,
+                    kp_star: lord_name(b.kp.0),
+                    kp_sub: lord_name(b.kp.1),
+                    kp_sub_sub: lord_name(b.kp.2),
+                    house: b.house,
+                })
+                .collect(),
+            mean_node_tropical: ch.mean_node.0,
+            true_node_tropical: ch.true_node.0,
+            cusps_tropical: ch.cusps.to_vec(),
+            cusps_sidereal: ch.cusps_sidereal.to_vec(),
+            panchanga: Panchanga {
+                nakshatra: n.name().to_string(),
+                pada: n.pada,
+                tithi_number: t.number,
+                tithi: t.name().to_string(),
+                is_shukla: t.is_shukla(),
+                yoga: y.name().to_string(),
+                karana: k.name.to_string(),
+                moon_sidereal: moon.sidereal,
+                sun_sidereal: sun.sidereal,
+            },
+            provenance_engine: ch.provenance.engine,
+            provenance_kernel: ch.provenance.kernel,
+            provenance_ut1: ch.provenance.ut1_source,
+            provenance_models: ch.provenance.models,
+        })
+    }
+
+    /// Exact instants in the next `days` days: sign ingresses and stations of the
+    /// classical seven, lunations, tithi and Moon-nakshatra boundaries.
+    pub fn next_events(
+        &self,
+        from: ExactInstant,
+        days: u32,
+        ayanamsa: AyanamsaChoice,
+    ) -> Vec<EventRecord> {
+        use kshana_events::*;
+        let from_i: Instant = from.into();
+        let to = from_i.add_ns(days as i128 * NS_PER_DAY);
+        let mut out = Vec::new();
+        let mut push = |evs: Result<Vec<Event>, EventError>, kind: &str, body: &str| {
+            if let Ok(evs) = evs {
+                for e in evs {
+                    out.push(EventRecord {
+                        kind: kind.into(),
+                        body: body.into(),
+                        instant: e.root.t.into(),
+                        half_width_ns: e.root.half_width_ns.max(0) as u64,
+                    });
+                }
+            }
+        };
+        for (name, body) in kshana_chart::BODIES.iter().take(7) {
+            push(
+                sign_ingresses(&self.spk, *body, from_i, to, MICROSECOND_NS),
+                "ingress",
+                name,
+            );
+            if *body != Body::Sun && *body != Body::Moon {
+                push(
+                    stations(&self.spk, *body, from_i, to, MICROSECOND_NS),
+                    "station",
+                    name,
+                );
+            }
+        }
+        push(
+            new_moons(&self.spk, from_i, to, MICROSECOND_NS),
+            "new_moon",
+            "Moon",
+        );
+        push(
+            full_moons(&self.spk, from_i, to, MICROSECOND_NS),
+            "full_moon",
+            "Moon",
+        );
+        push(
+            tithi_boundaries(&self.spk, from_i, to, MICROSECOND_NS),
+            "tithi",
+            "Moon",
+        );
+        push(
+            nakshatra_boundaries(
+                &self.spk,
+                Body::Moon,
+                ayanamsa.into(),
+                from_i,
+                to,
+                MICROSECOND_NS,
+            ),
+            "nakshatra",
+            "Moon",
+        );
+        out.sort_by_key(|e| (e.instant.tai_seconds, e.instant.nanos));
+        out
+    }
+}
+
+/// Vimshottari chain containing `at`, from mahadasha down `depth` levels (max 5),
+/// for a birth with the Moon at `moon_sidereal` degrees.
+#[uniffi::export]
+pub fn dasha_chain(
+    moon_sidereal: f64,
+    birth: ExactInstant,
+    at: ExactInstant,
+    depth: u8,
+) -> Vec<DashaRecord> {
+    kshana_vedic::vimshottari_levels(
+        moon_sidereal,
+        birth.into(),
+        kshana_vedic::dasha::YEAR_365_25_NS,
+        at.into(),
+        depth.min(5) as usize,
+    )
+    .into_iter()
+    .enumerate()
+    .map(|(i, p)| DashaRecord {
+        level: (i + 1) as u8,
+        lord: lord_name(p.lord),
+        start: p.start.into(),
+        end: p.end.into(),
+    })
+    .collect()
+}
+
+/// KP horary number (1–249) → sidereal lagna longitude in degrees.
+#[uniffi::export]
+pub fn horary_lagna(number: u16) -> Result<f64, KshanaError> {
+    kshana_vedic::horary_longitude(number)
+        .ok_or(KshanaError::Engine("horary number must be 1–249".into()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn engine_chart_and_events_through_the_boundary() {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/de421.bsp");
+        if !p.exists() {
+            return;
+        }
+        let engine = Engine::open(p.to_string_lossy().into_owned(), None).unwrap();
+        let at = instant_from_utc(UtcFields {
+            year: 2026,
+            month: 10,
+            day: 15,
+            hour: 9,
+            minute: 2,
+            second: 7,
+            nanos: 418_263_000,
+        })
+        .unwrap();
+        let ch = engine
+            .chart(
+                at,
+                9.9312,
+                76.2673,
+                0.0,
+                HouseSystem::Placidus,
+                AyanamsaChoice::Lahiri,
+                false,
+            )
+            .unwrap();
+        assert_eq!(ch.bodies.len(), 10);
+        assert_eq!(ch.cusps_tropical.len(), 12);
+        assert_eq!(ch.panchanga.tithi, "Panchami");
+        let ev = engine.next_events(at, 3, AyanamsaChoice::Lahiri);
+        assert!(ev.len() >= 6, "{}", ev.len());
+        assert!(ev
+            .windows(2)
+            .all(|w| (w[0].instant.tai_seconds, w[0].instant.nanos)
+                <= (w[1].instant.tai_seconds, w[1].instant.nanos)));
+        let chain = dasha_chain(ch.panchanga.moon_sidereal, at, at, 5);
+        assert_eq!(chain.len(), 5);
+        assert_eq!(horary_lagna(1).unwrap(), 0.0);
+    }
 
     #[test]
     fn instant_round_trips_across_the_boundary() {

@@ -157,6 +157,70 @@ fn placidus(ramc: f64, eps: f64, lat: f64, asc: f64, mc: f64) -> Result<[f64; 12
     Ok(c)
 }
 
+/// Local sidereal time (radians) at which `asc_deg` is rising, for obliquity `eps` and
+/// latitude `lat`. Used for KP horary charts, where the lagna is fixed by the querent's
+/// number and the other cusps follow from the moment that lagna rises at the place.
+///
+/// The ascendant is a monotonic function of sidereal time, so a bracketed bisection on
+/// the wrapped difference converges to 1e-12 rad in about 45 steps.
+pub fn lst_for_ascendant(asc_deg: f64, eps: f64, lat: f64) -> Result<f64, HouseError> {
+    let target = norm360(asc_deg);
+    let diff = |lst: f64| {
+        let a = angles(lst, eps, lat).asc;
+        let mut d = a - target;
+        if d > 180.0 {
+            d -= 360.0;
+        } else if d <= -180.0 {
+            d += 360.0;
+        }
+        d
+    };
+    // scan for a sign change in 5° steps of LST
+    let n = 72;
+    let step = TAU / n as f64;
+    let mut lo = 0.0;
+    let mut flo = diff(lo);
+    for i in 1..=n {
+        let hi = i as f64 * step;
+        let fhi = diff(hi);
+        if flo == 0.0 {
+            return Ok(lo);
+        }
+        if (flo > 0.0) != (fhi > 0.0) && (flo - fhi).abs() < 180.0 {
+            let (mut a, mut b, mut fa) = (lo, hi, flo);
+            for _ in 0..80 {
+                let m = 0.5 * (a + b);
+                let fm = diff(m);
+                if (fa > 0.0) == (fm > 0.0) {
+                    a = m;
+                    fa = fm;
+                } else {
+                    b = m;
+                }
+                if b - a < 1e-12 {
+                    break;
+                }
+            }
+            return Ok(0.5 * (a + b));
+        }
+        lo = hi;
+        flo = fhi;
+    }
+    Err(HouseError::NoConvergence)
+}
+
+/// House cusps for a KP horary chart: the lagna is `asc_deg` (tropical) and the cusps
+/// are those of the moment that longitude rises at the place.
+pub fn horary_cusps(
+    system: HouseSystem,
+    asc_deg: f64,
+    eps: f64,
+    lat: f64,
+) -> Result<[f64; 12], HouseError> {
+    let lst = lst_for_ascendant(asc_deg, eps, lat)?;
+    cusps(system, lst, eps, lat)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -220,6 +284,19 @@ mod tests {
             total += step;
         }
         assert!((total - 180.0).abs() < 1e-9, "total {total}");
+    }
+
+    #[test]
+    fn lst_for_ascendant_inverts_angles() {
+        let lat = 9.9312f64.to_radians();
+        for i in 0..36 {
+            let want = i as f64 * 10.0 + 3.7;
+            let lst = lst_for_ascendant(want, EPS, lat).unwrap();
+            let got = angles(lst, EPS, lat).asc;
+            assert!(close(got, want, 1e-8), "{want} → lst {lst} → asc {got}");
+        }
+        let c = horary_cusps(HouseSystem::Placidus, 123.456, EPS, lat).unwrap();
+        assert!(close(c[0], 123.456, 1e-8));
     }
 
     #[test]

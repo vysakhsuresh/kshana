@@ -39,7 +39,8 @@ a person can carry, and to be honest about how well it knows.
 | `kshana-events` | Exact instants on the real sky: ingresses, aspects, lunations, tithi and nakshatra boundaries, stations, solved to 1 µs | tested against almanac dates |
 | `kshana-verify` | Golden-vector tests against ERFA, jplephem and Skyfield (`tests/golden/`) | ERA, GMST, GAST, obliquity, precession angles, NPB matrix, 2000A/B nutation all match ERFA to ≤ 1e-12 rad |
 | `kshana-cli` | `kshana` binary: full chart from the kernel for a UTC instant and a place | working |
-| `kshana-ffi` | UniFFI surface for Kotlin/Swift/Python | builds; Kotlin generation via `android/build-engine.sh` |
+| `kshana-chart` | One instant, one place, the whole chart: placements with KP lords and houses, cusps, nodes, panchanga, provenance stamp | tested; shared by the CLI and the FFI |
+| `kshana-ffi` | UniFFI surface: `Engine` object (kernel loaded once), `chart`, `next_events`, `dasha_chain`, `horary_lagna`, panchanga, exact instants | tested through the boundary; Kotlin bindings generate cleanly |
 
 See `docs/ARCHITECTURE.md`, `docs/PRECISION.md` and `docs/ROADMAP.md`.
 

@@ -8,7 +8,7 @@ members = [
     "crates/kshana-houses",
     "crates/kshana-western",
     "crates/kshana-vedic",
-    "crates/kshana-ffi", "crates/kshana-sky", "crates/kshana-cli", "crates/kshana-events", "crates/kshana-verify",
+    "crates/kshana-ffi", "crates/kshana-sky", "crates/kshana-cli", "crates/kshana-events", "crates/kshana-verify", "crates/kshana-chart",
 ]
 
 [workspace.package]
@@ -29,6 +29,7 @@ kshana-western = { path = "crates/kshana-western" }
 kshana-vedic = { path = "crates/kshana-vedic" }
 kshana-sky = { path = "crates/kshana-sky" }
 kshana-events = { path = "crates/kshana-events" }
+kshana-chart = { path = "crates/kshana-chart" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

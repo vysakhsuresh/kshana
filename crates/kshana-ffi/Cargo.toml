@@ -25,6 +25,9 @@ kshana-frames = { workspace = true }
 kshana-houses = { workspace = true }
 kshana-western = { workspace = true }
 kshana-vedic = { workspace = true }
+kshana-sky = { workspace = true }
+kshana-events = { workspace = true }
+kshana-chart = { workspace = true }
 
 [lints]
 workspace = true

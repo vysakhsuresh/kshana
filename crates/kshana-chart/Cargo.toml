@@ -1,0 +1,20 @@
+[package]
+name = "kshana-chart"
+description = "One instant, one place, the whole chart: the single code path behind the CLI and the app"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+kshana-time = { workspace = true }
+kshana-ephem = { workspace = true }
+kshana-frames = { workspace = true }
+kshana-houses = { workspace = true }
+kshana-vedic = { workspace = true }
+kshana-sky = { workspace = true }
+
+[lints]
+workspace = true
