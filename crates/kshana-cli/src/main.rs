@@ -2,6 +2,7 @@
 //! `kshana next  --spk data/de421.bsp --utc 2026-10-15T00:00:00 --days 30 --tz +05:30`
 //! `kshana areas --spk data/de421.bsp --utc <birth UTC> --lat .. --lon ..`
 //! `kshana prashna --spk data/de421.bsp --utc <now UTC> --lat .. --lon .. --area Career [--number 1..249] [--tz +05:30]`
+//! `kshana rectify --spk data/de421.bsp --utc <birth center UTC> --lat .. --lon .. --window-min 15 --event Career=2013-07-01T04:00:00 --event Marriage=2018-11-22T05:00:00 [--tz +05:30]`
 //! `kshana muhurta --spk data/de421.bsp --utc <start UTC> --days 7 --lat .. --lon .. --activity Marriage [--natal-moon <sidereal deg>] [--tz +05:30]`
 //!
 //! The verification harness. `chart` prints everything `kshana-chart` computes; `next`
@@ -324,6 +325,73 @@ fn main() {
         ayanamsa: Ayanamsa::Lahiri,
         topocentric_moon: std::env::args().any(|a| a == "--topo"),
     };
+    if sub == "rectify" {
+        use kshana_rules::{area, rectify, LifeEvent};
+        let tz = arg("--tz").and_then(|s| parse_tz(&s)).unwrap_or(0);
+        let window_min: i128 = arg("--window-min")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(15);
+        let mut events = Vec::new();
+        let args: Vec<String> = std::env::args().collect();
+        for (i, a) in args.iter().enumerate() {
+            if a == "--event" {
+                if let Some(spec) = args.get(i + 1) {
+                    if let Some((name, when)) = spec.split_once('=') {
+                        match (area(name), parse_utc(when)) {
+                            (Some(ar), Some(u)) => events.push(LifeEvent {
+                                area: ar,
+                                at: u.to_instant().expect("instant"),
+                                label: format!("{name} {when}"),
+                            }),
+                            _ => eprintln!("ignored event {spec}"),
+                        }
+                    }
+                }
+            }
+        }
+        if events.is_empty() {
+            eprintln!("give at least one --event Area=YYYY-MM-DDTHH:MM:SS");
+            std::process::exit(2);
+        }
+        let obs = Observer {
+            latitude_deg: lat,
+            longitude_deg: lon,
+            height_m: 0.0,
+        };
+        let center = utc.to_instant().expect("instant");
+        let c = rectify(
+            &spk,
+            eop.as_ref(),
+            &obs,
+            Ayanamsa::Lahiri,
+            center,
+            window_min * 60 * kshana_time::NS_PER_SEC,
+            60 * kshana_time::NS_PER_SEC,
+            &events,
+        )
+        .unwrap_or_else(|e| {
+            eprintln!("rectify: {e:?}");
+            std::process::exit(1);
+        });
+        println!("KSHANA · rectification · ±{window_min} min around the given time · {} events · {} candidates", events.len(), c.len());
+        for cand in c.iter().take(6) {
+            println!();
+            println!(
+                "{}   score {:.3}   asc {} · sub-lord {:?}",
+                next::fmt_local(cand.birth, tz),
+                cand.score,
+                dms(cand.asc_sidereal),
+                cand.asc_sub_lord
+            );
+            for e in &cand.per_event {
+                println!("  {:<24} {:.2}", e.label, e.score);
+                for f in &e.factors {
+                    println!("      · {f}");
+                }
+            }
+        }
+        return;
+    }
     if sub == "muhurta" {
         use kshana_rules::{muhurta, Activity};
         let days: i64 = arg("--days").and_then(|s| s.parse().ok()).unwrap_or(7);

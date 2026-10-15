@@ -18,6 +18,7 @@ pub mod muhurta;
 pub mod parashari;
 pub mod parihara;
 pub mod prashna;
+pub mod rectify;
 
 pub use areas::{area, Area, AREAS};
 pub use facts::{Facts, PlanetFact};
@@ -33,6 +34,7 @@ pub use parihara::{parihara, Parihara, Remedy, RemedyKind};
 pub use prashna::{
     prashna, prashna_windows, MoonWindow, PrashnaVerdict, QuestionShape, RulingPlanets, Verdict,
 };
+pub use rectify::{rectify, Candidate, EventScore, LifeEvent};
 
 /// One fired rule.
 #[derive(Clone, Debug, PartialEq)]

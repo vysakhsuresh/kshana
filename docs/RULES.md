@@ -64,6 +64,20 @@ Windows are scored in five-minute steps and their edges refined to the second.
 | Fixed rising sign for permanence, movable for travel; lagna lord not in 6, 8 or 12 | +0.05 each | Muhurta Chintamani, lagna shuddhi |
 | Chandra bala (Moon in 1, 3, 6, 7, 10, 11 from the natal Moon) | +0.10 | Muhurta Chintamani |
 
+## Rectification
+
+Each candidate birth instant in the window is cast and scored per event, then averaged.
+
+| Consideration | Weight | Source |
+|---|---|---|
+| The event's area is promised by the cusp sub-lord (KS-K-0001) | 0.30, plus 0.10 × strength | KP Reader III |
+| Vimshottari levels (maha, antar, pratyantar) whose lords signify the area at the event | 0.40 × agreeing levels / 3 | KP Reader III |
+| Parashari quality of the running antardasha lord for the area | 0.20 | BPHS, Dasha phala |
+
+The quantity that changes between candidates is the Ascendant and its sub-lord; the
+screen shows both, and says that candidates within 0.05 of each other are not
+distinguishable without more events.
+
 ## Parihara
 
 Remedies are keyed to the graha located as the cause (the weakest running period lord,

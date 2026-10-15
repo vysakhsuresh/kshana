@@ -1572,6 +1572,96 @@ impl Engine {
     }
 }
 
+/// A dated life event for rectification.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct LifeEventRecord {
+    pub area: String,
+    pub at: ExactInstant,
+    pub label: String,
+}
+
+/// How a candidate explains one event.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct EventScoreRecord {
+    pub label: String,
+    pub score: f64,
+    pub factors: Vec<String>,
+}
+
+/// One candidate birth time.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct CandidateRecord {
+    pub birth: ExactInstant,
+    pub score: f64,
+    pub asc_sidereal: f64,
+    pub asc_sub_lord: String,
+    pub per_event: Vec<EventScoreRecord>,
+}
+
+#[uniffi::export]
+impl Engine {
+    /// Rank candidate birth instants in `center ± half_window_seconds`, every
+    /// `step_seconds`, by how well each explains the life events. Sorted best first.
+    #[allow(clippy::too_many_arguments)]
+    pub fn rectify(
+        &self,
+        center: ExactInstant,
+        half_window_seconds: u64,
+        step_seconds: u64,
+        latitude_deg: f64,
+        longitude_deg: f64,
+        ayanamsa: AyanamsaChoice,
+        events: Vec<LifeEventRecord>,
+    ) -> Result<Vec<CandidateRecord>, KshanaError> {
+        let obs = Observer {
+            latitude_deg,
+            longitude_deg,
+            height_m: 0.0,
+        };
+        let mut evs = Vec::with_capacity(events.len());
+        for e in events {
+            let area = kshana_rules::areas::area(&e.area)
+                .ok_or_else(|| KshanaError::Engine(format!("unknown area {}", e.area)))?;
+            evs.push(kshana_rules::LifeEvent {
+                area,
+                at: e.at.into(),
+                label: e.label,
+            });
+        }
+        let c = kshana_rules::rectify(
+            &self.spk,
+            self.eop.as_ref(),
+            &obs,
+            ayanamsa.into(),
+            center.into(),
+            half_window_seconds as i128 * NS_PER_SEC,
+            step_seconds.max(1) as i128 * NS_PER_SEC,
+            &evs,
+        )
+        .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(c.into_iter()
+            .map(|x| CandidateRecord {
+                birth: x.birth.into(),
+                score: x.score,
+                asc_sidereal: x.asc_sidereal,
+                asc_sub_lord: lord_name(x.asc_sub_lord),
+                per_event: x
+                    .per_event
+                    .into_iter()
+                    .map(|e| EventScoreRecord {
+                        label: e.label,
+                        score: e.score,
+                        factors: e.factors,
+                    })
+                    .collect(),
+            })
+            .collect())
+    }
+}
+
 /// Vimshottari chain containing `at`, from mahadasha down `depth` levels (max 5),
 /// for a birth with the Moon at `moon_sidereal` degrees.
 #[uniffi::export]
