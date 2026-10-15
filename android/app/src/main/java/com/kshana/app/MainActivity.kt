@@ -41,6 +41,7 @@ import com.kshana.app.ui.screens.NowScreen
 import com.kshana.app.ui.screens.PariharaScreen
 import com.kshana.app.ui.screens.PrashnaScreen
 import com.kshana.app.ui.screens.ReadingScreen
+import com.kshana.app.ui.screens.RectifyScreen
 import com.kshana.app.ui.screens.SettingsScreen
 import com.kshana.app.ui.screens.TrustScreen
 import com.kshana.app.ui.screens.VedicScreen
@@ -154,6 +155,15 @@ private fun App() {
             }
             composable("areas") { withProfile { AreasScreen(it, settings, onBack = { nav.popBackStack() }) } }
             composable("parihara") { withProfile { PariharaScreen(it, settings, onBack = { nav.popBackStack() }) } }
+            composable("rectify") {
+                withProfile {
+                    RectifyScreen(
+                        it, settings,
+                        onSaved = { p -> profile = p; nav.popBackStack() },
+                        onBack = { nav.popBackStack() },
+                    )
+                }
+            }
             composable("prashna") {
                 PrashnaScreen(
                     place = profile?.place() ?: ProfileStore.currentLocation(context),
@@ -179,6 +189,7 @@ private fun App() {
                     settings = settings,
                     onSettingsChanged = { settings = it },
                     onEditBirth = { nav.navigate("birth") { launchSingleTop = true } },
+                    onRectify = { nav.navigate("rectify") { launchSingleTop = true } },
                     onTrust = { nav.navigate("trust") { launchSingleTop = true } },
                     onBack = { nav.popBackStack() },
                 )

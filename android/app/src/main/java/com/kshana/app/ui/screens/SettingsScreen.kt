@@ -62,6 +62,7 @@ fun SettingsScreen(
     settings: EngineSettings,
     onSettingsChanged: (EngineSettings) -> Unit,
     onEditBirth: () -> Unit,
+    onRectify: () -> Unit,
     onTrust: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -115,6 +116,8 @@ fun SettingsScreen(
             )
         }
         QuietButton(if (profile == null) "ENTER BIRTH DETAILS" else "EDIT BIRTH DETAILS", onClick = onEditBirth)
+        Text("Unsure of the minute? Score every candidate time in your window against dated life events.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        QuietButton("RECTIFY FROM LIFE EVENTS", onClick = onRectify)
 
         SectionLabel("Ayanamsa")
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
