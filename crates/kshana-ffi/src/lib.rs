@@ -1500,6 +1500,78 @@ impl Engine {
     }
 }
 
+/// One muhurta window.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct MuhurtaRecord {
+    pub start: ExactInstant,
+    pub end: ExactInstant,
+    pub score: f64,
+    pub lagna_sign: u8,
+    pub tithi: String,
+    pub nakshatra: String,
+    pub yoga: String,
+    pub hora: String,
+    pub abhijit: bool,
+    pub factors: Vec<String>,
+    pub cautions: Vec<String>,
+}
+
+#[uniffi::export]
+impl Engine {
+    /// Best windows for an activity ("Marriage", "Travel", "Business", "Housewarming",
+    /// "Learning", "Medical", "General") in `days` days from `from` at a place. Pass the
+    /// person's natal sidereal Moon longitude for Tara bala and Chandra bala.
+    #[allow(clippy::too_many_arguments)]
+    pub fn muhurta(
+        &self,
+        activity: String,
+        from: ExactInstant,
+        days: u32,
+        latitude_deg: f64,
+        longitude_deg: f64,
+        ayanamsa: AyanamsaChoice,
+        natal_moon_sidereal: Option<f64>,
+        limit: u32,
+    ) -> Result<Vec<MuhurtaRecord>, KshanaError> {
+        let act = kshana_rules::Activity::parse(&activity)
+            .ok_or_else(|| KshanaError::Engine(format!("unknown activity {activity}")))?;
+        let obs = Observer {
+            latitude_deg,
+            longitude_deg,
+            height_m: 0.0,
+        };
+        let w = kshana_rules::muhurta(
+            &self.spk,
+            self.eop.as_ref(),
+            &obs,
+            act,
+            ayanamsa.into(),
+            natal_moon_sidereal,
+            from.into(),
+            days as i64,
+            0.5,
+            limit as usize,
+        )
+        .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(w.into_iter()
+            .map(|x| MuhurtaRecord {
+                start: x.start.into(),
+                end: x.end.into(),
+                score: x.score,
+                lagna_sign: x.lagna_sign,
+                tithi: x.tithi,
+                nakshatra: x.nakshatra,
+                yoga: x.yoga,
+                hora: x.hora,
+                abhijit: x.abhijit,
+                factors: x.factors,
+                cautions: x.cautions,
+            })
+            .collect())
+    }
+}
+
 /// Vimshottari chain containing `at`, from mahadasha down `depth` levels (max 5),
 /// for a birth with the Moon at `moon_sidereal` degrees.
 #[uniffi::export]

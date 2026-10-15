@@ -14,9 +14,11 @@ kshana-chart = { workspace = true }
 kshana-vedic = { workspace = true }
 kshana-ephem = { workspace = true }
 kshana-sky = { workspace = true }
+kshana-events = { workspace = true }
+kshana-frames = { workspace = true }
+kshana-houses = { workspace = true }
 
 [dev-dependencies]
-kshana-houses = { workspace = true }
 
 [lints]
 workspace = true

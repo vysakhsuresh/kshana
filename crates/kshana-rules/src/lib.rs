@@ -14,6 +14,7 @@
 pub mod areas;
 pub mod facts;
 pub mod kp;
+pub mod muhurta;
 pub mod parashari;
 pub mod parihara;
 pub mod prashna;
@@ -24,6 +25,7 @@ pub use kp::{
     agreeing_levels, node_agents, period_supports, promise, significators, timing, Level, Promise,
     Significance, TimingLevel,
 };
+pub use muhurta::{muhurta, Activity, MuhurtaWindow};
 pub use parashari::{
     assess, bhinna_for, dignity, period_quality, sarva_for, yogas, Assessment, Dignity, Yoga,
 };

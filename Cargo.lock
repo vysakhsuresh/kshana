@@ -329,6 +329,8 @@ version = "0.1.0"
 dependencies = [
  "kshana-chart",
  "kshana-ephem",
+ "kshana-events",
+ "kshana-frames",
  "kshana-houses",
  "kshana-sky",
  "kshana-time",

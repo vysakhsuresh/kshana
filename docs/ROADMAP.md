@@ -24,8 +24,8 @@ releasing, firdaria; fixed stars from Gaia DR3; Kemadruma cancellations.
 
 **M4 · Exact moments (mostly done).** Done: ingresses, stations, aspects, lunations,
 tithi and nakshatra boundaries, sunrise and sunset, horas, Rahu kala, stability under
-a birth-time window. Remaining: solar and lunar returns, eclipse contacts, muhurta
-search, the rectification workbench.
+a birth-time window. Muhurta search done. Remaining: lunar returns, eclipse contacts, the
+rectification workbench.
 
 **M5 · Android (written, first build pending).** Compose shell over every screen on the
 design canvas, offline kernel in assets, provenance in Settings. The first Android

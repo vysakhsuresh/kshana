@@ -46,6 +46,24 @@ straddling a sign boundary split in two. Horary number n → start of sub n as t
 | KS-Y-0060 | Neecha Bhanga | Debilitated planet whose dispositor is in a kendra from the lagna or the Moon | Phaladeepika 7 |
 | KS-Y-0070 | Kala Sarpa | All seven grahas on one side of the nodal axis | Later texts (not BPHS) |
 
+## Muhurta
+
+Windows are scored in five-minute steps and their edges refined to the second.
+
+| Consideration | Effect | Source |
+|---|---|---|
+| Rahu kala, Yamaganda, Gulika kala (eighths of the daytime by weekday) | prohibited | Muhurta Chintamani; panchanga practice |
+| Vishti (Bhadra) karana; Vyatipata and Vaidhriti yogas; Rikta tithis (4, 9, 14) and Amavasya | prohibited | Muhurta Chintamani |
+| Tara bala Vipat, Pratyak, Naidhana; Chandrashtama (Moon in the 8th from the natal Moon) | prohibited when the natal Moon is known | Muhurta Chintamani, Tara and Chandra bala |
+| Activity nakshatras (Marriage, Travel, Business, Housewarming, Learning, Medical, General lists) | +0.35 | Muhurta Chintamani, nakshatra prakarana |
+| Nanda, Bhadra, Jaya, Purna tithi | +0.15 | Muhurta Chintamani |
+| Weekday suited to the activity | +0.10 | Muhurta Chintamani, vara prakarana |
+| Hora lord suited to the activity | +0.15 | Hora shastra |
+| Abhijit (the eighth daytime muhurta) | +0.15 | Muhurta Chintamani |
+| Yoga not in the avoided set | +0.05 | Muhurta Chintamani |
+| Fixed rising sign for permanence, movable for travel; lagna lord not in 6, 8 or 12 | +0.05 each | Muhurta Chintamani, lagna shuddhi |
+| Chandra bala (Moon in 1, 3, 6, 7, 10, 11 from the natal Moon) | +0.10 | Muhurta Chintamani |
+
 ## Parihara
 
 Remedies are keyed to the graha located as the cause (the weakest running period lord,

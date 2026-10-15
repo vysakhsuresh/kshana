@@ -2,6 +2,7 @@
 //! `kshana next  --spk data/de421.bsp --utc 2026-10-15T00:00:00 --days 30 --tz +05:30`
 //! `kshana areas --spk data/de421.bsp --utc <birth UTC> --lat .. --lon ..`
 //! `kshana prashna --spk data/de421.bsp --utc <now UTC> --lat .. --lon .. --area Career [--number 1..249] [--tz +05:30]`
+//! `kshana muhurta --spk data/de421.bsp --utc <start UTC> --days 7 --lat .. --lon .. --activity Marriage [--natal-moon <sidereal deg>] [--tz +05:30]`
 //!
 //! The verification harness. `chart` prints everything `kshana-chart` computes; `next`
 //! lists upcoming exact instants from `kshana-events`. Nothing here does astronomy.
@@ -323,6 +324,65 @@ fn main() {
         ayanamsa: Ayanamsa::Lahiri,
         topocentric_moon: std::env::args().any(|a| a == "--topo"),
     };
+    if sub == "muhurta" {
+        use kshana_rules::{muhurta, Activity};
+        let days: i64 = arg("--days").and_then(|s| s.parse().ok()).unwrap_or(7);
+        let tz = arg("--tz").and_then(|s| parse_tz(&s)).unwrap_or(0);
+        let act = arg("--activity")
+            .and_then(|s| Activity::parse(&s))
+            .unwrap_or(Activity::General);
+        let natal: Option<f64> = arg("--natal-moon").and_then(|s| s.parse().ok());
+        let obs = Observer {
+            latitude_deg: lat,
+            longitude_deg: lon,
+            height_m: 0.0,
+        };
+        let from = utc.to_instant().expect("instant");
+        let w = muhurta(
+            &spk,
+            eop.as_ref(),
+            &obs,
+            act,
+            Ayanamsa::Lahiri,
+            natal,
+            from,
+            days,
+            0.5,
+            12,
+        )
+        .unwrap_or_else(|e| {
+            eprintln!("muhurta: {e:?}");
+            std::process::exit(1);
+        });
+        println!(
+            "KSHANA · muhurta · {} · next {days} days at {lat}°N {lon}°E",
+            act.name()
+        );
+        for x in &w {
+            println!();
+            println!(
+                "{} → {}   score {:.2}{}",
+                next::fmt_local(x.start, tz),
+                next::fmt_local(x.end, tz),
+                x.score,
+                if x.abhijit { " · Abhijit" } else { "" }
+            );
+            println!(
+                "  {} · {} · {} yoga · {} hora · lagna {}",
+                x.tithi, x.nakshatra, x.yoga, x.hora, x.lagna_sign
+            );
+            for f in &x.factors {
+                println!("    + {f}");
+            }
+            for c in &x.cautions {
+                println!("    − {c}");
+            }
+        }
+        if w.is_empty() {
+            println!("no window scored above the threshold; widen the range");
+        }
+        return;
+    }
     if sub == "prashna" {
         let number: Option<u16> = arg("--number").and_then(|s| s.parse().ok());
         let tz = arg("--tz").and_then(|s| parse_tz(&s)).unwrap_or(0);
