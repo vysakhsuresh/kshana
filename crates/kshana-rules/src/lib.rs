@@ -1,0 +1,33 @@
+//! The prediction layer.
+//!
+//! Nothing here invents a fact. [`Facts`] is derived from a computed [`Chart`]; every
+//! rule is a function of those facts that returns a [`Hit`] with the factors that fired
+//! it and a citation. The app renders hits; it never writes a sentence that cannot
+//! point at one.
+//!
+//! This first version carries the Krishnamurti Padhdhati significator model and the
+//! cusp sub-lord promise rule for eight life areas, because they are formal enough to
+//! implement without interpretation. Parashari rules follow the same shape.
+
+#![forbid(unsafe_code)]
+
+pub mod areas;
+pub mod facts;
+pub mod kp;
+
+pub use areas::{Area, AREAS};
+pub use facts::{Facts, PlanetFact};
+pub use kp::{promise, significators, Level, Promise, Significance};
+
+/// One fired rule.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Hit {
+    /// Stable rule id, e.g. `KS-K-0001`.
+    pub rule_id: &'static str,
+    /// Tradition and source text.
+    pub source: &'static str,
+    /// Weight in `[0, 1]`.
+    pub weight: f64,
+    /// The factors that fired it, in words the UI can show.
+    pub factors: Vec<String>,
+}

@@ -1,5 +1,6 @@
 //! `kshana chart --spk data/de421.bsp --utc 2026-10-15T09:02:07.418263 --lat 9.9312 --lon 76.2673`
 //! `kshana next  --spk data/de421.bsp --utc 2026-10-15T00:00:00 --days 30 --tz +05:30`
+//! `kshana areas --spk data/de421.bsp --utc <birth UTC> --lat .. --lon ..`
 //!
 //! The verification harness. `chart` prints everything `kshana-chart` computes; `next`
 //! lists upcoming exact instants from `kshana-events`. Nothing here does astronomy.
@@ -149,6 +150,48 @@ fn print_chart(utc: &Utc, ch: &Chart, lat: f64, lon: f64) {
     );
 }
 
+fn print_areas(ch: &Chart) {
+    use kshana_rules::{promise, Facts, AREAS};
+    let facts = Facts::from_chart(ch);
+    println!("KSHANA · life areas · KP cusp sub-lord promise (rule KS-K-0001)");
+    for a in AREAS {
+        let p = promise(&facts, a);
+        println!();
+        println!(
+            "{:<10} {}  strength {:.2}  sub-lord of {} cusp: {:?}",
+            a.name,
+            if p.promised {
+                "PROMISED"
+            } else {
+                "not promised"
+            },
+            p.strength,
+            a.primary,
+            p.sub_lord
+        );
+        for f in &p.hit.factors {
+            println!("           · {f}");
+        }
+    }
+    println!();
+    println!("Significators (house: level 1 star-of-occupant … 4 owner)");
+    for pl in &facts.planets {
+        let sig = kshana_rules::significators(&facts, pl.graha);
+        let list: Vec<String> = sig
+            .iter()
+            .map(|s| format!("{}:{}", s.house, s.level as u8))
+            .collect();
+        println!(
+            "  {:<8} house {:>2} · star {:?} · sub {:?} · {}",
+            format!("{:?}", pl.graha),
+            pl.house,
+            pl.star_lord,
+            pl.sub_lord,
+            list.join(" ")
+        );
+    }
+}
+
 fn main() {
     let sub = std::env::args().nth(1).unwrap_or_default();
     let spk_path = arg("--spk").unwrap_or_else(|| "data/de421.bsp".into());
@@ -190,6 +233,7 @@ fn main() {
         topocentric_moon: std::env::args().any(|a| a == "--topo"),
     };
     match compute(&spk, eop.as_ref(), &input) {
+        Ok(ch) if sub == "areas" => print_areas(&ch),
         Ok(ch) => print_chart(&utc, &ch, lat, lon),
         Err(e) => {
             eprintln!("chart: {e:?}");

@@ -1,0 +1,22 @@
+[package]
+name = "kshana-rules"
+description = "The prediction layer: facts from a chart, cited rules, promise and timing per life area"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+kshana-time = { workspace = true }
+kshana-chart = { workspace = true }
+kshana-vedic = { workspace = true }
+
+[dev-dependencies]
+kshana-ephem = { workspace = true }
+kshana-houses = { workspace = true }
+kshana-sky = { workspace = true }
+
+[lints]
+workspace = true

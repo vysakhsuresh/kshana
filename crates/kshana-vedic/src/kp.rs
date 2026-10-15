@@ -25,7 +25,8 @@ pub struct KpLords {
 
 const ORDER: [DashaLord; 9] = DashaLord::ORDER;
 
-fn sign_lord(sign_index: usize) -> DashaLord {
+/// Traditional ruler of a sign by 0-based index (Aries = 0).
+pub fn sign_lord(sign_index: usize) -> DashaLord {
     match sign_index % 12 {
         0 | 7 => DashaLord::Mars,
         1 | 6 => DashaLord::Venus,

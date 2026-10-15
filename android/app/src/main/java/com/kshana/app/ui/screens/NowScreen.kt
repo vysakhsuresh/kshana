@@ -22,7 +22,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -37,6 +36,7 @@ import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.AyanamsaChoice
 import uniffi.kshana_ffi.ChartRecord
 import uniffi.kshana_ffi.HouseSystem
+import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.cos
@@ -48,16 +48,6 @@ private const val LON = 76.2673
 private const val PLACE = "Kochi · 9.9312°N 76.2673°E"
 
 private val SIGN_GLYPHS = listOf("♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓")
-private val BODY_GLYPHS = mapOf(
-    "Sun" to "☉", "Moon" to "☽", "Mercury" to "☿", "Venus" to "♀", "Mars" to "♂",
-    "Jupiter" to "♃", "Saturn" to "♄", "Uranus" to "♅", "Neptune" to "♆", "Pluto" to "♇",
-)
-private val NAKSHATRAS = listOf(
-    "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra", "Punarvasu", "Pushya",
-    "Ashlesha", "Magha", "Purva Phalguni", "Uttara Phalguni", "Hasta", "Chitra", "Swati",
-    "Vishakha", "Anuradha", "Jyeshtha", "Mula", "Purva Ashadha", "Uttara Ashadha", "Shravana",
-    "Dhanishta", "Shatabhisha", "Purva Bhadrapada", "Uttara Bhadrapada", "Revati",
-)
 
 @Composable
 fun NowScreen() {
@@ -105,7 +95,7 @@ fun NowScreen() {
 
 @Composable
 private fun Clock(tickMillis: Long) {
-    val local = ZonedDateTime.now()
+    val local = ZonedDateTime.ofInstant(java.time.Instant.ofEpochMilli(tickMillis), ZoneId.systemDefault())
     val date = local.format(DateTimeFormatter.ofPattern("EEEE, d MMMM uuuu"))
     val hms = local.format(DateTimeFormatter.ofPattern("HH:mm:ss"))
     // microseconds within the second, from the monotonic clock so the digits keep moving
@@ -116,7 +106,7 @@ private fun Clock(tickMillis: Long) {
             Text(hms, style = MaterialTheme.typography.headlineLarge, color = KshanaColors.Text)
             Text(".${micro.substring(0, 3)} ${micro.substring(3)}", fontFamily = FontFamily.Monospace, fontSize = 20.sp, color = KshanaColors.Gold, modifier = Modifier.padding(start = 6.dp, bottom = 6.dp))
         }
-        Text("tick $tickMillis".let { "${local.zone.id} · ${local.offset}" }, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        Text("${local.zone.id} · UTC${local.offset}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
     }
 }
 
@@ -125,7 +115,7 @@ private fun Clock(tickMillis: Long) {
 private fun Wheel(chart: ChartRecord) {
     val asc = chart.cuspsTropical[0]
     val mc = chart.cuspsTropical[9]
-    Canvas(modifier = Modifier.size(320.dp).align()) {
+    Canvas(modifier = Modifier.size(320.dp)) {
         val c = Offset(size.width / 2, size.height / 2)
         val rOuter = size.minDimension / 2 - 4.dp.toPx()
         val rSign = rOuter * 0.89
@@ -164,8 +154,6 @@ private fun Wheel(chart: ChartRecord) {
     }
 }
 
-private fun Modifier.align(): Modifier = this
-
 @Composable
 private fun PanchangaRow(chart: ChartRecord) {
     val p = chart.panchanga
@@ -200,10 +188,3 @@ internal fun dms(lon: Double): String {
     val s = (((inSign - d) * 60 - m) * 60)
     return "%d°%02d′%05.2f″".format(d, m, s)
 }
-
-internal fun nakshatraName(index: Int): String = NAKSHATRAS[index % 27]
-
-@Suppress("unused")
-private val keepGlyphs = BODY_GLYPHS
-@Suppress("unused")
-private val keepColor = Color.Unspecified

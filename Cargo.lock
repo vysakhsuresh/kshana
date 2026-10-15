@@ -268,6 +268,7 @@ dependencies = [
  "kshana-events",
  "kshana-frames",
  "kshana-houses",
+ "kshana-rules",
  "kshana-sky",
  "kshana-time",
  "kshana-vedic",
@@ -318,6 +319,18 @@ dependencies = [
 [[package]]
 name = "kshana-houses"
 version = "0.1.0"
+
+[[package]]
+name = "kshana-rules"
+version = "0.1.0"
+dependencies = [
+ "kshana-chart",
+ "kshana-ephem",
+ "kshana-houses",
+ "kshana-sky",
+ "kshana-time",
+ "kshana-vedic",
+]
 
 [[package]]
 name = "kshana-sky"
