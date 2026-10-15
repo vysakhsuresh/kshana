@@ -143,7 +143,7 @@ pub fn run(spk: &Spk, from: Instant, days: i64, tz_minutes: i64) {
         tz_minutes.abs() / 60,
         tz_minutes.abs() % 60
     );
-    println!("{:<26}  {:<16}  {}", "local time", "event", "detail");
+    println!("{:<26}  {:<16}  detail", "local time", "event");
     for l in lines {
         println!(
             "{:<26}  {:<16}  {}",
