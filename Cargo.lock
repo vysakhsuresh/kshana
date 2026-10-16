@@ -300,7 +300,27 @@ dependencies = [
  "kshana-chart",
  "kshana-ephem",
  "kshana-events",
+ "kshana-forecast",
  "kshana-frames",
+ "kshana-houses",
+ "kshana-rules",
+ "kshana-sky",
+ "kshana-solver",
+ "kshana-speak",
+ "kshana-time",
+ "kshana-vedic",
+ "kshana-western",
+ "serde_json",
+ "uniffi",
+]
+
+[[package]]
+name = "kshana-forecast"
+version = "0.1.0"
+dependencies = [
+ "kshana-chart",
+ "kshana-ephem",
+ "kshana-events",
  "kshana-houses",
  "kshana-rules",
  "kshana-sky",
@@ -308,8 +328,6 @@ dependencies = [
  "kshana-time",
  "kshana-vedic",
  "kshana-western",
- "serde_json",
- "uniffi",
 ]
 
 [[package]]
@@ -335,6 +353,7 @@ dependencies = [
  "kshana-sky",
  "kshana-time",
  "kshana-vedic",
+ "kshana-western",
 ]
 
 [[package]]
@@ -351,6 +370,20 @@ name = "kshana-solver"
 version = "0.1.0"
 dependencies = [
  "kshana-time",
+]
+
+[[package]]
+name = "kshana-speak"
+version = "0.1.0"
+dependencies = [
+ "kshana-chart",
+ "kshana-ephem",
+ "kshana-forecast",
+ "kshana-houses",
+ "kshana-rules",
+ "kshana-sky",
+ "kshana-time",
+ "kshana-vedic",
 ]
 
 [[package]]

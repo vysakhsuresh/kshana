@@ -17,6 +17,7 @@ kshana-sky = { workspace = true }
 kshana-events = { workspace = true }
 kshana-frames = { workspace = true }
 kshana-houses = { workspace = true }
+kshana-western = { workspace = true }
 
 [dev-dependencies]
 

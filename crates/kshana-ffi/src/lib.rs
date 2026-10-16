@@ -10,6 +10,9 @@ use kshana_time::{Instant, Utc, NS_PER_SEC};
 
 uniffi::setup_scaffolding!();
 
+pub mod life;
+pub use life::*;
+
 /// Engine version string, from the workspace version.
 #[uniffi::export]
 pub fn engine_version() -> String {

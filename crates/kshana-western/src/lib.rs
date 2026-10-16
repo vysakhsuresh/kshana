@@ -35,6 +35,23 @@ impl Aspect {
         Aspect::Biquintile,
     ];
 
+    /// Name in words.
+    pub fn name(self) -> &'static str {
+        match self {
+            Aspect::Conjunction => "conjunction",
+            Aspect::Opposition => "opposition",
+            Aspect::Trine => "trine",
+            Aspect::Square => "square",
+            Aspect::Sextile => "sextile",
+            Aspect::Quincunx => "quincunx",
+            Aspect::Semisextile => "semisextile",
+            Aspect::Semisquare => "semisquare",
+            Aspect::Sesquiquadrate => "sesquiquadrate",
+            Aspect::Quintile => "quintile",
+            Aspect::Biquintile => "biquintile",
+        }
+    }
+
     /// Exact angle in degrees.
     pub const fn angle(self) -> f64 {
         match self {
