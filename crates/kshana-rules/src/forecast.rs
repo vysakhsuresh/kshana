@@ -1110,7 +1110,7 @@ pub fn moment(
         let mut t = at;
         for _ in 0..26 {
             let (_, _, e) = hora_at(d, obs, t);
-            if e <= t || e > d.next_sunrise {
+            if e <= t || e >= d.next_sunrise {
                 break;
             }
             let (next, _, _) = hora_at(d, obs, e.add_ns(NS_PER_SEC));

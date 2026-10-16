@@ -156,7 +156,7 @@ fun LifeScreen(
 
         Spacer(Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            GoldButton("ASK ABOUT ${life.uppercase()}", onClick = onAsk, modifier = Modifier.weight(1f))
+            GoldButton("ASK", onClick = onAsk, modifier = Modifier.weight(1f))
             QuietButton("REMEDY", onClick = onRemedy, modifier = Modifier.weight(1f))
         }
     }
@@ -217,7 +217,7 @@ private fun TodayPanel(hours: List<HourRecord>, idx: Int, life: String) {
         Text(hm(hours.last().end), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
     }
     val upcoming = hours.withIndex().filter { !it.value.caution && it.value.end.toJava().isAfter(now) }
-    val best = upcoming.sortedByDescending { fits[it.index] }.take(3).sortedBy { it.index }
+    val best = upcoming.filter { fits[it.index] >= 45.0 }.sortedByDescending { fits[it.index] }.take(3).sortedBy { it.index }
     SectionLabel("Best hours left today for ${life.lowercase()}")
     if (best.isEmpty()) {
         Text("The day's good hours have passed; tomorrow's sunrise starts a new set.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
@@ -306,13 +306,20 @@ private fun span(a: uniffi.kshana_ffi.ExactInstant, b: uniffi.kshana_ffi.ExactIn
 @Composable
 private fun Sparkline(values: List<Double>) {
     if (values.size < 2) return
+    // Zoom the axis to the data (at least a 30-point span) so the shape is readable.
+    val lo = ((values.min() - 8.0).coerceAtLeast(0.0))
+    val hi = ((values.max() + 8.0).coerceAtMost(100.0))
+    val span = (hi - lo).coerceAtLeast(30.0)
+    val bottom = if (hi - lo < 30.0) ((lo + hi) / 2 - 15.0).coerceIn(0.0, 70.0) else lo
     Canvas(Modifier.fillMaxWidth().height(110.dp)) {
         val n = values.size
         val stepX = size.width / (n - 1)
-        fun y(v: Double) = (size.height * (1 - (v / 100.0))).toFloat()
-        // band guides at 44 and 56
-        for (g in listOf(44.0, 56.0, 70.0)) {
-            drawLine(KshanaColors.LineSoft, Offset(0f, y(g)), Offset(size.width, y(g)), 1f)
+        fun y(v: Double) = (size.height * (1 - ((v - bottom) / span).coerceIn(0.0, 1.0))).toFloat()
+        // band guides
+        for (g in listOf(32.0, 44.0, 56.0, 70.0)) {
+            if (g > bottom && g < bottom + span) {
+                drawLine(KshanaColors.LineSoft, Offset(0f, y(g)), Offset(size.width, y(g)), 1f)
+            }
         }
         val path = Path()
         values.forEachIndexed { i, v ->

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -177,7 +178,7 @@ fun LoopScreen(
                     )
                     Spacer(Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        GoldButton("ASK A QUESTION", onClick = onAsk, modifier = Modifier.weight(1f))
+                        GoldButton("ASK", onClick = onAsk, modifier = Modifier.weight(1f))
                         QuietButton("REMEDIES", onClick = onRemedy, modifier = Modifier.weight(1f))
                     }
                     Text("Everything is computed on this phone from your birth time. Nothing leaves it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
@@ -276,7 +277,12 @@ private fun LifeTile(l: LifeScoreRecord, modifier: Modifier, onClick: () -> Unit
 @Composable
 private fun HoursStrip(hours: List<HourRecord>, tick: Instant, lives: List<LifeScoreRecord>) {
     if (hours.isEmpty()) return
-    LazyRow(contentPadding = PaddingValues(horizontal = 24.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    val state = rememberLazyListState()
+    val currentIndex = hours.indexOfFirst { !tick.isBefore(it.start.toJava()) && tick.isBefore(it.end.toJava()) }
+    LaunchedEffect(hours.firstOrNull()?.start, currentIndex) {
+        if (currentIndex >= 0) state.animateScrollToItem((currentIndex - 1).coerceAtLeast(0))
+    }
+    LazyRow(state = state, contentPadding = PaddingValues(horizontal = 24.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(hours) { h ->
             val start = h.start.toJava()
             val end = h.end.toJava()
@@ -286,7 +292,7 @@ private fun HoursStrip(hours: List<HourRecord>, tick: Instant, lives: List<LifeS
             val bestIdx = h.fit.withIndex().maxByOrNull { it.value }?.index
             val best = bestIdx?.let { lives.getOrNull(it)?.life } ?: ""
             Column(
-                Modifier.width(76.dp).clip(RoundedCornerShape(12.dp))
+                Modifier.width(92.dp).clip(RoundedCornerShape(12.dp))
                     .background(if (now) KshanaColors.Gold.copy(alpha = 0.14f) else KshanaColors.Surface)
                     .then(if (now) Modifier.border(1.dp, KshanaColors.Gold, RoundedCornerShape(12.dp)) else Modifier)
                     .padding(10.dp),
@@ -305,18 +311,23 @@ private fun HoursStrip(hours: List<HourRecord>, tick: Instant, lives: List<LifeS
 @Composable
 private fun WindowRow(w: WindowRecord, tick: Instant) {
     val active = !tick.isBefore(w.start.toJava()) && tick.isBefore(w.end.toJava())
+    val past = !tick.isBefore(w.end.toJava())
+    val alpha = if (past) 0.45f else 1f
     val c = if (w.caution) KshanaColors.Ember else KshanaColors.Leaf
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(8.dp).clip(CircleShape).background(c))
+        Box(Modifier.size(8.dp).clip(CircleShape).background(c.copy(alpha = alpha)))
         Spacer(Modifier.width(10.dp))
-        Text(w.label, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text, modifier = Modifier.weight(1f))
-        Text("${hm(w.start)} – ${hm(w.end)}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = if (active) c else KshanaColors.Muted)
+        Text(w.label, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text.copy(alpha = alpha), modifier = Modifier.weight(1f))
+        Text("${hm(w.start)} – ${hm(w.end)}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = if (active) c else KshanaColors.Muted.copy(alpha = alpha))
         if (active) Text("  now", style = MaterialTheme.typography.labelSmall, color = c)
+        if (past) Text("  done", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted.copy(alpha = alpha))
     }
-    Text(
-        if (w.caution) "Finish things, start nothing new." else "The best minutes of the day to begin.",
-        style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(start = 18.dp),
-    )
+    if (!past) {
+        Text(
+            if (w.caution) "Finish things, start nothing new." else "The best minutes of the day to begin.",
+            style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(start = 18.dp),
+        )
+    }
 }
 
 @Composable

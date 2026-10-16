@@ -80,7 +80,8 @@ private fun App() {
     val backStack by nav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route ?: start
     val showBar = tabs.any { it.route == current }
-    val here = profile?.place() ?: ProfileStore.currentLocation(context)
+    // Where the person is now: a saved current place, else the birth place, else Kochi.
+    var here by remember { mutableStateOf(ProfileStore.currentLocation(context)) }
 
     fun goTab(route: String) {
         if (current == route) return
@@ -182,6 +183,7 @@ private fun App() {
                     existing = profile,
                     onCast = { p ->
                         profile = p
+                        here = ProfileStore.currentLocation(context)
                         nav.navigate("loop") {
                             launchSingleTop = true
                             popUpTo("birth") { inclusive = true }
@@ -197,6 +199,7 @@ private fun App() {
                     onEditBirth = { open("birth") },
                     onTrust = { open("trust") },
                     onBack = { nav.popBackStack() },
+                    onPlaceChanged = { here = it },
                 )
             }
             composable("trust") {

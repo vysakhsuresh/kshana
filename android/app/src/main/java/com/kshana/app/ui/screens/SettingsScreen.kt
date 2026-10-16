@@ -64,6 +64,7 @@ fun SettingsScreen(
     onEditBirth: () -> Unit,
     onTrust: () -> Unit,
     onBack: () -> Unit,
+    onPlaceChanged: (com.kshana.app.data.Place) -> Unit = {},
 ) {
     val context = LocalContext.current
     var chart by remember { mutableStateOf<ChartRecord?>(null) }
@@ -115,6 +116,25 @@ fun SettingsScreen(
             )
         }
         QuietButton(if (profile == null) "ENTER BIRTH DETAILS" else "EDIT BIRTH DETAILS", onClick = onEditBirth)
+
+        SectionLabel("Where you are now")
+        Text(
+            "The Loop reads the sky over this place: sunrise, the hours, Rahu kala. Your birth place stays as it is.",
+            style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
+        )
+        val here = ProfileStore.currentLocation(context)
+        val choices = remember(profile) {
+            val birth = profile?.place()
+            (listOfNotNull(birth) + ProfileStore.places).distinctBy { it.name }
+        }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (p in choices) {
+                Chip(p.name.uppercase(), selected = here.name == p.name, onClick = {
+                    ProfileStore.saveCurrentLocation(context, p)
+                    onPlaceChanged(p)
+                })
+            }
+        }
 
         SectionLabel("Ayanamsa")
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
