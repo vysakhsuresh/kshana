@@ -109,7 +109,16 @@ private fun App() {
     fun withProfile(content: @Composable (BirthProfile) -> Unit) {
         val p = profile
         if (p == null) {
-            BirthScreen(existing = null, onCast = { profile = it; open("today") })
+            BirthScreen(
+                existing = null,
+                onCast = {
+                    profile = it
+                    nav.navigate("today") {
+                        launchSingleTop = true
+                        popUpTo(nav.graph.findStartDestination().id) { inclusive = true }
+                    }
+                },
+            )
         } else {
             content(p)
         }
