@@ -9,8 +9,8 @@
 //!    with the IAU 2006 bias-precession angles plus nutation.
 //! 4. Ecliptic of date: rotate about the x-axis by the true obliquity.
 //!
-//! Gravitational light deflection is not yet applied (at most 1.75″ at the solar limb,
-//! under 0.01″ for bodies more than 10° from the Sun); it is listed in PRECISION.md.
+//! Between 1 and 2, gravitational light deflection by the Sun (ERFA `ld` with the Sun as
+//! the single deflector: 1.75″ at the solar limb, 4 mas at 90°, zero at opposition).
 
 #![forbid(unsafe_code)]
 // Small fixed-size vector and matrix code reads more clearly with indices.
@@ -67,6 +67,9 @@ fn astrometric_direction(
     }
     // annual aberration (classical form; relativistic terms are below 1 mas)
     let mut u = [p[0] / dist, p[1] / dist, p[2] / dist];
+    if target != Body::Sun {
+        u = deflect_by_sun(spk, u, et - tau, obs.position, p)?;
+    }
     for k in 0..3 {
         u[k] += obs.velocity[k] / C_KM_S;
     }
@@ -112,6 +115,63 @@ pub fn apparent(spk: &Spk, body: Body, t: Instant) -> Result<Apparent, SpkError>
         distance_km: dist,
         speed: dl * 86_400.0 / (2.0 * h),
     })
+}
+
+/// 2GM☉/c², km: ERFA `SRS` (1.97412574336e-8 AU) in kilometres.
+const SRS_KM: f64 = 1.97412574336e-8 * 149_597_870.7;
+
+fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+
+fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+}
+
+/// Light deflection by one body of one solar mass (ERFA `ld`, `bm = 1`): `u` is the unit
+/// direction observer → source, `q` the unit direction deflector → source, `e` the unit
+/// direction deflector → observer and `em_km` that distance. Returns the deflected unit
+/// direction. The limiter `dlim` follows ERFA `ldsun`.
+pub fn ld(u: [f64; 3], q: [f64; 3], e: [f64; 3], em_km: f64) -> [f64; 3] {
+    let qpe = [q[0] + e[0], q[1] + e[1], q[2] + e[2]];
+    let qdqpe = dot(q, qpe);
+    let em_au = em_km / 149_597_870.7;
+    let dlim = 1e-6 / (em_au * em_au).max(1.0);
+    let w = SRS_KM / em_km / qdqpe.max(dlim);
+    let eq = cross(e, q);
+    let peq = cross(u, eq);
+    let p1 = [u[0] + w * peq[0], u[1] + w * peq[1], u[2] + w * peq[2]];
+    let n = norm(p1);
+    [p1[0] / n, p1[1] / n, p1[2] / n]
+}
+
+/// Deflect the light of a source by the Sun. `u` is the unit direction observer → source,
+/// `obs_pos` the observer's barycentric ICRF position (km) and `src_rel` the source's
+/// position relative to the observer (km) at emission; `et` is the ephemeris time at
+/// which the Sun is taken.
+fn deflect_by_sun(
+    spk: &Spk,
+    u: [f64; 3],
+    et: f64,
+    obs_pos: [f64; 3],
+    src_rel: [f64; 3],
+) -> Result<[f64; 3], SpkError> {
+    let sun = spk.state(Body::Sun, Body::SolarSystemBarycenter, et)?;
+    let ev = [
+        obs_pos[0] - sun.position[0],
+        obs_pos[1] - sun.position[1],
+        obs_pos[2] - sun.position[2],
+    ];
+    let em = norm(ev);
+    let e = [ev[0] / em, ev[1] / em, ev[2] / em];
+    let sv = [ev[0] + src_rel[0], ev[1] + src_rel[1], ev[2] + src_rel[2]];
+    let sn = norm(sv);
+    let q = [sv[0] / sn, sv[1] / sn, sv[2] / sn];
+    Ok(ld(u, q, e, em))
 }
 
 /// Mean lunar node, tropical longitude of date in degrees (Meeus), for `t` TT centuries.
@@ -223,6 +283,9 @@ pub fn apparent_topocentric(
             tau = dist / C_KM_S;
         }
         let mut u = [p[0] / dist, p[1] / dist, p[2] / dist];
+    if body != Body::Sun {
+        u = deflect_by_sun(spk, u, et - tau, o_pos, p)?;
+    }
         for k in 0..3 {
             u[k] += o_vel[k] / C_KM_S;
         }
@@ -401,5 +464,48 @@ mod tests {
                 ((st.longitude - sg.longitude + 180.0).rem_euclid(360.0) - 180.0).abs() * 3_600.0;
             assert!(ds < 10.0, "sun parallax {ds}″");
         }
+    }
+}
+
+#[cfg(test)]
+mod deflection_tests {
+    use super::*;
+
+    const AU_KM: f64 = 149_597_870.7;
+    const ARCSEC: f64 = std::f64::consts::PI / 180.0 / 3600.0;
+
+    /// A distant source (q = u) seen from 1 AU: ERFA's closed form is
+    /// δ = (2GM/c²)/em · tan(φ/2), φ the angle between the anti-Sun direction and the source.
+    fn delta(phi_deg: f64) -> f64 {
+        let e = [1.0, 0.0, 0.0]; // Sun → observer
+        let phi = phi_deg.to_radians();
+        let u = [phi.cos(), phi.sin(), 0.0]; // source at angle φ from e (anti-Sun)
+        let p1 = ld(u, u, e, AU_KM);
+        norm(cross(u, p1)).clamp(-1.0, 1.0).asin()
+    }
+
+    #[test]
+    fn deflection_is_zero_at_opposition_and_4_mas_at_quadrature() {
+        assert!(delta(0.0) < 1e-12);
+        let d90 = delta(90.0) / ARCSEC;
+        assert!((d90 - 0.00407).abs() < 0.0001, "{d90}");
+    }
+
+    #[test]
+    fn deflection_at_the_solar_limb_is_about_1_75_arcsec() {
+        // the limb is 0.2666° from the Sun's centre, i.e. φ = 180° − 0.2666°
+        let d = delta(180.0 - 0.2666) / ARCSEC;
+        assert!((d - 1.75).abs() < 0.02, "{d}");
+    }
+
+    #[test]
+    fn deflection_bends_light_away_from_the_sun() {
+        // the apparent position moves away from the Sun: the angle from the Sun grows
+        let e = [1.0, 0.0, 0.0];
+        let phi = (180.0_f64 - 1.0).to_radians();
+        let u = [phi.cos(), phi.sin(), 0.0];
+        let p1 = ld(u, u, e, AU_KM);
+        let sun_dir = [-1.0, 0.0, 0.0];
+        assert!(dot(p1, sun_dir) < dot(u, sun_dir));
     }
 }

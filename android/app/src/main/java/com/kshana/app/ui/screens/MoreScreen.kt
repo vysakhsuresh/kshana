@@ -51,6 +51,7 @@ fun MoreScreen(profile: BirthProfile?, onOpen: (String) -> Unit) {
         Entry("Reading", "the strongest area now with its rule trace", "reading", onOpen)
         Entry("Exact moments", "ingresses, stations, lunations", "moments", onOpen)
         Entry("Muhurta", "the best windows for a purpose", "muhurta", onOpen)
+        Entry("Prashna, horary", "the KP horary chart with a number, for the expert", "prashna_expert", onOpen)
     }
 }
 

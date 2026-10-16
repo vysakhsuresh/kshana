@@ -446,7 +446,7 @@ fn bav_index(g: DashaLord) -> Option<usize> {
     })
 }
 
-fn ordinal(h: u8) -> String {
+pub(crate) fn ordinal(h: u8) -> String {
     match h {
         1 => "1st".into(),
         2 => "2nd".into(),
@@ -525,6 +525,58 @@ fn sky(
 // Components
 // ---------------------------------------------------------------------------------
 
+/// What the birth chart itself promises for the life: the KP cusp sub-lord net and the
+/// Parashari assessment, half each. Constant over time; it sets each life's baseline.
+pub fn natal_component(natal: &Natal, life: Life) -> Component {
+    let area = life.area();
+    let p = crate::kp::promise(&natal.facts, area);
+    let b = crate::parashari::assess(&natal.facts, area);
+    let kp = (0.5 + 0.5 * p.net.clamp(-1.0, 1.0)).clamp(0.0, 1.0);
+    let score = (0.5 * kp + 0.5 * b.score).clamp(0.0, 1.0);
+    let name = life.name().to_ascii_lowercase();
+    let houses = |v: &[crate::kp::Significance]| {
+        v.iter()
+            .map(|s| s.house.to_string())
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    let note = match (p.promised, b.score >= 0.5) {
+        (true, true) => format!(
+            "your birth chart promises {name}: {:?}, sub-lord of the {}, signifies houses {} and the Parashari reading agrees ({:.0}%)",
+            p.sub_lord,
+            crate::forecast::ordinal(area.primary),
+            houses(&p.fulfilling),
+            b.score * 100.0
+        ),
+        (true, false) => format!(
+            "your birth chart promises {name} by KP ({:?} signifies {}) though the Parashari reading is cautious ({:.0}%)",
+            p.sub_lord,
+            houses(&p.fulfilling),
+            b.score * 100.0
+        ),
+        (false, true) => format!(
+            "your birth chart carries {name} through Parashari ({:.0}%) while the KP sub-lord {:?} leans to houses {}",
+            b.score * 100.0,
+            p.sub_lord,
+            if p.denying.is_empty() { "outside the matter".to_string() } else { houses(&p.denying) }
+        ),
+        (false, false) => format!(
+            "your birth chart makes {name} hard-won: {:?}, sub-lord of the {}, signifies {} and the Parashari reading is {:.0}%",
+            p.sub_lord,
+            crate::forecast::ordinal(area.primary),
+            if p.denying.is_empty() { "none of its houses".to_string() } else { format!("the negating houses {}", houses(&p.denying)) },
+            b.score * 100.0
+        ),
+    };
+    Component {
+        key: "natal",
+        score,
+        weight: 0.15,
+        note,
+        rule_id: "KS-N-0001",
+    }
+}
+
 fn dasha_component(natal: &Natal, life: Life, levels: &[DashaPeriod]) -> Component {
     let area = life.area();
     let mut num = 0.0;
@@ -584,7 +636,7 @@ fn dasha_component(natal: &Natal, life: Life, levels: &[DashaPeriod]) -> Compone
     Component {
         key: "dasha",
         score: score.clamp(0.0, 1.0),
-        weight: 0.35,
+        weight: 0.30,
         note,
         rule_id: "KS-F-0001",
     }
@@ -694,7 +746,7 @@ fn gochara_component(natal: &Natal, sky: &Sky, life: Life) -> Component {
     Component {
         key: "gochara",
         score,
-        weight: 0.25,
+        weight: 0.20,
         note,
         rule_id: "KS-G-0001",
     }
@@ -707,7 +759,7 @@ fn tara_component(natal: &Natal, sky: &Sky) -> (usize, Component) {
         Component {
             key: "tara",
             score: TARA_SCORE[t],
-            weight: 0.15,
+            weight: 0.12,
             note: tara_words(t).to_string(),
             rule_id: "KS-T-0001",
         },
@@ -721,7 +773,7 @@ fn hora_component(natal: &Natal, life: Life, hora: &Hora) -> Component {
     Component {
         key: "hora",
         score,
-        weight: 0.15,
+        weight: 0.13,
         note: format!("{:?} hora: {}", hora.lord, hora.words),
         rule_id: "KS-H-0001",
     }
@@ -1044,6 +1096,7 @@ pub fn moment(
         .iter()
         .map(|&life| {
             let mut comps = vec![
+                natal_component(natal, life),
                 dasha_component(natal, life, &levels),
                 gochara_component(natal, &sky, life),
                 tara_c.clone(),
@@ -1306,6 +1359,7 @@ pub fn series(
             .iter()
             .map(|&life| {
                 combine(&[
+                    natal_component(natal, life),
                     dasha_component(natal, life, &levels),
                     gochara_component(natal, &sky, life),
                     tara_c.clone(),
@@ -1487,7 +1541,7 @@ mod tests {
             assert!((0.0..=1.0).contains(&l.score), "{:?}", l);
             assert!(!l.headline.is_empty());
             assert!(!l.because.is_empty());
-            assert_eq!(l.components.len(), 5, "hora present at Kochi");
+            assert_eq!(l.components.len(), 6, "hora present at Kochi");
             let w: f64 = l.components.iter().map(|c| c.weight).sum();
             assert!((w - 1.0).abs() < 1e-9);
         }

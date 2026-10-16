@@ -11,8 +11,20 @@ Children), the day's twenty-four planetary hours, the windows to watch, and what
 coming. Tapping a life opens its page: now, today's best hours, this week, this month,
 this year, each with a trend line, the best and lowest stretch, and what changes when.
 The loop recomputes at every shift; every number can be opened to its reasons and rule
-ids (`docs/RULES.md`, Forecast section). The four doors are Loop, Ask (Prashna),
-Remedy (Parihara) and More.
+ids (`docs/RULES.md`, Forecast section). A travel row steps the whole loop forward or
+back (−1d, +1h, +1d, +7d, +30d) and back to now. The four doors are Loop, Ask, Remedy
+and More.
+
+**Ask** takes a life and one of six questions (will it happen, when, is now a good
+time, should I, will it come back, will it be set right) and answers from the birth
+chart, the running periods, the next 180 days and the horary chart of the instant:
+a verdict, a confidence, the window to act in, the first opening by the ruling
+planets, and the reasons. No typing, no network, no language model.
+
+**Remedy** locates the cause (the weakest running lord or the lord of the matter's
+house) and ranks its dictionary: fourteen to fifteen remedies per graha plus six for the
+life asked about, with the kind, day, effort and source of each, and commitments the
+person can hold.
 
 More holds the expert screens: Birth (profile, place, uncertainty), the sky now (live
 clock, wheel, panchanga), Chart (Western wheel, aspects, stability under the

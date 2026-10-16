@@ -69,15 +69,16 @@ Windows are scored in five-minute steps and their edges refined to the second.
 Nine plain life areas (Love, Career, Money, Health, Family, Study, Home, Travel,
 Children) map to the KP/Parashari areas (Marriage, Career, Wealth, Health, Family,
 Education, Property, Foreign, Children). A life's score at an instant is the weighted
-mean of five components; a day or fortnight sample uses the first three, renormalised.
+mean of six components; a day or fortnight sample uses the first four, renormalised.
 Every component carries the words that explain it, and the app shows them on demand.
 
 | Id | Component | Weight | Rule | Source |
 |---|---|---|---|---|
-| KS-F-0001 | Running periods | 0.35 | The five Vimshottari lords, weighted 0.35/0.30/0.20/0.10/0.05: half the strongest KP signification level of the area's houses by the lord, half the Parashari period quality | KP Reader III; BPHS, Dasha phala |
-| KS-G-0001 | Transits from the Moon | 0.25 | Each graha's house from the natal Moon: favourable (Sun 3 6 10 11; Moon 1 3 6 7 10 11; Mars 3 6 11; Mercury 2 4 6 8 10 11; Jupiter 2 5 7 9 11; Venus 1 2 3 4 5 8 9 11 12; Saturn and nodes 3 6 11) counts +1 unless its vedha house is occupied (Sun–Saturn and Moon–Mercury exempt), then +0.2; the adverse houses −1; Saturn in 12, 1, 2 (sade sati) or 4, 8 (dhaiya) −0.6; the Moon in the 8th from itself −1. Each is weighed by the graha's natural bearing on the life (+0.3 when it owns a house of the area in the birth chart) and by its Bhinnashtakavarga bindus in the transit sign (≥5 ×1.25, 4 ×1.0, ≤3 ×0.6) | Brihat Samhita 104; Phaladeepika 26; BPHS, Ashtakavargadhyaya |
-| KS-T-0001 | Tara bala | 0.15 | The Moon's star counted from the birth star: Janma 0.45, Sampat 1.0, Vipat 0.1, Kshema 0.8, Pratyak 0.2, Sadhana 0.9, Naidhana 0.0, Mitra 0.8, Parama Mitra 1.0 | Muhurta Chintamani |
-| KS-H-0001 | Planetary hour | 0.15 | The hora lord's fit for the life (Hora shastra tables, Venus for love, Mercury for study and trade, Jupiter for money and children, Sun for authority, Moon for family and travel, Mars for effort, Saturn for routine) times half plus half the lord's natal dignity | Hora shastra; Muhurta tradition |
+| KS-N-0001 | Birth chart | 0.15 | Half the KP cusp sub-lord net for the area mapped to [0, 1], half the Parashari assessment; constant in time, it sets each life's personal baseline | KP Reader III; BPHS |
+| KS-F-0001 | Running periods | 0.30 | The five Vimshottari lords, weighted 0.35/0.30/0.20/0.10/0.05: half the strongest KP signification level of the area's houses by the lord, half the Parashari period quality | KP Reader III; BPHS, Dasha phala |
+| KS-G-0001 | Transits from the Moon | 0.20 | Each graha's house from the natal Moon: favourable (Sun 3 6 10 11; Moon 1 3 6 7 10 11; Mars 3 6 11; Mercury 2 4 6 8 10 11; Jupiter 2 5 7 9 11; Venus 1 2 3 4 5 8 9 11 12; Saturn and nodes 3 6 11) counts +1 unless its vedha house is occupied (Sun–Saturn and Moon–Mercury exempt), then +0.2; the adverse houses −1; Saturn in 12, 1, 2 (sade sati) or 4, 8 (dhaiya) −0.6; the Moon in the 8th from itself −1. Each is weighed by the graha's natural bearing on the life (+0.3 when it owns a house of the area in the birth chart) and by its Bhinnashtakavarga bindus in the transit sign (≥5 ×1.25, 4 ×1.0, ≤3 ×0.6) | Brihat Samhita 104; Phaladeepika 26; BPHS, Ashtakavargadhyaya |
+| KS-T-0001 | Tara bala | 0.12 | The Moon's star counted from the birth star: Janma 0.45, Sampat 1.0, Vipat 0.1, Kshema 0.8, Pratyak 0.2, Sadhana 0.9, Naidhana 0.0, Mitra 0.8, Parama Mitra 1.0 | Muhurta Chintamani |
+| KS-H-0001 | Planetary hour | 0.13 | The hora lord's fit for the life (Hora shastra tables, Venus for love, Mercury for study and trade, Jupiter for money and children, Sun for authority, Moon for family and travel, Mars for effort, Saturn for routine) times half plus half the lord's natal dignity | Hora shastra; Muhurta tradition |
 | KS-M-0001 | Limbs of the day | 0.10 | Base 0.7; Rahu kala 0.1, Yamaganda 0.15, Gulika 0.2, Abhijit 1.0; +0.15 in an auspicious star; −0.2 on a rikta tithi or Amavasya; −0.2 under Vishti | Muhurta Chintamani |
 
 Bands: bright ≥ 0.70, good ≥ 0.56, steady ≥ 0.44, slow ≥ 0.32, else hold. The sentence
@@ -87,9 +88,35 @@ day's windows, sunrise and sunset) are exact instants from the event solver.
 
 The Family area (new): primary cusp 2, group 2 4 11, negating 1 3 10.
 
+## Ask
+
+A question about one life is always answered. Four sources, each in [0, 1]:
+
+| Source | Weight | What |
+|---|---|---|
+| natal | 0.35 | KS-N-0001, the birth chart's promise for the life |
+| period | 0.25 | 0.6 × (agreeing Vimshottari levels ÷ 5) + 0.4 × the life score now |
+| ahead | 0.25 | mean of the next 180 daily samples, half with the best stretch |
+| witness | 0.15 | the KP horary verdict for the instant and place of asking (KS-K-0001, KS-P-0012): Yes 1.0, Delayed 0.6, Unclear 0.5, No 0.2 |
+
+Verdicts: Yes ≥ 0.62, Yes with patience ≥ 0.50, Not yet ≥ 0.40, else Not in this
+period. Confidence is 1 − 2.5 × the standard deviation of the four sources, clamped
+to [0.3, 0.95]. "Is now a good time" is answered from the life score at the instant and
+the best remaining hour of the day. The window to act in is the nearest run of at least
+two days at or above the verdict's floor; the first opening is the first Moon window
+of the horary chart's ruling planets within 30 days (KS-P-0020). The Moon sub-lord's
+"genuineness" (KS-P-0001) is reported as a reason, never used to refuse an answer.
+
+
 ## Parihara
 
 Remedies are keyed to the graha located as the cause (the weakest running period lord,
-or the lord of the area's house). Six per graha, ranked karma, seva, discipline, daana,
-then mantra and pooja marked optional. Conduct items follow the dharma-shastra reading
+or the lord of the area's house). Each graha carries a dictionary of fourteen to
+fifteen entries across seven kinds (karma, seva, discipline, daana, vrata, mantra,
+pooja), each with its day, effort and source: the dharma reading of the graha's
+signification, BPHS Graha shanti (japa counts and deities), the Puranic graha-daana
+lists, Lal Kitab, and the Navagraha kshetra tradition. When the life is known, six
+more entries for that matter are added (the marriage vratas, Lakshmi for wealth,
+Mahamrityunjaya for health, Saraswati for study, and so on). Karma, seva and discipline
+rank above daana and vrata; mantra and pooja are marked optional. Conduct items follow the dharma-shastra reading
 of each graha's signification; ritual items follow common temple and Lal Kitab practice.

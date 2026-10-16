@@ -34,6 +34,7 @@ import androidx.navigation.navArgument
 import com.kshana.app.data.BirthProfile
 import com.kshana.app.data.ProfileStore
 import com.kshana.app.ui.screens.AreasScreen
+import com.kshana.app.ui.screens.AskScreen
 import com.kshana.app.ui.screens.BirthScreen
 import com.kshana.app.ui.screens.ChartScreen
 import com.kshana.app.ui.screens.LifeScreen
@@ -146,8 +147,8 @@ private fun App() {
                     LifeScreen(
                         profile = it, place = here, settings = settings, life = life,
                         onBack = { nav.popBackStack() },
-                        onAsk = { open("prashna") },
-                        onRemedy = { open("parihara") },
+                        onAsk = { open("ask/$life") },
+                        onRemedy = { open("parihara/$life") },
                     )
                 }
             }
@@ -175,7 +176,22 @@ private fun App() {
             }
             composable("areas") { withProfile { AreasScreen(it, settings, onBack = { nav.popBackStack() }) } }
             composable("parihara") { withProfile { PariharaScreen(it, settings, onBack = { nav.popBackStack() }) } }
+            composable("parihara/{life}", arguments = listOf(navArgument("life") { type = NavType.StringType })) { entry ->
+                val life = entry.arguments?.getString("life")
+                withProfile { PariharaScreen(it, settings, onBack = { nav.popBackStack() }, life = life) }
+            }
             composable("prashna") {
+                withProfile {
+                    AskScreen(profile = it, place = here, settings = settings, onRemedy = { l -> open("parihara/$l") })
+                }
+            }
+            composable("ask/{life}", arguments = listOf(navArgument("life") { type = NavType.StringType })) { entry ->
+                val life = entry.arguments?.getString("life")
+                withProfile {
+                    AskScreen(profile = it, place = here, settings = settings, initialLife = life, onBack = { nav.popBackStack() }, onRemedy = { l -> open("parihara/$l") })
+                }
+            }
+            composable("prashna_expert") {
                 PrashnaScreen(place = here, settings = settings, onBack = { nav.popBackStack() })
             }
             composable("birth") {

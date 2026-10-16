@@ -28,7 +28,7 @@ with the user's uncertainty, not the engine's.
 | Outer planets | km to tens of km ≈ 0.001–0.01″ | negligible |
 
 Frame rotation with full IAU 2006/2000A adds < 0.001″. Light-time, aberration and
-deflection, done properly, add < 0.001″.
+solar light deflection (ERFA `ld`, the Sun as the single deflector) are applied.
 
 ## Event solving
 
@@ -61,17 +61,25 @@ from ERFA 2.0.1 (the C port of SOFA), jplephem 2.24 and Skyfield 1.55, and repla
 | Sunrise and sunset, Kochi and London | Swiss Ephemeris `rise_trans` (default convention) | 3 dates | < 20 s |
 | Solar return 2026 for a 1990-10-29 birth | Sun returns to the natal longitude | | < 1e-6° at the solved instant |
 
+## Light deflection
+
+Gravitational deflection by the Sun is applied between light-time and aberration with
+the ERFA `ld` formula (one deflector of one solar mass, ERFA `ldsun` limiter). Unit
+tests pin the closed form: 0 at opposition, 4.07 mas at quadrature, 1.75″ at the
+solar limb, bending away from the Sun. Planetary deflectors (Jupiter ≤ 0.017″ at its
+limb) are not applied.
+
 ## The Android shell
 
-The Kotlin sources (ten screens, profile store, navigation, generated bindings) are
-type-checked with `scripts/kotlin-check.sh` against the real Compose 1.7 and Android
-framework classes with the Compose compiler plugin loaded. The APK is not built here
-because the SDK host is unreachable; the first Android Studio build remains the final
-verification step.
+The APK builds and runs on a device (moto g84, Android 15); every number on every
+screen comes from the Rust engine through the generated bindings. The forecast layer
+(Loop, lives, Ask) is a weighted sum of cited rules over these verified positions; its
+weights are a modelling choice recorded in RULES.md, not a measured quantity, and the
+only way to verify them is against recorded outcomes (the "Did this happen?" answers).
 
-Remaining known omissions: gravitational light deflection (≤ 1.75″ at the solar limb,
-usually < 0.02″), the full TDB−TT series (≈ 30 µs in time, negligible in angle), and
-polar motion in the topocentric observer (< 0.3″).
+Remaining known omissions: planetary light deflectors (< 0.02″), the full TDB−TT
+series (≈ 30 µs in time, negligible in angle), and polar motion in the topocentric
+observer (< 0.3″).
 
 ## Ayanamsa, precisely
 

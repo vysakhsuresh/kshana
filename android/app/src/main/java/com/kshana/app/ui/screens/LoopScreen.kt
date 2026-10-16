@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import com.kshana.app.data.BirthProfile
 import com.kshana.app.data.EngineSettings
 import com.kshana.app.data.Place
+import com.kshana.app.engine.Instants
 import com.kshana.app.ui.theme.KshanaColors
 import kotlinx.coroutines.delay
 import uniffi.kshana_ffi.HourRecord
@@ -83,6 +84,9 @@ fun LoopScreen(
     var moment by remember { mutableStateOf<MomentRecord?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var tick by remember { mutableStateOf(Instant.now()) }
+    // Time travel: an offset from now, in seconds. Zero means live.
+    var travelSeconds by remember { mutableStateOf(0L) }
+    val travelling = travelSeconds != 0L
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -90,14 +94,19 @@ fun LoopScreen(
             delay(1000)
         }
     }
-    LaunchedEffect(profile, place, settings) {
+    LaunchedEffect(profile, place, settings, travelSeconds) {
         while (true) {
             val wait = try {
-                val m = loadMoment(context, profile, place, settings)
+                val at = Instant.now().plusSeconds(travelSeconds)
+                val m = loadMoment(context, profile, place, settings, Instants.fromInstant(at))
                 moment = m
                 error = null
-                val next = m.shifts.firstOrNull()?.at?.toJava()
-                next?.let { Duration.between(Instant.now(), it).toMillis() + 400 } ?: 300_000L
+                if (travelling) {
+                    60_000L
+                } else {
+                    val next = m.shifts.firstOrNull()?.at?.toJava()
+                    next?.let { Duration.between(Instant.now(), it).toMillis() + 400 } ?: 300_000L
+                }
             } catch (e: Exception) {
                 error = e.message ?: e.toString()
                 5_000L
@@ -105,6 +114,7 @@ fun LoopScreen(
             delay(wait.coerceIn(1_000L, 300_000L))
         }
     }
+    val shownTick = tick.plusSeconds(travelSeconds)
 
     val m = moment
     LazyColumn(
@@ -118,7 +128,7 @@ fun LoopScreen(
                     Text("K S H A N A", fontFamily = FontFamily.Serif, fontSize = 20.sp, letterSpacing = 4.sp, color = KshanaColors.Gold)
                     Icon(Icons.Filled.Settings, contentDescription = "settings", tint = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onSettings).padding(8.dp))
                 }
-                val local = ZonedDateTime.ofInstant(tick, java.time.ZoneId.systemDefault())
+                val local = ZonedDateTime.ofInstant(shownTick, java.time.ZoneId.systemDefault())
                 Text(
                     "${greeting(local.hour)}${profile.name.takeIf { it.isNotBlank() }?.let { ", ${it.substringBefore(' ')}" } ?: ""}",
                     style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text,
@@ -128,6 +138,22 @@ fun LoopScreen(
                     Text("  ${local.format(LONG_DATE)} · ${place.name}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted, modifier = Modifier.padding(bottom = 6.dp))
                 }
                 ErrorLine(error)
+                // Time travel: step the whole loop forward or back.
+                Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (travelling) "TRAVELLING" else "TRAVEL", style = MaterialTheme.typography.labelSmall, color = if (travelling) KshanaColors.Ember else KshanaColors.Muted, modifier = Modifier.width(72.dp))
+                    for ((label, secs) in listOf("−1d" to -86_400L, "+1h" to 3_600L, "+1d" to 86_400L, "+7d" to 604_800L, "+30d" to 2_592_000L)) {
+                        Text(
+                            label, fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky,
+                            modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(KshanaColors.Surface).clickable { travelSeconds += secs; moment = null }.padding(horizontal = 10.dp, vertical = 6.dp),
+                        )
+                    }
+                    if (travelling) {
+                        Text(
+                            "NOW", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Night,
+                            modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(KshanaColors.Gold).clickable { travelSeconds = 0L; moment = null }.padding(horizontal = 10.dp, vertical = 6.dp),
+                        )
+                    }
+                }
             }
         }
 
@@ -135,7 +161,7 @@ fun LoopScreen(
             if (m == null) {
                 Text("reading the sky for this second…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted, modifier = Modifier.padding(horizontal = 24.dp))
             } else {
-                HeroCard(m, tick)
+                HeroCard(m, shownTick, travelling)
             }
         }
 
@@ -149,7 +175,7 @@ fun LoopScreen(
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionLabel("The hours of today", Modifier.padding(horizontal = 24.dp))
-                    HoursStrip(m.hours, tick, m.lives)
+                    HoursStrip(m.hours, shownTick, m.lives)
                     m.hora?.let {
                         Text("Now: ${it.lord} hour · ${it.words}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.padding(horizontal = 24.dp))
                     }
@@ -158,13 +184,13 @@ fun LoopScreen(
             item {
                 Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     SectionLabel("Watch the clock")
-                    for (w in m.windows) WindowRow(w, tick)
+                    for (w in m.windows) WindowRow(w, shownTick)
                 }
             }
             item {
                 Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     SectionLabel("Coming up")
-                    for (s in m.shifts.take(10)) ShiftRow(s, tick)
+                    for (s in m.shifts.take(10)) ShiftRow(s, shownTick)
                 }
             }
             item {
@@ -196,7 +222,7 @@ private fun greeting(hour: Int): String = when (hour) {
 }
 
 @Composable
-private fun HeroCard(m: MomentRecord, tick: Instant) {
+private fun HeroCard(m: MomentRecord, tick: Instant, travelling: Boolean) {
     val next = m.shifts.firstOrNull()
     Column(
         Modifier.padding(horizontal = 24.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(KshanaColors.Surface).padding(18.dp),
@@ -207,7 +233,12 @@ private fun HeroCard(m: MomentRecord, tick: Instant) {
             Column(Modifier.weight(1f)) {
                 Text(m.headline.substringBefore(" ·"), style = MaterialTheme.typography.titleLarge, color = bandColor(m.band))
                 Text(m.headline.substringAfter(" · ", ""), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
-                if (next != null) {
+                if (travelling) {
+                    Spacer(Modifier.height(6.dp))
+                    Text("you are looking at", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Ember)
+                    Text(localText(m.at, DATE_TIME), fontFamily = FontFamily.Monospace, fontSize = 18.sp, color = KshanaColors.Gold)
+                    if (next != null) Text("then: ${hm(next.at)} · ${next.what}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
+                } else if (next != null) {
                     Spacer(Modifier.height(6.dp))
                     Text("changes in", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
                     Text(countdown(tick, next.at.toJava()), fontFamily = FontFamily.Monospace, fontSize = 26.sp, color = KshanaColors.Gold)

@@ -12,6 +12,7 @@
 #![forbid(unsafe_code)]
 
 pub mod areas;
+pub mod ask;
 pub mod facts;
 pub mod forecast;
 pub mod gochara;
@@ -22,6 +23,7 @@ pub mod parihara;
 pub mod prashna;
 
 pub use areas::{area, Area, AREAS};
+pub use ask::{answer, Answer, Question};
 pub use facts::{Facts, PlanetFact};
 pub use forecast::{
     headline, moment, series, story, Band, Component, Hora, Life, LifeScore, Moment, Natal,

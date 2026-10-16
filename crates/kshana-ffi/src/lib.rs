@@ -830,12 +830,16 @@ impl Engine {
 #[derive(Clone, Debug, uniffi::Record)]
 #[allow(missing_docs)]
 pub struct RemedyRecord {
-    /// "Karma", "Seva", "Discipline", "Daana", "Mantra" or "Pooja".
+    /// "Karma", "Seva", "Discipline", "Daana", "Vrata", "Mantra" or "Pooja".
     pub kind: String,
     pub title: String,
     pub why: String,
     pub fit: f64,
     pub effort: String,
+    /// The day to begin or keep it.
+    pub day: String,
+    /// Where it comes from.
+    pub source: String,
     pub optional: bool,
 }
 
@@ -847,6 +851,8 @@ pub struct PariharaRecord {
     pub cause: String,
     pub severity: f64,
     pub remedies: Vec<RemedyRecord>,
+    /// Deity, day, metal, grain and colour of the graha, one line.
+    pub signature: String,
 }
 
 #[uniffi::export]
@@ -885,9 +891,12 @@ impl Engine {
             2,
         );
         let lords: Vec<DashaLord> = chain.iter().map(|p| p.lord).collect();
+        // A life name (Love, Money…) or an area name (Marriage, Wealth…) both work.
         let a = match area {
             Some(name) => Some(
-                kshana_rules::areas::area(&name)
+                kshana_rules::Life::parse(&name)
+                    .map(|l| l.area())
+                    .or_else(|| kshana_rules::areas::area(&name))
                     .ok_or_else(|| KshanaError::Engine(format!("unknown area {name}")))?,
             ),
             None => None,
@@ -906,9 +915,12 @@ impl Engine {
                     why: r.why.clone(),
                     fit: r.fit,
                     effort: r.effort.to_string(),
+                    day: r.day.to_string(),
+                    source: r.source.to_string(),
                     optional: r.optional,
                 })
                 .collect(),
+            signature: p.signature,
         })
     }
 }
@@ -1689,10 +1701,24 @@ mod tests {
                 5,
             )
             .unwrap();
-        assert_eq!(readings.len(), 8);
+        assert_eq!(readings.len(), 9);
         assert!(readings
             .iter()
             .all(|r| r.funnel.len() == 5 && !r.promise.factors.is_empty()));
+        let m = engine
+            .forecast_moment(birth, 9.9312, 76.2673, 9.9312, 76.2673, HouseSystem::Placidus, AyanamsaChoice::Lahiri, at)
+            .unwrap();
+        assert_eq!(m.lives.len(), 9);
+        assert!(m.lives.iter().all(|l| (0.0..=100.0).contains(&l.score) && !l.headline.is_empty()));
+        assert!(!m.shifts.is_empty() && m.hours.len() == 24);
+        let a = engine
+            .ask(birth, 9.9312, 76.2673, 9.9312, 76.2673, HouseSystem::Placidus, AyanamsaChoice::Lahiri, "Love".into(), "when".into(), at)
+            .unwrap();
+        assert!(!a.verdict.is_empty() && a.reasons.len() >= 4);
+        let p = engine
+            .parihara(birth, 9.9312, 76.2673, AyanamsaChoice::Lahiri, at, Some("Love".into()))
+            .unwrap();
+        assert!(p.remedies.len() >= 20 && !p.signature.is_empty());
         assert_eq!(horary_lagna(1).unwrap(), 0.0);
     }
 
@@ -2069,6 +2095,120 @@ impl Engine {
                 })
                 .collect(),
             stories,
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------------
+// Ask: a plain answer deduced from the chart, the periods and the sky ahead.
+// ---------------------------------------------------------------------------------
+
+/// One question the picker offers.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct QuestionRecord {
+    pub key: String,
+    pub words: String,
+}
+
+/// The questions, in display order.
+#[uniffi::export]
+pub fn questions() -> Vec<QuestionRecord> {
+    kshana_rules::Question::ALL
+        .iter()
+        .map(|q| QuestionRecord {
+            key: q.key().to_string(),
+            words: q.words().to_string(),
+        })
+        .collect()
+}
+
+/// The answer.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct AnswerRecord {
+    pub life: String,
+    pub question: String,
+    pub verdict: String,
+    /// 0–100.
+    pub score: f64,
+    /// 0–100.
+    pub confidence: f64,
+    pub headline: String,
+    pub when_start: Option<ExactInstant>,
+    pub when_end: Option<ExactInstant>,
+    pub when_words: String,
+    pub first_opening_start: Option<ExactInstant>,
+    pub first_opening_end: Option<ExactInstant>,
+    pub reasons: Vec<String>,
+    pub rule_ids: Vec<String>,
+    /// 0–100.
+    pub now: f64,
+    /// 0–100.
+    pub ahead_mean: f64,
+    /// 0–100.
+    pub ahead_best: f64,
+    pub shifts: Vec<ShiftRecord>,
+}
+
+#[uniffi::export]
+impl Engine {
+    /// Answer `question` (a key from `questions()`) about `life` (a name from
+    /// `life_names()`) at `at`, for a person born at `birth` now standing at `lat`/`lon`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn ask(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        life: String,
+        question: String,
+        at: ExactInstant,
+    ) -> Result<AnswerRecord, KshanaError> {
+        let life = kshana_rules::Life::parse(&life)
+            .ok_or_else(|| KshanaError::Engine(format!("unknown life {life}")))?;
+        let question = kshana_rules::Question::parse(&question)
+            .ok_or_else(|| KshanaError::Engine(format!("unknown question {question}")))?;
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let obs = Observer {
+            latitude_deg: lat,
+            longitude_deg: lon,
+            height_m: 0.0,
+        };
+        let a = kshana_rules::answer(
+            &self.spk,
+            self.eop.as_ref(),
+            &natal,
+            &obs,
+            to_house_system(system),
+            ayanamsa.into(),
+            life,
+            question,
+            at.into(),
+        )
+        .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(AnswerRecord {
+            life: a.life.name().to_string(),
+            question: a.question.key().to_string(),
+            verdict: a.verdict.clone(),
+            score: a.score * 100.0,
+            confidence: a.confidence * 100.0,
+            headline: a.headline.clone(),
+            when_start: a.when_start.map(Into::into),
+            when_end: a.when_end.map(Into::into),
+            when_words: a.when_words.clone(),
+            first_opening_start: a.first_opening_start.map(Into::into),
+            first_opening_end: a.first_opening_end.map(Into::into),
+            reasons: a.reasons.clone(),
+            rule_ids: a.rule_ids.iter().map(|s| s.to_string()).collect(),
+            now: a.now * 100.0,
+            ahead_mean: a.ahead_mean * 100.0,
+            ahead_best: a.ahead_best * 100.0,
+            shifts: a.shifts.iter().map(shift_record).collect(),
         })
     }
 }

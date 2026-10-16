@@ -56,25 +56,25 @@ private val ACTIVE_KINDS = setOf("Karma", "Seva", "Discipline")
 
 private fun kindColour(kind: String): Color = when (kind) {
     in ACTIVE_KINDS -> KshanaColors.Gold
-    "Daana" -> KshanaColors.Sky
+    "Daana", "Vrata" -> KshanaColors.Sky
     else -> KshanaColors.Muted
 }
 
 /** "Earn the period.": the cause, the ranked remedies, and the commitments kept so far. */
 @Composable
-fun PariharaScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> Unit) {
+fun PariharaScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> Unit, life: String? = null) {
     val context = LocalContext.current
     var record by remember { mutableStateOf<PariharaRecord?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var kept by remember { mutableStateOf<Set<String>>(emptySet()) }
     var since by remember { mutableStateOf<LocalDate?>(null) }
 
-    LaunchedEffect(profile, settings) {
+    LaunchedEffect(profile, settings, life) {
         try {
             val engine = EngineProvider.get(context)
             val birth = profile.birthInstant()
             val rec = withContext(Dispatchers.Default) {
-                engine.parihara(birth, profile.latitude, profile.longitude, settings.ayanamsa, Instants.now(), null)
+                engine.parihara(birth, profile.latitude, profile.longitude, settings.ayanamsa, Instants.now(), life)
             }
             val prefs = ProfileStore.prefs(context)
             kept = rec.remedies.map { it.title }.filter { prefs.getBoolean(commitKey(rec.planet, it), false) }.toSet()
@@ -141,12 +141,13 @@ fun PariharaScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(KshanaColors.Surface).padding(16.dp)) {
                 Text("${rec.planet} · severity ${"%.2f".format(rec.severity)}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Gold)
                 Text(rec.cause, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text, modifier = Modifier.padding(top = 6.dp))
+                Text(rec.signature, fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Sky, modifier = Modifier.padding(top = 8.dp))
             }
 
-            SectionLabel("Remedies, ranked")
+            SectionLabel("Remedies, ranked · ${rec.remedies.size} in the dictionary for this")
             if (rec.remedies.isEmpty()) Text("none for this period", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             for ((i, r) in rec.remedies.withIndex()) RemedyRow(i + 1, r, r.title in kept) { toggle(rec, r) }
-            Text("Karma, seva and discipline are the work. Daana supports it. Mantra and pooja are optional and never required.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(top = 8.dp))
+            Text("Karma, seva and discipline are the work. Daana and vrata support it. Mantra and pooja are optional and never required.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(top = 8.dp))
         }
     }
 }
@@ -183,7 +184,8 @@ private fun RemedyRow(rank: Int, r: RemedyRecord, committed: Boolean, onToggle: 
             }
             Text(r.title, fontFamily = FontFamily.Serif, fontSize = 18.sp, color = if (r.optional) KshanaColors.TextSoft else KshanaColors.Text)
             Text(r.why, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
-            Text("fit ${"%.2f".format(r.fit)} · effort ${r.effort}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.padding(top = 2.dp))
+            Text("${r.effort} · ${r.day} · fit ${(r.fit * 100).toInt()}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.padding(top = 2.dp))
+            Text(r.source, fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
         }
         Box(
             Modifier.padding(start = 12.dp, top = 6.dp).size(22.dp).clip(CircleShape)
