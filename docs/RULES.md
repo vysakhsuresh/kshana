@@ -84,3 +84,48 @@ Remedies are keyed to the graha located as the cause (the weakest running period
 or the lord of the area's house). Six per graha, ranked karma, seva, discipline, daana,
 then mantra and pooja marked optional. Conduct items follow the dharma-shastra reading
 of each graha's signification; ritual items follow common temple and Lal Kitab practice.
+
+## Compatibility
+
+| Id | Rule | Source |
+|---|---|---|
+| (Ashtakoota) | Eight kutas of the two Moons scored out of 36: Varna 1 (Moon-sign class, groom's not below bride's), Vashya 2 (control groups, the published 5×5 table), Tara 3 (nakshatra count mod 9, 3/5/7 fail, each direction 1.5), Yoni 4 (the symmetric 14-animal table), Graha Maitri 5 (natural friendship of the Moon lords), Gana 6 (Deva/Manushya/Rakshasa: same 6, Deva–Manushya 5, Deva–Rakshasa 1, Manushya–Rakshasa 0), Bhakoot 7 (0 for 2/12, 5/9, 6/8), Nadi 8 (0 when the same). Verdict bands: ≥ 28 excellent, ≥ 24 good, ≥ 18 acceptable, else weak | Muhurta Chintamani; the tables as published across Indian almanacs (convention: no exceptions applied automatically; the engine reports Nadi and Bhakoot dosha and states that some texts lift them) |
+| (Mangal dosha) | Mars in 1, 2, 4, 7, 8 or 12 from the lagna, the Moon or Venus (convention: South Indian, including the 2nd). Cancellations reported: Mars in own sign, exalted, in Cancer or Leo, aspected or joined by Jupiter. Two uncancelled doshas cancel each other | Common usage; BPHS has no single verse |
+| (synastry) | Cross-aspects between the two tropical charts within 6°, weighted by closeness and by the Sun, Moon, Mercury, Venus and Mars; trine and sextile harmonious, square and opposition tense, conjunction neutral | Western practice |
+
+## Gochara (transits)
+
+| Id | Rule | Source |
+|---|---|---|
+| (Sade Sati) | Saturn in the sign before, over, or after the natal Moon: three phases of about 2½ years; each boundary is an exact sidereal ingress solved to 1 µs | Phaladeepika 26; common usage |
+| (from the Moon) | Jupiter favourable in 2, 5, 7, 9, 11 from the Moon; Saturn favourable in 3, 6, 11; others reported as demanding | Phaladeepika 26, Gochara phala |
+| (over natal) | A transiting graha in the same sidereal sign as a natal point, with the exact separation | Convention |
+
+## Daily (for one person)
+
+| Id | Rule | Source |
+|---|---|---|
+| (Tara bala) | Count from the natal Moon's nakshatra to the transit Moon's, mod 9: Janma, Sampat, Vipat, Kshema, Pratyak, Sadhana, Naidhana, Mitra, Parama Mitra; 3, 5, 7 unfavourable | Muhurta Chintamani |
+| (Chandra bala) | The transit Moon in 1, 3, 6, 7, 10 or 11 from the natal Moon sign is favourable | Muhurta Chintamani |
+| (hours) | Rahu kala from the weekday and the actual sunrise; horas of Jupiter, Venus, Mercury and the Moon as good windows; Abhijit around local noon | Standard almanac rules |
+
+## Calendar
+
+Tithi observances (Ekadashi, Pradosha, Chaturthi, Ashtami, Purnima, Amavasya) carry the
+exact instant the tithi begins and the civil day it is observed on: the day whose
+sunrise, at the person's place, falls inside the tithi (the udaya rule; convention:
+no Vaishnava/Smarta split applied). Lunations are the exact Sun–Moon conjunction or
+opposition. Sankranti is the Sun's exact entry into a sidereal sign.
+
+## Jaimini
+
+Chara karakas use the seven-planet scheme (Sun through Saturn, Rahu excluded), ranked by
+degree within the sign; the eight-karaka scheme with Rahu is a known alternative and is
+not used. Arudha padas follow the standard exception (the pada falling in the house or
+its 7th moves to the 10th from there).
+
+## Naming
+
+The 27 × 4 syllable table (namakshara) is the one printed in Indian almanacs; regional
+variants exist and the app shows the nakshatra and pada beside the syllable so a family
+can consult its own.

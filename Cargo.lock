@@ -266,10 +266,12 @@ dependencies = [
  "kshana-chart",
  "kshana-ephem",
  "kshana-events",
+ "kshana-forecast",
  "kshana-frames",
  "kshana-houses",
  "kshana-rules",
  "kshana-sky",
+ "kshana-speak",
  "kshana-time",
  "kshana-vedic",
 ]

@@ -32,5 +32,14 @@ design canvas, offline kernel in assets, provenance in Settings. The first Andro
 Studio build is the verification step; then bundled fonts, a differential self-test on
 first launch, and the Play listing.
 
+**M6 · The whole life (done).** Forecast layer (sign transits with exact ingresses,
+Sade Sati, the day's hours, the life map, the observance calendar), plain-words reading
+with evidence per sentence, compatibility (Ashtakoota, Mangal dosha, synastry), Jaimini
+karakas, naming syllables, glossary; the five-door Android front (Today, My life, Ask,
+Right time, Me) with family profiles, reminders for exact moments, and the optional
+online features (place search, IERS refresh, grounded narration). Remaining: consults
+with a human astrologer and pooled calibration across users (both need a backend and an
+account system, deliberately left out of the offline app); bundled fonts; Play listing.
+
 **Always.** No number ships without a comparison test, and every disagreement with
 another ephemeris is written up in `docs/PRECISION.md`.

@@ -285,12 +285,34 @@ fn print_prashna(spk: &Spk, ch: &Chart, area_name: &str, number: Option<u16>, lo
     }
 }
 
+/// Now, from the system clock, to the nanosecond (leap seconds via the UTC table).
+fn now_instant() -> kshana_time::Instant {
+    let d = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default();
+    let secs = d.as_secs() as i64;
+    let (y, m, day) = kshana_time::civil_from_days(secs.div_euclid(86_400));
+    let sod = secs.rem_euclid(86_400) as u32;
+    Utc::new(
+        y,
+        m,
+        day,
+        sod / 3600,
+        (sod / 60) % 60,
+        sod % 60,
+        d.subsec_nanos(),
+    )
+    .and_then(|u| u.to_instant())
+    .expect("system clock within the UTC table")
+}
+
 fn main() {
     let sub = std::env::args().nth(1).unwrap_or_default();
     let spk_path = arg("--spk").unwrap_or_else(|| "data/de421.bsp".into());
     let utc = arg("--utc").and_then(|s| parse_utc(&s)).unwrap_or_else(|| {
         eprintln!("usage: kshana chart --spk <file.bsp> --utc YYYY-MM-DDTHH:MM:SS.ffffff --lat <deg> --lon <deg east> [--system placidus|equal|whole|porphyry] [--topo]");
         eprintln!("       kshana next  --spk <file.bsp> --utc YYYY-MM-DDTHH:MM:SS --days <n> [--tz +05:30]");
+        eprintln!("       kshana life|areas|prashna|muhurta|rectify|match|calendar ... (see README)");
         std::process::exit(2);
     });
     let spk = Spk::open(std::path::Path::new(&spk_path)).unwrap_or_else(|e| {
@@ -325,6 +347,111 @@ fn main() {
         ayanamsa: Ayanamsa::Lahiri,
         topocentric_moon: std::env::args().any(|a| a == "--topo"),
     };
+    if sub == "life" {
+        let ch = compute(&spk, eop.as_ref(), &input).unwrap_or_else(|e| {
+            eprintln!("life: {e:?}");
+            std::process::exit(1);
+        });
+        let at = arg("--at")
+            .and_then(|s| parse_utc(&s))
+            .and_then(|u| u.to_instant().ok())
+            .unwrap_or_else(now_instant);
+        for sec in kshana_speak::reading(&spk, &ch, at, Ayanamsa::Lahiri) {
+            println!("\n== {} — {}", sec.title, sec.summary);
+            for st in sec.sentences {
+                println!("  {}  [{:.0}%]", st.text, st.confidence * 100.0);
+                for w in st.why {
+                    println!("      · {w}");
+                }
+            }
+        }
+        return;
+    }
+    if sub == "match" {
+        let b_utc = arg("--utc2")
+            .and_then(|s| parse_utc(&s))
+            .unwrap_or_else(|| {
+                eprintln!("match needs --utc2 YYYY-MM-DDTHH:MM:SS --lat2 <deg> --lon2 <deg east>");
+                std::process::exit(2);
+            });
+        let lat2: f64 = arg("--lat2").and_then(|s| s.parse().ok()).unwrap_or(lat);
+        let lon2: f64 = arg("--lon2").and_then(|s| s.parse().ok()).unwrap_or(lon);
+        let input_b = ChartInput {
+            instant: b_utc.to_instant().expect("instant"),
+            observer: Observer {
+                latitude_deg: lat2,
+                longitude_deg: lon2,
+                height_m: 0.0,
+            },
+            ..input
+        };
+        let (a, b) = match (
+            compute(&spk, eop.as_ref(), &input),
+            compute(&spk, eop.as_ref(), &input_b),
+        ) {
+            (Ok(a), Ok(b)) => (a, b),
+            (Err(e), _) | (_, Err(e)) => {
+                eprintln!("match: {e:?}");
+                std::process::exit(1);
+            }
+        };
+        let ash = kshana_rules::ashtakoota(a.bodies[1].sidereal, b.bodies[1].sidereal);
+        let fa = kshana_rules::Facts::from_chart(&a);
+        let fb = kshana_rules::Facts::from_chart(&b);
+        let ma = kshana_rules::mangal_dosha(&fa);
+        let mb = kshana_rules::mangal_dosha(&fb);
+        let syn = kshana_rules::synastry(&a, &b, 6.0);
+        println!("Ashtakoota {:.1} / 36 — {}", ash.total, ash.verdict);
+        for k in &ash.kutas {
+            println!(
+                "  {:<13} {:>4.1} / {:<3}  {}",
+                k.name, k.points, k.max, k.detail
+            );
+        }
+        for st in kshana_speak::compatibility(&ash, &ma, &mb, &syn) {
+            println!("- {}", st.text);
+        }
+        return;
+    }
+    if sub == "calendar" {
+        let days: u32 = arg("--days").and_then(|s| s.parse().ok()).unwrap_or(60);
+        let tz = arg("--tz").and_then(|s| parse_tz(&s)).unwrap_or(0);
+        let obs = input.observer;
+        let list = kshana_forecast::observances(
+            &spk,
+            eop.as_ref(),
+            &obs,
+            Ayanamsa::Lahiri,
+            input.instant,
+            days,
+        )
+        .unwrap_or_else(|e| {
+            eprintln!("calendar: {e:?}");
+            std::process::exit(1);
+        });
+        for o in list {
+            let local = Utc::from_instant(o.exact.add_ns(tz as i128 * 60_000_000_000));
+            let observed = o
+                .observed_sunrise
+                .map(|s| {
+                    let u = Utc::from_instant(s.add_ns(tz as i128 * 60_000_000_000));
+                    format!("observed {:04}-{:02}-{:02}", u.year, u.month, u.day)
+                })
+                .unwrap_or_default();
+            println!(
+                "{:04}-{:02}-{:02} {:02}:{:02}:{:02}  {:<22} {}",
+                local.year,
+                local.month,
+                local.day,
+                local.hour,
+                local.minute,
+                local.second,
+                o.name,
+                observed
+            );
+        }
+        return;
+    }
     if sub == "rectify" {
         use kshana_rules::{area, rectify, LifeEvent};
         let tz = arg("--tz").and_then(|s| parse_tz(&s)).unwrap_or(0);
