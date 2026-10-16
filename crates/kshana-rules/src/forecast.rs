@@ -1438,3 +1438,102 @@ pub fn story(life: Life, samples: &[Sample]) -> Story {
         shifts,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn kernel() -> Option<Spk> {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/de421.bsp");
+        Spk::open(&p).ok()
+    }
+
+    fn natal(spk: &Spk) -> (Natal, Observer) {
+        let obs = Observer {
+            latitude_deg: 9.9312,
+            longitude_deg: 76.2673,
+            height_m: 0.0,
+        };
+        let birth = Utc::new(1990, 2, 20, 5, 4, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        let ch = compute(
+            spk,
+            None,
+            &ChartInput {
+                instant: birth,
+                observer: obs,
+                system: HouseSystem::Placidus,
+                ayanamsa: Ayanamsa::Lahiri,
+                topocentric_moon: false,
+            },
+        )
+        .unwrap();
+        (Natal::new(Facts::from_chart(&ch), birth), obs)
+    }
+
+    #[test]
+    fn every_life_is_scored_and_explained() {
+        let Some(spk) = kernel() else { return };
+        let (natal, obs) = natal(&spk);
+        let at = Utc::new(2026, 10, 16, 5, 0, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        let m = moment(&spk, None, &natal, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, at).unwrap();
+        assert_eq!(m.lives.len(), 9);
+        for l in &m.lives {
+            assert!((0.0..=1.0).contains(&l.score), "{:?}", l);
+            assert!(!l.headline.is_empty());
+            assert!(!l.because.is_empty());
+            assert_eq!(l.components.len(), 5, "hora present at Kochi");
+            let w: f64 = l.components.iter().map(|c| c.weight).sum();
+            assert!((w - 1.0).abs() < 1e-9);
+        }
+        assert!(!m.shifts.is_empty());
+        assert!(m.shifts.windows(2).all(|w| w[0].at <= w[1].at));
+        assert!(m.shifts.iter().all(|s| s.at > at));
+        assert_eq!(m.hours.len(), 24);
+        assert_eq!(m.windows.len(), 4);
+        assert!(m.hora.is_some());
+    }
+
+    #[test]
+    fn series_and_story_are_consistent() {
+        let Some(spk) = kernel() else { return };
+        let (natal, obs) = natal(&spk);
+        let from = Utc::new(2026, 10, 16, 5, 0, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        let s = series(&spk, None, &natal, &obs, Ayanamsa::Lahiri, from, NS_PER_DAY, 10).unwrap();
+        assert_eq!(s.len(), 10);
+        for life in Life::ALL {
+            let st = story(life, &s);
+            assert!((0.0..=1.0).contains(&st.mean));
+            let (a, b, v) = st.best.unwrap();
+            assert!(a <= b && (0.0..=1.0).contains(&v));
+            assert!(matches!(st.trend, "rising" | "falling" | "steady"));
+        }
+    }
+
+    #[test]
+    fn tara_counts_from_the_birth_star() {
+        assert_eq!(tara_index(18, 18), 0); // Janma
+        assert_eq!(tara_index(18, 19), 1); // Sampat
+        assert_eq!(tara_index(18, 26), 8); // Parama Mitra
+        assert_eq!(tara_index(18, 0), 0); // tenth star: Janma again
+        assert_eq!(tara_index(26, 0), 1);
+    }
+
+    #[test]
+    fn bands_are_monotone() {
+        assert_eq!(Band::of(0.9), Band::Bright);
+        assert_eq!(Band::of(0.6), Band::Good);
+        assert_eq!(Band::of(0.5), Band::Steady);
+        assert_eq!(Band::of(0.35), Band::Slow);
+        assert_eq!(Band::of(0.1), Band::Hold);
+        assert!(Band::Bright > Band::Hold);
+    }
+}
