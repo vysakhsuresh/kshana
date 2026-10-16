@@ -121,6 +121,13 @@ pub struct Promise {
     pub promised: bool,
     /// Score in `[0, 1]`: fulfilling weight over the group, less the denying share.
     pub strength: f64,
+    /// Fulfilling weight averaged over the group houses, before any denial is subtracted.
+    pub fulfilling_weight: f64,
+    /// Denying weight averaged over the negating houses.
+    pub denying_weight: f64,
+    /// Signed net `fulfilling_weight − denying_weight / 2`; `strength` is this clamped
+    /// to `[0, 1]`, so the UI can tell "nothing supports it" from "outweighed".
+    pub net: f64,
     /// The fired rule, with factors in words.
     pub hit: Hit,
 }
@@ -142,7 +149,8 @@ pub fn promise(facts: &Facts, area: Area) -> Promise {
     let f: f64 = fulfilling.iter().map(|s| s.level.weight()).sum::<f64>() / area.group.len() as f64;
     let d: f64 =
         denying.iter().map(|s| s.level.weight()).sum::<f64>() / area.negating.len().max(1) as f64;
-    let strength = (f - 0.5 * d).clamp(0.0, 1.0);
+    let net = f - 0.5 * d;
+    let strength = net.clamp(0.0, 1.0);
     let promised = !fulfilling.is_empty() && f > d;
     let mut factors = vec![format!(
         "{} cusp sub-lord is {:?}",
@@ -176,6 +184,9 @@ pub fn promise(facts: &Facts, area: Area) -> Promise {
         denying,
         promised,
         strength,
+        fulfilling_weight: f,
+        denying_weight: d,
+        net,
         hit: Hit {
             rule_id: "KS-K-0001",
             source: "Krishnamurti Padhdhati, Reader III: the cusp sub-lord must signify the houses of the matter",

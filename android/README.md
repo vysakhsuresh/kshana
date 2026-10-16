@@ -12,11 +12,10 @@ rule trace, both traditions, feedback), Areas (promise and timing funnel), Prash
 (three-tap picker, KP number, horary verdict and Moon windows), Parihara (ranked
 remedies with commitments) and Settings (ayanamsa, house system, provenance).
 
-The sources are type-checked against the real Compose and Android framework classes with
-`scripts/kotlin-check.sh` (Maven artifacts only, no SDK), but the APK itself has not been
-built here because the SDK installer host is unreachable. Open `android/` in Android
-Studio, run the steps below, and report any build error; the code targets AGP 8.7,
-Kotlin 2.1, Compose BOM 2024.12.
+The sources type-check with `scripts/kotlin-check.sh` (Maven artifacts only, no SDK) and
+the debug APK builds and runs on a device (moto g84, Android 15) with the steps below.
+The code targets AGP 8.7, Kotlin 2.1, Compose BOM 2024.12; Gradle 8.11 needs a JDK 17–21
+(the JBR bundled with current Android Studio is Java 25 and is rejected).
 
 ## One-time setup
 

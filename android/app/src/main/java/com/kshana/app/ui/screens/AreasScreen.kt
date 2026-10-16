@@ -127,25 +127,24 @@ fun AreasScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> U
             Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 val p = r.promise
                 SectionLabel("Promise")
+                Text(p.area, fontFamily = FontFamily.Serif, fontSize = 20.sp, color = KshanaColors.Text)
+                VerdictPair(r)
                 Text(
-                    if (p.promised) "${p.area} is promised · strength ${"%.2f".format(p.strength)}" else "${p.area} is not promised · strength ${"%.2f".format(p.strength)}",
-                    fontFamily = FontFamily.Serif, fontSize = 20.sp, color = if (p.promised) KshanaColors.Gold else KshanaColors.TextSoft,
+                    traditionsText(r),
+                    style = MaterialTheme.typography.bodyMedium, color = if (r.traditionsAgree) KshanaColors.Gold else KshanaColors.Sky,
                 )
+                Text(kpNetText(p), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
                 Text(
-                    "cusp ${p.primaryCusp} · group ${p.group.joinToString(" ")} · sub lord ${p.subLord} · ${p.ruleId} · ${p.source}",
+                    "cusp ${p.primaryCusp} · sub lord ${p.subLord} · ${p.ruleId} · ${p.source}",
                     fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted,
                 )
                 for (f in p.factors) {
                     HorizontalDivider(color = KshanaColors.LineSoft)
                     Text(f, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.padding(vertical = 6.dp))
                 }
-                Text(
-                    "Parashari ${"%.2f".format(r.parashariScore)} · lord ${r.parashariLord} · ${if (r.traditionsAgree) "traditions agree" else "traditions disagree"}",
-                    style = MaterialTheme.typography.bodySmall, color = if (r.traditionsAgree) KshanaColors.Gold else KshanaColors.Sky,
-                )
 
                 SectionLabel("Timing funnel")
-                Text("${r.agreeingLevels} of 5 levels support it", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+                Text(timingText(r, 5), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
                 val levels = r.funnel.sortedBy { it.level.toInt() }
                 for (i in 0 until 5) {
                     val t = levels.getOrNull(i)

@@ -476,8 +476,17 @@ pub struct PromiseRecord {
     pub primary_cusp: u8,
     pub group: Vec<u8>,
     pub sub_lord: String,
+    /// Houses whose signification denies or delays the matter.
+    pub negating: Vec<u8>,
     pub promised: bool,
+    /// `net` clamped to `[0, 1]`.
     pub strength: f64,
+    /// Fulfilling weight averaged over the group houses.
+    pub fulfilling_weight: f64,
+    /// Denying weight averaged over the negating houses.
+    pub denying_weight: f64,
+    /// Signed `fulfilling_weight − denying_weight / 2`; negative when outweighed.
+    pub net: f64,
     pub fulfilling: Vec<SignificanceRecord>,
     pub denying: Vec<SignificanceRecord>,
     pub rule_id: String,
@@ -604,9 +613,13 @@ impl Engine {
                         area: area.name.to_string(),
                         primary_cusp: area.primary,
                         group: area.group.to_vec(),
+                        negating: area.negating.to_vec(),
                         sub_lord: lord_name(p.sub_lord),
                         promised: p.promised,
                         strength: p.strength,
+                        fulfilling_weight: p.fulfilling_weight,
+                        denying_weight: p.denying_weight,
+                        net: p.net,
                         fulfilling: sig_records(&p.fulfilling),
                         denying: sig_records(&p.denying),
                         rule_id: p.hit.rule_id.to_string(),
@@ -743,9 +756,13 @@ impl Engine {
                 area: a.name.to_string(),
                 primary_cusp: a.primary,
                 group: a.group.to_vec(),
+                negating: a.negating.to_vec(),
                 sub_lord: lord_name(v.promise.sub_lord),
                 promised: v.promise.promised,
                 strength: v.promise.strength,
+                fulfilling_weight: v.promise.fulfilling_weight,
+                denying_weight: v.promise.denying_weight,
+                net: v.promise.net,
                 fulfilling: sig_records(&v.promise.fulfilling),
                 denying: sig_records(&v.promise.denying),
                 rule_id: v.promise.hit.rule_id.to_string(),
@@ -1486,6 +1503,7 @@ impl Engine {
             "yogas": yogas.iter().map(|y| json!({"name": y.name, "rule": hit(&y.hit)})).collect::<Vec<_>>(),
             "areas": readings.iter().map(|r| json!({
                 "area": r.promise.area, "kp_promised": r.promise.promised, "kp_strength": r.promise.strength,
+                "kp_net": r.promise.net, "kp_fulfilling_weight": r.promise.fulfilling_weight, "kp_denying_weight": r.promise.denying_weight,
                 "kp_sub_lord": r.promise.sub_lord, "kp_rule": {"rule_id": r.promise.rule_id, "source": r.promise.source, "factors": r.promise.factors},
                 "parashari_score": r.parashari_score, "parashari_lord": r.parashari_lord,
                 "parashari_rules": r.parashari_hits.iter().map(hit).collect::<Vec<_>>(),

@@ -74,7 +74,9 @@ fun ReadingScreen(profile: BirthProfile, settings: EngineSettings, onAreas: () -
     }
 
     val best = remember(readings) {
-        readings.maxWithOrNull(compareBy<AreaReading>({ it.agreeingLevels.toInt() }, { it.promise.strength }))
+        // Most dasha levels touching the houses first; then the KP net (signed, so an
+        // outweighed area ranks below an unsupported one); then the Parashari score.
+        readings.maxWithOrNull(compareBy<AreaReading>({ it.agreeingLevels.toInt() }, { it.promise.net }, { it.parashariScore }))
     }
 
     Column(
@@ -91,10 +93,14 @@ fun ReadingScreen(profile: BirthProfile, settings: EngineSettings, onAreas: () -
         } else {
             val p = r.promise
             Text(p.area, style = MaterialTheme.typography.displayLarge, color = KshanaColors.Text)
-            Text(if (p.promised) "promised" else "not promised", style = MaterialTheme.typography.displayMedium, color = if (p.promised) KshanaColors.Gold else KshanaColors.Muted)
+            VerdictPair(r)
+            Text(
+                traditionsText(r),
+                style = MaterialTheme.typography.bodyMedium, color = if (r.traditionsAgree) KshanaColors.Gold else KshanaColors.Sky,
+            )
             Row(verticalAlignment = Alignment.Bottom) {
                 Text("${r.agreeingLevels}/$FUNNEL_LEVELS", style = MaterialTheme.typography.headlineLarge, color = KshanaColors.Sky)
-                Text("levels converge", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.padding(start = 10.dp, bottom = 10.dp))
+                Text(timingText(r, FUNNEL_LEVELS), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.weight(1f).padding(start = 10.dp, bottom = 10.dp))
             }
 
             val maha = r.funnel.firstOrNull { it.level.toInt() == 1 }
@@ -121,7 +127,7 @@ fun ReadingScreen(profile: BirthProfile, settings: EngineSettings, onAreas: () -
             if (p.factors.isEmpty()) Text("no factors recorded", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             for ((i, f) in p.factors.withIndex()) FactorRow(i, f, p.ruleId, p.source, null)
             Text(
-                "cusp ${p.primaryCusp} · group ${p.group.joinToString(" ")} · sub lord ${p.subLord} · strength ${"%.2f".format(p.strength)}",
+                "cusp ${p.primaryCusp} · sub lord ${p.subLord} · ${kpNetText(p)}",
                 fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted, modifier = Modifier.padding(top = 4.dp),
             )
             val ruleIds = remember(r) { (listOf(p.ruleId) + r.parashariHits.map { it.ruleId }).distinct() }
@@ -140,11 +146,6 @@ fun ReadingScreen(profile: BirthProfile, settings: EngineSettings, onAreas: () -
             for ((i, h) in r.parashariHits.withIndex()) {
                 for ((j, f) in h.factors.withIndex()) FactorRow(1000 + i * 100 + j, f, h.ruleId, h.source, h.weight)
             }
-            Text(
-                if (r.traditionsAgree) "The traditions agree." else "The traditions disagree.",
-                style = MaterialTheme.typography.bodyMedium, color = if (r.traditionsAgree) KshanaColors.Gold else KshanaColors.Sky,
-            )
-
             SectionLabel("Did this happen?")
             DidItHappen(area = p.area, antarStart = antar?.start ?: maha?.start, ruleIds = ruleIds, onAnswered = { answersVersion++ })
 
