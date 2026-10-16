@@ -1715,3 +1715,360 @@ mod tests {
         );
     }
 }
+
+// ---------------------------------------------------------------------------------
+// Forecast: the plain-language layer for the Loop screen.
+// ---------------------------------------------------------------------------------
+
+/// One scored component of a life score.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct ComponentRecord {
+    pub key: String,
+    pub score: f64,
+    pub weight: f64,
+    pub note: String,
+    pub rule_id: String,
+}
+
+/// One life area at one instant.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct LifeScoreRecord {
+    pub life: String,
+    /// 0–100.
+    pub score: f64,
+    /// `bright`, `good`, `steady`, `slow` or `hold`.
+    pub band: String,
+    pub headline: String,
+    pub because: String,
+    pub components: Vec<ComponentRecord>,
+}
+
+/// A named window of the day.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct WindowRecord {
+    pub label: String,
+    pub start: ExactInstant,
+    pub end: ExactInstant,
+    pub caution: bool,
+}
+
+/// Something that changes at an instant.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct ShiftRecord {
+    pub at: ExactInstant,
+    pub what: String,
+    /// `hora`, `star`, `tithi`, `sign`, `dasha`, `kala` or `sun`.
+    pub kind: String,
+}
+
+/// The planetary hour.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct HoraRecord {
+    pub lord: String,
+    pub start: ExactInstant,
+    pub end: ExactInstant,
+    pub words: String,
+}
+
+/// One planetary hour of the day with its fit (0–100) for each life.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct HourRecord {
+    pub lord: String,
+    pub start: ExactInstant,
+    pub end: ExactInstant,
+    pub fit: Vec<f64>,
+    pub caution: bool,
+}
+
+/// Everything for one instant.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct MomentRecord {
+    pub hours: Vec<HourRecord>,
+    pub at: ExactInstant,
+    /// 0–100.
+    pub overall: f64,
+    pub band: String,
+    pub headline: String,
+    pub lives: Vec<LifeScoreRecord>,
+    pub hora: Option<HoraRecord>,
+    pub moon_star: String,
+    pub tara: u8,
+    pub tara_name: String,
+    pub tara_words: String,
+    pub moon_from_moon: u8,
+    pub saturn_words: String,
+    pub saturn_active: bool,
+    pub dasha: Vec<DashaRecord>,
+    pub windows: Vec<WindowRecord>,
+    pub shifts: Vec<ShiftRecord>,
+    pub sunrise: Option<ExactInstant>,
+    pub sunset: Option<ExactInstant>,
+}
+
+/// One sample of a series: scores 0–100 in `life_names()` order.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct SampleRecord {
+    pub at: ExactInstant,
+    pub scores: Vec<f64>,
+    pub tara: u8,
+}
+
+/// The story of one life over a horizon.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct StoryRecord {
+    pub life: String,
+    pub trend: String,
+    pub trend_words: String,
+    /// 0–100.
+    pub mean: f64,
+    pub best_start: Option<ExactInstant>,
+    pub best_end: Option<ExactInstant>,
+    pub best_score: f64,
+    pub low_start: Option<ExactInstant>,
+    pub low_end: Option<ExactInstant>,
+    pub low_score: f64,
+    pub shifts: Vec<ShiftRecord>,
+}
+
+/// A horizon: the samples and one story per life.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct HorizonRecord {
+    pub samples: Vec<SampleRecord>,
+    pub stories: Vec<StoryRecord>,
+}
+
+/// The nine life names, in the order scores are listed.
+#[uniffi::export]
+pub fn life_names() -> Vec<String> {
+    kshana_rules::Life::ALL
+        .iter()
+        .map(|l| l.name().to_string())
+        .collect()
+}
+
+fn shift_record(s: &kshana_rules::Shift) -> ShiftRecord {
+    ShiftRecord {
+        at: s.at.into(),
+        what: s.what.clone(),
+        kind: s.kind.to_string(),
+    }
+}
+
+impl Engine {
+    fn natal(
+        &self,
+        birth: ExactInstant,
+        latitude_deg: f64,
+        longitude_deg: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+    ) -> Result<kshana_rules::Natal, KshanaError> {
+        let input = ChartInput {
+            instant: birth.into(),
+            observer: Observer {
+                latitude_deg,
+                longitude_deg,
+                height_m: 0.0,
+            },
+            system: to_house_system(system),
+            ayanamsa: ayanamsa.into(),
+            topocentric_moon: false,
+        };
+        let ch = compute(&self.spk, self.eop.as_ref(), &input).map_err(|e| match e {
+            kshana_chart::ChartError::Houses(kshana_houses::HouseError::PolarLatitude) => {
+                KshanaError::PolarLatitude
+            }
+            other => KshanaError::Engine(format!("{other:?}")),
+        })?;
+        Ok(kshana_rules::Natal::new(
+            kshana_rules::Facts::from_chart(&ch),
+            birth.into(),
+        ))
+    }
+}
+
+#[uniffi::export]
+impl Engine {
+    /// The whole picture at `at` for a person born at `birth` (place of birth
+    /// `birth_lat`/`birth_lon`) who is now at `lat`/`lon`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn forecast_moment(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        at: ExactInstant,
+    ) -> Result<MomentRecord, KshanaError> {
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let obs = Observer {
+            latitude_deg: lat,
+            longitude_deg: lon,
+            height_m: 0.0,
+        };
+        let m = kshana_rules::moment(
+            &self.spk,
+            self.eop.as_ref(),
+            &natal,
+            &obs,
+            to_house_system(system),
+            ayanamsa.into(),
+            at.into(),
+        )
+        .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(MomentRecord {
+            hours: m
+                .hours
+                .iter()
+                .map(|h| HourRecord {
+                    lord: lord_name(h.lord),
+                    start: h.start.into(),
+                    end: h.end.into(),
+                    fit: h.fit.iter().map(|v| v * 100.0).collect(),
+                    caution: h.caution,
+                })
+                .collect(),
+            at: m.at.into(),
+            overall: m.overall * 100.0,
+            band: m.band.word().to_string(),
+            headline: m.headline.clone(),
+            lives: m
+                .lives
+                .iter()
+                .map(|l| LifeScoreRecord {
+                    life: l.life.name().to_string(),
+                    score: l.score * 100.0,
+                    band: l.band.word().to_string(),
+                    headline: l.headline.clone(),
+                    because: l.because.clone(),
+                    components: l
+                        .components
+                        .iter()
+                        .map(|c| ComponentRecord {
+                            key: c.key.to_string(),
+                            score: c.score,
+                            weight: c.weight,
+                            note: c.note.clone(),
+                            rule_id: c.rule_id.to_string(),
+                        })
+                        .collect(),
+                })
+                .collect(),
+            hora: m.hora.as_ref().map(|h| HoraRecord {
+                lord: lord_name(h.lord),
+                start: h.start.into(),
+                end: h.end.into(),
+                words: h.words.to_string(),
+            }),
+            moon_star: m.moon_star.clone(),
+            tara: m.tara as u8,
+            tara_name: kshana_rules::TARA_NAMES[m.tara].to_string(),
+            tara_words: m.tara_words.to_string(),
+            moon_from_moon: m.moon_from_moon,
+            saturn_words: m.saturn.words().to_string(),
+            saturn_active: m.saturn != kshana_rules::SaturnPhase::Clear,
+            dasha: m
+                .dasha
+                .iter()
+                .enumerate()
+                .map(|(i, p)| DashaRecord {
+                    level: (i + 1) as u8,
+                    lord: lord_name(p.lord),
+                    start: p.start.into(),
+                    end: p.end.into(),
+                })
+                .collect(),
+            windows: m
+                .windows
+                .iter()
+                .map(|w| WindowRecord {
+                    label: w.label.clone(),
+                    start: w.start.into(),
+                    end: w.end.into(),
+                    caution: w.caution,
+                })
+                .collect(),
+            shifts: m.shifts.iter().map(shift_record).collect(),
+            sunrise: m.sunrise.map(Into::into),
+            sunset: m.sunset.map(Into::into),
+        })
+    }
+
+    /// `count` samples from `from`, `step_days` apart, and the story of every life.
+    #[allow(clippy::too_many_arguments)]
+    pub fn forecast_horizon(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        from: ExactInstant,
+        step_days: f64,
+        count: u32,
+    ) -> Result<HorizonRecord, KshanaError> {
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let obs = Observer {
+            latitude_deg: lat,
+            longitude_deg: lon,
+            height_m: 0.0,
+        };
+        let step = (step_days.max(1.0 / 24.0) * NS_PER_DAY as f64) as i128;
+        let samples = kshana_rules::series(
+            &self.spk,
+            self.eop.as_ref(),
+            &natal,
+            &obs,
+            ayanamsa.into(),
+            from.into(),
+            step,
+            count.clamp(2, 400) as usize,
+        )
+        .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        let stories = kshana_rules::Life::ALL
+            .iter()
+            .map(|&life| {
+                let s = kshana_rules::story(life, &samples);
+                StoryRecord {
+                    life: life.name().to_string(),
+                    trend: s.trend.to_string(),
+                    trend_words: s.trend_words.clone(),
+                    mean: s.mean * 100.0,
+                    best_start: s.best.map(|b| b.0.into()),
+                    best_end: s.best.map(|b| b.1.into()),
+                    best_score: s.best.map(|b| b.2 * 100.0).unwrap_or(0.0),
+                    low_start: s.low.map(|b| b.0.into()),
+                    low_end: s.low.map(|b| b.1.into()),
+                    low_score: s.low.map(|b| b.2 * 100.0).unwrap_or(0.0),
+                    shifts: s.shifts.iter().map(shift_record).collect(),
+                }
+            })
+            .collect();
+        Ok(HorizonRecord {
+            samples: samples
+                .iter()
+                .map(|s| SampleRecord {
+                    at: s.at.into(),
+                    scores: s.scores.iter().map(|v| v * 100.0).collect(),
+                    tara: s.tara as u8,
+                })
+                .collect(),
+            stories,
+        })
+    }
+}

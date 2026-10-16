@@ -16,8 +16,8 @@ pub struct Area {
     pub varga: &'static str,
 }
 
-/// The eight areas the app offers first.
-pub const AREAS: [Area; 8] = [
+/// The nine areas the app offers.
+pub const AREAS: [Area; 9] = [
     Area {
         name: "Career",
         primary: 10,
@@ -66,6 +66,13 @@ pub const AREAS: [Area; 8] = [
         group: &[4, 9, 11],
         negating: &[3, 8, 10],
         varga: "D24",
+    },
+    Area {
+        name: "Family",
+        primary: 2,
+        group: &[2, 4, 11],
+        negating: &[1, 3, 10],
+        varga: "D4",
     },
     Area {
         name: "Foreign",

@@ -22,6 +22,8 @@ object KshanaColors {
     val Muted = Color(0xFF9A9EB0)
     val Gold = Color(0xFFE3B96A)
     val Sky = Color(0xFFA9C4E6)
+    val Ember = Color(0xFFE07A5F)
+    val Leaf = Color(0xFF8FBF9F)
 }
 
 private val scheme = darkColorScheme(

@@ -13,6 +13,8 @@
 
 pub mod areas;
 pub mod facts;
+pub mod forecast;
+pub mod gochara;
 pub mod kp;
 pub mod muhurta;
 pub mod parashari;
@@ -21,6 +23,11 @@ pub mod prashna;
 
 pub use areas::{area, Area, AREAS};
 pub use facts::{Facts, PlanetFact};
+pub use forecast::{
+    headline, moment, series, story, Band, Component, Hora, Life, LifeScore, Moment, Natal,
+    Sample, Shift, Story, Window,
+};
+pub use gochara::{tara_index, tara_words, SaturnPhase, TARA_NAMES, TARA_SCORE};
 pub use kp::{
     agreeing_levels, node_agents, period_supports, promise, significators, timing, Level, Promise,
     Significance, TimingLevel,

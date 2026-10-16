@@ -27,10 +27,18 @@ tithi and nakshatra boundaries, sunrise and sunset, horas, Rahu kala, stability 
 a birth-time window. Muhurta search done. Remaining: lunar returns, eclipse contacts, the
 rectification workbench.
 
-**M5 · Android (written, first build pending).** Compose shell over every screen on the
+**M5 · Android (built, runs on device).** Compose shell over every screen on the
 design canvas, offline kernel in assets, provenance in Settings. The first Android
 Studio build is the verification step; then bundled fonts, a differential self-test on
 first launch, and the Play listing.
+
+**M6 · The common app (first pass done).** The Loop: nine plain lives scored at every
+instant from running periods, Moon-relative transits with vedha and Ashtakavarga, Tara
+bala, the planetary hour and the limbs of the day; a countdown to the next shift; per-life
+pages for today, week, month, year with trend, best and lowest stretch and what changes;
+expert screens moved under More. Remaining: calibration of weights against recorded
+outcomes, bundled fonts, notifications at shifts the user chooses, widgets, Malayalam
+and Hindi copy.
 
 **Always.** No number ships without a comparison test, and every disagreement with
 another ephemeris is written up in `docs/PRECISION.md`.

@@ -64,6 +64,29 @@ Windows are scored in five-minute steps and their edges refined to the second.
 | Fixed rising sign for permanence, movable for travel; lagna lord not in 6, 8 or 12 | +0.05 each | Muhurta Chintamani, lagna shuddhi |
 | Chandra bala (Moon in 1, 3, 6, 7, 10, 11 from the natal Moon) | +0.10 | Muhurta Chintamani |
 
+## Forecast (the Loop)
+
+Nine plain life areas (Love, Career, Money, Health, Family, Study, Home, Travel,
+Children) map to the KP/Parashari areas (Marriage, Career, Wealth, Health, Family,
+Education, Property, Foreign, Children). A life's score at an instant is the weighted
+mean of five components; a day or fortnight sample uses the first three, renormalised.
+Every component carries the words that explain it, and the app shows them on demand.
+
+| Id | Component | Weight | Rule | Source |
+|---|---|---|---|---|
+| KS-F-0001 | Running periods | 0.35 | The five Vimshottari lords, weighted 0.35/0.30/0.20/0.10/0.05: half the strongest KP signification level of the area's houses by the lord, half the Parashari period quality | KP Reader III; BPHS, Dasha phala |
+| KS-G-0001 | Transits from the Moon | 0.25 | Each graha's house from the natal Moon: favourable (Sun 3 6 10 11; Moon 1 3 6 7 10 11; Mars 3 6 11; Mercury 2 4 6 8 10 11; Jupiter 2 5 7 9 11; Venus 1 2 3 4 5 8 9 11 12; Saturn and nodes 3 6 11) counts +1 unless its vedha house is occupied (Sun–Saturn and Moon–Mercury exempt), then +0.2; the adverse houses −1; Saturn in 12, 1, 2 (sade sati) or 4, 8 (dhaiya) −0.6; the Moon in the 8th from itself −1. Each is weighed by the graha's natural bearing on the life (+0.3 when it owns a house of the area in the birth chart) and by its Bhinnashtakavarga bindus in the transit sign (≥5 ×1.25, 4 ×1.0, ≤3 ×0.6) | Brihat Samhita 104; Phaladeepika 26; BPHS, Ashtakavargadhyaya |
+| KS-T-0001 | Tara bala | 0.15 | The Moon's star counted from the birth star: Janma 0.45, Sampat 1.0, Vipat 0.1, Kshema 0.8, Pratyak 0.2, Sadhana 0.9, Naidhana 0.0, Mitra 0.8, Parama Mitra 1.0 | Muhurta Chintamani |
+| KS-H-0001 | Planetary hour | 0.15 | The hora lord's fit for the life (Hora shastra tables, Venus for love, Mercury for study and trade, Jupiter for money and children, Sun for authority, Moon for family and travel, Mars for effort, Saturn for routine) times half plus half the lord's natal dignity | Hora shastra; Muhurta tradition |
+| KS-M-0001 | Limbs of the day | 0.10 | Base 0.7; Rahu kala 0.1, Yamaganda 0.15, Gulika 0.2, Abhijit 1.0; +0.15 in an auspicious star; −0.2 on a rikta tithi or Amavasya; −0.2 under Vishti | Muhurta Chintamani |
+
+Bands: bright ≥ 0.70, good ≥ 0.56, steady ≥ 0.44, slow ≥ 0.32, else hold. The sentence
+shown for a band is a fixed template per life; the reason under it is the component
+that moves the score most. Shifts (hora, star, tithi, Moon sign, dasha level, the
+day's windows, sunrise and sunset) are exact instants from the event solver.
+
+The Family area (new): primary cusp 2, group 2 4 11, negating 1 3 10.
+
 ## Parihara
 
 Remedies are keyed to the graha located as the cause (the weakest running period lord,
