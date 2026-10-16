@@ -13,33 +13,44 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kshana.app.data.BirthProfile
 import com.kshana.app.data.EngineSettings
+import com.kshana.app.data.FamilyStore
 import com.kshana.app.data.ProfileStore
 import com.kshana.app.data.Uncertainty
 import com.kshana.app.engine.EngineProvider
+import com.kshana.app.net.updateEop
 import com.kshana.app.ui.theme.KshanaColors
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.AyanamsaChoice
 import uniffi.kshana_ffi.ChartRecord
 import uniffi.kshana_ffi.HouseSystem
 import uniffi.kshana_ffi.engineVersion
+import java.time.Instant
+import java.time.ZoneId
 
 private val AYANAMSAS = listOf(
     "Lahiri" to AyanamsaChoice.LAHIRI,
@@ -55,7 +66,7 @@ private val HOUSES = listOf(
     "Porphyry" to HouseSystem.PORPHYRY,
 )
 
-/** Profile summary, engine choices, and the provenance of the last chart cast with them. */
+/** Profile summary, engine choices, the provenance of the last chart cast with them, and the optional online features. */
 @Composable
 fun SettingsScreen(
     profile: BirthProfile?,
@@ -64,12 +75,22 @@ fun SettingsScreen(
     onEditBirth: () -> Unit,
     onRectify: () -> Unit,
     onTrust: () -> Unit,
+    onNarrate: () -> Unit,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var chart by remember { mutableStateOf<ChartRecord?>(null) }
     var version by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+
+    // Online section state.
+    var onlineOn by remember { mutableStateOf(FamilyStore.onlineAllowed(context)) }
+    var eopFetchedAt by remember { mutableLongStateOf(FamilyStore.eopFetchedAt(context)) }
+    var eopUpdating by remember { mutableStateOf(false) }
+    var eopMessage by remember { mutableStateOf<String?>(null) }
+    var eopError by remember { mutableStateOf<String?>(null) }
+    var aiKey by remember { mutableStateOf(FamilyStore.aiKey(context) ?: "") }
 
     LaunchedEffect(profile, settings) {
         try {
@@ -92,6 +113,27 @@ fun SettingsScreen(
     fun save(s: EngineSettings) {
         ProfileStore.saveSettings(context, s)
         onSettingsChanged(s)
+    }
+
+    fun setOnline(on: Boolean) {
+        FamilyStore.saveOnlineAllowed(context, on)
+        onlineOn = on
+    }
+
+    fun runEopUpdate() {
+        if (eopUpdating) return
+        scope.launch {
+            eopUpdating = true
+            eopMessage = null
+            eopError = null
+            updateEop(context)
+                .onSuccess { at ->
+                    eopFetchedAt = at
+                    eopMessage = "Updated. The engine will use the new data from the next calculation."
+                }
+                .onFailure { e -> eopError = e.message ?: e.toString() }
+            eopUpdating = false
+        }
     }
 
     Column(
@@ -162,7 +204,68 @@ fun SettingsScreen(
             MonoRow("TT JD", "%.1f + %.9f".format(c.ttJd1, c.ttJd2))
         }
         Spacer(Modifier.height(8.dp))
-        Text("Everything is computed on this phone. Nothing leaves it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        Text(
+            if (onlineOn) "Everything is computed on this phone. The network is used only for the online features below, when you ask."
+            else "Everything is computed on this phone. Nothing leaves it.",
+            style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+        )
+
+        SectionLabel("Online")
+        Text(
+            "Off by default. When on, you can search any place on Earth, refresh the Earth-rotation data, and ask for a spoken-style narration with your own key.",
+            style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Chip("OFF", selected = !onlineOn, onClick = { setOnline(false) })
+            Chip("ON", selected = onlineOn, onClick = { setOnline(true) })
+        }
+        if (onlineOn) {
+            Spacer(Modifier.height(4.dp))
+            Text("Earth rotation data (IERS)", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
+            MonoRow("finals2000A.all", if (eopFetchedAt > 0L) "last updated " + Instant.ofEpochMilli(eopFetchedAt).atZone(ZoneId.systemDefault()).format(DATE_ONLY) else "bundled copy")
+            Text(
+                "UT1−UTC and polar motion for recent dates. The bundled file ages; a fresh one tightens the error budget.",
+                style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+            )
+            if (eopUpdating) {
+                Text("Updating…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Sky)
+            } else {
+                QuietButton("UPDATE NOW", onClick = { runEopUpdate() })
+            }
+            eopMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted) }
+            ErrorLine(eopError)
+
+            Spacer(Modifier.height(4.dp))
+            Text("Narration key", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
+            OutlinedTextField(
+                value = aiKey,
+                onValueChange = {
+                    aiKey = it
+                    FamilyStore.saveAiKey(context, it)
+                },
+                label = { Text("Claude API key", style = MaterialTheme.typography.labelSmall) },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = KshanaColors.Text),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = KshanaColors.Text,
+                    unfocusedTextColor = KshanaColors.Text,
+                    cursorColor = KshanaColors.Gold,
+                    focusedBorderColor = KshanaColors.Gold,
+                    unfocusedBorderColor = KshanaColors.Line,
+                    focusedLabelColor = KshanaColors.Gold,
+                    unfocusedLabelColor = KshanaColors.Muted,
+                    focusedContainerColor = KshanaColors.Surface,
+                    unfocusedContainerColor = KshanaColors.Surface,
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                "The key is stored only on this phone and used only when you tap Narrate. It is sent to the narration service and nowhere else.",
+                style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+            )
+            QuietButton("OPEN NARRATION", onClick = onNarrate)
+        }
 
         SectionLabel("Trust")
         Text("What the app does not know, a self-test on this phone, the error budget, and the full report to export.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)

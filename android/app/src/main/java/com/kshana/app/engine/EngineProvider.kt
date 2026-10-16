@@ -18,6 +18,15 @@ object EngineProvider {
         engine ?: open(context.applicationContext).also { engine = it }
     }
 
+    /**
+     * Forget the open engine so the next [get] reopens it, e.g. after a fresh Earth-orientation
+     * file has been written to the files directory. The old handle stays valid for callers that
+     * already hold it.
+     */
+    fun reset() {
+        engine = null
+    }
+
     private fun open(context: Context): Engine {
         val spk = ensureAsset(context, "de421.bsp")
         val eop = runCatching { ensureAsset(context, "finals2000A.all") }.getOrNull()

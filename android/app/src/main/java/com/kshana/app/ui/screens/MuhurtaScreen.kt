@@ -187,7 +187,15 @@ private fun WindowCard(w: MuhurtaRecord, zone: ZoneId) {
                 )
             }
         }
-        Text("${localText(w.start, CLOCK, zone)} → ${localText(w.end, CLOCK, zone)}", fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = KshanaColors.Sky)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("${localText(w.start, CLOCK, zone)} → ${localText(w.end, CLOCK, zone)}", fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = KshanaColors.Sky)
+            RemindButton(
+                key = "muhurta:${w.start.taiSeconds}",
+                atMillis = Instants.toLocal(w.start, zone).toInstant().toEpochMilli() - 10L * 60L * 1000L,
+                title = "Your window opens at ${localText(w.start, TIME_ONLY, zone)}",
+                text = "${localText(w.start, DATE_TIME_S, zone)} → ${localText(w.end, TIME_ONLY, zone)} · ${w.tithi} · ${w.nakshatra}",
+            )
+        }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ScoreBar(w.score.toFloat(), Modifier.weight(1f))
             Text("%.2f".format(w.score), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Gold)

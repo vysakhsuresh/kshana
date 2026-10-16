@@ -71,6 +71,13 @@ private fun EventRow(e: EventRecord) {
             Text(local.format(DAY), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             Text(title(e), fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text)
             Text(detail(e), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            RemindButton(
+                key = "moment:${e.kind}:${e.body}:${e.instant.taiSeconds}",
+                atMillis = local.toInstant().toEpochMilli() - 5L * 60L * 1000L,
+                title = "${title(e)} in 5 minutes",
+                text = "exact at ${local.format(DATE_TIME_S)}",
+                modifier = Modifier.padding(top = 6.dp),
+            )
         }
         Column(horizontalAlignment = androidx.compose.ui.Alignment.End) {
             Text(local.format(TIME), fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = KshanaColors.Sky)

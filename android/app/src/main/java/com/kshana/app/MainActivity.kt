@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
@@ -31,18 +31,30 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.kshana.app.data.BirthProfile
+import com.kshana.app.data.FamilyStore
 import com.kshana.app.data.ProfileStore
 import com.kshana.app.ui.screens.AreasScreen
 import com.kshana.app.ui.screens.BirthScreen
+import com.kshana.app.ui.screens.CalendarScreen
 import com.kshana.app.ui.screens.ChartScreen
+import com.kshana.app.ui.screens.CompatibilityScreen
+import com.kshana.app.ui.screens.FamilyScreen
+import com.kshana.app.ui.screens.GlossaryScreen
+import com.kshana.app.ui.screens.LifeMapScreen
+import com.kshana.app.ui.screens.LifeScreen
+import com.kshana.app.ui.screens.MeScreen
 import com.kshana.app.ui.screens.MomentsScreen
 import com.kshana.app.ui.screens.MuhurtaScreen
+import com.kshana.app.ui.screens.NamingScreen
+import com.kshana.app.ui.screens.NarrateScreen
 import com.kshana.app.ui.screens.NowScreen
 import com.kshana.app.ui.screens.PariharaScreen
 import com.kshana.app.ui.screens.PrashnaScreen
 import com.kshana.app.ui.screens.ReadingScreen
 import com.kshana.app.ui.screens.RectifyScreen
+import com.kshana.app.ui.screens.RightTimeScreen
 import com.kshana.app.ui.screens.SettingsScreen
+import com.kshana.app.ui.screens.TodayScreen
 import com.kshana.app.ui.screens.TrustScreen
 import com.kshana.app.ui.screens.VedicScreen
 import com.kshana.app.ui.theme.KshanaColors
@@ -50,12 +62,13 @@ import com.kshana.app.ui.theme.KshanaTheme
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
 
+/** The five doors. Everything else is reached from one of them. */
 private val tabs = listOf(
-    Tab("now", "NOW", Icons.Filled.Star),
-    Tab("chart", "CHART", Icons.Filled.Place),
-    Tab("vedic", "VEDIC", Icons.Filled.List),
-    Tab("moments", "MOMENTS", Icons.Filled.DateRange),
-    Tab("reading", "READING", Icons.Filled.Info),
+    Tab("today", "TODAY", Icons.Filled.Star),
+    Tab("life", "MY LIFE", Icons.Filled.Info),
+    Tab("prashna", "ASK", Icons.Filled.Place),
+    Tab("righttime", "RIGHT TIME", Icons.Filled.DateRange),
+    Tab("me", "ME", Icons.Filled.Person),
 )
 
 class MainActivity : ComponentActivity() {
@@ -72,8 +85,9 @@ private fun App() {
     val nav = rememberNavController()
     var profile by remember { mutableStateOf(ProfileStore.load(context)) }
     var settings by remember { mutableStateOf(ProfileStore.settings(context)) }
-    // First launch with no profile lands on the birth form; afterwards on Now.
-    val start = remember { if (profile == null) "birth" else "now" }
+    var simple by remember { mutableStateOf(FamilyStore.simpleMode(context)) }
+    // First launch with no profile lands on the birth form; afterwards on Today.
+    val start = remember { if (profile == null) "birth" else "today" }
     val backStack by nav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route ?: start
     val showBar = tabs.any { it.route == current }
@@ -87,12 +101,15 @@ private fun App() {
         }
     }
 
+    fun open(route: String) = nav.navigate(route) { launchSingleTop = true }
+    val back: () -> Unit = { nav.popBackStack() }
+
     /** Screens that need a birth go to the form when there is none. */
     @Composable
     fun withProfile(content: @Composable (BirthProfile) -> Unit) {
         val p = profile
         if (p == null) {
-            BirthScreen(existing = null, onCast = { profile = it; nav.navigate("chart") { launchSingleTop = true } })
+            BirthScreen(existing = null, onCast = { profile = it; open("today") })
         } else {
             content(p)
         }
@@ -123,44 +140,31 @@ private fun App() {
         },
     ) { padding ->
         NavHost(nav, startDestination = start, modifier = Modifier.padding(padding)) {
-            composable("now") {
-                NowScreen(
-                    place = profile?.place() ?: ProfileStore.currentLocation(context),
-                    settings = settings,
-                    onAsk = { nav.navigate("prashna") { launchSingleTop = true } },
-                    onSettings = { nav.navigate("settings") { launchSingleTop = true } },
-                )
-            }
-            composable("chart") { withProfile { ChartScreen(it, settings) } }
-            composable("vedic") { withProfile { VedicScreen(it, settings) } }
-            composable("moments") {
-                MomentsScreen(ayanamsa = settings.ayanamsa, onMuhurta = { nav.navigate("muhurta") { launchSingleTop = true } })
-            }
-            composable("muhurta") {
-                MuhurtaScreen(
-                    place = profile?.place() ?: ProfileStore.currentLocation(context),
-                    settings = settings,
-                    profile = profile,
-                    onBack = { nav.popBackStack() },
-                )
-            }
-            composable("reading") {
+            // ---- the five doors ----
+            composable("today") {
                 withProfile {
-                    ReadingScreen(
-                        it, settings,
-                        onAreas = { nav.navigate("areas") { launchSingleTop = true } },
-                        onParihara = { nav.navigate("parihara") { launchSingleTop = true } },
+                    TodayScreen(
+                        profile = it,
+                        here = ProfileStore.currentLocation(context),
+                        settings = settings,
+                        simple = simple,
+                        onAsk = { goTab("prashna") },
+                        onRightTime = { goTab("righttime") },
+                        onLife = { goTab("life") },
+                        onSettings = { open("settings") },
                     )
                 }
             }
-            composable("areas") { withProfile { AreasScreen(it, settings, onBack = { nav.popBackStack() }) } }
-            composable("parihara") { withProfile { PariharaScreen(it, settings, onBack = { nav.popBackStack() }) } }
-            composable("rectify") {
+            composable("life") {
                 withProfile {
-                    RectifyScreen(
-                        it, settings,
-                        onSaved = { p -> profile = p; nav.popBackStack() },
-                        onBack = { nav.popBackStack() },
+                    LifeScreen(
+                        profile = it,
+                        settings = settings,
+                        simple = simple,
+                        onLifeMap = { open("lifemap") },
+                        onAreas = { open("areas") },
+                        onParihara = { open("parihara") },
+                        onChart = { open("reading") },
                     )
                 }
             }
@@ -168,15 +172,102 @@ private fun App() {
                 PrashnaScreen(
                     place = profile?.place() ?: ProfileStore.currentLocation(context),
                     settings = settings,
-                    onBack = { nav.popBackStack() },
+                    onBack = { goTab("today") },
                 )
+            }
+            composable("righttime") {
+                RightTimeScreen(
+                    profile = profile,
+                    here = ProfileStore.currentLocation(context),
+                    settings = settings,
+                    onMuhurta = { open("muhurta") },
+                    onCalendar = { open("calendar") },
+                    onMoments = { open("moments") },
+                )
+            }
+            composable("me") {
+                MeScreen(
+                    profile = profile,
+                    settings = settings,
+                    simple = simple,
+                    onSimpleChanged = { simple = it; FamilyStore.saveSimpleMode(context, it) },
+                    onEditBirth = { open("birth") },
+                    onFamily = { open("family") },
+                    onCompatibility = { open("compatibility") },
+                    onNaming = { open("naming") },
+                    onGlossary = { open("glossary") },
+                    onChart = { open("chart") },
+                    onVedic = { open("vedic") },
+                    onTrust = { open("trust") },
+                    onRectify = { open("rectify") },
+                    onSettings = { open("settings") },
+                    onNarrate = { open("narrate") },
+                )
+            }
+
+            // ---- behind the doors ----
+            composable("lifemap") { withProfile { LifeMapScreen(it, settings, onBack = back) } }
+            composable("family") { FamilyScreen(onBack = back) }
+            composable("compatibility") {
+                CompatibilityScreen(settings = settings, onFamily = { open("family") }, onBack = back)
+            }
+            composable("naming") { NamingScreen(settings = settings, onBack = back) }
+            composable("glossary") { GlossaryScreen(onBack = back) }
+            composable("calendar") {
+                CalendarScreen(here = ProfileStore.currentLocation(context), settings = settings, onBack = back)
+            }
+            composable("narrate") {
+                withProfile { NarrateScreen(it, settings, onBack = back, onSettings = { open("settings") }) }
+            }
+
+            // ---- the instrument ----
+            composable("now") {
+                NowScreen(
+                    place = profile?.place() ?: ProfileStore.currentLocation(context),
+                    settings = settings,
+                    onAsk = { goTab("prashna") },
+                    onSettings = { open("settings") },
+                )
+            }
+            composable("chart") { withProfile { ChartScreen(it, settings) } }
+            composable("vedic") { withProfile { VedicScreen(it, settings) } }
+            composable("moments") {
+                MomentsScreen(ayanamsa = settings.ayanamsa, onMuhurta = { open("muhurta") })
+            }
+            composable("muhurta") {
+                MuhurtaScreen(
+                    place = profile?.place() ?: ProfileStore.currentLocation(context),
+                    settings = settings,
+                    profile = profile,
+                    onBack = back,
+                )
+            }
+            composable("reading") {
+                withProfile {
+                    ReadingScreen(
+                        it, settings,
+                        onAreas = { open("areas") },
+                        onParihara = { open("parihara") },
+                    )
+                }
+            }
+            composable("areas") { withProfile { AreasScreen(it, settings, onBack = back) } }
+            composable("parihara") { withProfile { PariharaScreen(it, settings, onBack = back) } }
+            composable("rectify") {
+                withProfile {
+                    RectifyScreen(
+                        it, settings,
+                        onSaved = { p -> profile = p; nav.popBackStack() },
+                        onBack = back,
+                    )
+                }
             }
             composable("birth") {
                 BirthScreen(
                     existing = profile,
                     onCast = { p ->
                         profile = p
-                        nav.navigate("chart") {
+                        nav.navigate("today") {
                             launchSingleTop = true
                             popUpTo("birth") { inclusive = true }
                         }
@@ -188,14 +279,15 @@ private fun App() {
                     profile = profile,
                     settings = settings,
                     onSettingsChanged = { settings = it },
-                    onEditBirth = { nav.navigate("birth") { launchSingleTop = true } },
-                    onRectify = { nav.navigate("rectify") { launchSingleTop = true } },
-                    onTrust = { nav.navigate("trust") { launchSingleTop = true } },
-                    onBack = { nav.popBackStack() },
+                    onEditBirth = { open("birth") },
+                    onRectify = { open("rectify") },
+                    onTrust = { open("trust") },
+                    onNarrate = { open("narrate") },
+                    onBack = back,
                 )
             }
             composable("trust") {
-                TrustScreen(profile = profile, settings = settings, onBack = { nav.popBackStack() })
+                TrustScreen(profile = profile, settings = settings, onBack = back)
             }
         }
     }
