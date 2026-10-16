@@ -91,6 +91,16 @@ fn to_ecliptic_of_date(dir: [f64; 3], t_centuries: f64) -> (f64, f64) {
     (lon, lat)
 }
 
+/// Apparent geocentric ecliptic longitude of date (degrees) for `body` at `t`, without
+/// the daily motion: one third of the cost of [`apparent`], for scans that only need the
+/// longitude (Moon windows, muhurta steps).
+pub fn apparent_longitude(spk: &Spk, body: Body, t: Instant) -> Result<f64, SpkError> {
+    let et = Spk::et_of(t);
+    let tc = t.tt_centuries_since_j2000();
+    let (dir, _) = astrometric_direction(spk, body, Body::Earth, et)?;
+    Ok(to_ecliptic_of_date(dir, tc).0)
+}
+
 /// Apparent geocentric ecliptic position of date for `body` at `t`.
 pub fn apparent(spk: &Spk, body: Body, t: Instant) -> Result<Apparent, SpkError> {
     let et = Spk::et_of(t);

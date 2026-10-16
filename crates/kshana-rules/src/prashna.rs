@@ -15,7 +15,7 @@ use crate::facts::Facts;
 use crate::kp::{promise, significators, Promise, Significance};
 use crate::Hit;
 use kshana_ephem::{Body, Spk};
-use kshana_sky::apparent;
+use kshana_sky::apparent_longitude;
 use kshana_time::{Instant, Utc, NS_PER_SEC};
 use kshana_vedic::{ayanamsa_degrees, kp_lords, sidereal, sign_lord, Ayanamsa, DashaLord};
 
@@ -254,9 +254,9 @@ pub fn prashna_windows(
         return Vec::new();
     }
     let lords_at = |t: Instant| -> Option<(DashaLord, DashaLord)> {
-        let a = apparent(spk, Body::Moon, t).ok()?;
+        let lon = apparent_longitude(spk, Body::Moon, t).ok()?;
         let ay = ayanamsa_degrees(ayanamsa, t.tt_centuries_since_j2000());
-        let k = kp_lords(sidereal(a.longitude, ay));
+        let k = kp_lords(sidereal(lon, ay));
         Some((k.star, k.sub))
     };
     let on = |l: Option<(DashaLord, DashaLord)>| {

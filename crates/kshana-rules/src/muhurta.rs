@@ -14,7 +14,7 @@ use kshana_frames::{
     earth_rotation_angle, gast, local_sidereal_time, mean_obliquity_iau2006, nutation_iau2006a,
 };
 use kshana_houses::angles;
-use kshana_sky::{apparent, Observer};
+use kshana_sky::{apparent_longitude, Observer};
 use kshana_time::{EopTable, Instant, Utc, NS_PER_SEC};
 use kshana_vedic::panchanga::{NAKSHATRA_NAMES, TITHI_NAMES, YOGA_NAMES};
 use kshana_vedic::{
@@ -210,8 +210,8 @@ fn score_step(
 ) -> Result<Step, SpkError> {
     let tc = t.tt_centuries_since_j2000();
     let ay = ayanamsa_degrees(ayanamsa, tc);
-    let sun = sidereal(apparent(spk, Body::Sun, t)?.longitude, ay);
-    let moon = sidereal(apparent(spk, Body::Moon, t)?.longitude, ay);
+    let sun = sidereal(apparent_longitude(spk, Body::Sun, t)?, ay);
+    let moon = sidereal(apparent_longitude(spk, Body::Moon, t)?, ay);
     let n = nakshatra(moon);
     let ti = tithi(moon, sun);
     let y = yoga(moon, sun);
@@ -388,7 +388,7 @@ fn score_step(
         _ => None,
     };
     if let Some(b) = lord_body {
-        let l = sidereal(apparent(spk, b, t)?.longitude, ay);
+        let l = sidereal(apparent_longitude(spk, b, t)?, ay);
         let house = ((l / 30.0).floor() as i64 - lagna_sign as i64).rem_euclid(12) + 1;
         if matches!(house, 6 | 8 | 12) {
             cautions.push(format!(
