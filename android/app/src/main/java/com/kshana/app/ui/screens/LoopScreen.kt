@@ -52,7 +52,12 @@ import com.kshana.app.data.EngineSettings
 import com.kshana.app.data.Place
 import com.kshana.app.engine.Instants
 import com.kshana.app.ui.theme.KshanaColors
+import androidx.compose.material3.HorizontalDivider
+import com.kshana.app.engine.EngineProvider
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import uniffi.kshana_ffi.BriefingRecord
 import uniffi.kshana_ffi.HourRecord
 import uniffi.kshana_ffi.LifeScoreRecord
 import uniffi.kshana_ffi.MomentRecord
@@ -176,6 +181,11 @@ fun LoopScreen(
                 }
             }
             item {
+                Column(Modifier.padding(horizontal = 24.dp)) {
+                    BriefingCard(profile, place, settings, travelSeconds, onLife, onRemedy)
+                }
+            }
+            item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionLabel("The hours of today", Modifier.padding(horizontal = 24.dp))
                     HoursStrip(m.hours, shownTick, m.lives)
@@ -217,6 +227,113 @@ fun LoopScreen(
                     QuietButton("THE BOOK OF YOUR LIFE · PAST, PRESENT, FUTURE", onClick = onBook, modifier = Modifier.fillMaxWidth())
                     Text("Everything is computed on this phone from your birth time. Nothing leaves it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
                 }
+            }
+        }
+    }
+}
+
+/** One briefing per profile, place and hour is kept for the process so the Loop stays instant. */
+internal object BriefingCache {
+    var key: String? = null
+    var record: BriefingRecord? = null
+}
+
+/**
+ * The reading, as an astrologer would give it: the birth Moon (so it can be checked),
+ * the running periods with their ends, Saturn's phase and its exit date, the moment in
+ * words, the days to circle this month and the remedy in brief. Loads once per hour.
+ */
+@Composable
+private fun BriefingCard(
+    profile: BirthProfile,
+    place: Place,
+    settings: EngineSettings,
+    travelSeconds: Long,
+    onLife: (String) -> Unit,
+    onRemedy: () -> Unit,
+) {
+    val context = LocalContext.current
+    val hourKey = (System.currentTimeMillis() + travelSeconds * 1000L) / 3_600_000L
+    val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${settings.houseSystem}|$hourKey"
+    var b by remember { mutableStateOf(if (BriefingCache.key == key) BriefingCache.record else null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var open by remember { mutableStateOf(false) }
+    LaunchedEffect(key) {
+        if (BriefingCache.key == key && BriefingCache.record != null) { b = BriefingCache.record; return@LaunchedEffect }
+        try {
+            val engine = EngineProvider.get(context)
+            val at = Instants.fromInstant(Instant.now().plusSeconds(travelSeconds))
+            val r = withContext(Dispatchers.Default) {
+                engine.briefing(
+                    profile.birthInstant(), profile.latitude, profile.longitude,
+                    place.latitude, place.longitude,
+                    settings.houseSystem, settings.ayanamsa, listOf("Love", "Career", "Money", "Health"), at,
+                )
+            }
+            BriefingCache.key = key
+            BriefingCache.record = r
+            b = r
+            error = null
+        } catch (e: Exception) {
+            error = e.message ?: e.toString()
+        }
+    }
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(KshanaColors.Surface).padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text("YOUR READING · AS AN ASTROLOGER WOULD SAY IT", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        ErrorLine(error)
+        val r = b
+        if (r == null) {
+            if (error == null) Text("reading your chart aloud…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            return@Column
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(Modifier.weight(1f)) {
+                Text("BIRTH MOON", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
+                Text(r.moon, fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text)
+            }
+            Column(Modifier.weight(1.4f)) {
+                Text("RUNNING", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
+                Text(r.dasha.replace(" (to ", "\nto ").replace(")", ""), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
+            }
+        }
+        Text(r.saturnWords + ".", style = MaterialTheme.typography.bodyMedium, color = if (r.saturnActive) KshanaColors.Ember else KshanaColors.TextSoft)
+        val shown = if (open) r.paragraphs else r.paragraphs.drop(2).take(1)
+        for (p in shown) Text(p, fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 25.sp, color = KshanaColors.Text)
+        Text(
+            if (open) "LESS −" else "THE WHOLE READING +",
+            style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
+            modifier = Modifier.clickable { open = !open }.padding(vertical = 2.dp),
+        )
+        if (open) {
+            HorizontalDivider(color = KshanaColors.LineSoft)
+            Text("DAYS TO CIRCLE · THE NEXT THIRTY", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            for (c in r.circled) {
+                Row(Modifier.fillMaxWidth().clickable { onLife(c.life) }.padding(vertical = 3.dp), verticalAlignment = Alignment.Top) {
+                    Text(lifeGlyph(c.life), fontSize = 14.sp, color = scoreColor(c.score), modifier = Modifier.width(22.dp).padding(top = 2.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("${c.life} · ${localText(c.at, WEEKDAY_DAY)}", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
+                        Text(c.words.substringAfter(". ", c.words), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+                    }
+                    Text(c.score.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 16.sp, color = scoreColor(c.score))
+                }
+            }
+            r.remedy?.let { rem ->
+                HorizontalDivider(color = KshanaColors.LineSoft)
+                Text("THE REMEDY IN BRIEF · ${rem.planet.uppercase()}", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+                Text(rem.cause, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+                for (t in rem.top) {
+                    Row(Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.Top) {
+                        Text(t.kind.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.width(78.dp).padding(top = 3.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(t.title, style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
+                            Text(t.why, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+                        }
+                    }
+                }
+                QuietButton("ALL ${rem.total} REMEDIES", onClick = onRemedy, modifier = Modifier.fillMaxWidth())
             }
         }
     }

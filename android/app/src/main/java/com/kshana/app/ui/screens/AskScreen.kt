@@ -110,15 +110,7 @@ fun AskScreen(
             for (row in qs.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     for (q in row) {
-                        val selected = question == q.key
-                        Box(
-                            Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
-                                .background(if (selected) KshanaColors.Gold else KshanaColors.Surface)
-                                .clickable { question = q.key; answer = null }
-                                .padding(horizontal = 12.dp, vertical = 12.dp),
-                        ) {
-                            Text(q.words, style = MaterialTheme.typography.bodyMedium, color = if (selected) KshanaColors.Night else KshanaColors.Text)
-                        }
+                        OptionBox(q.words, selected = question == q.key, onClick = { question = q.key; answer = null }, modifier = Modifier.weight(1f))
                     }
                     if (row.size == 1) Spacer(Modifier.weight(1f))
                 }

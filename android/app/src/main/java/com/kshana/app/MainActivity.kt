@@ -89,12 +89,18 @@ private fun App() {
     // Where the person is now: a saved current place, else the birth place, else Kochi.
     var here by remember { mutableStateOf(ProfileStore.currentLocation(context)) }
 
+    /**
+     * Tabs sit on top of the Loop: every tab tap clears whatever was pushed above the Loop
+     * and shows the tab. No saved state is restored, so a tab never comes back showing a
+     * screen that was pushed over it earlier (the Loop button → Ask → Loop tab bug).
+     */
     fun goTab(route: String) {
         if (current == route) return
+        val hasLoop = runCatching { nav.getBackStackEntry("loop") }.isSuccess
         nav.navigate(route) {
             launchSingleTop = true
-            restoreState = true
-            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+            if (hasLoop) popUpTo("loop") { inclusive = route == "loop" }
+            else popUpTo(nav.graph.findStartDestination().id) { inclusive = true }
         }
     }
     fun open(route: String) = nav.navigate(route) { launchSingleTop = true }

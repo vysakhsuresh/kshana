@@ -2558,6 +2558,65 @@ pub struct KundaliRecord {
     pub moon_distance: u8,
     pub strengths: Vec<String>,
     pub frictions: Vec<String>,
+    pub remedies: Vec<DoshaRemedyRecord>,
+}
+
+/// A remedy for a dosha of the match.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct DoshaRemedyRecord {
+    pub dosha: String,
+    pub title: String,
+    pub why: String,
+    pub source: String,
+    pub optional: bool,
+}
+
+/// A day worth circling for one life.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct CircledRecord {
+    pub life: String,
+    pub at: ExactInstant,
+    /// 0–100.
+    pub score: f64,
+    pub words: String,
+}
+
+/// One line of a remedy in brief.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct RemedyLineRecord {
+    pub kind: String,
+    pub title: String,
+    pub why: String,
+}
+
+/// The remedy in brief: the graha, the cause, the first three things to do.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct RemedyBriefRecord {
+    pub planet: String,
+    pub cause: String,
+    pub top: Vec<RemedyLineRecord>,
+    pub total: u32,
+}
+
+/// The briefing for one person at one instant.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct BriefingRecord {
+    pub at: ExactInstant,
+    pub moon: String,
+    pub moon_sign: u8,
+    pub dasha: String,
+    pub saturn_words: String,
+    pub saturn_active: bool,
+    pub saturn_until: Option<ExactInstant>,
+    pub paragraphs: Vec<String>,
+    pub circled: Vec<CircledRecord>,
+    pub remedy: Option<RemedyBriefRecord>,
+    pub moment: MomentRecord,
 }
 
 /// One monthly sample of the pair: 0–100 each.
@@ -2599,6 +2658,9 @@ pub struct CoupleRecord {
     pub b_relief: Vec<ReliefRecord>,
     pub a_cause: String,
     pub b_cause: String,
+    pub a_briefing: BriefingRecord,
+    pub b_briefing: BriefingRecord,
+    pub together_words: Vec<String>,
 }
 
 /// A question about the pair, answered from both charts.
@@ -2682,6 +2744,17 @@ impl Engine {
             moon_distance: k.moon_distance,
             strengths: k.strengths.clone(),
             frictions: k.frictions.clone(),
+            remedies: k
+                .remedies
+                .iter()
+                .map(|r| DoshaRemedyRecord {
+                    dosha: r.dosha.to_string(),
+                    title: r.title.to_string(),
+                    why: r.why.to_string(),
+                    source: r.source.to_string(),
+                    optional: r.optional,
+                })
+                .collect(),
         })
     }
 
@@ -2755,6 +2828,9 @@ impl Engine {
             b_relief: c.b_relief.iter().map(relief_record).collect(),
             a_cause: c.a_cause.clone(),
             b_cause: c.b_cause.clone(),
+            a_briefing: briefing_record(&c.a_briefing),
+            b_briefing: briefing_record(&c.b_briefing),
+            together_words: c.together_words.clone(),
         })
     }
 
@@ -3055,5 +3131,167 @@ mod layer_tests {
             .unwrap();
         assert_eq!(t.chapters.len(), 9);
         assert!(t.saturn.len() >= 5 && !t.returns.is_empty());
+    }
+}
+
+// ---------------------------------------------------------------------------------
+// The briefing: what an astrologer would say across the table.
+// ---------------------------------------------------------------------------------
+
+fn moment_record(m: &kshana_rules::Moment) -> MomentRecord {
+    MomentRecord {
+        hours: m
+            .hours
+            .iter()
+            .map(|h| HourRecord {
+                lord: lord_name(h.lord),
+                start: h.start.into(),
+                end: h.end.into(),
+                fit: h.fit.iter().map(|v| v * 100.0).collect(),
+                caution: h.caution,
+            })
+            .collect(),
+        at: m.at.into(),
+        overall: m.overall * 100.0,
+        band: m.band.word().to_string(),
+        headline: m.headline.clone(),
+        lives: m
+            .lives
+            .iter()
+            .map(|l| LifeScoreRecord {
+                life: l.life.name().to_string(),
+                score: l.score * 100.0,
+                band: l.band.word().to_string(),
+                headline: l.headline.clone(),
+                because: l.because.clone(),
+                components: l
+                    .components
+                    .iter()
+                    .map(|c| ComponentRecord {
+                        key: c.key.to_string(),
+                        score: c.score,
+                        weight: c.weight,
+                        note: c.note.clone(),
+                        rule_id: c.rule_id.to_string(),
+                    })
+                    .collect(),
+            })
+            .collect(),
+        hora: m.hora.as_ref().map(|h| HoraRecord {
+            lord: lord_name(h.lord),
+            start: h.start.into(),
+            end: h.end.into(),
+            words: h.words.to_string(),
+        }),
+        moon_star: m.moon_star.clone(),
+        tara: m.tara as u8,
+        tara_name: kshana_rules::TARA_NAMES[m.tara].to_string(),
+        tara_words: m.tara_words.to_string(),
+        moon_from_moon: m.moon_from_moon,
+        saturn_words: m.saturn.words().to_string(),
+        saturn_active: m.saturn != kshana_rules::SaturnPhase::Clear,
+        dasha: m
+            .dasha
+            .iter()
+            .enumerate()
+            .map(|(i, p)| DashaRecord {
+                level: (i + 1) as u8,
+                lord: lord_name(p.lord),
+                start: p.start.into(),
+                end: p.end.into(),
+            })
+            .collect(),
+        windows: m
+            .windows
+            .iter()
+            .map(|w| WindowRecord {
+                label: w.label.clone(),
+                start: w.start.into(),
+                end: w.end.into(),
+                caution: w.caution,
+            })
+            .collect(),
+        shifts: m.shifts.iter().map(shift_record).collect(),
+        sunrise: m.sunrise.map(Into::into),
+        sunset: m.sunset.map(Into::into),
+    }
+}
+
+fn briefing_record(b: &kshana_rules::Briefing) -> BriefingRecord {
+    BriefingRecord {
+        at: b.at.into(),
+        moon: b.moon.clone(),
+        moon_sign: b.moon_sign,
+        dasha: b.dasha.clone(),
+        saturn_words: b.saturn_words.clone(),
+        saturn_active: b.saturn != kshana_rules::SaturnPhase::Clear,
+        saturn_until: b.saturn_until.map(Into::into),
+        paragraphs: b.paragraphs.clone(),
+        circled: b
+            .circled
+            .iter()
+            .map(|c| CircledRecord {
+                life: c.life.name().to_string(),
+                at: c.at.into(),
+                score: c.score * 100.0,
+                words: c.words.clone(),
+            })
+            .collect(),
+        remedy: b.remedy.as_ref().map(|r| RemedyBriefRecord {
+            planet: lord_name(r.planet),
+            cause: r.cause.clone(),
+            top: r
+                .top
+                .iter()
+                .map(|(k, t, w)| RemedyLineRecord {
+                    kind: k.clone(),
+                    title: t.clone(),
+                    why: w.clone(),
+                })
+                .collect(),
+            total: r.total as u32,
+        }),
+        moment: moment_record(&b.moment),
+    }
+}
+
+#[uniffi::export]
+impl Engine {
+    /// The briefing at `at` for a person born at `birth` now standing at `lat`/`lon`:
+    /// the birth Moon, the running periods with their ends, Saturn's phase and its exit,
+    /// the moment in words, the days to circle for `lives` (names from `life_names()`),
+    /// and the remedy in brief for the weakest of them.
+    #[allow(clippy::too_many_arguments)]
+    pub fn briefing(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        lives: Vec<String>,
+        at: ExactInstant,
+    ) -> Result<BriefingRecord, KshanaError> {
+        let lives: Vec<kshana_rules::Life> = lives.iter().filter_map(|l| kshana_rules::Life::parse(l)).collect();
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let obs = Observer {
+            latitude_deg: lat,
+            longitude_deg: lon,
+            height_m: 0.0,
+        };
+        let b = kshana_rules::briefing(
+            &self.spk,
+            self.eop.as_ref(),
+            &natal,
+            &obs,
+            to_house_system(system),
+            ayanamsa.into(),
+            &lives,
+            at.into(),
+        )
+        .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(briefing_record(&b))
     }
 }

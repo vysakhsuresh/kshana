@@ -7,9 +7,11 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.kshana.app.R
 
 /** The design canvas palette: night ground, one gold accent, a sky blue for data. */
 object KshanaColors {
@@ -36,14 +38,25 @@ private val scheme = darkColorScheme(
     outline = KshanaColors.Line,
 )
 
-/** Display serif, UI sans, mono for every number. System families until the bundled
- *  fonts (Cormorant Garamond, Manrope, IBM Plex Mono) are added under res/font. */
+/** The UI sans: Space Grotesk, bundled under res/font (the same family LayerLink uses). */
+val Grotesk = FontFamily(
+    Font(R.font.space_grotesk_regular, FontWeight.Normal),
+    Font(R.font.space_grotesk_medium, FontWeight.Medium),
+    Font(R.font.space_grotesk_semibold, FontWeight.SemiBold),
+    Font(R.font.space_grotesk_bold, FontWeight.Bold),
+)
+
+/** Display serif for the sentences, Space Grotesk for every label, chip and option,
+ *  mono for every number. */
 val KshanaType = Typography(
     displayLarge = TextStyle(fontFamily = FontFamily.Serif, fontWeight = FontWeight.Medium, fontSize = 40.sp, lineHeight = 42.sp),
     displayMedium = TextStyle(fontFamily = FontFamily.Serif, fontWeight = FontWeight.Medium, fontSize = 30.sp, lineHeight = 32.sp),
     titleLarge = TextStyle(fontFamily = FontFamily.Serif, fontWeight = FontWeight.Medium, fontSize = 20.sp),
-    bodyMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 13.sp, lineHeight = 20.sp),
-    labelSmall = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 10.sp, letterSpacing = 1.4.sp),
+    titleMedium = TextStyle(fontFamily = Grotesk, fontWeight = FontWeight.Medium, fontSize = 15.sp, lineHeight = 20.sp),
+    bodyMedium = TextStyle(fontFamily = Grotesk, fontSize = 13.sp, lineHeight = 20.sp),
+    bodyLarge = TextStyle(fontFamily = Grotesk, fontSize = 15.sp, lineHeight = 22.sp),
+    labelSmall = TextStyle(fontFamily = Grotesk, fontWeight = FontWeight.Medium, fontSize = 10.sp, letterSpacing = 1.4.sp),
+    labelMedium = TextStyle(fontFamily = Grotesk, fontWeight = FontWeight.Medium, fontSize = 12.sp, letterSpacing = 1.sp),
     bodySmall = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 11.sp),
     headlineLarge = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium, fontSize = 44.sp),
 )

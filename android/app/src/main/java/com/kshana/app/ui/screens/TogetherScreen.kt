@@ -267,6 +267,47 @@ fun TogetherScreen(
             c.peakAt?.let { Bullet("Best month ahead: ${localText(it, DATE_ONLY)} at ${c.peakScore.toInt()}.", KshanaColors.Gold) }
             c.lowAt?.let { Bullet("Lowest month ahead: ${localText(it, DATE_ONLY)} at ${c.lowScore.toInt()}. Hold what you have there.", KshanaColors.Ember) }
 
+            SectionLabel("The briefing · said plainly")
+            val me = profile.name.substringBefore(' ').ifBlank { "You" }
+            val them = partner.name.substringBefore(' ')
+            for (p in c.togetherWords) Text(personalise(p, me, them), fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 25.sp, color = KshanaColors.Text)
+            PersonBriefing(me, c.aBriefing, KshanaColors.Sky)
+            PersonBriefing(them, c.bBriefing, KshanaColors.Leaf)
+
+            SectionLabel("What to do about it")
+            val remedies = k?.remedies.orEmpty()
+            if (remedies.isEmpty() && c.aBriefing.remedy == null && c.bBriefing.remedy == null) {
+                Text("Nothing in the match or in either chart asks for a remedy today.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            }
+            if (remedies.isNotEmpty()) {
+                Text("For the match itself", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Gold)
+                for (r in remedies) {
+                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
+                        Text(r.dosha.uppercase(), style = MaterialTheme.typography.labelSmall, color = if (r.optional) KshanaColors.Muted else KshanaColors.Gold, modifier = Modifier.width(78.dp).padding(top = 3.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(r.title, style = MaterialTheme.typography.titleMedium, color = if (r.optional) KshanaColors.TextSoft else KshanaColors.Text)
+                            Text(r.why, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+                            Text(r.source + if (r.optional) " · optional" else "", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+                        }
+                    }
+                }
+            }
+            for ((who, rb) in listOf(me to c.aBriefing.remedy, them to c.bBriefing.remedy)) {
+                if (rb == null) continue
+                Text("For $who · ${rb.planet}", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Gold)
+                Text(rb.cause, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+                for (t in rb.top) {
+                    Row(Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.Top) {
+                        Text(t.kind.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.width(78.dp).padding(top = 3.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(t.title, style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
+                            Text(t.why, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+                        }
+                    }
+                }
+            }
+            QuietButton("THE FULL REMEDY FOR LOVE", onClick = { onRemedy("Love") }, modifier = Modifier.fillMaxWidth())
+
             SectionLabel("What weighs, what lifts")
             Text(profile.name.substringBefore(' ').ifBlank { "You" }, fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Sky)
             if (c.aCause.isNotBlank()) Text(c.aCause.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
@@ -282,13 +323,7 @@ fun TogetherScreen(
                 for (row in qs.chunked(2)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         for (q in row) {
-                            val sel = question == q.key
-                            Box(
-                                Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
-                                    .background(if (sel) KshanaColors.Gold else KshanaColors.Surface)
-                                    .clickable { question = q.key; coupleAnswer = null }
-                                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                            ) { Text(coupleWords(q.key, q.words), style = MaterialTheme.typography.bodyMedium, color = if (sel) KshanaColors.Night else KshanaColors.Text) }
+                            OptionBox(coupleWords(q.key, q.words), selected = question == q.key, onClick = { question = q.key; coupleAnswer = null }, modifier = Modifier.weight(1f))
                         }
                         if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
@@ -378,6 +413,32 @@ private fun coupleWords(key: String, fallback: String): String = when (key) {
     "will_it_return" -> "Will they come back?"
     "will_it_recover" -> "Will it be set right between us?"
     else -> fallback
+}
+
+/** One person's briefing under Us: the Moon, the periods, Saturn, and the paragraphs. */
+@Composable
+private fun PersonBriefing(name: String, b: uniffi.kshana_ffi.BriefingRecord, c: Color) {
+    var open by remember { mutableStateOf(false) }
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(KshanaColors.Surface).padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(8.dp).clip(CircleShape).background(c))
+            Spacer(Modifier.width(8.dp))
+            Text(name, fontFamily = FontFamily.Serif, fontSize = 18.sp, color = c)
+        }
+        Text("Birth Moon ${b.moon}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
+        Text(b.dasha, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
+        Text(b.saturnWords + ".", style = MaterialTheme.typography.bodyMedium, color = if (b.saturnActive) KshanaColors.Ember else KshanaColors.TextSoft)
+        val shown = if (open) b.paragraphs else b.paragraphs.drop(3)
+        for (p in shown) Text(p.replace("Your birth Moon", "$name's birth Moon").replace("You are in", "$name is in").replace("your ", "their ").replace("You ", "$name "), fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 24.sp, color = KshanaColors.Text)
+        Text(
+            if (open) "LESS −" else "THE WHOLE READING FOR ${name.uppercase()} +",
+            style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
+            modifier = Modifier.clickable { open = !open }.padding(vertical = 2.dp),
+        )
+    }
 }
 
 @Composable

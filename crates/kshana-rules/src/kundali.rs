@@ -7,6 +7,7 @@
 //! explained and dated like everything else.
 
 use crate::ask::{answer, Answer, Question};
+use crate::briefing::{briefing, Briefing};
 use crate::explain::{explain, Relief};
 use crate::forecast::{date_words, moment, slow_series, Band, ForecastError, Life, Natal, SIGN_NAMES};
 use crate::gochara::{favourable_from_moon, SaturnPhase};
@@ -60,6 +61,60 @@ pub struct Kundali {
     pub strengths: Vec<String>,
     /// What rubs, in words.
     pub frictions: Vec<String>,
+    /// The classical remedies for the doshas the match carries.
+    pub remedies: Vec<DoshaRemedy>,
+}
+
+/// A remedy for a dosha of the match, from the Vivaha tradition.
+#[derive(Clone, Debug, PartialEq)]
+pub struct DoshaRemedy {
+    /// `Nadi`, `Bhakoot`, `Gana`, `Kuja`, `Graha Maitri`, `Yoni`.
+    pub dosha: &'static str,
+    /// What to do.
+    pub title: &'static str,
+    /// Why, in a sentence.
+    pub why: &'static str,
+    /// Where it comes from.
+    pub source: &'static str,
+    /// True for ritual items: supportive, never required.
+    pub optional: bool,
+}
+
+const VIVAHA: &str = "Vivaha prakarana of Muhurta Chintamani and the Kerala and Tamil matching tradition";
+const DHARMA_SINDHU: &str = "Dharma Sindhu, Nirnaya Sindhu (dosha parihara)";
+const LAL_KITAB: &str = "Lal Kitab";
+
+fn dosha_remedies(nadi: bool, bhakoot: bool, gana: bool, kuja_unbalanced: bool, maitri_low: bool, yoni_low: bool) -> Vec<DoshaRemedy> {
+    let mut v = Vec::new();
+    if nadi {
+        v.push(DoshaRemedy { dosha: "Nadi", title: "Mahamrityunjaya japa together, 108 a day for 40 days", why: "The Nadi dosha touches health and the line of children; the Mrityunjaya mantra is the classical shield for both.", source: DHARMA_SINDHU, optional: true });
+        v.push(DoshaRemedy { dosha: "Nadi", title: "Nadi dosha nivarana: feed and clothe the poor on a Monday, and give grain in the Moon's name", why: "The pulse (nadi) is the Moon's; its dosha is paid down in the Moon's currency, food and care.", source: VIVAHA, optional: false });
+        v.push(DoshaRemedy { dosha: "Nadi", title: "Keep the body's rhythm: shared meals, shared sleep hours, no all-nighters", why: "Same-nadi pairs tire the same way at the same time; a kept routine is the daily remedy.", source: "Dharma reading of the dosha", optional: false });
+    }
+    if bhakoot {
+        v.push(DoshaRemedy { dosha: "Bhakoot", title: "Lakshmi-Narayana or Gauri-Shankara pooja on a Friday or Monday", why: "The Bhakoot dosha is a quarrel of the two Moons; the divine couple is worshipped to reconcile them.", source: DHARMA_SINDHU, optional: true });
+        v.push(DoshaRemedy { dosha: "Bhakoot", title: "Strengthen the weaker Moon: water, rice and white cloth given on Mondays; a Monday fast kept lightly", why: "A sound Moon rides out a hard Moon-to-Moon angle; the texts treat the dosha as half-cancelled when the Moon is strong.", source: VIVAHA, optional: false });
+        v.push(DoshaRemedy { dosha: "Bhakoot", title: "Decide money matters only after sleeping on them, and never during a quarrel", why: "The 2/12, 5/9 and 6/8 angles work through money, children and sudden turns; a one-night rule takes the heat out.", source: "Dharma reading of the dosha", optional: false });
+    }
+    if gana {
+        v.push(DoshaRemedy { dosha: "Gana", title: "Gauri pooja, and Durga Saptashati read once a month (or heard)", why: "A gentle and a fierce temper under one roof: Gauri and Durga are the two tempers made one.", source: DHARMA_SINDHU, optional: true });
+        v.push(DoshaRemedy { dosha: "Gana", title: "A rule of words: no verdicts after nine at night, and the sharp word apologised for before sleep", why: "The Gana dosha shows as sharp words at the wrong hour; the remedy is a rule about hours and words.", source: "Dharma reading of the dosha", optional: false });
+    }
+    if kuja_unbalanced {
+        v.push(DoshaRemedy { dosha: "Kuja", title: "Mangala shanti: Hanuman Chalisa or the Mangala stotra on Tuesdays, and red lentils given", why: "Mars in the houses of the home and the partner heats them; the shanti cools the graha that carries the dosha.", source: DHARMA_SINDHU, optional: true });
+        v.push(DoshaRemedy { dosha: "Kuja", title: "Mangala Gauri vrata on the Tuesdays of Shravana, or any four Tuesdays", why: "The vrata the tradition prescribes for the Mars-touched partner, kept for the marriage.", source: VIVAHA, optional: false });
+        v.push(DoshaRemedy { dosha: "Kuja", title: "Spend Mars: hard exercise, repairs, a kitchen garden, anything that burns heat with the hands", why: "The dosha is unspent Mars; spent on effort it does not spend itself on the partner.", source: LAL_KITAB, optional: false });
+        v.push(DoshaRemedy { dosha: "Kuja", title: "The tradition also names a Kumbha vivaha (a symbolic first wedding) before the marriage; many families keep it, many do not", why: "Stated for completeness; it is a rite of the family's choosing, not a requirement of the chart.", source: VIVAHA, optional: true });
+    }
+    if maitri_low {
+        v.push(DoshaRemedy { dosha: "Graha Maitri", title: "Each of you keeps the other's Moon lord's day: a small act in its colour and grain", why: "Enemy Moon lords are made friends by serving each other's lord; the day, the colour and the grain are the lord's.", source: LAL_KITAB, optional: false });
+        v.push(DoshaRemedy { dosha: "Graha Maitri", title: "Say the hard thing in writing first, then talk", why: "When the minds pull apart, the written word gives each mind its own hour to understand.", source: "Dharma reading of the dosha", optional: false });
+    }
+    if yoni_low {
+        v.push(DoshaRemedy { dosha: "Yoni", title: "Rati-Kama or Uma-Maheshwara worship on a Friday", why: "The Yoni koota is the body's ease; the tradition turns to the divine pair for it.", source: VIVAHA, optional: true });
+        v.push(DoshaRemedy { dosha: "Yoni", title: "Unhurried time without a screen, at the same hour, twice a week", why: "Enemy yonis need time to learn each other; the remedy is kept time, not a rite.", source: "Dharma reading of the dosha", optional: false });
+    }
+    v
 }
 
 const MC: &str = "Muhurta Chintamani, Vivaha prakarana; Kerala and Tamil matching tables";
@@ -467,6 +522,16 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
         }
     );
 
+    let points_of = |name: &str| kootas.iter().find(|k| k.name == name).map(|k| k.points).unwrap_or(0.0);
+    let remedies = dosha_remedies(
+        points_of("Nadi") == 0.0,
+        points_of("Bhakoot") == 0.0,
+        points_of("Gana") <= 1.0,
+        ka != kb,
+        points_of("Graha Maitri") <= 1.0,
+        points_of("Yoni") <= 1.0,
+    );
+
     Kundali {
         total,
         kootas,
@@ -480,6 +545,7 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
         moon_distance: d,
         strengths,
         frictions,
+        remedies,
     }
 }
 
@@ -520,6 +586,12 @@ pub struct Couple {
     pub a_cause: String,
     /// The second's.
     pub b_cause: String,
+    /// The first person's briefing: Moon, periods, Saturn, the moment, the first lift.
+    pub a_briefing: Briefing,
+    /// The second's.
+    pub b_briefing: Briefing,
+    /// The pair's own paragraphs: what the two seasons mean together.
+    pub together_words: Vec<String>,
 }
 
 fn together_of(a: f64, b: f64, match_total: f64) -> f64 {
@@ -652,6 +724,66 @@ pub fn couple(
         }
     }
 
+    // Each person's briefing for love, and the pair's own paragraphs.
+    let a_briefing = briefing(spk, eop, a, obs, system, ayanamsa, &[Life::Love], at)?;
+    let b_briefing = briefing(spk, eop, b, obs, system, ayanamsa, &[Life::Love], at)?;
+    let mut together_words = Vec::new();
+    together_words.push(format!(
+        "Two seasons run at once. The first chart is in {}; the second in {}. {} {}",
+        a_briefing.dasha,
+        b_briefing.dasha,
+        match (ma.saturn, mb.saturn) {
+            (SaturnPhase::Clear, SaturnPhase::Clear) => "Saturn tests neither Moon now.".to_string(),
+            (x, SaturnPhase::Clear) => format!("Saturn tests the first chart's Moon ({}); the second is free of it, and can carry.", x.words().split(':').next().unwrap_or("")),
+            (SaturnPhase::Clear, y) => format!("Saturn tests the second chart's Moon ({}); the first is free of it, and can carry.", y.words().split(':').next().unwrap_or("")),
+            (x, y) => format!("Saturn tests both Moons ({}; {}): a shared trial, which binds those who stay.", x.words().split(':').next().unwrap_or(""), y.words().split(':').next().unwrap_or("")),
+        },
+        match (a_briefing.saturn_until, b_briefing.saturn_until) {
+            (Some(ta), _) if ma.saturn != SaturnPhase::Clear => format!("The first chart's Saturn phase ends {}.", date_words(ta, lon)),
+            (_, Some(tb)) if mb.saturn != SaturnPhase::Clear => format!("The second chart's Saturn phase ends {}.", date_words(tb, lon)),
+            _ => String::new(),
+        }
+    ));
+    let d = ((b.moon_sign() - a.moon_sign()).rem_euclid(12) + 1) as u8;
+    together_words.push(format!(
+        "Your Moons stand {} apart ({}). Love reads {:.0} in the first chart and {:.0} in the second this second; the pair, with the match of {:.1} of 36 folded in, reads {:.0}. {}",
+        crate::forecast::ordinal(d),
+        match d {
+            1 => "the same sign: the same weather on the same day",
+            7 => "facing each other: the classical angle of partners",
+            3 | 11 => "a friendly angle: ease and gain flow between you",
+            2 | 12 => "the 2/12 angle: money and words need care",
+            5 | 9 => "the 5/9 angle: children and faith need care",
+            6 | 8 => "the 6/8 angle: health and sudden turns need care",
+            _ => "a square angle: effort, not ease, but it builds",
+        },
+        a_love * 100.0,
+        b_love * 100.0,
+        match_total,
+        together * 100.0,
+        if a_love < b_love {
+            format!("The wait is on the first chart's side: {}.", a_cause)
+        } else if b_love < a_love {
+            format!("The wait is on the second chart's side: {}.", b_cause)
+        } else {
+            "The two charts carry the same weight today.".to_string()
+        }
+    ));
+    let first_lift = a_relief.iter().map(|r| (r, "first")).chain(b_relief.iter().map(|r| (r, "second"))).min_by_key(|(r, _)| r.at.tai_ns());
+    if let Some((r, who)) = first_lift {
+        together_words.push(format!(
+            "The first lasting lift for the pair comes on {}, in the {who} chart: {} ({:+.0} points). {}",
+            date_words(r.at, lon),
+            r.what,
+            r.gain * 100.0,
+            match (eases, peak) {
+                (Some((t, s)), _) => format!("The pair climbs to {} from {}.", Band::of(s).word(), date_words(t, lon)),
+                (None, Some((t, _))) => format!("The best month in the next two years is around {}.", date_words(t, lon)),
+                _ => String::new(),
+            }
+        ));
+    }
+
     Ok(Couple {
         at,
         a_love,
@@ -670,6 +802,9 @@ pub fn couple(
         b_relief,
         a_cause,
         b_cause,
+        a_briefing,
+        b_briefing,
+        together_words,
     })
 }
 

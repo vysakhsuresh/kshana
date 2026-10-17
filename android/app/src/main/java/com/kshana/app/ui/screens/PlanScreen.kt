@@ -158,8 +158,8 @@ fun PlanScreen(
 
         SectionLabel("When")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip(chosen.format(WEEKDAY_DAY).uppercase(), selected = true, onClick = { pickDate = true }, modifier = Modifier.weight(1.4f))
-            Chip(chosen.format(TIME_HM), selected = true, onClick = { pickTime = true }, modifier = Modifier.weight(1f))
+            ValuePill(chosen.format(WEEKDAY_DAY), onClick = { pickDate = true }, modifier = Modifier.weight(1.4f))
+            ValuePill(chosen.format(TIME_HM), onClick = { pickTime = true }, modifier = Modifier.weight(1f))
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for ((label, action) in listOf<Pair<String, () -> Unit>>(
@@ -184,15 +184,7 @@ fun PlanScreen(
             for (row in ps.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     for (p in row) {
-                        val selected = purpose == p.key
-                        Box(
-                            Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
-                                .background(if (selected) KshanaColors.Gold else KshanaColors.Surface)
-                                .clickable { purpose = p.key; result = null }
-                                .padding(horizontal = 12.dp, vertical = 12.dp),
-                        ) {
-                            Text(p.words, style = MaterialTheme.typography.bodyMedium, color = if (selected) KshanaColors.Night else KshanaColors.Text)
-                        }
+                        OptionBox(p.words, selected = purpose == p.key, onClick = { purpose = p.key; result = null }, modifier = Modifier.weight(1f))
                     }
                     if (row.size == 1) Spacer(Modifier.weight(1f))
                 }

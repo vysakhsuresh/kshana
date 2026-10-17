@@ -14,6 +14,7 @@
 pub mod areas;
 pub mod appointment;
 pub mod ask;
+pub mod briefing;
 pub mod explain;
 pub mod facts;
 pub mod forecast;
@@ -30,6 +31,7 @@ pub mod transit;
 pub use areas::{area, Area, AREAS};
 pub use appointment::{appointment, Appointment, Purpose, Slot};
 pub use ask::{answer, Answer, Question};
+pub use briefing::{briefing, saturn_sentence, Briefing, Circled, RemedyBrief};
 pub use explain::{explain, Cause, Explanation, Relief, Turning};
 pub use kundali::{couple, couple_ask, kundali, Couple, CoupleAnswer, Koota, Kundali};
 pub use timeline::{timeline, Chapter, Passage, Return, SaturnSpan, Timeline};

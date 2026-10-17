@@ -5,9 +5,16 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import com.kshana.app.ui.theme.Grotesk
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -95,7 +102,7 @@ internal fun ErrorLine(error: String?) {
     }
 }
 
-/** A 44 dp pill chip in the night palette. */
+/** A 44 dp pill chip in the night palette: the one filled selection on a screen (a topic). */
 @Composable
 internal fun Chip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(22.dp)
@@ -111,10 +118,68 @@ internal fun Chip(label: String, selected: Boolean, onClick: () -> Unit, modifie
     ) {
         Text(
             label,
-            fontFamily = FontFamily.SansSerif,
+            fontFamily = Grotesk,
+            fontWeight = FontWeight.Medium,
             fontSize = 12.sp,
             letterSpacing = 1.sp,
             color = if (selected) KshanaColors.Night else KshanaColors.TextSoft,
+        )
+    }
+}
+
+/**
+ * A quiet pill for a value the person can change (a date, a time): outlined, never
+ * filled, so the gold fill stays for the topic chip and the one call to action.
+ */
+@Composable
+internal fun ValuePill(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(22.dp)
+    Box(
+        modifier = modifier
+            .height(44.dp)
+            .clip(shape)
+            .background(KshanaColors.Surface)
+            .border(1.dp, KshanaColors.Gold.copy(alpha = 0.7f), shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = KshanaColors.Gold)
+    }
+}
+
+/**
+ * One option among several (a question, a purpose): a surface box with a small ring on
+ * the left. Selected: gold ring filled, gold border, text in the UI sans. Never filled,
+ * so a screen keeps one gold block, the button.
+ */
+@Composable
+internal fun OptionBox(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(12.dp)
+    Row(
+        modifier = modifier
+            .clip(shape)
+            .background(KshanaColors.Surface)
+            .border(1.dp, if (selected) KshanaColors.Gold else KshanaColors.LineSoft, shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(10.dp)
+                .clip(CircleShape)
+                .border(1.5.dp, if (selected) KshanaColors.Gold else KshanaColors.Muted, CircleShape)
+                .background(if (selected) KshanaColors.Gold else Color.Transparent),
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            label,
+            fontFamily = Grotesk,
+            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+            fontSize = 14.sp,
+            lineHeight = 18.sp,
+            color = if (selected) KshanaColors.Gold else KshanaColors.Text,
         )
     }
 }
