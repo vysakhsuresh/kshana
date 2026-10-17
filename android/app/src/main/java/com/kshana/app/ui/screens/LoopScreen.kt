@@ -102,6 +102,7 @@ fun LoopScreen(
     val context = LocalContext.current
     var moment by remember { mutableStateOf<MomentRecord?>(null) }
     var sky by remember { mutableStateOf<uniffi.kshana_ffi.ChartRecord?>(null) }
+    var brief by remember { mutableStateOf(BriefingCache.record) }
     var error by remember { mutableStateOf<String?>(null) }
     var tick by remember { mutableStateOf(Instant.now()) }
     // A soft tap when the hour turns while the Loop is open.
@@ -186,7 +187,7 @@ fun LoopScreen(
                     Text("  ${local.format(LONG_DATE)} · ${place.name}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted, modifier = Modifier.padding(bottom = 6.dp))
                 }
                 // The season in one quiet line: the running periods and Saturn, stated, not announced.
-                BriefingCache.record?.let { b ->
+                brief?.let { b ->
                     Text(
                         seasonLine(b),
                         style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft,
@@ -261,7 +262,7 @@ fun LoopScreen(
             }
             item {
                 Column(Modifier.padding(horizontal = 24.dp)) {
-                    BriefingCard(profile, place, settings, travelSeconds, onLife, onRemedy)
+                    BriefingCard(profile, place, settings, travelSeconds, onLife, onRemedy, onLoaded = { brief = it })
                 }
             }
             item {
@@ -477,6 +478,7 @@ private fun BriefingCard(
     travelSeconds: Long,
     onLife: (String) -> Unit,
     onRemedy: () -> Unit,
+    onLoaded: (BriefingRecord) -> Unit = {},
 ) {
     val context = LocalContext.current
     val hourKey = (System.currentTimeMillis() + travelSeconds * 1000L) / 3_600_000L
@@ -485,7 +487,7 @@ private fun BriefingCard(
     var error by remember { mutableStateOf<String?>(null) }
     var open by remember { mutableStateOf(false) }
     LaunchedEffect(key) {
-        if (BriefingCache.key == key && BriefingCache.record != null) { b = BriefingCache.record; return@LaunchedEffect }
+        if (BriefingCache.key == key && BriefingCache.record != null) { b = BriefingCache.record; BriefingCache.record?.let(onLoaded); return@LaunchedEffect }
         try {
             val engine = EngineProvider.get(context)
             val at = Instants.fromInstant(Instant.now().plusSeconds(travelSeconds))
@@ -500,6 +502,7 @@ private fun BriefingCard(
             BriefingCache.record = r
             b = r
             error = null
+            onLoaded(r)
             com.kshana.app.system.SadeSatiWidget.push(context, r)
         } catch (e: Exception) {
             error = e.message ?: e.toString()
