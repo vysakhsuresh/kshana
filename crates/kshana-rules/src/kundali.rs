@@ -594,6 +594,34 @@ pub struct Couple {
     pub together_words: Vec<String>,
 }
 
+/// The engine speaks to the person whose chart it reads; the second chart's sentences
+/// are turned to the third person so a screen can show both side by side.
+pub fn theirs(s: &str) -> String {
+    s.replace("Your birth Moon", "Their birth Moon")
+        .replace("You are in", "They are in")
+        .replace("your Moon", "their Moon")
+        .replace("your love", "their love")
+        .replace("your birth", "their birth")
+        .replace("your strongest", "their strongest")
+        .replace("your chart", "their chart")
+        .replace("You ", "They ")
+        .replace(" you ", " them ")
+        .replace("your ", "their ")
+}
+
+fn third_person_briefing(b: &mut Briefing) {
+    b.saturn_words = theirs(&b.saturn_words);
+    for p in b.paragraphs.iter_mut() {
+        *p = theirs(p);
+    }
+    for c in b.circled.iter_mut() {
+        c.words = theirs(&c.words);
+    }
+    if let Some(r) = b.remedy.as_mut() {
+        r.cause = theirs(&r.cause);
+    }
+}
+
 fn together_of(a: f64, b: f64, match_total: f64) -> f64 {
     (0.65 * (a + b) / 2.0 + 0.35 * (match_total / 36.0)).clamp(0.0, 1.0)
 }
@@ -665,7 +693,10 @@ pub fn couple(
         v
     };
     let a_relief = lifts(&ea);
-    let b_relief = lifts(&eb);
+    let mut b_relief = lifts(&eb);
+    for r in b_relief.iter_mut() {
+        r.what = theirs(&r.what);
+    }
     let lasting = |e: &crate::explain::Explanation| -> String {
         e.causes
             .iter()
@@ -674,7 +705,7 @@ pub fn couple(
             .unwrap_or_default()
     };
     let a_cause = lasting(&ea);
-    let b_cause = lasting(&eb);
+    let b_cause = theirs(&lasting(&eb));
 
     let mut notes = Vec::new();
     match (ma.saturn, mb.saturn) {
@@ -687,7 +718,7 @@ pub fn couple(
     if !jup_a.is_empty() {
         notes.push(format!("First chart, transits for love: {jup_a}."));
     }
-    let jup_b = mb.lives[0].components.iter().find(|c| c.key == "gochara").map(|c| c.note.clone()).unwrap_or_default();
+    let jup_b = mb.lives[0].components.iter().find(|c| c.key == "gochara").map(|c| theirs(&c.note)).unwrap_or_default();
     if !jup_b.is_empty() {
         notes.push(format!("Second chart, transits for love: {jup_b}."));
     }
@@ -726,7 +757,8 @@ pub fn couple(
 
     // Each person's briefing for love, and the pair's own paragraphs.
     let a_briefing = briefing(spk, eop, a, obs, system, ayanamsa, &[Life::Love], at)?;
-    let b_briefing = briefing(spk, eop, b, obs, system, ayanamsa, &[Life::Love], at)?;
+    let mut b_briefing = briefing(spk, eop, b, obs, system, ayanamsa, &[Life::Love], at)?;
+    third_person_briefing(&mut b_briefing);
     let mut together_words = Vec::new();
     together_words.push(format!(
         "Two seasons run at once. The first chart is in {}; the second in {}. {} {}",

@@ -669,11 +669,11 @@ pub fn period_quality(facts: &Facts, area: Area, lord: DashaLord) -> (f64, Vec<S
     )];
     if owns.iter().any(|h| is_kendra(*h) || is_trikona(*h)) {
         s += 0.3;
-        f.push(format!("{lord:?} owns a kendra or trikona ({owns:?})"));
+        f.push(format!("{lord:?} owns a kendra or trikona (house{} {})", if owns.len() > 1 { "s" } else { "" }, owns.iter().map(|h| h.to_string()).collect::<Vec<_>>().join(", ")));
     }
     if owns.iter().any(|h| is_dusthana(*h)) {
         s -= 0.3;
-        f.push(format!("{lord:?} owns a dusthana ({owns:?})"));
+        f.push(format!("{lord:?} owns a dusthana (house{} {})", if owns.len() > 1 { "s" } else { "" }, owns.iter().map(|h| h.to_string()).collect::<Vec<_>>().join(", ")));
     }
     if owns.contains(&area.primary) || owns.iter().any(|h| area.group.contains(h)) {
         s += 0.3;

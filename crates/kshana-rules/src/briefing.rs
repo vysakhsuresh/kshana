@@ -9,7 +9,7 @@ use crate::explain::explain;
 use crate::forecast::{date_words, moment, series, Band, ForecastError, Life, Moment, Natal, SIGN_NAMES};
 use crate::gochara::SaturnPhase;
 use crate::parihara::parihara;
-use crate::transit::next_sign_change;
+use crate::transit::{next_sign_change, sign_changes};
 use kshana_ephem::Spk;
 use kshana_houses::HouseSystem;
 use kshana_sky::Observer;
@@ -110,25 +110,58 @@ pub fn saturn_sentence(spk: &Spk, ayanamsa: Ayanamsa, natal: &Natal, phase: Satu
             (words, next.map(|c| c.at))
         }
         p => {
-            let words = match next {
-                Some(c) => {
-                    let h = ((c.to as i64 - natal.moon_sign()).rem_euclid(12) + 1) as u8;
-                    let after = SaturnPhase::from_house(h);
-                    if after == SaturnPhase::Clear {
-                        format!("{}. It ends on {}, when Saturn enters {}", capitalise(p.words()), date_words(c.at, lon), SIGN_NAMES[c.to as usize])
-                    } else {
-                        format!(
-                            "{}. On {} Saturn enters {} and the {} phase follows",
-                            capitalise(p.words()),
-                            date_words(c.at, lon),
-                            SIGN_NAMES[c.to as usize],
-                            after.words().split(':').next().unwrap_or("next")
-                        )
+            // The trial is the same kind of phase (sade sati: 12, 1, 2; a dhaiya: its one
+            // house). Walk Saturn's sign changes ahead: a retrograde step out and back
+            // within 1.5 years is a pause, not the end. The end is the last exit.
+            let kind = |ph: SaturnPhase| match ph {
+                SaturnPhase::SadeSatiRising | SaturnPhase::SadeSatiPeak | SaturnPhase::SadeSatiSetting => 1,
+                SaturnPhase::DhaiyaFourth => 2,
+                SaturnPhase::DhaiyaEighth => 3,
+                SaturnPhase::Clear => 0,
+            };
+            let my_kind = kind(p);
+            let changes = sign_changes(spk, ayanamsa, DashaLord::Saturn, at, at.add_ns(4_000 * NS_PER_DAY));
+            let house_of = |sign: u8| ((sign as i64 - natal.moon_sign()).rem_euclid(12) + 1) as u8;
+            // (instant, inside the trial after this change)
+            let steps: Vec<(Instant, bool, u8)> = changes
+                .iter()
+                .map(|c| (c.at, kind(SaturnPhase::from_house(house_of(c.to))) == my_kind, c.to))
+                .collect();
+            let mut end: Option<(Instant, u8)> = None;
+            let mut pauses: Vec<(Instant, Instant)> = Vec::new();
+            let mut i = 0;
+            while i < steps.len() {
+                let (t, inside, sign) = steps[i];
+                if !inside {
+                    // find the next re-entry, if any, within 1.5 years
+                    let re = steps[i + 1..].iter().find(|s| s.1).map(|s| s.0);
+                    match re {
+                        Some(r) if r.ns_since(t) < (548 * NS_PER_DAY) => {
+                            pauses.push((t, r));
+                        }
+                        _ => {
+                            end = Some((t, sign));
+                            break;
+                        }
                     }
+                }
+                i += 1;
+            }
+            let words = match end {
+                Some((t, sign)) => {
+                    let mut s = format!("{}. It ends on {}, when Saturn enters {} for good", capitalise(p.words()), date_words(t, lon), SIGN_NAMES[sign as usize]);
+                    if let Some((a, b)) = pauses.first() {
+                        s.push_str(&format!(
+                            "; before that Saturn steps out from {} to {}, a pause, then returns",
+                            date_words(*a, lon),
+                            date_words(*b, lon)
+                        ));
+                    }
+                    s
                 }
                 None => capitalise(p.words()),
             };
-            (words, next.map(|c| c.at))
+            (words, end.map(|e| e.0))
         }
     }
 }
@@ -198,7 +231,7 @@ pub fn briefing(
         let hora = m
             .hora
             .as_ref()
-            .map(|h| format!(" The {:?} hour runs until the clock turns; {}.", h.lord, h.words))
+            .map(|h| format!(" The {:?} hour is running: {}.", h.lord, h.words))
             .unwrap_or_default();
         paragraphs.push(format!(
             "This second reads {:.0}, {}. {} is your strongest life now at {:.0} ({}), {} the weakest at {:.0} ({}).{} The Moon is in {} today, your {} tara: {}.",

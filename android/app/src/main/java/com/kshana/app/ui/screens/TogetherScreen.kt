@@ -432,7 +432,7 @@ private fun PersonBriefing(name: String, b: uniffi.kshana_ffi.BriefingRecord, c:
         Text(b.dasha, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
         Text(b.saturnWords + ".", style = MaterialTheme.typography.bodyMedium, color = if (b.saturnActive) KshanaColors.Ember else KshanaColors.TextSoft)
         val shown = if (open) b.paragraphs else b.paragraphs.drop(3)
-        for (p in shown) Text(p.replace("Your birth Moon", "$name's birth Moon").replace("You are in", "$name is in").replace("your ", "their ").replace("You ", "$name "), fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 24.sp, color = KshanaColors.Text)
+        for (p in shown) Text(p.replace("Their birth Moon", "$name's birth Moon").replace("They are in", "$name is in"), fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 24.sp, color = KshanaColors.Text)
         Text(
             if (open) "LESS −" else "THE WHOLE READING FOR ${name.uppercase()} +",
             style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,

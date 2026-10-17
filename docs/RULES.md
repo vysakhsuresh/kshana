@@ -163,6 +163,26 @@ slow Love score of each chart twelve months back and twenty-four ahead. A questi
 about the pair is answered for Love in both charts and combined half and half; the
 confidence is the mean confidence less half the gap between the two scores.
 
+## The briefing
+
+What an astrologer would say across the table, assembled from the rules above and
+nothing else: the birth Moon's sign and star (stated first, so any other reading can be
+checked against it: a different Moon sign means a birth time off by hours); the
+mahadasha and antardasha with their end instants; Saturn's phase relative to the Moon
+with its exit, found by walking Saturn's sidereal sign changes ahead and treating a
+retrograde step out and back within 1.5 years as a pause, so the date agrees with the
+Book; the moment (overall band, strongest and weakest life with their reasons, the
+hour, the Moon's star and tara); the days to circle (the best of the next thirty daily
+samples for each chosen life); the remedy in brief (the parihara plan for the weakest
+chosen life when it is below good, its first three non-optional entries); and, when
+that life is steady or lower, its heaviest lasting cause and first lasting lift from
+Explain. Under Us the second chart's sentences are turned to the third person, and the
+pair gets its own paragraphs: the two seasons, the Moon-to-Moon angle, which side the
+wait is on, and the first lasting lift for either. The match's doshas (Nadi, Bhakoot,
+Gana, unbalanced Kuja, low Graha Maitri, low Yoni) each carry their classical remedies
+(Dharma Sindhu and Nirnaya Sindhu dosha parihara, the Vivaha tradition, Lal Kitab) with
+ritual items marked optional.
+
 ## The book of a life
 
 Chapters are the mahadashas of the 120-year Vimshottari cycle, pages the antardashas of
