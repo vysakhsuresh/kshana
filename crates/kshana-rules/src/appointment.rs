@@ -88,6 +88,23 @@ impl Purpose {
         }
     }
 
+    /// The purpose as a phrase inside a sentence: "the sky carries {phrase}".
+    pub fn phrase(self) -> &'static str {
+        match self {
+            Purpose::Meeting => "a meeting",
+            Purpose::Interview => "an interview or a pitch",
+            Purpose::Exam => "an exam",
+            Purpose::Journey => "a journey",
+            Purpose::Deal => "a deal or a signing",
+            Purpose::Doctor => "a visit to the doctor",
+            Purpose::Date => "a date or a proposal",
+            Purpose::Family => "a family matter",
+            Purpose::Property => "a house or land matter",
+            Purpose::Launch => "a new start",
+            Purpose::Anything => "what you have planned",
+        }
+    }
+
     /// The lives it touches and their weights (sum 1).
     pub fn lives(self) -> Vec<(Life, f64)> {
         use Life::*;
@@ -277,20 +294,20 @@ pub fn appointment(
     let pw = purpose.words();
     let headline = match (caution.as_deref(), verdict) {
         (Some(c), _) => format!(
-            "{pw} falls inside {c}. Finish, do not begin: start it once {c} ends if you can, or take one of the hours below."
+            "{} falls inside {c}. Finish, do not begin: start it once {c} ends if you can, or take one of the hours below.", pw
         ),
         (None, "Go") => format!(
             "Go. {} is {} at that hour and the sky carries {}. {}",
             top.name(),
             top_ls.band.word(),
-            pw.to_ascii_lowercase(),
+            purpose.phrase(),
             top_ls.headline
         ),
         (None, "Go, with care") => format!(
             "Go, with care. {} is {} then; {} will work, but prepare more than usual.{}",
             top.name(),
             top_ls.band.word(),
-            pw.to_ascii_lowercase(),
+            purpose.phrase(),
             weak.filter(|(_, s)| *s < 0.44)
                 .map(|(l, _)| format!(" Watch {}.", l.name().to_ascii_lowercase()))
                 .unwrap_or_default()
@@ -299,12 +316,12 @@ pub fn appointment(
             "Shift it if you can. {} is {} at that hour, and that is what {} leans on. The hours and days below serve it better.",
             top.name(),
             top_ls.band.word(),
-            pw.to_ascii_lowercase()
+            purpose.phrase()
         ),
         _ => format!(
             "Avoid this time. {} is on hold then, and {} would carry that weight. Move it to one of the times below.",
             top.name(),
-            pw.to_ascii_lowercase()
+            purpose.phrase()
         ),
     };
 

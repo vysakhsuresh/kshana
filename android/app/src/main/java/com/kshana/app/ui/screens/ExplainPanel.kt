@@ -99,13 +99,18 @@ fun ExplainPanel(profile: BirthProfile, place: Place, settings: EngineSettings, 
         }
         Text(e.headline, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)
 
-        if (e.causes.isNotEmpty()) {
+        // Grahas with no measurable pull are left out, except Saturn and Jupiter, whose
+        // position people always want to see.
+        val keep: (CauseRecord) -> Boolean = { kotlin.math.abs(it.pull) >= 0.3 || it.planet == "Saturn" || it.planet == "Jupiter" || it.kind == "natal" }
+        val causes = e.causes.filter(keep)
+        val helpers = e.helpers.filter(keep)
+        if (causes.isNotEmpty()) {
             SectionLabel("Who weighs on it")
-            for (c in e.causes) CauseRow(c, negative = true)
+            for (c in causes) CauseRow(c, negative = true)
         }
-        if (e.helpers.isNotEmpty()) {
+        if (helpers.isNotEmpty()) {
             SectionLabel("Who carries it")
-            for (c in e.helpers) CauseRow(c, negative = false)
+            for (c in helpers) CauseRow(c, negative = false)
         }
 
         SectionLabel("What changes, and by how much")
@@ -152,8 +157,15 @@ private fun CauseRow(c: CauseRecord, negative: Boolean) {
             if (c.untilWords.isNotBlank()) Text(c.untilWords.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
             Text("${kindName(c.kind)} · ${c.ruleId}", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
         }
-        Text((if (c.pull >= 0) "+" else "") + c.pull.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 15.sp, color = col, modifier = Modifier.padding(start = 8.dp))
+        Text(signedPoints(c.pull), fontFamily = FontFamily.Monospace, fontSize = 15.sp, color = col, modifier = Modifier.padding(start = 8.dp))
     }
+}
+
+/** "+6", "−0.6": one decimal under two points so small pulls do not read as nothing. */
+internal fun signedPoints(v: Double): String {
+    val a = kotlin.math.abs(v)
+    val body = if (a < 2.0) "%.1f".format(a) else a.toInt().toString()
+    return (if (v < 0) "−" else "+") + body
 }
 
 private fun kindName(k: String): String = when (k) {

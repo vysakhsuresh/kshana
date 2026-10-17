@@ -296,8 +296,17 @@ pub fn timeline(spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, longitude_deg: f64
     for s in saturn {
         if let Some(last) = merged.last_mut() {
             if last.kind == s.kind && years(last.end, s.start) < 1.5 {
+                let months = (years(last.end, s.start) * 12.0).round() as i64;
+                last.phases.push((
+                    last.end,
+                    format!("Saturn steps out for about {months} month{} (retrograde): the trial pauses", if months == 1 { "" } else { "s" }),
+                ));
+                last.phases.extend(
+                    s.phases
+                        .into_iter()
+                        .map(|(t, w)| (t, w.replacen("Saturn enters", "Saturn returns to", 1))),
+                );
                 last.end = s.end;
-                last.phases.extend(s.phases);
                 last.current = last.start <= at && at < last.end;
                 last.words = format!(
                     "{} from {} to {} (age {:.0} to {:.0}){}",

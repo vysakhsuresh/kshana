@@ -422,7 +422,7 @@ internal fun ReliefRow(r: ReliefRecord) {
     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.Top) {
         Text(localText(r.at, DATE_ONLY), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.width(92.dp).padding(top = 2.dp))
         Text(r.what, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1f))
-        Text((if (up) "+" else "") + r.gain.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = if (up) KshanaColors.Leaf else KshanaColors.Ember, modifier = Modifier.padding(start = 8.dp))
+        Text(signedPoints(r.gain), fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = if (up) KshanaColors.Leaf else KshanaColors.Ember, modifier = Modifier.padding(start = 8.dp))
     }
 }
 
