@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Star
@@ -36,7 +37,10 @@ import com.kshana.app.data.ProfileStore
 import com.kshana.app.ui.screens.AreasScreen
 import com.kshana.app.ui.screens.AskScreen
 import com.kshana.app.ui.screens.BirthScreen
+import com.kshana.app.ui.screens.BookScreen
 import com.kshana.app.ui.screens.ChartScreen
+import com.kshana.app.ui.screens.PlanScreen
+import com.kshana.app.ui.screens.TogetherScreen
 import com.kshana.app.ui.screens.LifeScreen
 import com.kshana.app.ui.screens.LoopScreen
 import com.kshana.app.ui.screens.MomentsScreen
@@ -54,11 +58,12 @@ import com.kshana.app.ui.theme.KshanaTheme
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
 
-/** The four doors: the loop, a question, a remedy, and everything else. */
+/** The five doors: the loop, a question, a time to plan, the two of you, and everything else. */
 private val tabs = listOf(
     Tab("loop", "LOOP", Icons.Filled.Star),
     Tab("prashna", "ASK", Icons.Filled.Info),
-    Tab("parihara", "REMEDY", Icons.Filled.Favorite),
+    Tab("plan", "PLAN", Icons.Filled.DateRange),
+    Tab("together", "US", Icons.Filled.Favorite),
     Tab("more", "MORE", Icons.AutoMirrored.Filled.List),
 )
 
@@ -138,8 +143,38 @@ private fun App() {
                         onAsk = { open("prashna") },
                         onRemedy = { open("parihara") },
                         onSettings = { open("settings") },
+                        onPlan = { goTab("plan") },
+                        onBook = { open("book") },
+                        onTogether = { goTab("together") },
                     )
                 }
+            }
+            composable("plan") {
+                withProfile { PlanScreen(profile = it, place = here, settings = settings, onLife = { life -> open("life/$life") }) }
+            }
+            composable("together") {
+                withProfile {
+                    TogetherScreen(profile = it, place = here, settings = settings, onAddPartner = { open("partner") }, onRemedy = { l -> open("parihara/$l") })
+                }
+            }
+            composable("partner") {
+                BirthScreen(
+                    existing = null,
+                    onCast = { p ->
+                        ProfileStore.addPartner(context, p)
+                        nav.popBackStack()
+                    },
+                    heading = "THE OTHER PERSON",
+                    title = "Their moment of arrival",
+                    intro = "Their date, clock time and place. If the time is unknown, enter 12:00 and set the slider to unknown; the Moon and the match still hold.",
+                    nameLabel = "Their name",
+                    button = "ADD TO US",
+                    persist = false,
+                    onBack = { nav.popBackStack() },
+                )
+            }
+            composable("book") {
+                withProfile { BookScreen(profile = it, settings = settings, onBack = { nav.popBackStack() }, onLife = { life -> open("life/$life") }) }
             }
             composable("life/{life}", arguments = listOf(navArgument("life") { type = NavType.StringType })) { entry ->
                 val life = entry.arguments?.getString("life") ?: "Love"

@@ -396,11 +396,13 @@ impl Natal {
         }
     }
 
-    fn moon_sign(&self) -> i64 {
+    /// The natal Moon's sidereal sign, 0 = Aries.
+    pub fn moon_sign(&self) -> i64 {
         (self.moon_sidereal / 30.0).floor() as i64
     }
 
-    fn janma(&self) -> usize {
+    /// The birth star, 0 = Ashwini.
+    pub fn janma(&self) -> usize {
         nakshatra(self.moon_sidereal).index
     }
 }
@@ -412,7 +414,7 @@ pub enum ForecastError {
     Chart(String),
 }
 
-const GRAHAS: [DashaLord; 9] = [
+pub(crate) const GRAHAS: [DashaLord; 9] = [
     DashaLord::Sun,
     DashaLord::Moon,
     DashaLord::Mars,
@@ -424,14 +426,24 @@ const GRAHAS: [DashaLord; 9] = [
     DashaLord::Ketu,
 ];
 
-const LEVEL_NAMES: [&str; 5] = ["mahadasha", "antardasha", "pratyantar", "sookshma", "prana"];
-const LEVEL_WEIGHTS: [f64; 5] = [0.35, 0.30, 0.20, 0.10, 0.05];
+pub(crate) const LEVEL_NAMES: [&str; 5] = ["mahadasha", "antardasha", "pratyantar", "sookshma", "prana"];
+pub(crate) const LEVEL_WEIGHTS: [f64; 5] = [0.35, 0.30, 0.20, 0.10, 0.05];
+
+/// "3 Jun 2027" for an instant, on the local mean date at `longitude_deg`.
+pub(crate) fn date_words(t: Instant, longitude_deg: f64) -> String {
+    const MONTHS: [&str; 12] = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    let local = t.add_ns((longitude_deg / 15.0 * 3_600.0 * NS_PER_SEC as f64) as i128);
+    let u = Utc::from_instant(local);
+    format!("{} {} {}", u.day, MONTHS[(u.month as usize - 1).min(11)], u.year)
+}
 
 /// The universally auspicious stars (Muhurta Chintamani), 0-based.
-const GOOD_STARS: [usize; 15] = [0, 3, 4, 6, 7, 11, 12, 13, 14, 16, 20, 21, 22, 25, 26];
+pub(crate) const GOOD_STARS: [usize; 15] = [0, 3, 4, 6, 7, 11, 12, 13, 14, 16, 20, 21, 22, 25, 26];
 /// Yamaganda and Gulika slots (1-based eighth of the daytime) by weekday Sun..Sat.
-const YAMAGANDA: [usize; 7] = [5, 4, 3, 2, 1, 7, 6];
-const GULIKA: [usize; 7] = [7, 6, 5, 4, 3, 2, 1];
+pub(crate) const YAMAGANDA: [usize; 7] = [5, 4, 3, 2, 1, 7, 6];
+pub(crate) const GULIKA: [usize; 7] = [7, 6, 5, 4, 3, 2, 1];
 
 fn bav_index(g: DashaLord) -> Option<usize> {
     Some(match g {
@@ -455,14 +467,14 @@ pub(crate) fn ordinal(h: u8) -> String {
     }
 }
 
-fn weekday(day: &SolarDay, obs: &Observer) -> u32 {
+pub(crate) fn weekday(day: &SolarDay, obs: &Observer) -> u32 {
     let local = day
         .sunrise
         .add_ns((obs.longitude_deg / 15.0 * 3_600.0 * NS_PER_SEC as f64) as i128);
     ((Utc::from_instant(local).utc_day() + 4).rem_euclid(7)) as u32
 }
 
-fn slot_window(day: &SolarDay, slot: usize) -> (Instant, Instant) {
+pub(crate) fn slot_window(day: &SolarDay, slot: usize) -> (Instant, Instant) {
     let len = day.sunset.ns_since(day.sunrise) / 8;
     (
         day.sunrise.add_ns((slot as i128 - 1) * len),
@@ -470,7 +482,7 @@ fn slot_window(day: &SolarDay, slot: usize) -> (Instant, Instant) {
     )
 }
 
-fn abhijit_window(day: &SolarDay) -> (Instant, Instant) {
+pub(crate) fn abhijit_window(day: &SolarDay) -> (Instant, Instant) {
     let len = day.sunset.ns_since(day.sunrise);
     let noon = day.sunrise.add_ns(len / 2);
     (noon.add_ns(-len / 30), noon.add_ns(len / 30))
@@ -481,15 +493,22 @@ fn in_window(t: Instant, w: (Instant, Instant)) -> bool {
 }
 
 /// The sky of the moment, as facts, plus each graha's house from the natal Moon.
-struct Sky {
-    facts: Facts,
-    from_moon: [u8; 9],
-    moon_sidereal: f64,
-    sun_sidereal: f64,
-    ayanamsa_deg: f64,
+pub(crate) struct Sky {
+    pub(crate) facts: Facts,
+    pub(crate) from_moon: [u8; 9],
+    pub(crate) moon_sidereal: f64,
+    pub(crate) sun_sidereal: f64,
+    pub(crate) ayanamsa_deg: f64,
 }
 
-fn sky(
+impl Sky {
+    /// Each graha's sidereal sign, Sun..Ketu.
+    pub(crate) fn signs(&self) -> [u8; 9] {
+        std::array::from_fn(|i| self.facts.planet(GRAHAS[i]).sign)
+    }
+}
+
+pub(crate) fn sky(
     spk: &Spk,
     eop: Option<&EopTable>,
     natal: &Natal,
@@ -577,48 +596,89 @@ pub fn natal_component(natal: &Natal, life: Life) -> Component {
     }
 }
 
-fn dasha_component(natal: &Natal, life: Life, levels: &[DashaPeriod]) -> Component {
+/// One running period lord's bearing on a life.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct DashaItem {
+    pub(crate) lord: DashaLord,
+    /// 0 = mahadasha … 4 = prana.
+    pub(crate) level: usize,
+    /// The lord's score for the life in `[0, 1]`: half KP signification, half Parashari quality.
+    pub(crate) score: f64,
+    /// Level weight.
+    pub(crate) weight: f64,
+    pub(crate) words: String,
+    pub(crate) start: Instant,
+    pub(crate) end: Instant,
+}
+
+/// How one lord scores for a life, regardless of level.
+pub(crate) fn lord_score(natal: &Natal, life: Life, lord: DashaLord) -> (f64, String) {
     let area = life.area();
+    let sup = period_supports(&natal.facts, area, lord);
+    let kp = sup
+        .iter()
+        .map(|s| s.level.weight())
+        .fold(0.0_f64, f64::max);
+    let (pq, _) = period_quality(&natal.facts, area, lord);
+    let houses = sup
+        .iter()
+        .map(|s| s.house.to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+    (0.5 * kp + 0.5 * pq, houses)
+}
+
+pub(crate) fn dasha_items(natal: &Natal, life: Life, levels: &[DashaPeriod]) -> Vec<DashaItem> {
+    levels
+        .iter()
+        .enumerate()
+        .take(5)
+        .map(|(i, p)| {
+            let (s, houses) = lord_score(natal, life, p.lord);
+            let words = if houses.is_empty() {
+                format!(
+                    "{:?} {} does not touch your {} houses",
+                    p.lord,
+                    LEVEL_NAMES[i],
+                    life.name().to_ascii_lowercase()
+                )
+            } else {
+                format!(
+                    "{:?} {} carries your {} houses ({})",
+                    p.lord,
+                    LEVEL_NAMES[i],
+                    life.name().to_ascii_lowercase(),
+                    houses
+                )
+            };
+            DashaItem {
+                lord: p.lord,
+                level: i,
+                score: s,
+                weight: LEVEL_WEIGHTS[i],
+                words,
+                start: p.start,
+                end: p.end,
+            }
+        })
+        .collect()
+}
+
+fn dasha_component(natal: &Natal, life: Life, levels: &[DashaPeriod]) -> Component {
+    let items = dasha_items(natal, life, levels);
     let mut num = 0.0;
     let mut den = 0.0;
     let mut best: Option<(f64, String)> = None;
     let mut worst: Option<(f64, String)> = None;
-    for (i, p) in levels.iter().enumerate().take(5) {
-        let w = LEVEL_WEIGHTS[i];
-        let sup = period_supports(&natal.facts, area, p.lord);
-        let kp = sup
-            .iter()
-            .map(|s| s.level.weight())
-            .fold(0.0_f64, f64::max);
-        let (pq, _) = period_quality(&natal.facts, area, p.lord);
-        let s = 0.5 * kp + 0.5 * pq;
-        num += w * s;
-        den += w;
-        let words = if sup.is_empty() {
-            format!(
-                "{:?} {} does not touch your {} houses",
-                p.lord,
-                LEVEL_NAMES[i],
-                life.name().to_ascii_lowercase()
-            )
-        } else {
-            format!(
-                "{:?} {} carries your {} houses ({})",
-                p.lord,
-                LEVEL_NAMES[i],
-                life.name().to_ascii_lowercase(),
-                sup.iter()
-                    .map(|s| s.house.to_string())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            )
-        };
-        let v = w * (s - 0.5);
+    for it in &items {
+        num += it.weight * it.score;
+        den += it.weight;
+        let v = it.weight * (it.score - 0.5);
         if best.as_ref().map_or(true, |b| v > b.0) {
-            best = Some((v, words.clone()));
+            best = Some((v, it.words.clone()));
         }
         if worst.as_ref().map_or(true, |b| v < b.0) {
-            worst = Some((v, words));
+            worst = Some((v, it.words.clone()));
         }
     }
     let score = if den > 0.0 { num / den } else { 0.5 };
@@ -642,13 +702,35 @@ fn dasha_component(natal: &Natal, life: Life, levels: &[DashaPeriod]) -> Compone
     }
 }
 
-fn gochara_component(natal: &Natal, sky: &Sky, life: Life) -> Component {
-    let mut num = 0.0;
+/// One transiting graha's bearing on a life.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GocharaItem {
+    pub(crate) graha: DashaLord,
+    /// House from the natal Moon, 1–12.
+    pub(crate) house: u8,
+    /// Relevance of the graha to the life, after the ownership bonus.
+    pub(crate) relevance: f64,
+    /// `relevance × value × ashtakavarga factor`, in `[-1.25, 1.25]`.
+    pub(crate) contrib: f64,
+    pub(crate) words: String,
+    pub(crate) saturn_phase: SaturnPhase,
+    pub(crate) favourable: bool,
+    pub(crate) adverse: bool,
+    pub(crate) obstructed: bool,
+}
+
+/// Every graha's transit bearing on a life, given each graha's house from the natal Moon
+/// and its sidereal sign (Sun..Ketu). Returns the items and the sum of relevances.
+pub(crate) fn gochara_items(
+    natal: &Natal,
+    from_moon: &[u8; 9],
+    signs: &[u8; 9],
+    life: Life,
+) -> (Vec<GocharaItem>, f64) {
+    let mut items = Vec::with_capacity(9);
     let mut den = 0.0;
-    let mut best: Option<(f64, String)> = None;
-    let mut worst: Option<(f64, String)> = None;
     for (i, &g) in GRAHAS.iter().enumerate() {
-        let h = sky.from_moon[i];
+        let h = from_moon[i];
         let mut r = life.relevance(g);
         // A graha that owns one of the area's houses in the birth chart matters more.
         let owns_area = natal
@@ -665,9 +747,10 @@ fn gochara_component(natal: &Natal, sky: &Sky, life: Life) -> Component {
         let obstructed = fav
             && vedha_pairs(g).iter().any(|&(fh, vh)| {
                 fh == h
-                    && GRAHAS[..7].iter().enumerate().any(|(j, &p)| {
-                        p != g && !vedha_exempt(g, p) && sky.from_moon[j] == vh
-                    })
+                    && GRAHAS[..7]
+                        .iter()
+                        .enumerate()
+                        .any(|(j, &p)| p != g && !vedha_exempt(g, p) && from_moon[j] == vh)
             });
         let saturn_phase = if g == DashaLord::Saturn {
             SaturnPhase::from_house(h)
@@ -692,7 +775,7 @@ fn gochara_component(natal: &Natal, sky: &Sky, life: Life) -> Component {
             r = r.max(0.8);
         }
         let av = match bav_index(g) {
-            Some(k) => match natal.bav[k][sky.facts.planet(g).sign as usize] {
+            Some(k) => match natal.bav[k][signs[i] as usize % 12] {
                 b if b >= 5 => 1.25,
                 4 => 1.0,
                 _ => 0.6,
@@ -700,7 +783,6 @@ fn gochara_component(natal: &Natal, sky: &Sky, life: Life) -> Component {
             None => 1.0,
         };
         let contrib = r * v * av;
-        num += contrib;
         den += r;
         let words = if saturn_phase != SaturnPhase::Clear {
             saturn_phase.words().to_string()
@@ -722,11 +804,33 @@ fn gochara_component(natal: &Natal, sky: &Sky, life: Life) -> Component {
                 }
             )
         };
-        if best.as_ref().map_or(true, |b| contrib > b.0) {
-            best = Some((contrib, words.clone()));
+        items.push(GocharaItem {
+            graha: g,
+            house: h,
+            relevance: r,
+            contrib,
+            words,
+            saturn_phase,
+            favourable: fav,
+            adverse,
+            obstructed,
+        });
+    }
+    (items, den)
+}
+
+fn gochara_component(natal: &Natal, sky: &Sky, life: Life) -> Component {
+    let (items, den) = gochara_items(natal, &sky.from_moon, &sky.signs(), life);
+    let mut num = 0.0;
+    let mut best: Option<(f64, String)> = None;
+    let mut worst: Option<(f64, String)> = None;
+    for it in &items {
+        num += it.contrib;
+        if best.as_ref().map_or(true, |b| it.contrib > b.0) {
+            best = Some((it.contrib, it.words.clone()));
         }
-        if worst.as_ref().map_or(true, |b| contrib < b.0) {
-            worst = Some((contrib, words));
+        if worst.as_ref().map_or(true, |b| it.contrib < b.0) {
+            worst = Some((it.contrib, it.words.clone()));
         }
     }
     let raw = if den > 0.0 { num / den } else { 0.0 };
@@ -752,7 +856,7 @@ fn gochara_component(natal: &Natal, sky: &Sky, life: Life) -> Component {
     }
 }
 
-fn tara_component(natal: &Natal, sky: &Sky) -> (usize, Component) {
+pub(crate) fn tara_component(natal: &Natal, sky: &Sky) -> (usize, Component) {
     let t = tara_index(natal.janma(), nakshatra(sky.moon_sidereal).index);
     (
         t,
@@ -766,7 +870,7 @@ fn tara_component(natal: &Natal, sky: &Sky) -> (usize, Component) {
     )
 }
 
-fn hora_component(natal: &Natal, life: Life, hora: &Hora) -> Component {
+pub(crate) fn hora_component(natal: &Natal, life: Life, hora: &Hora) -> Component {
     let p = natal.facts.planet(hora.lord);
     let d = dignity(hora.lord, p.sidereal).score();
     let score = (life.hora_affinity(hora.lord) * (0.5 + 0.5 * d)).clamp(0.0, 1.0);
@@ -779,7 +883,7 @@ fn hora_component(natal: &Natal, life: Life, hora: &Hora) -> Component {
     }
 }
 
-fn kala_component(sky: &Sky, day: Option<&SolarDay>, obs: &Observer, at: Instant) -> Component {
+pub(crate) fn kala_component(sky: &Sky, day: Option<&SolarDay>, obs: &Observer, at: Instant) -> Component {
     let n = nakshatra(sky.moon_sidereal);
     let ti = tithi(sky.moon_sidereal, sky.sun_sidereal);
     let k = karana(sky.moon_sidereal, sky.sun_sidereal);
@@ -830,7 +934,7 @@ fn kala_component(sky: &Sky, day: Option<&SolarDay>, obs: &Observer, at: Instant
     }
 }
 
-fn combine(components: &[Component]) -> f64 {
+pub(crate) fn combine(components: &[Component]) -> f64 {
     let den: f64 = components.iter().map(|c| c.weight).sum();
     if den <= 0.0 {
         return 0.5;
@@ -1375,6 +1479,76 @@ pub fn series(
         });
     }
     Ok(out)
+}
+
+/// The slow score of every life at `at`: birth chart, running periods (three levels)
+/// and the transits of the eight grahas other than the Moon, renormalised. It leaves
+/// out everything that turns within a month, so a monthly sample of it reads as the
+/// shape of a year rather than the noise of a day.
+pub(crate) fn slow_scores(natal: &Natal, sky: &Sky, levels: &[DashaPeriod]) -> Vec<f64> {
+    let signs = sky.signs();
+    Life::ALL
+        .iter()
+        .map(|&life| {
+            let n = natal_component(natal, life);
+            let d = dasha_component(natal, life, levels);
+            let (items, den) = gochara_items(natal, &sky.from_moon, &signs, life);
+            let moon = &items[1];
+            let den = den - moon.relevance;
+            let num: f64 = items.iter().map(|i| i.contrib).sum::<f64>() - moon.contrib;
+            let raw = if den > 0.0 { num / den } else { 0.0 };
+            let g = (0.5 + 0.5 * raw).clamp(0.0, 1.0);
+            ((0.15 * n.score + 0.30 * d.score + 0.20 * g) / 0.65).clamp(0.0, 1.0)
+        })
+        .collect()
+}
+
+/// `count` monthly slow samples (see [`slow_scores`]) from `from`: `(instant, nine scores)`.
+#[allow(clippy::too_many_arguments)]
+pub fn slow_series(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    natal: &Natal,
+    obs: &Observer,
+    ayanamsa: Ayanamsa,
+    from: Instant,
+    step_ns: i128,
+    count: usize,
+) -> Result<Vec<(Instant, Vec<f64>)>, ForecastError> {
+    let mut out = Vec::with_capacity(count);
+    for k in 0..count {
+        let at = from.add_ns(step_ns * k as i128);
+        let sky = sky(spk, eop, natal, obs, HouseSystem::WholeSign, ayanamsa, at)?;
+        let levels = vimshottari_levels(natal.moon_sidereal, natal.birth, YEAR_365_25_NS, at, 3);
+        out.push((at, slow_scores(natal, &sky, &levels)));
+    }
+    Ok(out)
+}
+
+impl Natal {
+    /// Compute the birth chart and derive what the forecast needs from it.
+    pub fn compute(
+        spk: &Spk,
+        eop: Option<&EopTable>,
+        birth: Instant,
+        obs: &Observer,
+        system: HouseSystem,
+        ayanamsa: Ayanamsa,
+    ) -> Result<Natal, ForecastError> {
+        let ch = compute(
+            spk,
+            eop,
+            &ChartInput {
+                instant: birth,
+                observer: *obs,
+                system,
+                ayanamsa,
+                topocentric_moon: false,
+            },
+        )
+        .map_err(|e| ForecastError::Chart(format!("{e:?}")))?;
+        Ok(Natal::new(Facts::from_chart(&ch), birth))
+    }
 }
 
 /// The story of one life over a series.

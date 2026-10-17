@@ -61,7 +61,17 @@ private val LEVEL_COPY = listOf(
  * hands control back so the caller can navigate to the chart.
  */
 @Composable
-fun BirthScreen(existing: BirthProfile?, onCast: (BirthProfile) -> Unit) {
+fun BirthScreen(
+    existing: BirthProfile?,
+    onCast: (BirthProfile) -> Unit,
+    heading: String = "BIRTH",
+    title: String = "The moment you arrived",
+    intro: String = "Date, clock time and place, as written on the record. Say how sure the time is; the sky is drawn to that width.",
+    nameLabel: String = "Name",
+    button: String = "CAST THE SKY",
+    persist: Boolean = true,
+    onBack: (() -> Unit)? = null,
+) {
     val context = LocalContext.current
     val initialPlace = existing?.place() ?: ProfileStore.kochi
 
@@ -104,7 +114,7 @@ fun BirthScreen(existing: BirthProfile?, onCast: (BirthProfile) -> Unit) {
         try { ZoneId.of(zoneId.trim()) } catch (e: DateTimeException) { problem = "Unknown time zone id. Use an IANA name such as Asia/Kolkata."; return null }
         problem = null
         return BirthProfile(
-            name = name.trim().ifEmpty { "You" },
+            name = name.trim().ifEmpty { if (persist) "You" else "Partner" },
             year = y, month = mo, day = d, hour = h, minute = mi, second = s,
             uncertaintyLevel = level,
             latitude = lat, longitude = lon,
@@ -117,14 +127,14 @@ fun BirthScreen(existing: BirthProfile?, onCast: (BirthProfile) -> Unit) {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(top = 48.dp, bottom = 40.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text("BIRTH", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-        Text("The moment you arrived", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
-        Text(
-            "Date, clock time and place, as written on the record. Say how sure the time is; the sky is drawn to that width.",
-            style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
-        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(heading, style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            if (onBack != null) Text("BACK", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onBack).padding(12.dp))
+        }
+        Text(title, style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+        Text(intro, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
 
-        Field(name, { name = it }, "Name", Modifier.fillMaxWidth())
+        Field(name, { name = it }, nameLabel, Modifier.fillMaxWidth())
 
         SectionLabel("Date")
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -196,10 +206,10 @@ fun BirthScreen(existing: BirthProfile?, onCast: (BirthProfile) -> Unit) {
 
         Spacer(Modifier.height(8.dp))
         problem?.let { Text(it, color = KshanaColors.Sky, style = MaterialTheme.typography.bodyMedium) }
-        GoldButton("CAST THE SKY", onClick = {
+        GoldButton(button, onClick = {
             val p = build()
             if (p != null) {
-                ProfileStore.save(context, p)
+                if (persist) ProfileStore.save(context, p)
                 onCast(p)
             }
         }, modifier = Modifier.fillMaxWidth())

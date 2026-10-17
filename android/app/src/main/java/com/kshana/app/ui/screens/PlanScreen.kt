@@ -1,0 +1,297 @@
+package com.kshana.app.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.kshana.app.data.BirthProfile
+import com.kshana.app.data.EngineSettings
+import com.kshana.app.data.Place
+import com.kshana.app.engine.EngineProvider
+import com.kshana.app.engine.Instants
+import com.kshana.app.ui.theme.KshanaColors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import uniffi.kshana_ffi.AppointmentRecord
+import uniffi.kshana_ffi.PurposeRecord
+import uniffi.kshana_ffi.purposes
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+
+private val DAY_LONG: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE d MMMM uuuu")
+
+/**
+ * Plan: "I have something at this time; how is that time for me?" Pick the moment and
+ * the purpose, read the verdict, the reasons, and the better hours and days when the
+ * time is poor. Nothing is typed; nothing leaves the phone.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PlanScreen(
+    profile: BirthProfile,
+    place: Place,
+    settings: EngineSettings,
+    onLife: (String) -> Unit = {},
+) {
+    val context = LocalContext.current
+    val zone: ZoneId = remember(place) { runCatching { ZoneId.of(place.zoneId) }.getOrDefault(ZoneId.systemDefault()) }
+    val ps: List<PurposeRecord> = remember { purposes() }
+    val startLocal = remember { ZonedDateTime.now(zone).plusHours(1).withMinute(0).withSecond(0).withNano(0) }
+    var date by remember { mutableStateOf(startLocal.toLocalDate()) }
+    var time by remember { mutableStateOf(startLocal.toLocalTime()) }
+    var purpose by remember { mutableStateOf(ps.firstOrNull()?.key ?: "meeting") }
+    var pickDate by remember { mutableStateOf(false) }
+    var pickTime by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf<AppointmentRecord?>(null) }
+    var reading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var request by remember { mutableStateOf<String?>(null) }
+    var showLives by remember { mutableStateOf(false) }
+
+    val chosen: ZonedDateTime = ZonedDateTime.of(date, time, zone)
+
+    LaunchedEffect(request) {
+        val r = request ?: return@LaunchedEffect
+        reading = true
+        try {
+            val engine = EngineProvider.get(context)
+            val at = Instants.fromInstant(chosen.toInstant())
+            result = withContext(Dispatchers.Default) {
+                engine.appointment(
+                    profile.birthInstant(), profile.latitude, profile.longitude,
+                    place.latitude, place.longitude,
+                    settings.houseSystem, settings.ayanamsa, purpose, at,
+                )
+            }
+            error = null
+        } catch (e: Exception) {
+            error = e.message ?: e.toString()
+        }
+        reading = false
+        showLives = false
+    }
+
+    if (pickDate) {
+        val state = rememberDatePickerState(initialSelectedDateMillis = date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
+        DatePickerDialog(
+            onDismissRequest = { pickDate = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let { date = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() }
+                    pickDate = false
+                    result = null
+                }) { Text("SET", color = KshanaColors.Gold) }
+            },
+            dismissButton = { TextButton(onClick = { pickDate = false }) { Text("CANCEL", color = KshanaColors.Muted) } },
+        ) { DatePicker(state = state) }
+    }
+    if (pickTime) {
+        val state = rememberTimePickerState(initialHour = time.hour, initialMinute = time.minute, is24Hour = true)
+        AlertDialog(
+            onDismissRequest = { pickTime = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    time = LocalTime.of(state.hour, state.minute)
+                    pickTime = false
+                    result = null
+                }) { Text("SET", color = KshanaColors.Gold) }
+            },
+            dismissButton = { TextButton(onClick = { pickTime = false }) { Text("CANCEL", color = KshanaColors.Muted) } },
+            text = { TimePicker(state = state) },
+            containerColor = KshanaColors.Surface,
+        )
+    }
+
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(top = 44.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text("PLAN", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text("How is that time for me?", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+        Text(
+            "A meeting, an interview, a journey, a date. You may not know what will be said or who will be there; your chart knows how the hour sits with you. Pick the time and what it is for.",
+            style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
+        )
+
+        SectionLabel("When")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Chip(chosen.format(WEEKDAY_DAY).uppercase(), selected = true, onClick = { pickDate = true }, modifier = Modifier.weight(1.4f))
+            Chip(chosen.format(TIME_HM), selected = true, onClick = { pickTime = true }, modifier = Modifier.weight(1f))
+        }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for ((label, action) in listOf<Pair<String, () -> Unit>>(
+                "NOW" to { val n = ZonedDateTime.now(zone); date = n.toLocalDate(); time = n.toLocalTime().withSecond(0).withNano(0) },
+                "+1 H" to { val n = chosen.plusHours(1); date = n.toLocalDate(); time = n.toLocalTime() },
+                "TOMORROW" to { date = date.plusDays(1) },
+                "+7 D" to { date = date.plusDays(7) },
+                "MORNING 9:00" to { time = LocalTime.of(9, 0) },
+                "NOON 12:00" to { time = LocalTime.of(12, 0) },
+                "EVENING 18:00" to { time = LocalTime.of(18, 0) },
+            )) {
+                Text(
+                    label, fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky,
+                    modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(KshanaColors.Surface).clickable { action(); result = null }.padding(horizontal = 10.dp, vertical = 8.dp),
+                )
+            }
+        }
+        Text("${chosen.format(DAY_LONG)} · ${place.name} time", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+
+        SectionLabel("For")
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (row in ps.chunked(2)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for (p in row) {
+                        val selected = purpose == p.key
+                        Box(
+                            Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
+                                .background(if (selected) KshanaColors.Gold else KshanaColors.Surface)
+                                .clickable { purpose = p.key; result = null }
+                                .padding(horizontal = 12.dp, vertical = 12.dp),
+                        ) {
+                            Text(p.words, style = MaterialTheme.typography.bodyMedium, color = if (selected) KshanaColors.Night else KshanaColors.Text)
+                        }
+                    }
+                    if (row.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+        GoldButton(
+            if (reading) "READING THAT HOUR…" else "READ · ${ps.firstOrNull { it.key == purpose }?.words?.uppercase() ?: purpose.uppercase()}",
+            enabled = !reading,
+            onClick = { request = "$purpose|$chosen|${System.currentTimeMillis()}" },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        ErrorLine(error)
+
+        val a = result
+        if (a != null) {
+            Spacer(Modifier.height(4.dp))
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(KshanaColors.Surface).padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    ScoreRing(a.score, size = 84.dp, stroke = 7.dp, label = bandWord(a.band))
+                    Column(Modifier.weight(1f)) {
+                        Text("${a.purposeWords} · ${localText(a.at, WEEKDAY_DAY, zone)} ${localText(a.at, TIME_HM, zone)}", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
+                        Text(a.verdict, style = MaterialTheme.typography.displayMedium, color = scoreColor(a.score))
+                    }
+                }
+                Text(a.headline, fontFamily = FontFamily.Serif, fontSize = 20.sp, lineHeight = 28.sp, color = KshanaColors.Text)
+                a.caution?.let {
+                    Text("$it runs then. Finish, do not begin.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Ember)
+                }
+                if (a.abhijit) Text("Abhijit muhurta: the day's winning minutes.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Gold)
+                HorizontalDivider(color = KshanaColors.LineSoft)
+                for (line in a.advice) {
+                    Row(verticalAlignment = Alignment.Top) {
+                        Box(Modifier.padding(top = 7.dp).size(6.dp).clip(CircleShape).background(KshanaColors.Sky))
+                        Spacer(Modifier.width(10.dp))
+                        Text(line.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+                    }
+                }
+            }
+
+            SectionLabel("What it leans on")
+            for (l in a.lives) {
+                Row(Modifier.fillMaxWidth().clickable { onLife(l.life) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("${lifeGlyph(l.life)} ${l.life}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text, modifier = Modifier.width(110.dp))
+                    Box(Modifier.weight(1f).height(6.dp).clip(RoundedCornerShape(3.dp)).background(KshanaColors.Line)) {
+                        Box(Modifier.fillMaxWidth((l.score / 100.0).toFloat().coerceIn(0.02f, 1f)).height(6.dp).background(scoreColor(l.score)))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text(l.score.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = scoreColor(l.score), modifier = Modifier.width(28.dp))
+                    Text("×${"%.0f".format(l.weight * 100)}%", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+                }
+            }
+
+            if (a.betterToday.isNotEmpty()) {
+                SectionLabel("Better hours that day")
+                for (s in a.betterToday) {
+                    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("${localText(s.start, TIME_HM, zone)} – ${localText(s.end, TIME_HM, zone)}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky, modifier = Modifier.width(110.dp))
+                        Text("${s.lord} hour", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+                        Text(s.score.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 14.sp, color = scoreColor(s.score))
+                    }
+                }
+                Text("By the planetary hours, outside Rahu kala, Yamaganda and Gulika.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            }
+            val bd = a.betterDay
+            if (bd != null) {
+                SectionLabel("A better day")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(KshanaColors.Gold))
+                    Spacer(Modifier.width(10.dp))
+                    Text(localText(bd, WEEKDAY_DAY, zone), fontFamily = FontFamily.Monospace, fontSize = 14.sp, color = KshanaColors.Gold, modifier = Modifier.width(110.dp))
+                    Text(a.betterDayWords, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1f))
+                }
+            }
+
+            Text(
+                if (showLives) "HIDE THAT MOMENT −" else "THE WHOLE MOMENT +",
+                style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
+                modifier = Modifier.clickable { showLives = !showLives }.padding(vertical = 4.dp),
+            )
+            if (showLives) {
+                val m = a.moment
+                Text(m.headline, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+                for (l in m.lives) {
+                    HorizontalDivider(color = KshanaColors.LineSoft)
+                    Row(Modifier.fillMaxWidth().clickable { onLife(l.life) }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(lifeGlyph(l.life), fontSize = 14.sp, color = bandColor(l.band), modifier = Modifier.width(22.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("${l.life} · ${bandWord(l.band)}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
+                            Text(l.headline, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                        }
+                        Text(l.score.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 16.sp, color = scoreColor(l.score))
+                    }
+                }
+                Text("Moon in ${m.moonStar} · ${m.taraName} tara · ${m.taraWords}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            }
+            Text("Read for ${place.name}. Computed on this phone; nothing leaves it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        }
+    }
+}

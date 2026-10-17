@@ -36,9 +36,16 @@ first launch, and the Play listing.
 instant from running periods, Moon-relative transits with vedha and Ashtakavarga, Tara
 bala, the planetary hour and the limbs of the day; a countdown to the next shift; per-life
 pages for today, week, month, year with trend, best and lowest stretch and what changes;
-expert screens moved under More. Remaining: calibration of weights against recorded
-outcomes, bundled fonts, notifications at shifts the user chooses, widgets, Malayalam
-and Hindi copy.
+expert screens moved under More. Also done: Ask (a life × six questions, always
+answered), the remedy dictionary, time travel on the Loop; Explain on every life (each
+graha's pull, the exact instant it moves on, the solved gain of every coming change, the
+three-year slow line); Plan (a scheduled time read for a purpose, with better hours and
+days); Us (the thirty-six-point match, Kuja dosha, the pair this second and over
+thirty-six months, questions answered from both charts); the Book (chapters and pages,
+every sade sati and dhaiya to the second, Jupiter's passages, the returns). Remaining:
+calibration of weights against recorded outcomes, bundled fonts, notifications at
+shifts the user chooses, widgets, Malayalam and Hindi copy, DE440s so the Book sees
+past 2053.
 
 **Always.** No number ships without a comparison test, and every disagreement with
 another ephemeris is written up in `docs/PRECISION.md`.

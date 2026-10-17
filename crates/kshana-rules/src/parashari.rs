@@ -67,7 +67,7 @@ fn moolatrikona(g: DashaLord) -> Option<(u8, f64, f64)> {
 }
 
 /// Natural relationship (BPHS, naisargika maitri): 1 friend, 0 neutral, −1 enemy.
-fn natural_relation(a: DashaLord, b: DashaLord) -> i8 {
+pub(crate) fn natural_relation(a: DashaLord, b: DashaLord) -> i8 {
     use DashaLord::*;
     let friends: &[DashaLord] = match a {
         Sun => &[Moon, Mars, Jupiter],

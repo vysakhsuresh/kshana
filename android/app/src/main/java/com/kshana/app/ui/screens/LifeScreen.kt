@@ -138,6 +138,8 @@ fun LifeScreen(
             Text("reading your chart…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         }
 
+        if (now != null) ExplainPanel(profile, place, settings, life, onRemedy = onRemedy)
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (r in RANGES) Chip(r, selected = range == r, onClick = { range = r })
         }

@@ -12,21 +12,31 @@
 #![forbid(unsafe_code)]
 
 pub mod areas;
+pub mod appointment;
 pub mod ask;
+pub mod explain;
 pub mod facts;
 pub mod forecast;
 pub mod gochara;
 pub mod kp;
+pub mod kundali;
 pub mod muhurta;
 pub mod parashari;
 pub mod parihara;
 pub mod prashna;
+pub mod timeline;
+pub mod transit;
 
 pub use areas::{area, Area, AREAS};
+pub use appointment::{appointment, Appointment, Purpose, Slot};
 pub use ask::{answer, Answer, Question};
+pub use explain::{explain, Cause, Explanation, Relief, Turning};
+pub use kundali::{couple, couple_ask, kundali, Couple, CoupleAnswer, Koota, Kundali};
+pub use timeline::{timeline, Chapter, Passage, Return, SaturnSpan, Timeline};
+pub use transit::{next_sign_change, returns, sidereal_longitude, sign_changes, SignChange};
 pub use facts::{Facts, PlanetFact};
 pub use forecast::{
-    headline, moment, series, story, Band, Component, Hora, Life, LifeScore, Moment, Natal,
+    headline, moment, series, slow_series, story, Band, Component, Hora, Life, LifeScore, Moment, Natal,
     Sample, Shift, Story, Window,
 };
 pub use gochara::{tara_index, tara_words, SaturnPhase, TARA_NAMES, TARA_SCORE};

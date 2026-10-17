@@ -2212,3 +2212,844 @@ impl Engine {
         })
     }
 }
+
+// ---------------------------------------------------------------------------------
+// Explain: who causes it, when it eases, what eases it.
+// ---------------------------------------------------------------------------------
+
+/// Something that pulls a life's score now.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct CauseRecord {
+    pub planet: Option<String>,
+    /// `natal`, `dasha`, `gochara`, `tara`, `hora` or `kala`.
+    pub kind: String,
+    pub what: String,
+    /// Signed points on the 0–100 scale.
+    pub pull: f64,
+    pub until: Option<ExactInstant>,
+    pub until_words: String,
+    pub rule_id: String,
+}
+
+/// A coming change and its exact effect.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct ReliefRecord {
+    pub at: ExactInstant,
+    pub what: String,
+    /// Signed points on the 0–100 scale.
+    pub gain: f64,
+    pub planet: Option<String>,
+    pub kind: String,
+}
+
+/// A turning point of the slow series.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct TurningRecord {
+    pub at: ExactInstant,
+    /// 0–100.
+    pub score: f64,
+    pub band: String,
+    pub words: String,
+}
+
+/// The explanation of one life at one instant.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct ExplanationRecord {
+    pub life: String,
+    pub at: ExactInstant,
+    /// 0–100.
+    pub score: f64,
+    pub band: String,
+    pub headline: String,
+    pub causes: Vec<CauseRecord>,
+    pub helpers: Vec<CauseRecord>,
+    pub relief: Vec<ReliefRecord>,
+    pub eases: Option<TurningRecord>,
+    pub peak: Option<TurningRecord>,
+    pub toughens: Option<TurningRecord>,
+    /// 0–100.
+    pub slow_now: f64,
+    /// Thirty-six monthly slow samples, 0–100.
+    pub slow: Vec<SampleRecord>,
+}
+
+fn cause_record(c: &kshana_rules::Cause) -> CauseRecord {
+    CauseRecord {
+        planet: c.planet.map(lord_name),
+        kind: c.kind.to_string(),
+        what: c.what.clone(),
+        pull: c.pull * 100.0,
+        until: c.until.map(Into::into),
+        until_words: c.until_words.clone(),
+        rule_id: c.rule_id.to_string(),
+    }
+}
+
+fn relief_record(r: &kshana_rules::Relief) -> ReliefRecord {
+    ReliefRecord {
+        at: r.at.into(),
+        what: r.what.clone(),
+        gain: r.gain * 100.0,
+        planet: r.planet.map(lord_name),
+        kind: r.kind.to_string(),
+    }
+}
+
+fn turning_record(t: &kshana_rules::Turning) -> TurningRecord {
+    TurningRecord {
+        at: t.at.into(),
+        score: t.score * 100.0,
+        band: t.band.word().to_string(),
+        words: t.words.clone(),
+    }
+}
+
+#[uniffi::export]
+impl Engine {
+    /// Why `life` stands where it stands at `at`, who causes it, when it eases and what
+    /// eases it, for a person born at `birth` now standing at `lat`/`lon`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn explain(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        life: String,
+        at: ExactInstant,
+    ) -> Result<ExplanationRecord, KshanaError> {
+        let life = kshana_rules::Life::parse(&life)
+            .ok_or_else(|| KshanaError::Engine(format!("unknown life {life}")))?;
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let obs = Observer {
+            latitude_deg: lat,
+            longitude_deg: lon,
+            height_m: 0.0,
+        };
+        let e = kshana_rules::explain(
+            &self.spk,
+            self.eop.as_ref(),
+            &natal,
+            &obs,
+            to_house_system(system),
+            ayanamsa.into(),
+            life,
+            at.into(),
+        )
+        .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(ExplanationRecord {
+            life: e.life.name().to_string(),
+            at: e.at.into(),
+            score: e.score * 100.0,
+            band: e.band.word().to_string(),
+            headline: e.headline.clone(),
+            causes: e.causes.iter().map(cause_record).collect(),
+            helpers: e.helpers.iter().map(cause_record).collect(),
+            relief: e.relief.iter().map(relief_record).collect(),
+            eases: e.eases.as_ref().map(turning_record),
+            peak: e.peak.as_ref().map(turning_record),
+            toughens: e.toughens.as_ref().map(turning_record),
+            slow_now: e.slow_now * 100.0,
+            slow: e
+                .slow
+                .iter()
+                .map(|(t, v)| SampleRecord {
+                    at: (*t).into(),
+                    scores: vec![v * 100.0],
+                    tara: 0,
+                })
+                .collect(),
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------------
+// Plan: how is this scheduled time for me?
+// ---------------------------------------------------------------------------------
+
+/// One purpose the picker offers.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct PurposeRecord {
+    pub key: String,
+    pub words: String,
+}
+
+/// The purposes, in display order.
+#[uniffi::export]
+pub fn purposes() -> Vec<PurposeRecord> {
+    kshana_rules::Purpose::ALL
+        .iter()
+        .map(|p| PurposeRecord {
+            key: p.key().to_string(),
+            words: p.words().to_string(),
+        })
+        .collect()
+}
+
+/// A better hour.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct SlotRecord {
+    pub start: ExactInstant,
+    pub end: ExactInstant,
+    pub lord: String,
+    /// 0–100.
+    pub score: f64,
+}
+
+/// A life the purpose touches: weight and score.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct LifeWeightRecord {
+    pub life: String,
+    pub weight: f64,
+    /// 0–100.
+    pub score: f64,
+}
+
+/// The reading of one scheduled time for one purpose.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct AppointmentRecord {
+    pub purpose: String,
+    pub purpose_words: String,
+    pub at: ExactInstant,
+    /// 0–100.
+    pub score: f64,
+    pub band: String,
+    pub verdict: String,
+    pub headline: String,
+    pub advice: Vec<String>,
+    pub lives: Vec<LifeWeightRecord>,
+    pub hora: Option<HoraRecord>,
+    pub caution: Option<String>,
+    pub abhijit: bool,
+    pub tara_name: String,
+    pub better_today: Vec<SlotRecord>,
+    pub better_day: Option<ExactInstant>,
+    /// 0–100.
+    pub better_day_score: f64,
+    pub better_day_words: String,
+    pub moment: MomentRecord,
+}
+
+#[uniffi::export]
+impl Engine {
+    /// How `at` reads for `purpose` (a key from `purposes()`), for a person born at
+    /// `birth` who will be at `lat`/`lon` then.
+    #[allow(clippy::too_many_arguments)]
+    pub fn appointment(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        purpose: String,
+        at: ExactInstant,
+    ) -> Result<AppointmentRecord, KshanaError> {
+        let purpose = kshana_rules::Purpose::parse(&purpose)
+            .ok_or_else(|| KshanaError::Engine(format!("unknown purpose {purpose}")))?;
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let obs = Observer {
+            latitude_deg: lat,
+            longitude_deg: lon,
+            height_m: 0.0,
+        };
+        let a = kshana_rules::appointment(
+            &self.spk,
+            self.eop.as_ref(),
+            &natal,
+            &obs,
+            to_house_system(system),
+            ayanamsa.into(),
+            purpose,
+            at.into(),
+        )
+        .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        let moment = self.forecast_moment(birth, birth_lat, birth_lon, lat, lon, system, ayanamsa, at)?;
+        Ok(AppointmentRecord {
+            purpose: a.purpose.key().to_string(),
+            purpose_words: a.purpose.words().to_string(),
+            at: a.at.into(),
+            score: a.score * 100.0,
+            band: a.band.word().to_string(),
+            verdict: a.verdict.clone(),
+            headline: a.headline.clone(),
+            advice: a.advice.clone(),
+            lives: a
+                .lives
+                .iter()
+                .map(|(l, w, s)| LifeWeightRecord {
+                    life: l.name().to_string(),
+                    weight: *w,
+                    score: s * 100.0,
+                })
+                .collect(),
+            hora: a.hora.as_ref().map(|h| HoraRecord {
+                lord: lord_name(h.lord),
+                start: h.start.into(),
+                end: h.end.into(),
+                words: h.words.to_string(),
+            }),
+            caution: a.caution.clone(),
+            abhijit: a.abhijit,
+            tara_name: kshana_rules::TARA_NAMES[a.tara].to_string(),
+            better_today: a
+                .better_today
+                .iter()
+                .map(|s| SlotRecord {
+                    start: s.start.into(),
+                    end: s.end.into(),
+                    lord: lord_name(s.lord),
+                    score: s.score * 100.0,
+                })
+                .collect(),
+            better_day: a.better_day.map(|(t, _)| t.into()),
+            better_day_score: a.better_day.map(|(_, v)| v * 100.0).unwrap_or(0.0),
+            better_day_words: a.better_day_words.clone(),
+            moment,
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------------
+// Together: two charts.
+// ---------------------------------------------------------------------------------
+
+/// One koota of the match.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct KootaRecord {
+    pub name: String,
+    pub points: f64,
+    pub max: f64,
+    pub words: String,
+    pub source: String,
+}
+
+/// The match of two charts.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct KundaliRecord {
+    pub total: f64,
+    pub kootas: Vec<KootaRecord>,
+    pub verdict: String,
+    pub headline: String,
+    pub kuja_a: bool,
+    pub kuja_b: bool,
+    pub kuja_words: String,
+    pub moon_a: String,
+    pub moon_b: String,
+    pub moon_distance: u8,
+    pub strengths: Vec<String>,
+    pub frictions: Vec<String>,
+}
+
+/// One monthly sample of the pair: 0–100 each.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct CoupleSampleRecord {
+    pub at: ExactInstant,
+    pub a: f64,
+    pub b: f64,
+    pub together: f64,
+}
+
+/// The pair at an instant and over the months around it.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct CoupleRecord {
+    pub at: ExactInstant,
+    /// 0–100.
+    pub a_love: f64,
+    /// 0–100.
+    pub b_love: f64,
+    /// 0–100.
+    pub together: f64,
+    pub band: String,
+    pub headline: String,
+    pub a_saturn: String,
+    pub b_saturn: String,
+    pub a_saturn_active: bool,
+    pub b_saturn_active: bool,
+    pub notes: Vec<String>,
+    pub eases_at: Option<ExactInstant>,
+    pub eases_score: f64,
+    pub peak_at: Option<ExactInstant>,
+    pub peak_score: f64,
+    pub low_at: Option<ExactInstant>,
+    pub low_score: f64,
+    pub series: Vec<CoupleSampleRecord>,
+    pub a_relief: Vec<ReliefRecord>,
+    pub b_relief: Vec<ReliefRecord>,
+    pub a_cause: String,
+    pub b_cause: String,
+}
+
+/// A question about the pair, answered from both charts.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct CoupleAnswerRecord {
+    pub a: AnswerRecord,
+    pub b: AnswerRecord,
+    pub verdict: String,
+    /// 0–100.
+    pub score: f64,
+    /// 0–100.
+    pub confidence: f64,
+    pub headline: String,
+    pub when_start: Option<ExactInstant>,
+    pub when_end: Option<ExactInstant>,
+}
+
+fn answer_record(a: &kshana_rules::Answer) -> AnswerRecord {
+    AnswerRecord {
+        life: a.life.name().to_string(),
+        question: a.question.key().to_string(),
+        verdict: a.verdict.clone(),
+        score: a.score * 100.0,
+        confidence: a.confidence * 100.0,
+        headline: a.headline.clone(),
+        when_start: a.when_start.map(Into::into),
+        when_end: a.when_end.map(Into::into),
+        when_words: a.when_words.clone(),
+        first_opening_start: a.first_opening_start.map(Into::into),
+        first_opening_end: a.first_opening_end.map(Into::into),
+        reasons: a.reasons.clone(),
+        rule_ids: a.rule_ids.iter().map(|s| s.to_string()).collect(),
+        now: a.now * 100.0,
+        ahead_mean: a.ahead_mean * 100.0,
+        ahead_best: a.ahead_best * 100.0,
+        shifts: a.shifts.iter().map(shift_record).collect(),
+    }
+}
+
+#[uniffi::export]
+impl Engine {
+    /// The Ashtakoota match of two births (each with its birth place), Kuja dosha and
+    /// the Moon-to-Moon synastry. `a_is_groom` orients the one-directional kootas.
+    #[allow(clippy::too_many_arguments)]
+    pub fn kundali(
+        &self,
+        a_birth: ExactInstant,
+        a_lat: f64,
+        a_lon: f64,
+        b_birth: ExactInstant,
+        b_lat: f64,
+        b_lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        a_is_groom: bool,
+    ) -> Result<KundaliRecord, KshanaError> {
+        let a = self.natal(a_birth, a_lat, a_lon, system, ayanamsa)?;
+        let b = self.natal(b_birth, b_lat, b_lon, system, ayanamsa)?;
+        let k = kshana_rules::kundali(&a, &b, a_is_groom);
+        Ok(KundaliRecord {
+            total: k.total,
+            kootas: k
+                .kootas
+                .iter()
+                .map(|x| KootaRecord {
+                    name: x.name.to_string(),
+                    points: x.points,
+                    max: x.max,
+                    words: x.words.clone(),
+                    source: x.source.to_string(),
+                })
+                .collect(),
+            verdict: k.verdict.clone(),
+            headline: k.headline.clone(),
+            kuja_a: k.kuja_a,
+            kuja_b: k.kuja_b,
+            kuja_words: k.kuja_words.clone(),
+            moon_a: k.moon_a.clone(),
+            moon_b: k.moon_b.clone(),
+            moon_distance: k.moon_distance,
+            strengths: k.strengths.clone(),
+            frictions: k.frictions.clone(),
+        })
+    }
+
+    /// The pair at `at` (both at `lat`/`lon`) and over twelve months back and
+    /// twenty-four ahead.
+    #[allow(clippy::too_many_arguments)]
+    pub fn couple(
+        &self,
+        a_birth: ExactInstant,
+        a_lat: f64,
+        a_lon: f64,
+        b_birth: ExactInstant,
+        b_lat: f64,
+        b_lon: f64,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        a_is_groom: bool,
+        at: ExactInstant,
+    ) -> Result<CoupleRecord, KshanaError> {
+        let a = self.natal(a_birth, a_lat, a_lon, system, ayanamsa)?;
+        let b = self.natal(b_birth, b_lat, b_lon, system, ayanamsa)?;
+        let k = kshana_rules::kundali(&a, &b, a_is_groom);
+        let obs = Observer {
+            latitude_deg: lat,
+            longitude_deg: lon,
+            height_m: 0.0,
+        };
+        let c = kshana_rules::couple(
+            &self.spk,
+            self.eop.as_ref(),
+            &a,
+            &b,
+            &obs,
+            to_house_system(system),
+            ayanamsa.into(),
+            k.total,
+            at.into(),
+        )
+        .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(CoupleRecord {
+            at: c.at.into(),
+            a_love: c.a_love * 100.0,
+            b_love: c.b_love * 100.0,
+            together: c.together * 100.0,
+            band: c.band.word().to_string(),
+            headline: c.headline.clone(),
+            a_saturn: c.a_saturn.words().to_string(),
+            b_saturn: c.b_saturn.words().to_string(),
+            a_saturn_active: c.a_saturn != kshana_rules::SaturnPhase::Clear,
+            b_saturn_active: c.b_saturn != kshana_rules::SaturnPhase::Clear,
+            notes: c.notes.clone(),
+            eases_at: c.eases.map(|(t, _)| t.into()),
+            eases_score: c.eases.map(|(_, v)| v * 100.0).unwrap_or(0.0),
+            peak_at: c.peak.map(|(t, _)| t.into()),
+            peak_score: c.peak.map(|(_, v)| v * 100.0).unwrap_or(0.0),
+            low_at: c.low.map(|(t, _)| t.into()),
+            low_score: c.low.map(|(_, v)| v * 100.0).unwrap_or(0.0),
+            series: c
+                .series
+                .iter()
+                .map(|(t, a, b, g)| CoupleSampleRecord {
+                    at: (*t).into(),
+                    a: a * 100.0,
+                    b: b * 100.0,
+                    together: g * 100.0,
+                })
+                .collect(),
+            a_relief: c.a_relief.iter().map(relief_record).collect(),
+            b_relief: c.b_relief.iter().map(relief_record).collect(),
+            a_cause: c.a_cause.clone(),
+            b_cause: c.b_cause.clone(),
+        })
+    }
+
+    /// Ask `question` (a key from `questions()`) about love for both charts at `at`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn couple_ask(
+        &self,
+        a_birth: ExactInstant,
+        a_lat: f64,
+        a_lon: f64,
+        b_birth: ExactInstant,
+        b_lat: f64,
+        b_lon: f64,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        question: String,
+        at: ExactInstant,
+    ) -> Result<CoupleAnswerRecord, KshanaError> {
+        let question = kshana_rules::Question::parse(&question)
+            .ok_or_else(|| KshanaError::Engine(format!("unknown question {question}")))?;
+        let a = self.natal(a_birth, a_lat, a_lon, system, ayanamsa)?;
+        let b = self.natal(b_birth, b_lat, b_lon, system, ayanamsa)?;
+        let obs = Observer {
+            latitude_deg: lat,
+            longitude_deg: lon,
+            height_m: 0.0,
+        };
+        let c = kshana_rules::couple_ask(
+            &self.spk,
+            self.eop.as_ref(),
+            &a,
+            &b,
+            &obs,
+            to_house_system(system),
+            ayanamsa.into(),
+            question,
+            at.into(),
+        )
+        .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(CoupleAnswerRecord {
+            a: answer_record(&c.a),
+            b: answer_record(&c.b),
+            verdict: c.verdict.clone(),
+            score: c.score * 100.0,
+            confidence: c.confidence * 100.0,
+            headline: c.headline.clone(),
+            when_start: c.when_start.map(Into::into),
+            when_end: c.when_end.map(Into::into),
+        })
+    }
+}
+
+// ---------------------------------------------------------------------------------
+// The book of a life.
+// ---------------------------------------------------------------------------------
+
+/// A chapter (mahadasha) or page (antardasha).
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct ChapterRecord {
+    pub lord: String,
+    pub level: u8,
+    pub start: ExactInstant,
+    pub end: ExactInstant,
+    pub age: f64,
+    /// 0–100.
+    pub tone: f64,
+    pub band: String,
+    /// 0–100, `life_names()` order.
+    pub lives: Vec<f64>,
+    pub best: String,
+    pub weak: String,
+    pub words: String,
+    pub current: bool,
+}
+
+/// A phase change inside a Saturn span.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct PhaseRecord {
+    pub at: ExactInstant,
+    pub words: String,
+}
+
+/// A span of Saturn over the Moon's testing houses.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct SaturnSpanRecord {
+    pub kind: String,
+    pub start: ExactInstant,
+    pub end: ExactInstant,
+    pub age: f64,
+    pub phases: Vec<PhaseRecord>,
+    pub current: bool,
+    pub words: String,
+}
+
+/// Jupiter in one house from the Moon.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct PassageRecord {
+    pub start: ExactInstant,
+    pub end: ExactInstant,
+    pub sign: String,
+    pub house: u8,
+    pub favourable: bool,
+    pub current: bool,
+    pub words: String,
+}
+
+/// A graha back at its birth place.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct ReturnRecord {
+    pub graha: String,
+    pub nth: u8,
+    pub at: ExactInstant,
+    pub age: f64,
+    pub words: String,
+}
+
+/// The book.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct TimelineRecord {
+    pub birth: ExactInstant,
+    pub at: ExactInstant,
+    pub age: f64,
+    pub chapters: Vec<ChapterRecord>,
+    pub pages: Vec<ChapterRecord>,
+    pub saturn: Vec<SaturnSpanRecord>,
+    pub jupiter: Vec<PassageRecord>,
+    pub returns: Vec<ReturnRecord>,
+    pub headline: String,
+    pub horizon: ExactInstant,
+}
+
+fn chapter_record(c: &kshana_rules::Chapter) -> ChapterRecord {
+    ChapterRecord {
+        lord: lord_name(c.lord),
+        level: c.level,
+        start: c.start.into(),
+        end: c.end.into(),
+        age: c.age,
+        tone: c.tone * 100.0,
+        band: c.band.word().to_string(),
+        lives: c.lives.iter().map(|v| v * 100.0).collect(),
+        best: c.best.name().to_string(),
+        weak: c.weak.name().to_string(),
+        words: c.words.clone(),
+        current: c.current,
+    }
+}
+
+#[uniffi::export]
+impl Engine {
+    /// The book of a life opened at `at`: chapters, pages, Saturn's trials, Jupiter's
+    /// passages and the returns. Depends only on the birth, so the app may cache it.
+    #[allow(clippy::too_many_arguments)]
+    pub fn timeline(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        at: ExactInstant,
+    ) -> Result<TimelineRecord, KshanaError> {
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let t = kshana_rules::timeline(&self.spk, &natal, ayanamsa.into(), birth_lon, at.into());
+        Ok(TimelineRecord {
+            birth: t.birth.into(),
+            at: t.at.into(),
+            age: t.age,
+            chapters: t.chapters.iter().map(chapter_record).collect(),
+            pages: t.pages.iter().map(chapter_record).collect(),
+            saturn: t
+                .saturn
+                .iter()
+                .map(|s| SaturnSpanRecord {
+                    kind: s.kind.to_string(),
+                    start: s.start.into(),
+                    end: s.end.into(),
+                    age: s.age,
+                    phases: s
+                        .phases
+                        .iter()
+                        .map(|(t, w)| PhaseRecord {
+                            at: (*t).into(),
+                            words: w.clone(),
+                        })
+                        .collect(),
+                    current: s.current,
+                    words: s.words.clone(),
+                })
+                .collect(),
+            jupiter: t
+                .jupiter
+                .iter()
+                .map(|p| PassageRecord {
+                    start: p.start.into(),
+                    end: p.end.into(),
+                    sign: kshana_rules::forecast::SIGN_NAMES[p.sign as usize % 12].to_string(),
+                    house: p.house,
+                    favourable: p.favourable,
+                    current: p.current,
+                    words: p.words.clone(),
+                })
+                .collect(),
+            returns: t
+                .returns
+                .iter()
+                .map(|r| ReturnRecord {
+                    graha: lord_name(r.graha),
+                    nth: r.nth,
+                    at: r.at.into(),
+                    age: r.age,
+                    words: r.words.clone(),
+                })
+                .collect(),
+            headline: t.headline.clone(),
+            horizon: t.horizon.into(),
+        })
+    }
+}
+
+#[cfg(test)]
+mod layer_tests {
+    use super::*;
+
+    fn engine() -> Option<Arc<Engine>> {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/de421.bsp");
+        if !p.exists() {
+            return None;
+        }
+        Engine::open(p.to_string_lossy().into_owned(), None).ok()
+    }
+
+    #[test]
+    fn explain_plan_together_and_the_book_cross_the_boundary() {
+        let Some(engine) = engine() else { return };
+        let birth = instant_from_utc(UtcFields {
+            year: 1990,
+            month: 2,
+            day: 20,
+            hour: 5,
+            minute: 4,
+            second: 0,
+            nanos: 0,
+        })
+        .unwrap();
+        let other = instant_from_utc(UtcFields {
+            year: 1992,
+            month: 8,
+            day: 11,
+            hour: 14,
+            minute: 30,
+            second: 0,
+            nanos: 0,
+        })
+        .unwrap();
+        let at = instant_from_utc(UtcFields {
+            year: 2026,
+            month: 10,
+            day: 17,
+            hour: 5,
+            minute: 0,
+            second: 0,
+            nanos: 0,
+        })
+        .unwrap();
+        let (lat, lon) = (9.9312, 76.2673);
+        let e = engine
+            .explain(birth, lat, lon, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, "Love".into(), at)
+            .unwrap();
+        assert!(!e.headline.is_empty() && !e.relief.is_empty() && e.slow.len() == 36);
+        assert!(purposes().len() == 11);
+        let a = engine
+            .appointment(birth, lat, lon, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, "interview".into(), at)
+            .unwrap();
+        assert!(!a.verdict.is_empty() && a.moment.lives.len() == 9);
+        let k = engine
+            .kundali(birth, lat, lon, other, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, true)
+            .unwrap();
+        assert_eq!(k.kootas.len(), 8);
+        let c = engine
+            .couple(birth, lat, lon, other, lat, lon, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, true, at)
+            .unwrap();
+        assert_eq!(c.series.len(), 37);
+        let q = engine
+            .couple_ask(birth, lat, lon, other, lat, lon, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, "will_it_return".into(), at)
+            .unwrap();
+        assert!(!q.verdict.is_empty());
+        let t = engine
+            .timeline(birth, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, at)
+            .unwrap();
+        assert_eq!(t.chapters.len(), 9);
+        assert!(t.saturn.len() >= 5 && !t.returns.is_empty());
+    }
+}

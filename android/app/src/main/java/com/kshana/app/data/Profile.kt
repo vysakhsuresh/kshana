@@ -184,6 +184,64 @@ object ProfileStore {
             .apply()
     }
 
+    // ----- Partners: other people's births, for Together. Stored as JSON on the phone. -----
+
+    private const val K_PARTNERS = "partners.json"
+    private const val K_PARTNER_SELECTED = "partners.selected"
+    private const val K_SELF_GROOM = "partners.selfIsGroom"
+
+    fun partners(context: Context): List<BirthProfile> {
+        val raw = prefs(context).getString(K_PARTNERS, null) ?: return emptyList()
+        return runCatching {
+            val arr = org.json.JSONArray(raw)
+            (0 until arr.length()).map { i ->
+                val o = arr.getJSONObject(i)
+                BirthProfile(
+                    name = o.optString("name", "Partner"),
+                    year = o.getInt("year"), month = o.getInt("month"), day = o.getInt("day"),
+                    hour = o.getInt("hour"), minute = o.getInt("minute"), second = o.optInt("second", 0),
+                    uncertaintyLevel = o.optInt("unc", 0),
+                    latitude = o.getDouble("lat"), longitude = o.getDouble("lon"),
+                    placeName = o.optString("place", ""), zoneId = o.optString("zone", "Asia/Kolkata"),
+                )
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    fun savePartners(context: Context, list: List<BirthProfile>) {
+        val arr = org.json.JSONArray()
+        for (p in list) {
+            arr.put(
+                org.json.JSONObject()
+                    .put("name", p.name).put("year", p.year).put("month", p.month).put("day", p.day)
+                    .put("hour", p.hour).put("minute", p.minute).put("second", p.second).put("unc", p.uncertaintyLevel)
+                    .put("lat", p.latitude).put("lon", p.longitude).put("place", p.placeName).put("zone", p.zoneId),
+            )
+        }
+        prefs(context).edit().putString(K_PARTNERS, arr.toString()).apply()
+    }
+
+    /** Adds or replaces (by name) a partner and selects it. */
+    fun addPartner(context: Context, p: BirthProfile) {
+        val list = partners(context).filter { it.name != p.name } + p
+        savePartners(context, list)
+        selectPartner(context, list.lastIndex)
+    }
+
+    fun removePartner(context: Context, index: Int) {
+        val list = partners(context).toMutableList()
+        if (index in list.indices) list.removeAt(index)
+        savePartners(context, list)
+        selectPartner(context, (selectedPartner(context)).coerceAtMost(list.lastIndex).coerceAtLeast(0))
+    }
+
+    fun selectedPartner(context: Context): Int = prefs(context).getInt(K_PARTNER_SELECTED, 0)
+    fun selectPartner(context: Context, index: Int) = prefs(context).edit().putInt(K_PARTNER_SELECTED, index).apply()
+
+    /** Whether the one-directional kootas are counted with this person as the groom. */
+    fun selfIsGroom(context: Context): Boolean = prefs(context).getBoolean(K_SELF_GROOM, true)
+    fun saveSelfIsGroom(context: Context, v: Boolean) = prefs(context).edit().putBoolean(K_SELF_GROOM, v).apply()
+
     /** Major Indian and world cities for the picker. */
     val places: List<Place> = listOf(
         kochi,

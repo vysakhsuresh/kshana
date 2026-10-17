@@ -79,6 +79,9 @@ fun LoopScreen(
     onAsk: () -> Unit,
     onRemedy: () -> Unit,
     onSettings: () -> Unit,
+    onPlan: () -> Unit = {},
+    onBook: () -> Unit = {},
+    onTogether: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var moment by remember { mutableStateOf<MomentRecord?>(null) }
@@ -207,6 +210,11 @@ fun LoopScreen(
                         GoldButton("ASK", onClick = onAsk, modifier = Modifier.weight(1f))
                         QuietButton("REMEDIES", onClick = onRemedy, modifier = Modifier.weight(1f))
                     }
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        QuietButton("PLAN A TIME", onClick = onPlan, modifier = Modifier.weight(1f))
+                        QuietButton("THE TWO OF US", onClick = onTogether, modifier = Modifier.weight(1f))
+                    }
+                    QuietButton("THE BOOK OF YOUR LIFE · PAST, PRESENT, FUTURE", onClick = onBook, modifier = Modifier.fillMaxWidth())
                     Text("Everything is computed on this phone from your birth time. Nothing leaves it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
                 }
             }

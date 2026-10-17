@@ -333,6 +333,7 @@ dependencies = [
  "kshana-frames",
  "kshana-houses",
  "kshana-sky",
+ "kshana-solver",
  "kshana-time",
  "kshana-vedic",
 ]

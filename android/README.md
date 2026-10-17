@@ -12,8 +12,8 @@ coming. Tapping a life opens its page: now, today's best hours, this week, this 
 this year, each with a trend line, the best and lowest stretch, and what changes when.
 The loop recomputes at every shift; every number can be opened to its reasons and rule
 ids (`docs/RULES.md`, Forecast section). A travel row steps the whole loop forward or
-back (−1d, +1h, +1d, +7d, +30d) and back to now. The four doors are Loop, Ask, Remedy
-and More.
+back (−1d, +1h, +1d, +7d, +30d) and back to now. The five doors are Loop, Ask, Plan,
+Us and More; Remedy is a button on the Loop, on every life page and under More.
 
 **Ask** takes a life and one of six questions (will it happen, when, is now a good
 time, should I, will it come back, will it be set right) and answers from the birth
@@ -25,6 +25,23 @@ planets, and the reasons. No typing, no network, no language model.
 house) and ranks its dictionary: fourteen to fifteen remedies per graha plus six for the
 life asked about, with the kind, day, effort and source of each, and commitments the
 person can hold.
+
+Every life page opens to **Why now · who · when it eases**: each graha behind the
+number with its signed pull and the exact instant it moves on, every coming change
+with its solved gain in points, and the three-year slow line with its turning points.
+
+**Plan** reads a scheduled time for a purpose (meeting, interview, exam, journey, deal,
+doctor, date, family, property, a start, anything): a verdict, the reasons, the better
+hours that day and a better day in the fortnight.
+
+**Us** puts another person's birth beside yours: the thirty-six-point match with its
+eight kootas, Kuja dosha, how the two charts stand this second, twelve months back and
+twenty-four ahead, what lifts each side next, and any of the six questions answered
+from both charts together.
+
+**The book of your life** (from the Loop or More) lays out the chapters and pages
+(Vimshottari), every sade sati and dhaiya from birth to the second, Jupiter's passages,
+and the Saturn, Jupiter and Rahu returns, with the present marked.
 
 More holds the expert screens: Birth (profile, place, uncertainty), the sky now (live
 clock, wheel, panchanga), Chart (Western wheel, aspects, stability under the

@@ -43,6 +43,12 @@ fun MoreScreen(profile: BirthProfile?, onOpen: (String) -> Unit) {
         Entry("Settings", "ayanamsa, house system, where you are now", "settings", onOpen)
         Entry("Why trust this", "the engine, its data and its checks", "trust", onOpen)
 
+        SectionLabel("Your life")
+        Entry("The book of your life", "chapters, Saturn's trials, Jupiter's passages, the returns", "book", onOpen)
+        Entry("Remedies", "the parihara dictionary for the cause now", "parihara", onOpen)
+        Entry("Plan a time", "how a scheduled hour sits with you", "plan", onOpen)
+        Entry("The two of you", "match, this moment, the months ahead, questions about us", "together", onOpen)
+
         SectionLabel("Go deeper")
         Entry("The sky now", "live wheel, ascendant, panchanga", "now", onOpen)
         Entry("Your birth chart", "Western wheel and aspects", "chart", onOpen)
