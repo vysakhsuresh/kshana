@@ -348,7 +348,7 @@ fun TogetherScreen(
                     val we = ca.whenEnd
                     if (ws != null && we != null) {
                         Text("The window both charts open", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-                        Text("${localText(ws, WEEKDAY_DAY)} – ${localText(we, WEEKDAY_DAY)}", fontFamily = FontFamily.Monospace, fontSize = 15.sp, color = KshanaColors.Sky)
+                        Text("${whenText(ws)} – ${whenText(we)}", fontFamily = FontFamily.Monospace, fontSize = 15.sp, color = KshanaColors.Sky)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                         MiniStat("you now", ca.a.now)

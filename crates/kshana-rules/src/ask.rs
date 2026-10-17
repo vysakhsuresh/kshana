@@ -450,8 +450,10 @@ pub fn answer(
             if dip && back_at.is_some() {
                 let t = back_at.unwrap();
                 let months = months_between(at, t);
-                let score = (0.72 - months / 100.0 + 0.1 * (witness - 0.5)).clamp(0.4, 0.9);
-                ("Yes, it comes back".to_string(), score, agreement(&[natal_c.score, fut_peak, witness]), format!("Yes. {} fell from {:.0} to {:.0} in the slow line, and climbs back to where it was around {}. Keep the door open and do not chase; the return is the season's, not an argument's.", life.name(), past_peak * 100.0, now_slow * 100.0, date_words(t, lon)), Some((t, t.add_ns(60 * NS_PER_DAY))), "when the line is back where it was".to_string())
+                // A yes is at least a half; nearer and fuller returns score higher.
+                let score = (0.58 + 0.25 * (1.0 - months / 24.0).max(0.0) + 0.5 * (fut_peak - past_peak).clamp(-0.1, 0.1) + 0.1 * (witness - 0.5)).clamp(0.5, 0.9);
+                let v = if months <= 12.0 { "Yes, it comes back" } else { "Yes, in its season" };
+                (v.to_string(), score, agreement(&[natal_c.score, fut_peak, witness]), format!("Yes. {} fell from {:.0} to {:.0} in the slow line, and climbs back to where it was around {}. Keep the door open and do not chase; the return is the season's, not an argument's.", life.name(), past_peak * 100.0, now_slow * 100.0, date_words(t, lon)), Some((t, t.add_ns(60 * NS_PER_DAY))), "when the line is back where it was".to_string())
             } else if dip {
                 let score = (0.42 + 0.1 * (witness - 0.5)).clamp(0.3, 0.55);
                 ("Not as it was".to_string(), score, agreement(&[natal_c.score, fut_peak, witness]), format!("Not as it was. {} eases to {:.0} around {} but does not reach the {:.0} of the past year within two years. What comes back comes changed, or what comes is new.", life.name(), fut_peak * 100.0, date_words(fut_t, lon), past_peak * 100.0), Some((fut_t, fut_t.add_ns(60 * NS_PER_DAY))), "the best the line reaches".to_string())
@@ -477,7 +479,7 @@ pub fn answer(
             match (&e.eases, &lift) {
                 (Some(t), _) => {
                     let months = months_between(at, t.at);
-                    let score = (0.8 - months / 60.0).clamp(0.45, 0.85);
+                    let score = (0.8 - months / 60.0).clamp(0.5, 0.85);
                     let soon = months <= 12.0;
                     let mut h = format!("{} {} climbs to {} from {}", if soon { "Yes, it mends." } else { "It mends, slowly." }, life.name(), t.band.word(), date_words(t.at, lon));
                     if let Some(r) = &lift {

@@ -145,7 +145,7 @@ fun AskScreen(
                     HorizontalDivider(color = KshanaColors.LineSoft)
                     Text(a.whenWords.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
                     Text(
-                        if (sameDay(ws, we)) "${localText(ws, WEEKDAY_DAY)} · ${hm(ws)} – ${hm(we)}" else "${localText(ws, WEEKDAY_DAY)} – ${localText(we, WEEKDAY_DAY)}",
+                        if (sameDay(ws, we)) "${whenText(ws)} · ${hm(ws)} – ${hm(we)}" else "${whenText(ws)} – ${whenText(we)}",
                         fontFamily = FontFamily.Monospace, fontSize = 16.sp, color = KshanaColors.Sky,
                     )
                 }
