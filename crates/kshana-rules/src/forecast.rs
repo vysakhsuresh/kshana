@@ -312,6 +312,8 @@ pub struct Moment {
     pub headline: String,
     /// The moment's name: "Sampat under the Moon's hour, waxing".
     pub title: String,
+    /// The day's name: "Sampat Shashthi, the Moon's day".
+    pub day_title: String,
     /// Nine lives, in `Life::ALL` order.
     pub lives: Vec<LifeScore>,
     /// The planetary hour, when the Sun rises and sets here.
@@ -1427,6 +1429,11 @@ pub fn moment(
         sky.facts.moon_phase_deg < 180.0,
         nakshatra(sky.moon_sidereal).name(),
     );
+    let day_title = crate::feed::day_title(
+        tara,
+        &tithi(sky.moon_sidereal, sky.sun_sidereal),
+        crate::prashna::day_lord(at, obs.longitude_deg),
+    );
     Ok(Moment {
         hours,
         at,
@@ -1434,6 +1441,7 @@ pub fn moment(
         band,
         headline: moment_words(band, hora.as_ref(), tara),
         title,
+        day_title,
         lives,
         hora,
         moon_star,

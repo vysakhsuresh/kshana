@@ -45,7 +45,11 @@ fun MoreScreen(profile: BirthProfile?, onOpen: (String) -> Unit) {
         Entry("Why trust this", "the engine, its data and its checks", "trust", onOpen)
 
         SectionLabel("Your life")
-        Entry("The book of your life", "chapters, Saturn's trials, Jupiter's passages, the returns", "book", onOpen)
+        Entry("The book of your life", "this year, the chapters, Saturn's trials, Jupiter's passages, the returns", "book", onOpen)
+        Entry("The wall", "every instant you are waiting for, counting down to the second", "wall", onOpen)
+        Entry("The month's letter", "one page for the thirty days ahead, kept and shareable", "letter", onOpen)
+        Entry("What the sky said on…", "any day of your life, read as it was", "hindsight", onOpen)
+        Entry("Did it happen?", "grade the windows the app named; the record it makes", "record", onOpen)
         Entry("Remedies", "the parihara dictionary for the cause now", "parihara", onOpen)
         Entry("Plan a time", "how a scheduled hour sits with you", "plan", onOpen)
         Entry("The two of you", "match, this moment, the months ahead, questions about us", "together", onOpen)

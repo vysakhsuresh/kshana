@@ -3,6 +3,7 @@ package com.kshana.app.ui.screens
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,7 +58,36 @@ private val ACTIVE_KINDS = setOf("Karma", "Seva", "Discipline")
 private fun kindColour(kind: String): Color = when (kind) {
     in ACTIVE_KINDS -> KshanaColors.Gold
     "Daana", "Vrata" -> KshanaColors.Sky
+    "Anna", "Jeeva", "Prakriti" -> KshanaColors.Leaf
+    "Vastra" -> KshanaColors.Sky
     else -> KshanaColors.Muted
+}
+
+private fun kindWords(kind: String): String = when (kind) {
+    "Anna" -> "FOOD"
+    "Jeeva" -> "CREATURES"
+    "Prakriti" -> "WATER & TREES"
+    "Vastra" -> "COLOUR"
+    else -> kind.uppercase()
+}
+
+private val GROUPS = listOf(
+    "ALL" to null,
+    "DO" to setOf("Karma", "Seva", "Discipline"),
+    "FEED" to setOf("Anna", "Jeeva"),
+    "GIVE" to setOf("Daana", "Prakriti", "Vastra"),
+    "FAST & PRAYER" to setOf("Vrata", "Mantra", "Pooja"),
+)
+
+private fun planetDay(planet: String): java.time.DayOfWeek? = when (planet) {
+    "Sun" -> java.time.DayOfWeek.SUNDAY
+    "Moon" -> java.time.DayOfWeek.MONDAY
+    "Mars", "Ketu" -> java.time.DayOfWeek.TUESDAY
+    "Mercury" -> java.time.DayOfWeek.WEDNESDAY
+    "Jupiter" -> java.time.DayOfWeek.THURSDAY
+    "Venus" -> java.time.DayOfWeek.FRIDAY
+    "Saturn", "Rahu" -> java.time.DayOfWeek.SATURDAY
+    else -> null
 }
 
 /** "Earn the period.": the cause, the ranked remedies, and the commitments kept so far. */
@@ -144,9 +174,33 @@ fun PariharaScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -
                 Text(rec.signature, fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Sky, modifier = Modifier.padding(top = 8.dp))
             }
 
-            SectionLabel("Remedies, ranked · ${rec.remedies.size} in the dictionary for this")
-            if (rec.remedies.isEmpty()) Text("none for this period", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
-            for ((i, r) in rec.remedies.withIndex()) RemedyRow(i + 1, r, r.title in kept) { toggle(rec, r) }
+            // The streak: today's tick on each held remedy, and the longest run.
+            var streakVersion by remember { mutableStateOf(0) }
+            val bestStreak = remember(streakVersion, kept) { com.kshana.app.data.StreakStore.best(context, rec.planet, kept.toList()) }
+            val today = java.time.LocalDate.now().dayOfWeek
+            val pd = planetDay(rec.planet)
+            if (pd == today) {
+                Text("Today is ${rec.planet}'s day. What you keep today counts double in the tradition; tick what you did.", fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Gold)
+            }
+            if (kept.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(KshanaColors.Surface).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("🔥", fontSize = 22.sp)
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("$bestStreak-day streak", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
+                        Text("Tick TODAY on a held remedy once you have done it. The run counts consecutive days; a morning tick keeps yesterday's run alive.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                    }
+                }
+            }
+            var group by remember { mutableStateOf("ALL") }
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for ((label, _) in GROUPS) Chip(label, selected = group == label, onClick = { group = label })
+            }
+            val set = GROUPS.firstOrNull { it.first == group }?.second
+            val shown = rec.remedies.withIndex().filter { set == null || it.value.kind in set }
+            SectionLabel("Remedies, ranked · ${shown.size} of ${rec.remedies.size} in the dictionary for this")
+            if (shown.isEmpty()) Text("none of this kind for this period", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            for ((i, r) in shown) RemedyRow(i + 1, r, r.title in kept, rec.planet, streakVersion, { streakVersion++ }) { toggle(rec, r) }
             Text("Karma, seva and discipline are the work. Daana and vrata support it. Mantra and pooja are optional and never required.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(top = 8.dp))
         }
     }
@@ -169,7 +223,8 @@ private fun WorthinessRing(fraction: Float) {
 }
 
 @Composable
-private fun RemedyRow(rank: Int, r: RemedyRecord, committed: Boolean, onToggle: () -> Unit) {
+private fun RemedyRow(rank: Int, r: RemedyRecord, committed: Boolean, planet: String, streakVersion: Int, onTicked: () -> Unit, onToggle: () -> Unit) {
+    val context = LocalContext.current
     val colour = kindColour(r.kind)
     HorizontalDivider(color = KshanaColors.LineSoft)
     Row(
@@ -179,13 +234,21 @@ private fun RemedyRow(rank: Int, r: RemedyRecord, committed: Boolean, onToggle: 
         Text(rank.toString(), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Muted, modifier = Modifier.width(22.dp).padding(top = 3.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(r.kind.uppercase(), style = MaterialTheme.typography.labelSmall, color = colour)
+                Text(kindWords(r.kind), style = MaterialTheme.typography.labelSmall, color = colour)
                 if (r.optional) Text(" · OPTIONAL · NOT REQUIRED", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
             }
             Text(r.title, fontFamily = FontFamily.Serif, fontSize = 18.sp, color = if (r.optional) KshanaColors.TextSoft else KshanaColors.Text)
             Text(r.why, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             Text("${r.effort} · ${r.day} · fit ${(r.fit * 100).toInt()}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.padding(top = 2.dp))
             Text(r.source, fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+            if (committed) {
+                val ticked = remember(streakVersion) { com.kshana.app.data.StreakStore.tickedToday(context, planet, r.title) }
+                val streak = remember(streakVersion) { com.kshana.app.data.StreakStore.streak(context, planet, r.title) }
+                Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Chip(if (ticked) "✓ DONE TODAY" else "TODAY", selected = ticked, onClick = { com.kshana.app.data.StreakStore.toggleToday(context, planet, r.title); onTicked() })
+                    if (streak > 0) Text("🔥 $streak", fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = KshanaColors.Gold)
+                }
+            }
         }
         Box(
             Modifier.padding(start = 12.dp, top = 6.dp).size(22.dp).clip(CircleShape)

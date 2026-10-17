@@ -44,6 +44,21 @@ return to solar return, with its rising sign, lord and a tone per life), the cha
 and pages (Vimshottari), every sade sati and dhaiya from birth to the second, Jupiter's
 passages, and the Saturn, Jupiter and Rahu returns, with the present marked.
 
+The Loop opens with a one-line oracle, names the day and the moment, draws the real
+sky behind the hero (the signs and the planets at their true places, the ascendant to
+the left), traces the day's hours round the score ring, names **your next good
+minute** for the weakest main life, dims a shade inside Rahu kala, Yamaganda and
+Gulika, taps softly when the hour turns, and shows **the wall** (what you are waiting
+for, counting down), **your people today** (each person's reading and the talk window
+for the two of you), and bells on every shift so the phone tells you when it comes.
+**The wall**, **the month's letter**, **what the sky said on…** (hindsight on any date)
+and **did it happen?** (the proof feed, also asked at sunset) are a tap away. Plan
+compares readings side by side, by place, and finds the week's best hours for a
+purpose. Us holds everyone added with their relation, matches any two of them, and
+names the talk window. Remedies now include food for the graha's people, its creatures
+to feed, its water and trees, and its colours, with a daily tick and a streak on every
+held remedy, and the hour's mantra can be chanted aloud by the phone, counted to 108.
+
 The Loop also carries **the reading** (the birth Moon stated first, the periods with
 their ends, Saturn's phase and exit, the moment in words, days to circle, the remedy
 in brief), **the hour's lore** (deity, colour, direction, metal, mantra), a **name for

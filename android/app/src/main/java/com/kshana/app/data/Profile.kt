@@ -187,6 +187,20 @@ object ProfileStore {
     // ----- Partners: other people's births, for Together. Stored as JSON on the phone. -----
 
     private const val K_PARTNERS = "partners.json"
+    private const val K_RELATIONS = "partners.relations.json"
+
+    /** The relations people can be given under Us. */
+    val relations = listOf("Partner", "Spouse", "Mother", "Father", "Child", "Sibling", "Friend", "Other")
+
+    /** The relation stored for a person's name, "Partner" when none. */
+    fun relationOf(context: Context, name: String): String =
+        runCatching { org.json.JSONObject(prefs(context).getString(K_RELATIONS, "{}") ?: "{}").optString(name, "Partner") }.getOrDefault("Partner")
+
+    fun saveRelation(context: Context, name: String, relation: String) {
+        val o = runCatching { org.json.JSONObject(prefs(context).getString(K_RELATIONS, "{}") ?: "{}") }.getOrDefault(org.json.JSONObject())
+        o.put(name, relation)
+        prefs(context).edit().putString(K_RELATIONS, o.toString()).apply()
+    }
     private const val K_PARTNER_SELECTED = "partners.selected"
     private const val K_SELF_GROOM = "partners.selfIsGroom"
 

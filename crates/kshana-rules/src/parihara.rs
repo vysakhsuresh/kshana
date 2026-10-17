@@ -26,6 +26,14 @@ pub enum RemedyKind {
     Vrata,
     Mantra,
     Pooja,
+    /// Food given to the graha's people.
+    Anna,
+    /// Creatures fed: crows, cows, dogs, ants, fish, birds.
+    Jeeva,
+    /// Water, trees and places tended.
+    Prakriti,
+    /// Colours worn and kept from, small things carried.
+    Vastra,
 }
 
 /// One remedy.
@@ -65,7 +73,7 @@ pub struct Parihara {
 }
 
 /// `(kind, title, why, effort, day, source)`.
-type Row = (RemedyKind, &'static str, &'static str, &'static str, &'static str, &'static str);
+pub type Row = (RemedyKind, &'static str, &'static str, &'static str, &'static str, &'static str);
 
 const DHARMA: &str = "Dharma reading of the graha's signification";
 const BPHS: &str = "BPHS, Graha shanti adhyaya";
@@ -331,6 +339,10 @@ fn kind_base(kind: RemedyKind) -> f64 {
         RemedyKind::Vrata => 0.55,
         RemedyKind::Mantra => 0.45,
         RemedyKind::Pooja => 0.3,
+        RemedyKind::Anna => 0.82,
+        RemedyKind::Jeeva => 0.78,
+        RemedyKind::Prakriti => 0.72,
+        RemedyKind::Vastra => 0.5,
     }
 }
 
@@ -411,6 +423,9 @@ pub fn parihara(facts: &Facts, area: Option<Area>, period_lords: &[DashaLord]) -
             .collect()
     };
     let mut remedies = make(table(planet), 0.0);
+    // The other ways: food to the graha's people, its creatures fed, water and trees,
+    // colour. They sit with the daana and seva of the main table.
+    remedies.extend(make(crate::daana::alternatives(planet), -0.01));
     if let Some(a) = area {
         // The matter's own remedies sit just under the graha's: same kind, a shade less fit.
         remedies.extend(make(life_table(a.name), -0.03));

@@ -243,6 +243,47 @@ life has five answers, half the mean gap between what happened (1 or 0) and what
 predicted becomes an offset bounded to ±8 points, shown beside the score as "by your
 record". The core score is never altered silently.
 
+## The feed, the wall and the observances
+
+The next good minute for a life is the first planetary hour, outside the cautions, at
+or above 0.60 for it (KS-H-0001). The wall is every instant the person waits for:
+Saturn's exit or next move, the next sade sati (Saturn entering the 12th from the
+Moon, scanned ahead to the kernel's end), the ends of the running mahadasha, antardasha
+and pratyantar, Jupiter's and Rahu's next sign with its house from the Moon, the next
+solar return, the Moon's return to the birth star, the next Pournami and Amavasya,
+and the next Jupiter and Saturn returns, each solved to the second. The observances
+are the tithis of the month (Shukla Shashthi 6, Durga Ashtami 8, Ekadashi 11 and 26,
+Pradosham 13 and 28, Pournami 15, Sankashti Chaturthi 19, masik Shivaratri 29,
+Amavasya 30), the Sun's sankranti, and the Moon's entry into the birth star. The
+day's name is its tara, its tithi and the weekday's lord ("Sampat Shashthi, the
+Moon's day").
+
+## The month's letter
+
+Thirty daily samples from the day it is written: each life's story (trend, best and
+lowest stretch), the days to circle (the briefing's), the observances, the nearest
+countdown on the wall, and the remedy in brief for the weakest life, set out as
+paragraphs with dates.
+
+## The best slots and the talk window
+
+The best slots for a purpose in the days ahead score every planetary hour outside the
+cautions half by its weighted hora fit and half by the day's weighted reading from
+the daily series. The talk window for a pair is the first hour in the days ahead when
+both charts' hora fits for love are at or above 0.55, outside the cautions, on a day
+when both daily love scores are at or above 0.50.
+
+## Food, creatures, water and colour
+
+The remedy dictionary carries, beside the karma, seva, discipline, daana, vrata,
+mantra and pooja of each graha, its food given to its people (anna), its creatures
+fed (jeeva: the crow for Saturn and the ancestors, the cow for Jupiter and Venus, the
+dog for Ketu, ants and fish and birds for Rahu, monkeys for Mars), its water and trees
+(prakriti: the peepal for Saturn and Jupiter, the tulasi for Venus and Mercury) and
+its colours worn and kept from (vastra), from the Puranic daana lists, Lal Kitab and
+temple practice. Rahu's remedies are feeding those outside the circle: the outcast,
+the stranger, the one sleeping on the street, and the small and many creatures.
+
 ## The book of a life
 
 Chapters are the mahadashas of the 120-year Vimshottari cycle, pages the antardashas of

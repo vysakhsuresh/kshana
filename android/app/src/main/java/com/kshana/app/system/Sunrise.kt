@@ -140,6 +140,7 @@ class SunriseReceiver : BroadcastReceiver() {
                     val b = Sunrise.post(context)
                     android.util.Log.i("Kshana", "sunrise reading posted=${b != null}")
                     if (b != null) SadeSatiWidget.push(context, b)
+                    Sunset.rememberTodayAndSchedule(context)
                     Sunrise.scheduleNext(context)
                 }
             } catch (e: Exception) {
@@ -154,7 +155,10 @@ class SunriseReceiver : BroadcastReceiver() {
 /** After a reboot the alarm is gone; set it again. */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED && Sunrise.enabled(context)) Sunrise.scheduleNext(context)
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+            Alerts.rearm(context)
+            if (Sunrise.enabled(context)) Sunrise.scheduleNext(context)
+        }
     }
 }
 

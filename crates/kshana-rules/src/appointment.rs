@@ -388,6 +388,65 @@ pub fn appointment(
     })
 }
 
+/// One of the best slots in the days ahead for a purpose.
+#[derive(Clone, Debug, PartialEq)]
+pub struct DaySlot {
+    /// Start.
+    pub start: Instant,
+    /// End.
+    pub end: Instant,
+    /// Hora lord.
+    pub lord: DashaLord,
+    /// Combined score, `[0, 1]`: half the hour's fit, half the day's reading for the purpose.
+    pub score: f64,
+    /// The day's reading alone.
+    pub day_score: f64,
+}
+
+/// The best `limit` hours for `purpose` in the next `days`, outside the cautions,
+/// scored half by the planetary hour and half by the day.
+#[allow(clippy::too_many_arguments)]
+pub fn best_slots(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    natal: &crate::forecast::Natal,
+    obs: &Observer,
+    system: HouseSystem,
+    ayanamsa: Ayanamsa,
+    purpose: Purpose,
+    from: Instant,
+    days: usize,
+    limit: usize,
+) -> Result<Vec<DaySlot>, ForecastError> {
+    let weights = purpose.lives();
+    let idx = |l: Life| Life::ALL.iter().position(|x| *x == l).unwrap_or(0);
+    let wsum: f64 = weights.iter().map(|(_, w)| w).sum();
+    let samples = series(spk, eop, natal, obs, ayanamsa, from, NS_PER_DAY, days.max(1))?;
+    let mut out: Vec<DaySlot> = Vec::new();
+    for (d, s) in samples.iter().enumerate() {
+        let day_score = weights.iter().map(|(l, w)| w * s.scores[idx(*l)]).sum::<f64>() / wsum;
+        // The hours of that day: the moment at the sample instant carries them.
+        let m = moment(spk, eop, natal, obs, system, ayanamsa, from.add_ns(d as i128 * NS_PER_DAY + 6 * 3_600 * kshana_time::NS_PER_SEC))?;
+        for h in &m.hours {
+            if h.caution || h.end <= from {
+                continue;
+            }
+            let fit = weights.iter().map(|(l, w)| w * h.fit[idx(*l)]).sum::<f64>() / wsum;
+            out.push(DaySlot {
+                start: h.start.max(from),
+                end: h.end,
+                lord: h.lord,
+                score: 0.5 * fit + 0.5 * day_score,
+                day_score,
+            });
+        }
+    }
+    out.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    out.truncate(limit);
+    out.sort_by(|a, b| a.start.cmp(&b.start));
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -427,5 +486,9 @@ mod tests {
         assert!(a.caution.is_some(), "{:?}", a.moment.windows);
         assert!(a.score <= 0.45);
         assert_eq!(a.verdict, "Shift it if you can");
+        let slots = best_slots(&spk, None, &natal, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, Purpose::Interview, at, 7, 3).unwrap();
+        assert_eq!(slots.len(), 3);
+        assert!(slots.windows(2).all(|w| w[0].start <= w[1].start));
+        assert!(slots.iter().all(|s| s.start >= at && (0.0..=1.0).contains(&s.score)));
     }
 }

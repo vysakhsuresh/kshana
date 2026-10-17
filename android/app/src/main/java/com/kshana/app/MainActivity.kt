@@ -39,6 +39,10 @@ import com.kshana.app.ui.screens.AskScreen
 import com.kshana.app.ui.screens.BirthScreen
 import com.kshana.app.ui.screens.BookScreen
 import com.kshana.app.ui.screens.ChartScreen
+import com.kshana.app.ui.screens.HindsightScreen
+import com.kshana.app.ui.screens.LetterScreen
+import com.kshana.app.ui.screens.RecordScreen
+import com.kshana.app.ui.screens.WallScreen
 import com.kshana.app.ui.screens.PlanScreen
 import com.kshana.app.ui.screens.RectifyScreen
 import com.kshana.app.ui.screens.TogetherScreen
@@ -84,6 +88,7 @@ private fun App() {
     // The chosen language, and the sunrise alarm re-armed on every launch when it is on.
     remember {
         com.kshana.app.data.Lang.load(context)
+        com.kshana.app.system.Alerts.rearm(context)
         if (com.kshana.app.system.Sunrise.enabled(context)) com.kshana.app.system.Sunrise.scheduleNext(context)
         true
     }
@@ -159,9 +164,21 @@ private fun App() {
                         onPlan = { goTab("plan") },
                         onBook = { open("book") },
                         onTogether = { goTab("together") },
+                        onWall = { open("wall") },
+                        onLetter = { open("letter") },
+                        onHindsight = { open("hindsight") },
+                        onRecord = { open("record") },
                     )
                 }
             }
+            composable("wall") { withProfile { WallScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }) } }
+            composable("letter") {
+                withProfile { LetterScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }, onLife = { life -> open("life/$life") }, onWall = { open("wall") }) }
+            }
+            composable("hindsight") {
+                withProfile { HindsightScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }, onLife = { life -> open("life/$life") }) }
+            }
+            composable("record") { RecordScreen(onBack = { nav.popBackStack() }, onLife = { life -> open("life/$life") }) }
             composable("plan") {
                 withProfile { PlanScreen(profile = it, place = here, settings = settings, onLife = { life -> open("life/$life") }) }
             }

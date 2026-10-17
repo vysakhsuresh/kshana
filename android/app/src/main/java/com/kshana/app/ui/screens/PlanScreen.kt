@@ -90,6 +90,12 @@ fun PlanScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var request by remember { mutableStateOf<String?>(null) }
     var showLives by remember { mutableStateOf(false) }
+    // Readings kept side by side: two times, or two places, for the same purpose.
+    var kept by remember { mutableStateOf(listOf<Pair<String, AppointmentRecord>>()) }
+    // The place the appointment is at; the current place by default.
+    var planPlace by remember { mutableStateOf(place) }
+    var bestWeek by remember { mutableStateOf<List<uniffi.kshana_ffi.DaySlotRecord>?>(null) }
+    var findingBest by remember { mutableStateOf(false) }
 
     val chosen: ZonedDateTime = ZonedDateTime.of(date, time, zone)
 
@@ -102,7 +108,7 @@ fun PlanScreen(
             result = withContext(Dispatchers.Default) {
                 engine.appointment(
                     profile.birthInstant(), profile.latitude, profile.longitude,
-                    place.latitude, place.longitude,
+                    planPlace.latitude, planPlace.longitude,
                     settings.houseSystem, settings.ayanamsa, purpose, at,
                 )
             }
@@ -190,16 +196,82 @@ fun PlanScreen(
                 }
             }
         }
+        SectionLabel("Where")
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val choices = (listOf(place, profile.place()) + com.kshana.app.data.ProfileStore.places).distinctBy { it.name }
+            for (p in choices) Chip(p.name.uppercase(), selected = planPlace.name == p.name, onClick = { planPlace = p; result = null })
+        }
         GoldButton(
             if (reading) "READING THAT HOUR…" else "READ · ${ps.firstOrNull { it.key == purpose }?.words?.uppercase() ?: purpose.uppercase()}",
             enabled = !reading,
-            onClick = { request = "$purpose|$chosen|${System.currentTimeMillis()}" },
+            onClick = { request = "$purpose|$chosen|${planPlace.name}|${System.currentTimeMillis()}" },
             modifier = Modifier.fillMaxWidth(),
         )
+        QuietButton(
+            if (findingBest) "SCANNING SEVEN DAYS…" else "BEST HOURS IN THE NEXT 7 DAYS FOR THIS",
+            onClick = {
+                if (findingBest) return@QuietButton
+                findingBest = true
+                bestWeek = null
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        LaunchedEffect(findingBest, purpose, planPlace) {
+            if (!findingBest) return@LaunchedEffect
+            try {
+                val engine = EngineProvider.get(context)
+                bestWeek = withContext(Dispatchers.Default) {
+                    engine.bestSlots(profile.birthInstant(), profile.latitude, profile.longitude, planPlace.latitude, planPlace.longitude, settings.houseSystem, settings.ayanamsa, purpose, Instants.now(), 7u, 5u)
+                }
+            } catch (e: Exception) {
+                error = e.message ?: e.toString()
+            }
+            findingBest = false
+        }
         ErrorLine(error)
+        val bw = bestWeek
+        if (bw != null) {
+            SectionLabel("The week's best hours for ${ps.firstOrNull { it.key == purpose }?.words?.lowercase() ?: purpose}")
+            for (s in bw) {
+                Row(Modifier.fillMaxWidth().clickable {
+                    val l = Instants.toLocal(s.start, zone)
+                    date = l.toLocalDate(); time = l.toLocalTime().withSecond(0).withNano(0); result = null
+                }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("${localText(s.start, WEEKDAY_DAY, zone)} ${localText(s.start, TIME_HM, zone)} – ${localText(s.end, TIME_HM, zone)}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky, modifier = Modifier.weight(1f))
+                    Text("${s.lord} hour", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                    Spacer(Modifier.width(10.dp))
+                    Text(s.score.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 15.sp, color = scoreColor(s.score))
+                }
+            }
+            Text("Half the hour's fit, half the day's reading; tap one to set it above and read it in full.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        }
+
+        if (kept.isNotEmpty()) {
+            SectionLabel("Side by side")
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for ((label, r) in kept) {
+                    Column(
+                        Modifier.width(150.dp).clip(RoundedCornerShape(12.dp)).background(KshanaColors.Surface).padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(label, style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, maxLines = 2)
+                        Text(r.score.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 28.sp, color = scoreColor(r.score))
+                        Text(r.verdict, style = MaterialTheme.typography.titleMedium, color = scoreColor(r.score))
+                        Text(r.purposeWords, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                        Text("DROP", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable { kept = kept.filter { it.second !== r } }.padding(vertical = 4.dp))
+                    }
+                }
+            }
+            val best = kept.maxByOrNull { it.second.score }
+            if (best != null && kept.size > 1) Text("Best of these: ${best.first} at ${best.second.score.toInt()}.", fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text)
+        }
 
         val a = result
         if (a != null) {
+            QuietButton("KEEP THIS, TO COMPARE", onClick = {
+                val label = "${localText(a.at, WEEKDAY_DAY, zone)} ${localText(a.at, TIME_HM, zone)} · ${planPlace.name}"
+                if (kept.none { it.first == label }) kept = (kept + (label to a)).takeLast(4)
+            }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(4.dp))
             Column(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(KshanaColors.Surface).padding(18.dp),

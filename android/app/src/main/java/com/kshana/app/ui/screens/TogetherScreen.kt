@@ -164,6 +164,17 @@ fun TogetherScreen(
             GoldButton("ADD THE OTHER PERSON", onClick = onAddPartner, modifier = Modifier.fillMaxWidth())
             return@Column
         }
+        // Family mode: everyone added, with their relation and how their day reads.
+        var relVersion by remember { mutableStateOf(0) }
+        val relation = remember(partner.name, relVersion) { ProfileStore.relationOf(context, partner.name) }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("They are my", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            for (r in ProfileStore.relations) Chip(r.uppercase(), selected = relation == r, onClick = { ProfileStore.saveRelation(context, partner.name, r); relVersion++ })
+        }
+        if (partners.size >= 2) {
+            PeopleGrid(partners, place, settings, onPick = { i -> selected = i; ProfileStore.selectPartner(context, i) })
+            MatchTwo(partners, settings)
+        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Count me as", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             Chip("GROOM", selected = selfIsGroom, onClick = { selfIsGroom = true; ProfileStore.saveSelfIsGroom(context, true) })
@@ -383,6 +394,91 @@ fun TogetherScreen(
 }
 
 private val MONTH_SHORT = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+/** Everyone added, each with how their day reads this hour. */
+@Composable
+private fun PeopleGrid(people: List<BirthProfile>, place: Place, settings: EngineSettings, onPick: (Int) -> Unit) {
+    val context = LocalContext.current
+    val hourKey = System.currentTimeMillis() / 3_600_000L
+    var moments by remember { mutableStateOf<Map<String, uniffi.kshana_ffi.MomentRecord>>(emptyMap()) }
+    LaunchedEffect(hourKey, people) {
+        runCatching {
+            val engine = EngineProvider.get(context)
+            val out = HashMap<String, uniffi.kshana_ffi.MomentRecord>()
+            for (p in people) {
+                val k = "${p.name}|$hourKey|${place.name}"
+                out[p.name] = PeopleCache.moments[k] ?: withContext(Dispatchers.Default) {
+                    engine.forecastMoment(p.birthInstant(), p.latitude, p.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now())
+                }.also { PeopleCache.moments[k] = it }
+            }
+            moments = out
+        }
+    }
+    SectionLabel("Your people · this hour")
+    for ((i, p) in people.withIndex()) {
+        val pm = moments[p.name]
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(KshanaColors.Surface).clickable { onPick(i) }.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("${p.name.substringBefore(' ')} · ${ProfileStore.relationOf(context, p.name)}", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
+                if (pm != null) {
+                    val top = pm.lives.maxByOrNull { it.score }
+                    val low = pm.lives.minByOrNull { it.score }
+                    Text("${top?.life} ${top?.score?.toInt()} strongest · ${low?.life?.lowercase()} ${low?.score?.toInt()} asks care · ${pm.title}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
+                } else {
+                    Text("reading…", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                }
+            }
+            if (pm != null) ScoreRing(pm.overall, size = 44.dp, stroke = 4.dp)
+        }
+    }
+}
+
+/** Pick two of your people and read their match. */
+@Composable
+private fun MatchTwo(people: List<BirthProfile>, settings: EngineSettings) {
+    val context = LocalContext.current
+    var a by remember { mutableStateOf(0) }
+    var b by remember { mutableStateOf(1) }
+    var k by remember { mutableStateOf<KundaliRecord?>(null) }
+    var open by remember { mutableStateOf(false) }
+    Text(if (open) "MATCH TWO OF THEM −" else "MATCH TWO OF THEM +", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable { open = !open }.padding(vertical = 4.dp))
+    if (!open) return
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        for ((i, p) in people.withIndex()) Chip(p.name.substringBefore(' ').uppercase(), selected = i == a, onClick = { a = i; k = null })
+    }
+    Text("with", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        for ((i, p) in people.withIndex()) Chip(p.name.substringBefore(' ').uppercase(), selected = i == b, onClick = { b = i; k = null })
+    }
+    LaunchedEffect(a, b, open) {
+        if (a == b) { k = null; return@LaunchedEffect }
+        runCatching {
+            val engine = EngineProvider.get(context)
+            val pa = people[a]
+            val pb = people[b]
+            k = withContext(Dispatchers.Default) {
+                engine.kundali(pa.birthInstant(), pa.latitude, pa.longitude, pb.birthInstant(), pb.latitude, pb.longitude, settings.houseSystem, settings.ayanamsa, true)
+            }
+        }
+    }
+    val r = k
+    if (a == b) {
+        Text("Pick two different people.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+    } else if (r != null) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            ScoreRing(r.total / 36.0 * 100.0, size = 64.dp, stroke = 6.dp, label = "of 36")
+            Column(Modifier.weight(1f)) {
+                Text("${people[a].name.substringBefore(' ')} and ${people[b].name.substringBefore(' ')} · ${r.verdict}", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
+                Text(r.headline, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+                Text(r.kujaWords, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            }
+        }
+        Text("The first is counted as the groom. Open the two of them under With for the full match and its remedies.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+    }
+}
 
 /** The engine speaks of "the first chart" and "the second"; the screen uses names. */
 private fun personalise(s: String, me: String, them: String): String =

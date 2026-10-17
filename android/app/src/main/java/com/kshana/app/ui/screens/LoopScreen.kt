@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import com.kshana.app.data.BirthProfile
 import com.kshana.app.data.EngineSettings
 import com.kshana.app.data.Place
+import com.kshana.app.data.ProfileStore
 import com.kshana.app.engine.Instants
 import com.kshana.app.ui.theme.KshanaColors
 import androidx.compose.material3.DatePicker
@@ -93,11 +94,21 @@ fun LoopScreen(
     onPlan: () -> Unit = {},
     onBook: () -> Unit = {},
     onTogether: () -> Unit = {},
+    onWall: () -> Unit = {},
+    onLetter: () -> Unit = {},
+    onHindsight: () -> Unit = {},
+    onRecord: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var moment by remember { mutableStateOf<MomentRecord?>(null) }
+    var sky by remember { mutableStateOf<uniffi.kshana_ffi.ChartRecord?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var tick by remember { mutableStateOf(Instant.now()) }
+    // The one-line oracle that fades in when the Loop opens.
+    var oracle by remember { mutableStateOf<String?>(null) }
+    var oracleShown by remember { mutableStateOf(false) }
+    // A soft tap when the hour turns while the Loop is open.
+    var lastShift by remember { mutableStateOf<Instant?>(null) }
     // Time travel: an offset from now, in seconds. Zero means live.
     var travelSeconds by remember { mutableStateOf(0L) }
     var pickDate by remember { mutableStateOf(false) }
@@ -106,7 +117,36 @@ fun LoopScreen(
     LaunchedEffect(Unit) {
         while (true) {
             tick = Instant.now()
+            val next = lastShift
+            if (next != null && !travelling && Instant.now().isAfter(next)) {
+                lastShift = null
+                runCatching {
+                    val v = context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as android.os.Vibrator
+                    v.vibrate(android.os.VibrationEffect.createOneShot(30, 80))
+                }
+            }
             delay(1000)
+        }
+    }
+    LaunchedEffect(moment) {
+        val m0 = moment ?: return@LaunchedEffect
+        lastShift = m0.shifts.firstOrNull()?.at?.toJava()
+        if (!oracleShown) {
+            oracleShown = true
+            val b = BriefingCache.record
+            oracle = b?.saturnWords?.let { "$it." } ?: "${m0.title}. ${m0.lives.maxByOrNull { it.score }?.headline ?: ""}"
+            delay(4200)
+            oracle = null
+        }
+    }
+    LaunchedEffect(profile, place, settings, travelSeconds) {
+        // The real sky for the backdrop, once per load.
+        runCatching {
+            val engine = EngineProvider.get(context)
+            val at = Instants.fromInstant(Instant.now().plusSeconds(travelSeconds))
+            sky = withContext(Dispatchers.Default) {
+                engine.chart(at, place.latitude, place.longitude, 0.0, settings.houseSystem, settings.ayanamsa, false)
+            }
         }
     }
     LaunchedEffect(profile, place, settings, travelSeconds) {
@@ -132,12 +172,20 @@ fun LoopScreen(
     val shownTick = tick.plusSeconds(travelSeconds)
 
     val m = moment
+    // The screen dims a shade inside Rahu kala, Yamaganda and Gulika: colour as information.
+    val inCaution = m?.windows?.any { it.caution && !shownTick.isBefore(it.start.toJava()) && shownTick.isBefore(it.end.toJava()) } == true
+    Box(Modifier.fillMaxSize()) {
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = 44.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
+            androidx.compose.animation.AnimatedVisibility(visible = oracle != null, enter = androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.fadeOut()) {
+                Column(Modifier.padding(horizontal = 24.dp).padding(bottom = 10.dp)) {
+                    Text(oracle ?: "", fontFamily = FontFamily.Serif, fontSize = 20.sp, lineHeight = 28.sp, color = KshanaColors.Gold)
+                }
+            }
             Column(Modifier.padding(horizontal = 24.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("K S H A N A", fontFamily = FontFamily.Serif, fontSize = 20.sp, letterSpacing = 4.sp, color = KshanaColors.Gold)
@@ -199,7 +247,7 @@ fun LoopScreen(
             if (m == null) {
                 Text("reading the sky for this second…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted, modifier = Modifier.padding(horizontal = 24.dp))
             } else {
-                HeroCard(m, shownTick, travelling)
+                HeroCard(m, shownTick, travelling, sky, onLife)
             }
         }
 
@@ -208,6 +256,14 @@ fun LoopScreen(
                 Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionLabel(tr("Your nine lives · right now"))
                     LivesGrid(m.lives, onLife)
+                }
+            }
+            item {
+                WallStrip(profile, place, settings, shownTick, onWall)
+            }
+            item {
+                Column(Modifier.padding(horizontal = 24.dp)) {
+                    PeopleToday(profile, place, settings, shownTick, onTogether)
                 }
             }
             item {
@@ -253,8 +309,157 @@ fun LoopScreen(
                         QuietButton(tr("THE TWO OF US"), onClick = onTogether, modifier = Modifier.weight(1f))
                     }
                     QuietButton(tr("THE BOOK OF YOUR LIFE · PAST, PRESENT, FUTURE"), onClick = onBook, modifier = Modifier.fillMaxWidth())
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        QuietButton("THE WALL", onClick = onWall, modifier = Modifier.weight(1f))
+                        QuietButton("THE LETTER", onClick = onLetter, modifier = Modifier.weight(1f))
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        QuietButton("WHAT THE SKY SAID ON…", onClick = onHindsight, modifier = Modifier.weight(1f))
+                        QuietButton("DID IT HAPPEN?", onClick = onRecord, modifier = Modifier.weight(1f))
+                    }
                     Text(tr("Everything is computed on this phone from your birth time. Nothing leaves it."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                    Text("Moon to 0.1 arcsecond · sunrise to the second · checked against JPL, ERFA and the Swiss Ephemeris.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
                 }
+            }
+        }
+    }
+    if (inCaution) {
+        Box(Modifier.fillMaxSize().background(KshanaColors.Night.copy(alpha = 0.22f)))
+    }
+    }
+}
+
+/** The first four things on the wall, as a strip; the whole wall is one tap away. */
+@Composable
+private fun WallStrip(profile: BirthProfile, place: Place, settings: EngineSettings, tick: Instant, onWall: () -> Unit) {
+    val context = LocalContext.current
+    val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${java.time.LocalDate.now()}"
+    var items by remember { mutableStateOf(if (WallCache.key == key) WallCache.countdowns else null) }
+    var fest by remember { mutableStateOf(if (WallCache.key == key) WallCache.festivals else null) }
+    LaunchedEffect(key) {
+        if (items != null) return@LaunchedEffect
+        runCatching {
+            val engine = EngineProvider.get(context)
+            val (c, f) = withContext(Dispatchers.Default) {
+                Pair(
+                    engine.countdowns(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now()),
+                    engine.festivals(profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), 35u),
+                )
+            }
+            WallCache.key = key
+            WallCache.countdowns = c
+            WallCache.festivals = f
+            items = c
+            fest = f
+        }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            SectionLabel("What you are waiting for")
+            Text("THE WALL ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onWall).padding(top = 18.dp, bottom = 6.dp))
+        }
+        val list = items
+        if (list == null) {
+            Text("solving the sky ahead…", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(horizontal = 24.dp))
+        } else {
+            LazyRow(contentPadding = PaddingValues(horizontal = 24.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(list.take(6)) { c ->
+                    val at = Instants.toLocal(c.at).toInstant()
+                    Column(
+                        Modifier.width(150.dp).clip(RoundedCornerShape(12.dp)).background(KshanaColors.Surface).clickable(onClick = onWall).padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(c.title.uppercase(), style = MaterialTheme.typography.labelSmall, color = if (c.good) KshanaColors.Leaf else KshanaColors.Ember, maxLines = 2)
+                        Text(left(tick, at), fontFamily = FontFamily.Monospace, fontSize = 18.sp, color = KshanaColors.Text)
+                        Text(localText(c.at, DATE_ONLY), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Sky)
+                    }
+                }
+            }
+        }
+        val f = fest?.filter { Instants.toLocal(it.at).toInstant().isBefore(tick.plusSeconds(7 * 86_400)) && Instants.toLocal(it.at).toInstant().isAfter(tick.minusSeconds(86_400)) }
+        if (!f.isNullOrEmpty()) {
+            Text(
+                "This week: " + f.joinToString(" · ") { "${it.name} ${localText(it.at, java.time.format.DateTimeFormatter.ofPattern("EEE"))}" },
+                style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft, modifier = Modifier.padding(horizontal = 24.dp),
+            )
+        }
+    }
+}
+
+internal object PeopleCache {
+    val moments = HashMap<String, MomentRecord>()
+    var talkKey: String? = null
+    var talk: uniffi.kshana_ffi.TalkWindowRecord? = null
+}
+
+/** The partner's day on your Loop, and the talk window for the two of you. */
+@Composable
+private fun PeopleToday(profile: BirthProfile, place: Place, settings: EngineSettings, tick: Instant, onTogether: () -> Unit) {
+    val context = LocalContext.current
+    val people = remember { ProfileStore.partners(context) }
+    if (people.isEmpty()) return
+    val hourKey = System.currentTimeMillis() / 3_600_000L
+    var moments by remember { mutableStateOf<Map<String, MomentRecord>>(emptyMap()) }
+    var talk by remember { mutableStateOf(PeopleCache.talk) }
+    LaunchedEffect(hourKey, people) {
+        runCatching {
+            val engine = EngineProvider.get(context)
+            val out = HashMap<String, MomentRecord>()
+            for (p in people.take(4)) {
+                val k = "${p.name}|$hourKey|${place.name}"
+                out[p.name] = PeopleCache.moments[k] ?: withContext(Dispatchers.Default) {
+                    engine.forecastMoment(p.birthInstant(), p.latitude, p.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now())
+                }.also { PeopleCache.moments[k] = it }
+            }
+            moments = out
+            val first = people[ProfileStore.selectedPartner(context).coerceIn(0, people.lastIndex)]
+            val tk = "${first.name}|${java.time.LocalDate.now()}|${place.name}"
+            if (PeopleCache.talkKey != tk) {
+                val w = withContext(Dispatchers.Default) {
+                    engine.talkWindow(profile.birthInstant(), profile.latitude, profile.longitude, first.birthInstant(), first.latitude, first.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), 7u)
+                }
+                PeopleCache.talkKey = tk
+                PeopleCache.talk = w
+                talk = w
+            }
+        }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            SectionLabel("Your people today")
+            Text("US ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onTogether).padding(top = 18.dp, bottom = 6.dp))
+        }
+        for (p in people.take(4)) {
+            val pm = moments[p.name]
+            val rel = ProfileStore.relationOf(context, p.name)
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(KshanaColors.Surface).clickable(onClick = onTogether).padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("${p.name.substringBefore(' ')} · $rel", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
+                    if (pm == null) {
+                        Text("reading…", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                    } else {
+                        val top = pm.lives.maxByOrNull { it.score }
+                        val low = pm.lives.minByOrNull { it.score }
+                        Text("${pm.title}. ${top?.life} ${top?.score?.toInt()} is the strongest, ${low?.life?.lowercase()} ${low?.score?.toInt()} asks care.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
+                        if (pm.saturnActive) Text(pm.saturnWords.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Ember)
+                    }
+                }
+                if (pm != null) ScoreRing(pm.overall, size = 48.dp, stroke = 4.dp)
+            }
+        }
+        val w = talk
+        if (w != null) {
+            val s = Instants.toLocal(w.start).toInstant()
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(KshanaColors.Gold.copy(alpha = 0.10f)).border(1.dp, KshanaColors.Gold.copy(alpha = 0.5f), RoundedCornerShape(12.dp)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("THE TALK WINDOW", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+                    Text("${localText(w.start, WEEKDAY_DAY)} · ${hm(w.start)} – ${hm(w.end)}", fontFamily = FontFamily.Monospace, fontSize = 15.sp, color = KshanaColors.Text)
+                    Text("The first hour when both your charts read well for love at once (fit ${w.fit.toInt()}).", style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
+                }
+                Text(if (s.isAfter(tick)) "in ${countdown(tick, s)}" else "now", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Gold)
             }
         }
     }
@@ -385,6 +590,16 @@ private fun HourLoreCard(h: uniffi.kshana_ffi.HoraRecord, tick: Instant) {
         if (open) {
             Text(h.mantra, fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text)
             Text("For ${h.forWords}. Keep away from ${h.avoid}.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            val context = LocalContext.current
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (com.kshana.app.system.Chant.running) {
+                    QuietButton("STOP · ${com.kshana.app.system.Chant.count} OF 108", onClick = { com.kshana.app.system.Chant.stop() }, modifier = Modifier.weight(1f))
+                } else {
+                    QuietButton("CHANT IT ×108 · SPOKEN", onClick = { com.kshana.app.system.Chant.start(context, h.mantra) }, modifier = Modifier.weight(1f))
+                    QuietButton("×11", onClick = { com.kshana.app.system.Chant.start(context, h.mantra, 11) })
+                }
+            }
+            Text("Spoken slowly by the phone's own voice; no recording, no network.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         }
         Text(if (open) "LESS −" else "THE MANTRA +", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
     }
@@ -398,14 +613,17 @@ private fun greeting(hour: Int): String = when (hour) {
 }
 
 @Composable
-private fun HeroCard(m: MomentRecord, tick: Instant, travelling: Boolean) {
+private fun HeroCard(m: MomentRecord, tick: Instant, travelling: Boolean, sky: uniffi.kshana_ffi.ChartRecord?, onLife: (String) -> Unit) {
     val next = m.shifts.firstOrNull()
+    Box(Modifier.padding(horizontal = 24.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(KshanaColors.Surface)) {
+    if (sky != null) SkyBackdrop(sky, m.band)
     Column(
-        Modifier.padding(horizontal = 24.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(KshanaColors.Surface).padding(18.dp),
+        Modifier.fillMaxWidth().padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        Text(m.dayTitle.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-            ScoreRing(m.overall, size = 92.dp, stroke = 7.dp)
+            RingWithTrace(m, tick, size = 96.dp, stroke = 7.dp)
             Column(Modifier.weight(1f)) {
                 Text(m.title.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
                 Text(m.headline.substringBefore(" ·"), style = MaterialTheme.typography.titleLarge, color = bandColor(m.band))
@@ -429,6 +647,93 @@ private fun HeroCard(m: MomentRecord, tick: Instant, travelling: Boolean) {
             Text(top.headline, fontFamily = FontFamily.Serif, fontSize = 19.sp, lineHeight = 26.sp, color = KshanaColors.Text)
             Text("${lifeGlyph(top.life)} ${top.life} is your strongest now · ${lifeGlyph(low.life)} ${low.life} asks for care", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         }
+        // The next good minute: for the weakest of the four main lives, the next hour that serves it.
+        val mains = listOf("Love", "Career", "Money", "Health")
+        val focus = m.lives.filter { it.life in mains }.minByOrNull { it.score }?.life ?: "Love"
+        val fi = LIFE_ORDER.indexOf(focus).coerceAtLeast(0)
+        val g = m.nextGood.getOrNull(fi)
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(KshanaColors.Night.copy(alpha = 0.5f)).clickable { onLife(focus) }.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("YOUR NEXT GOOD MINUTE FOR ${focus.uppercase()}", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+                if (g == null) {
+                    Text("None left today; tomorrow's sunrise starts a new set.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+                } else {
+                    Text(if (g.now) "Now, until ${hm(g.end)} · ${g.lord} hour" else "${hm(g.start)} · ${g.lord} hour · fit ${g.fit.toInt()}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
+                }
+            }
+            if (g != null) Text(if (g.now) "now" else countdown(tick, g.start.toJava()), fontFamily = FontFamily.Monospace, fontSize = 20.sp, color = KshanaColors.Gold)
+        }
+    }
+    }
+}
+
+/** The real sky behind the words: the twelve signs as a faint band with the planets at their true places, the ascendant to the left. */
+@Composable
+private fun SkyBackdrop(chart: uniffi.kshana_ffi.ChartRecord, band: String) {
+    val asc = chart.cuspsTropical.firstOrNull() ?: 0.0
+    val accent = bandColor(band)
+    Canvas(Modifier.fillMaxWidth().height(230.dp)) {
+        val cx = size.width * 0.78f
+        val cy = size.height * 0.55f
+        val r = size.height * 0.62f
+        // the band of the ecliptic
+        drawCircle(KshanaColors.Line.copy(alpha = 0.35f), r, Offset(cx, cy), style = Stroke(1f))
+        drawCircle(KshanaColors.Line.copy(alpha = 0.25f), r * 0.78f, Offset(cx, cy), style = Stroke(1f))
+        for (k in 0 until 12) {
+            val a = Math.toRadians(180.0 + (k * 30.0 - asc))
+            val x1 = cx + (r * 0.78f) * Math.cos(a).toFloat()
+            val y1 = cy - (r * 0.78f) * Math.sin(a).toFloat()
+            val x2 = cx + r * Math.cos(a).toFloat()
+            val y2 = cy - r * Math.sin(a).toFloat()
+            drawLine(KshanaColors.Line.copy(alpha = 0.3f), Offset(x1, y1), Offset(x2, y2), 1f)
+        }
+        // the planets
+        for (b in chart.bodies) {
+            val a = Math.toRadians(180.0 + (b.tropical - asc))
+            val rr = r * 0.89f
+            val x = cx + rr * Math.cos(a).toFloat()
+            val y = cy - rr * Math.sin(a).toFloat()
+            val c = when (b.name) {
+                "Sun" -> KshanaColors.Gold
+                "Moon" -> KshanaColors.Text
+                "Mars" -> KshanaColors.Ember
+                "Jupiter" -> KshanaColors.Gold
+                "Venus" -> KshanaColors.Sky
+                "Saturn" -> KshanaColors.Muted
+                else -> KshanaColors.Sky
+            }
+            val size = if (b.name == "Sun" || b.name == "Moon") 4.5f else 3f
+            drawCircle(c.copy(alpha = 0.55f), size, Offset(x, y))
+            drawCircle(c.copy(alpha = 0.12f), size * 3, Offset(x, y))
+        }
+        // the horizon
+        drawLine(accent.copy(alpha = 0.25f), Offset(cx - r, cy), Offset(cx + r, cy), 1f)
+    }
+}
+
+/** The score ring with a thin trace of the day's hours around it: the day's shape at a glance. */
+@Composable
+private fun RingWithTrace(m: MomentRecord, tick: Instant, size: androidx.compose.ui.unit.Dp, stroke: androidx.compose.ui.unit.Dp) {
+    Box(Modifier.size(size + 14.dp), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val n = m.hours.size
+            if (n > 0) {
+                val inset = 1.5f
+                val arc = Size(this.size.width - 3f, this.size.height - 3f)
+                val sweep = 360f / n
+                m.hours.forEachIndexed { i, h ->
+                    val mean = if (h.fit.isEmpty()) 50.0 else h.fit.average()
+                    val past = !tick.isBefore(h.end.toJava())
+                    val now = !tick.isBefore(h.start.toJava()) && tick.isBefore(h.end.toJava())
+                    val c = if (h.caution) KshanaColors.Ember else scoreColor(mean)
+                    drawArc(c.copy(alpha = if (now) 0.95f else if (past) 0.55f else 0.22f), -90f + i * sweep, sweep - 1.5f, false, Offset(inset, inset), arc, style = Stroke(3f, cap = StrokeCap.Butt))
+                }
+            }
+        }
+        ScoreRing(m.overall, size = size, stroke = stroke)
     }
 }
 
@@ -540,15 +845,23 @@ private fun WindowRow(w: WindowRecord, tick: Instant) {
 
 @Composable
 private fun ShiftRow(s: ShiftRecord, tick: Instant) {
+    val context = LocalContext.current
     val c: Color = when (s.kind) {
         "kala" -> KshanaColors.Ember
         "star", "sign", "tithi" -> KshanaColors.Sky
         "dasha" -> KshanaColors.Gold
         else -> KshanaColors.Muted
     }
+    val at = s.at.toJava().toEpochMilli()
+    var set by remember(at) { mutableStateOf(com.kshana.app.system.Alerts.has(context, at)) }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(hm(s.at), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Muted, modifier = Modifier.width(52.dp))
         Text(s.what, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1f))
         Text("in ${countdown(tick, s.at.toJava())}", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = c)
+        Text(
+            if (set) "🔔" else "🔕", fontSize = 13.sp,
+            modifier = Modifier.clickable { set = com.kshana.app.system.Alerts.toggle(context, at, s.what, "${hm(s.at)} · ${s.what}") }.padding(start = 10.dp, top = 4.dp, bottom = 4.dp),
+            color = if (set) KshanaColors.Gold else KshanaColors.Muted.copy(alpha = 0.5f),
+        )
     }
 }

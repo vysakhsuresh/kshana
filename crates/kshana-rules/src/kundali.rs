@@ -840,6 +840,42 @@ pub fn couple(
     })
 }
 
+/// The talk window: the first hour in the next `days` when both charts read well for
+/// love at once (both hora fits at or above 0.55, outside the cautions, both daily
+/// love scores at or above 0.5). `(start, end, mean fit)`.
+#[allow(clippy::too_many_arguments)]
+pub fn talk_window(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    a: &Natal,
+    b: &Natal,
+    obs: &Observer,
+    system: HouseSystem,
+    ayanamsa: Ayanamsa,
+    from: Instant,
+    days: usize,
+) -> Result<Option<(Instant, Instant, f64)>, ForecastError> {
+    let sa = crate::forecast::series(spk, eop, a, obs, ayanamsa, from, NS_PER_DAY, days.max(1))?;
+    let sb = crate::forecast::series(spk, eop, b, obs, ayanamsa, from, NS_PER_DAY, days.max(1))?;
+    for d in 0..days.max(1) {
+        if sa[d].scores[0] < 0.5 || sb[d].scores[0] < 0.5 {
+            continue;
+        }
+        let t = from.add_ns(d as i128 * NS_PER_DAY + 6 * 3_600 * kshana_time::NS_PER_SEC);
+        let ma = moment(spk, eop, a, obs, system, ayanamsa, t)?;
+        let mb = moment(spk, eop, b, obs, system, ayanamsa, t)?;
+        for (ha, hb) in ma.hours.iter().zip(mb.hours.iter()) {
+            if ha.caution || ha.end <= from {
+                continue;
+            }
+            if ha.fit[0] >= 0.55 && hb.fit[0] >= 0.55 {
+                return Ok(Some((ha.start.max(from), ha.end, (ha.fit[0] + hb.fit[0]) / 2.0)));
+            }
+        }
+    }
+    Ok(None)
+}
+
 /// A question about the pair, answered from both charts.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CoupleAnswer {

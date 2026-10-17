@@ -830,7 +830,7 @@ impl Engine {
 #[derive(Clone, Debug, uniffi::Record)]
 #[allow(missing_docs)]
 pub struct RemedyRecord {
-    /// "Karma", "Seva", "Discipline", "Daana", "Vrata", "Mantra" or "Pooja".
+    /// "Karma", "Seva", "Discipline", "Daana", "Vrata", "Mantra", "Pooja", "Anna" (food), "Jeeva" (creatures), "Prakriti" (water and trees) or "Vastra" (colour).
     pub kind: String,
     pub title: String,
     pub why: String,
@@ -1830,6 +1830,9 @@ pub struct MomentRecord {
     pub band: String,
     pub headline: String,
     pub title: String,
+    pub day_title: String,
+    /// The next hour at or above 60 for each life (`life_names()` order), when one is left today.
+    pub next_good: Vec<Option<GoodMinuteRecord>>,
     pub lives: Vec<LifeScoreRecord>,
     pub hora: Option<HoraRecord>,
     pub moon_star: String,
@@ -1844,6 +1847,35 @@ pub struct MomentRecord {
     pub shifts: Vec<ShiftRecord>,
     pub sunrise: Option<ExactInstant>,
     pub sunset: Option<ExactInstant>,
+}
+
+/// The next hour that serves a life.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct GoodMinuteRecord {
+    pub life: String,
+    pub start: ExactInstant,
+    pub end: ExactInstant,
+    /// 0–100.
+    pub fit: f64,
+    pub lord: String,
+    pub now: bool,
+}
+
+fn good_minutes(m: &kshana_rules::Moment) -> Vec<Option<GoodMinuteRecord>> {
+    kshana_rules::next_good(m, m.at, 0.6)
+        .into_iter()
+        .map(|g| {
+            g.map(|g| GoodMinuteRecord {
+                life: g.life.name().to_string(),
+                start: g.start.into(),
+                end: g.end.into(),
+                fit: g.fit * 100.0,
+                lord: lord_name(g.lord),
+                now: g.now,
+            })
+        })
+        .collect()
 }
 
 /// One sample of a series: scores 0–100 in `life_names()` order.
@@ -1980,6 +2012,8 @@ impl Engine {
             band: m.band.word().to_string(),
             headline: m.headline.clone(),
             title: m.title.clone(),
+            day_title: m.day_title.clone(),
+            next_good: good_minutes(&m),
             lives: m
                 .lives
                 .iter()
@@ -3155,6 +3189,8 @@ fn moment_record(m: &kshana_rules::Moment) -> MomentRecord {
         band: m.band.word().to_string(),
         headline: m.headline.clone(),
         title: m.title.clone(),
+        day_title: m.day_title.clone(),
+        next_good: good_minutes(m),
         lives: m
             .lives
             .iter()
@@ -3653,5 +3689,268 @@ impl Engine {
             by_sign: kshana_rules::by_rising_sign(&v).iter().map(candidate_record).collect(),
             candidates: v.iter().map(candidate_record).collect(),
         }
+    }
+}
+
+// ---------------------------------------------------------------------------------
+// The wall, the observances, the letter, the best slots, the talk window, hindsight.
+// ---------------------------------------------------------------------------------
+
+/// One thing the person is waiting for.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct CountdownRecord {
+    pub kind: String,
+    pub title: String,
+    pub at: ExactInstant,
+    pub words: String,
+    pub good: bool,
+}
+
+/// An observance of the coming days.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct FestivalRecord {
+    pub name: String,
+    pub at: ExactInstant,
+    pub end: Option<ExactInstant>,
+    pub what: String,
+    pub kind: String,
+}
+
+/// The month's letter.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct LetterRecord {
+    pub from: ExactInstant,
+    pub to: ExactInstant,
+    pub title: String,
+    pub paragraphs: Vec<String>,
+    pub stories: Vec<StoryRecord>,
+    pub festivals: Vec<FestivalRecord>,
+    pub countdowns: Vec<CountdownRecord>,
+    pub briefing: BriefingRecord,
+}
+
+/// One of the best slots in the days ahead for a purpose.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct DaySlotRecord {
+    pub start: ExactInstant,
+    pub end: ExactInstant,
+    pub lord: String,
+    /// 0–100.
+    pub score: f64,
+    /// 0–100.
+    pub day_score: f64,
+}
+
+/// The talk window for a pair.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct TalkWindowRecord {
+    pub start: ExactInstant,
+    pub end: ExactInstant,
+    /// 0–100.
+    pub fit: f64,
+}
+
+fn countdown_record(c: &kshana_rules::Countdown) -> CountdownRecord {
+    CountdownRecord {
+        kind: c.kind.to_string(),
+        title: c.title.clone(),
+        at: c.at.into(),
+        words: c.words.clone(),
+        good: c.good,
+    }
+}
+
+fn festival_record(f: &kshana_rules::Festival) -> FestivalRecord {
+    FestivalRecord {
+        name: f.name.to_string(),
+        at: f.at.into(),
+        end: f.end.map(Into::into),
+        what: f.what.to_string(),
+        kind: f.kind.to_string(),
+    }
+}
+
+fn story_record(s: &kshana_rules::Story) -> StoryRecord {
+    StoryRecord {
+        life: s.life.name().to_string(),
+        trend: s.trend.to_string(),
+        trend_words: s.trend_words.clone(),
+        mean: s.mean * 100.0,
+        best_start: s.best.map(|b| b.0.into()),
+        best_end: s.best.map(|b| b.1.into()),
+        best_score: s.best.map(|b| b.2 * 100.0).unwrap_or(0.0),
+        low_start: s.low.map(|b| b.0.into()),
+        low_end: s.low.map(|b| b.1.into()),
+        low_score: s.low.map(|b| b.2 * 100.0).unwrap_or(0.0),
+        shifts: s.shifts.iter().map(shift_record).collect(),
+    }
+}
+
+#[uniffi::export]
+impl Engine {
+    /// The wall of countdowns from `at`, soonest first.
+    #[allow(clippy::too_many_arguments)]
+    pub fn countdowns(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        at: ExactInstant,
+    ) -> Result<Vec<CountdownRecord>, KshanaError> {
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
+        Ok(kshana_rules::countdowns(&self.spk, self.eop.as_ref(), &natal, &obs, ayanamsa.into(), at.into())
+            .iter()
+            .map(countdown_record)
+            .collect())
+    }
+
+    /// The observances in the next `days`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn festivals(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        at: ExactInstant,
+        days: u32,
+    ) -> Result<Vec<FestivalRecord>, KshanaError> {
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        Ok(kshana_rules::festivals(&self.spk, &natal, ayanamsa.into(), at.into(), days.clamp(1, 400) as i64)
+            .iter()
+            .map(festival_record)
+            .collect())
+    }
+
+    /// The month's letter from `at`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn letter(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        at: ExactInstant,
+    ) -> Result<LetterRecord, KshanaError> {
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
+        let l = kshana_rules::letter(&self.spk, self.eop.as_ref(), &natal, &obs, to_house_system(system), ayanamsa.into(), at.into())
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(LetterRecord {
+            from: l.from.into(),
+            to: l.to.into(),
+            title: l.title.clone(),
+            paragraphs: l.paragraphs.clone(),
+            stories: l.stories.iter().map(story_record).collect(),
+            festivals: l.festivals.iter().map(festival_record).collect(),
+            countdowns: l.countdowns.iter().map(countdown_record).collect(),
+            briefing: briefing_record(&l.briefing),
+        })
+    }
+
+    /// The best `limit` hours in the next `days` for `purpose` (a key from `purposes()`).
+    #[allow(clippy::too_many_arguments)]
+    pub fn best_slots(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        purpose: String,
+        from: ExactInstant,
+        days: u32,
+        limit: u32,
+    ) -> Result<Vec<DaySlotRecord>, KshanaError> {
+        let purpose = kshana_rules::Purpose::parse(&purpose).ok_or_else(|| KshanaError::Engine(format!("unknown purpose {purpose}")))?;
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
+        let v = kshana_rules::best_slots(
+            &self.spk,
+            self.eop.as_ref(),
+            &natal,
+            &obs,
+            to_house_system(system),
+            ayanamsa.into(),
+            purpose,
+            from.into(),
+            days.clamp(1, 14) as usize,
+            limit.clamp(1, 10) as usize,
+        )
+        .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(v.iter()
+            .map(|s| DaySlotRecord {
+                start: s.start.into(),
+                end: s.end.into(),
+                lord: lord_name(s.lord),
+                score: s.score * 100.0,
+                day_score: s.day_score * 100.0,
+            })
+            .collect())
+    }
+
+    /// The first hour in the next `days` when both charts read well for love at once.
+    #[allow(clippy::too_many_arguments)]
+    pub fn talk_window(
+        &self,
+        a_birth: ExactInstant,
+        a_lat: f64,
+        a_lon: f64,
+        b_birth: ExactInstant,
+        b_lat: f64,
+        b_lon: f64,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        from: ExactInstant,
+        days: u32,
+    ) -> Result<Option<TalkWindowRecord>, KshanaError> {
+        let a = self.natal(a_birth, a_lat, a_lon, system, ayanamsa)?;
+        let b = self.natal(b_birth, b_lat, b_lon, system, ayanamsa)?;
+        let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
+        let w = kshana_rules::talk_window(&self.spk, self.eop.as_ref(), &a, &b, &obs, to_house_system(system), ayanamsa.into(), from.into(), days.clamp(1, 14) as usize)
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(w.map(|(s, e, f)| TalkWindowRecord { start: s.into(), end: e.into(), fit: f * 100.0 }))
+    }
+
+    /// Monthly slow samples (the season, not the weather) from `from`: `count` months.
+    #[allow(clippy::too_many_arguments)]
+    pub fn slow_horizon(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        from: ExactInstant,
+        count: u32,
+    ) -> Result<Vec<SampleRecord>, KshanaError> {
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
+        let month = (30.4375 * NS_PER_DAY as f64) as i128;
+        let v = kshana_rules::slow_series(&self.spk, self.eop.as_ref(), &natal, &obs, ayanamsa.into(), from.into(), month, count.clamp(2, 60) as usize)
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(v.iter()
+            .map(|(t, s)| SampleRecord { at: (*t).into(), scores: s.iter().map(|x| x * 100.0).collect(), tara: 0 })
+            .collect())
     }
 }
