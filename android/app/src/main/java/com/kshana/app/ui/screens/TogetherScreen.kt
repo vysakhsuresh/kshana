@@ -256,7 +256,7 @@ fun TogetherScreen(
                 }
                 val me = profile.name.substringBefore(' ').ifBlank { "You" }
                 val them = partner.name.substringBefore(' ')
-                Text(personalise(c.headline, me, them), fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)
+                Text(personalise(c.headline.substringBefore(" The heavier side"), me, them), fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)
                 if (c.aSaturnActive || c.bSaturnActive) {
                     Text(personalise(c.notes.firstOrNull() ?: "", me, them), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Ember)
                 }

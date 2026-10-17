@@ -3954,3 +3954,94 @@ impl Engine {
             .collect())
     }
 }
+
+// ---------------------------------------------------------------------------------
+// The outlook in plain words: today, this week, this month, this year.
+// ---------------------------------------------------------------------------------
+
+/// One life's outlook over a span.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct LifeOutlookRecord {
+    pub life: String,
+    /// 0–100.
+    pub score: f64,
+    pub band: String,
+    pub trend: String,
+    pub words: String,
+    pub advice: String,
+    pub best_at: Option<ExactInstant>,
+    /// 0–100.
+    pub best_score: f64,
+    pub care_at: Option<ExactInstant>,
+    /// 0–100.
+    pub care_score: f64,
+    pub why: Vec<String>,
+}
+
+/// The outlook.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct OutlookRecord {
+    pub span: String,
+    pub from: ExactInstant,
+    pub to: ExactInstant,
+    /// 0–100.
+    pub score: f64,
+    pub band: String,
+    pub headline: String,
+    pub lives: Vec<LifeOutlookRecord>,
+    pub season: String,
+    pub season_why: String,
+}
+
+#[uniffi::export]
+impl Engine {
+    /// The outlook for `span` (`day`, `week`, `month` or `year`) from `at`, in plain words.
+    #[allow(clippy::too_many_arguments)]
+    pub fn outlook(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        span: String,
+        at: ExactInstant,
+    ) -> Result<OutlookRecord, KshanaError> {
+        let span = kshana_rules::Span::parse(&span).ok_or_else(|| KshanaError::Engine(format!("unknown span {span}")))?;
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
+        let o = kshana_rules::outlook(&self.spk, self.eop.as_ref(), &natal, &obs, to_house_system(system), ayanamsa.into(), span, at.into())
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(OutlookRecord {
+            span: o.span.key().to_string(),
+            from: o.from.into(),
+            to: o.to.into(),
+            score: o.score * 100.0,
+            band: o.band.word().to_string(),
+            headline: o.headline.clone(),
+            lives: o
+                .lives
+                .iter()
+                .map(|l| LifeOutlookRecord {
+                    life: l.life.name().to_string(),
+                    score: l.score * 100.0,
+                    band: l.band.word().to_string(),
+                    trend: l.trend.to_string(),
+                    words: l.words.clone(),
+                    advice: l.advice.clone(),
+                    best_at: l.best_at.map(Into::into),
+                    best_score: l.best_score * 100.0,
+                    care_at: l.care_at.map(Into::into),
+                    care_score: l.care_score * 100.0,
+                    why: l.why.clone(),
+                })
+                .collect(),
+            season: o.season.clone(),
+            season_why: o.season_why.clone(),
+        })
+    }
+}

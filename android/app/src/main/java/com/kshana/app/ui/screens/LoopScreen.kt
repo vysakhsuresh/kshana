@@ -98,6 +98,7 @@ fun LoopScreen(
     onLetter: () -> Unit = {},
     onHindsight: () -> Unit = {},
     onRecord: () -> Unit = {},
+    onAhead: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var moment by remember { mutableStateOf<MomentRecord?>(null) }
@@ -283,11 +284,6 @@ fun LoopScreen(
                 }
             }
             item {
-                Column(Modifier.padding(horizontal = 24.dp)) {
-                    BriefingCard(profile, place, settings, travelSeconds, onLife, onRemedy, onLoaded = { brief = it })
-                }
-            }
-            item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionLabel(tr("The hours of today"), Modifier.padding(horizontal = 24.dp))
                     HoursStrip(m.hours, shownTick, m.lives)
@@ -296,41 +292,40 @@ fun LoopScreen(
             }
             item {
                 Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SectionLabel(tr("Watch the clock"))
-                    for (w in m.windows) WindowRow(w, shownTick)
+                    var clockOpen by remember { mutableStateOf(false) }
+                    Row(Modifier.fillMaxWidth().clickable { clockOpen = !clockOpen }, verticalAlignment = Alignment.CenterVertically) {
+                        SectionLabel(tr("Watch the clock"), Modifier.weight(1f))
+                        Text(if (clockOpen) "−" else "+", fontSize = 20.sp, color = KshanaColors.Gold)
+                    }
+                    val caution = m.windows.filter { it.caution && it.end.toJava().isAfter(shownTick) }.minByOrNull { it.start.seconds() }
+                    if (!clockOpen && caution != null) WindowRow(caution, shownTick)
+                    if (clockOpen) {
+                        for (w in m.windows) WindowRow(w, shownTick)
+                        Spacer(Modifier.height(4.dp))
+                        for (s in m.shifts.take(10)) ShiftRow(s, shownTick)
+                    }
                 }
             }
             item {
                 Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SectionLabel(tr("Coming up"))
-                    for (s in m.shifts.take(10)) ShiftRow(s, shownTick)
-                }
-            }
-            item {
-                Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SectionLabel(tr("Under the hood"))
-                    Text("Moon in ${m.moonStar} · ${m.taraName} tara · ${m.taraWords}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
-                    if (m.saturnActive) Text(m.saturnWords.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Ember)
-                    Text(
-                        "Running periods: " + m.dasha.joinToString(" › ") { it.lord },
-                        fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Muted,
-                    )
+                    var astroOpen by remember { mutableStateOf(false) }
+                    Text(if (astroOpen) "THE ASTROLOGY BEHIND TODAY −" else "THE ASTROLOGY BEHIND TODAY +", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable { astroOpen = !astroOpen }.padding(vertical = 6.dp))
+                    if (astroOpen) {
+                        Text("Moon in ${m.moonStar} · ${m.taraName} tara · ${m.taraWords}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+                        if (m.saturnActive) Text(m.saturnWords.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Ember)
+                        Text(
+                            "Running periods: " + m.dasha.joinToString(" › ") { it.lord },
+                            fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Muted,
+                        )
+                        BriefingCard(profile, place, settings, travelSeconds, onLife, onRemedy, onLoaded = { brief = it })
+                    }
                     Spacer(Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         GoldButton(tr("ASK"), onClick = onAsk, modifier = Modifier.weight(1f))
-                        QuietButton(tr("REMEDIES"), onClick = onRemedy, modifier = Modifier.weight(1f))
+                        QuietButton("WHAT TO DO", onClick = onRemedy, modifier = Modifier.weight(1f))
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        QuietButton(tr("PLAN A TIME"), onClick = onPlan, modifier = Modifier.weight(1f))
-                        QuietButton(tr("THE TWO OF US"), onClick = onTogether, modifier = Modifier.weight(1f))
-                    }
-                    QuietButton(tr("THE BOOK OF YOUR LIFE · PAST, PRESENT, FUTURE"), onClick = onBook, modifier = Modifier.fillMaxWidth())
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        QuietButton("THE WALL", onClick = onWall, modifier = Modifier.weight(1f))
-                        QuietButton("THE LETTER", onClick = onLetter, modifier = Modifier.weight(1f))
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        QuietButton("WHAT THE SKY SAID ON…", onClick = onHindsight, modifier = Modifier.weight(1f))
+                        QuietButton("THE WEEK, MONTH, YEAR", onClick = onAhead, modifier = Modifier.weight(1f))
                         QuietButton("DID IT HAPPEN?", onClick = onRecord, modifier = Modifier.weight(1f))
                     }
                     Text(tr("Everything is computed on this phone from your birth time. Nothing leaves it."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
@@ -628,18 +623,23 @@ private fun HourLoreCard(h: uniffi.kshana_ffi.HoraRecord, tick: Instant) {
  * Ardhashtama until 23 Feb 2028." Facts with dates, in the body type, no colour.
  */
 private fun seasonLine(b: BriefingRecord): String {
-    val periods = b.dasha
-        .replace(" (to ", " to ").replace(")", "")
-        .split(" › ")
-    val maha = periods.getOrNull(0)?.substringBefore(" to ") ?: ""
-    val antar = periods.getOrNull(1) ?: ""
-    val first = listOf(maha, antar).filter { it.isNotBlank() }.joinToString(", ") + "."
+    // "Moon mahadasha (to 10 Oct 2030) › Mercury antardasha (to 9 Jan 2028)" → the nearer end.
+    val antarEnd = b.dasha.split(" › ").getOrNull(1)?.substringAfter("(to ")?.substringBefore(")")?.trim()
+    val first = if (!antarEnd.isNullOrBlank()) "This stretch of your life runs to $antarEnd." else ""
     val saturn = if (b.saturnActive) {
-        val phase = b.saturnWords.substringBefore(':').trim().replaceFirstChar { it.uppercase() }
+        val w = b.saturnWords.lowercase()
+        val what = when {
+            "ardhashtama" in w -> "A testing time for home and peace of mind"
+            "ashtama" in w -> "A testing time for health and sudden turns"
+            "peak" in w -> "The long test (sade sati) is at its peak and"
+            "last phase" in w -> "The last part of the long test (sade sati)"
+            "sade sati" in w -> "The long test (sade sati)"
+            else -> "A testing time"
+        }
         val until = b.saturnUntil?.let { localText(it, DATE_ONLY) }
-        if (until != null) " $phase until $until." else " $phase."
+        if (until != null) " $what lasts until $until." else " $what is on you."
     } else ""
-    return first + saturn
+    return (first + saturn).trim()
 }
 
 private fun greeting(hour: Int): String = when (hour) {

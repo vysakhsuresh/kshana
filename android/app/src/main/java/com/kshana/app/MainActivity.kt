@@ -35,6 +35,8 @@ import androidx.navigation.navArgument
 import com.kshana.app.data.BirthProfile
 import com.kshana.app.data.ProfileStore
 import com.kshana.app.ui.screens.AreasScreen
+import com.kshana.app.ui.screens.AheadScreen
+import com.kshana.app.ui.screens.AskHub
 import com.kshana.app.ui.screens.AskScreen
 import com.kshana.app.ui.screens.BirthScreen
 import com.kshana.app.ui.screens.BookScreen
@@ -65,9 +67,9 @@ private data class Tab(val route: String, val label: String, val icon: ImageVect
 
 /** The five doors: the loop, a question, a time to plan, the two of you, and everything else. */
 private val tabs = listOf(
-    Tab("loop", "LOOP", Icons.Filled.Star),
+    Tab("loop", "NOW", Icons.Filled.Star),
+    Tab("ahead", "AHEAD", Icons.Filled.DateRange),
     Tab("prashna", "ASK", Icons.Filled.Info),
-    Tab("plan", "PLAN", Icons.Filled.DateRange),
     Tab("together", "US", Icons.Filled.Favorite),
     Tab("more", "MORE", Icons.AutoMirrored.Filled.List),
 )
@@ -161,7 +163,8 @@ private fun App() {
                         onAsk = { open("prashna") },
                         onRemedy = { open("parihara") },
                         onSettings = { open("settings") },
-                        onPlan = { goTab("plan") },
+                        onPlan = { open("plan") },
+                        onAhead = { goTab("ahead") },
                         onBook = { open("book") },
                         onTogether = { goTab("together") },
                         onWall = { open("wall") },
@@ -180,7 +183,19 @@ private fun App() {
             }
             composable("record") { RecordScreen(onBack = { nav.popBackStack() }, onLife = { life -> open("life/$life") }) }
             composable("plan") {
-                withProfile { PlanScreen(profile = it, place = here, settings = settings, onLife = { life -> open("life/$life") }) }
+                withProfile { AskHub(profile = it, place = here, settings = settings, initialMode = "time", onRemedy = { l -> open("parihara/$l") }, onLife = { life -> open("life/$life") }) }
+            }
+            composable("ahead") {
+                withProfile {
+                    AheadScreen(
+                        profile = it, place = here, settings = settings,
+                        onLife = { life -> open("life/$life") },
+                        onRemedy = { l -> open("parihara/$l") },
+                        onLetter = { open("letter") },
+                        onBook = { open("book") },
+                        onHindsight = { open("hindsight") },
+                    )
+                }
             }
             composable("together") {
                 withProfile {
@@ -255,7 +270,7 @@ private fun App() {
             }
             composable("prashna") {
                 withProfile {
-                    AskScreen(profile = it, place = here, settings = settings, onRemedy = { l -> open("parihara/$l") })
+                    AskHub(profile = it, place = here, settings = settings, onRemedy = { l -> open("parihara/$l") }, onLife = { life -> open("life/$life") })
                 }
             }
             composable("ask/{life}", arguments = listOf(navArgument("life") { type = NavType.StringType })) { entry ->

@@ -1,0 +1,178 @@
+package com.kshana.app.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.kshana.app.data.BirthProfile
+import com.kshana.app.data.EngineSettings
+import com.kshana.app.data.Place
+import com.kshana.app.engine.EngineProvider
+import com.kshana.app.engine.Instants
+import com.kshana.app.ui.theme.KshanaColors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import uniffi.kshana_ffi.OutlookRecord
+
+internal object OutlookCache {
+    val records = HashMap<String, OutlookRecord>()
+}
+
+private val SPANS = listOf("day" to "TODAY", "week" to "THIS WEEK", "month" to "THIS MONTH", "year" to "THIS YEAR")
+
+/**
+ * Ahead: your life today, this week, this month, this year, in plain words. Each life
+ * says what the stretch holds, the day to use and the day to go easy, and what to do.
+ * The astrology behind each line sits under one tap, never in the sentence.
+ */
+@Composable
+fun AheadScreen(
+    profile: BirthProfile,
+    place: Place,
+    settings: EngineSettings,
+    onLife: (String) -> Unit,
+    onRemedy: (String) -> Unit,
+    onLetter: () -> Unit,
+    onBook: () -> Unit,
+    onHindsight: () -> Unit,
+) {
+    val context = LocalContext.current
+    var span by remember { mutableStateOf("day") }
+    var out by remember { mutableStateOf<OutlookRecord?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var whyOpen by remember { mutableStateOf<String?>(null) }
+    val hourKey = System.currentTimeMillis() / 3_600_000L
+    val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|$span|${if (span == "day") hourKey else hourKey / 24}"
+
+    LaunchedEffect(key) {
+        out = OutlookCache.records[key]
+        if (out != null) return@LaunchedEffect
+        try {
+            val engine = EngineProvider.get(context)
+            val o = withContext(Dispatchers.Default) {
+                engine.outlook(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, span, Instants.now())
+            }
+            OutlookCache.records[key] = o
+            out = o
+            error = null
+        } catch (e: Exception) {
+            error = e.message ?: e.toString()
+        }
+    }
+
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(top = 44.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text("AHEAD", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(
+            when (span) {
+                "day" -> "Your day"
+                "week" -> "Your week"
+                "month" -> "Your month"
+                else -> "Your year"
+            },
+            style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text,
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for ((k, label) in SPANS) Chip(label, selected = span == k, onClick = { span = k; whyOpen = null }, modifier = Modifier.weight(1f))
+        }
+        ErrorLine(error)
+        val o = out
+        if (o == null) {
+            if (error == null) Text(
+                when (span) {
+                    "day" -> "reading today…"
+                    "week" -> "reading seven days…"
+                    "month" -> "reading thirty days…"
+                    else -> "reading the year, month by month…"
+                },
+                style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
+            )
+            return@Column
+        }
+
+        // The whole, in a card: the ring, the dates, the headline, the season.
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(KshanaColors.Surface).padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                ScoreRing(o.score, size = 84.dp, stroke = 7.dp, label = bandWord(o.band))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        if (span == "day") localText(o.from, java.time.format.DateTimeFormatter.ofPattern("EEEE d MMMM")) else "${localText(o.from, DATE_ONLY)} – ${localText(o.to, DATE_ONLY)}",
+                        fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky,
+                    )
+                    Text(o.headline, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)
+                }
+            }
+            Text(o.season, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+        }
+
+        // Each life: the sentence, the dates, what to do.
+        for (l in o.lives) {
+            HorizontalDivider(color = KshanaColors.LineSoft)
+            Column(Modifier.fillMaxWidth().clickable { onLife(l.life) }.padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(lifeGlyph(l.life), fontSize = 16.sp, color = bandColor(l.band), modifier = Modifier.width(26.dp))
+                    Text(lifeName(l.life), style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+                    Text(bandWord(l.band), style = MaterialTheme.typography.labelSmall, color = bandColor(l.band))
+                    Spacer(Modifier.width(10.dp))
+                    Text(l.score.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 18.sp, color = scoreColor(l.score))
+                }
+                Text(l.words, style = MaterialTheme.typography.bodyLarge, color = KshanaColors.Text, modifier = Modifier.padding(start = 26.dp))
+                Text(l.advice, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted, modifier = Modifier.padding(start = 26.dp))
+                Row(Modifier.padding(start = 26.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    if (l.band == "slow" || l.band == "hold") {
+                        Text("WHAT TO DO", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable { onRemedy(l.life) }.padding(vertical = 4.dp))
+                    }
+                    if (l.why.isNotEmpty()) {
+                        Text(if (whyOpen == l.life) "HIDE THE ASTROLOGY −" else "THE ASTROLOGY BEHIND IT +", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable { whyOpen = if (whyOpen == l.life) null else l.life }.padding(vertical = 4.dp))
+                    }
+                }
+                if (whyOpen == l.life) {
+                    Column(Modifier.padding(start = 26.dp).clip(RoundedCornerShape(10.dp)).background(KshanaColors.Surface).padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        for (w in l.why) Text(w.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                    }
+                }
+            }
+        }
+
+        SectionLabel("More of your time")
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            QuietButton("THE MONTH'S LETTER", onClick = onLetter, modifier = Modifier.weight(1f))
+            QuietButton("LOOK BACK AT A DAY", onClick = onHindsight, modifier = Modifier.weight(1f))
+        }
+        QuietButton("THE BOOK OF YOUR LIFE · THE YEARS AHEAD AND BEHIND", onClick = onBook, modifier = Modifier.fillMaxWidth())
+        Box(Modifier.height(4.dp))
+        Text("The astrology behind every line sits under its tap. ${o.seasonWhy.replaceFirstChar { it.uppercase() }}.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+    }
+}
