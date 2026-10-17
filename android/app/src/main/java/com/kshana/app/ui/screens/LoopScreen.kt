@@ -104,9 +104,6 @@ fun LoopScreen(
     var sky by remember { mutableStateOf<uniffi.kshana_ffi.ChartRecord?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var tick by remember { mutableStateOf(Instant.now()) }
-    // The one-line oracle that fades in when the Loop opens.
-    var oracle by remember { mutableStateOf<String?>(null) }
-    var oracleShown by remember { mutableStateOf(false) }
     // A soft tap when the hour turns while the Loop is open.
     var lastShift by remember { mutableStateOf<Instant?>(null) }
     // Time travel: an offset from now, in seconds. Zero means live.
@@ -131,13 +128,6 @@ fun LoopScreen(
     LaunchedEffect(moment) {
         val m0 = moment ?: return@LaunchedEffect
         lastShift = m0.shifts.firstOrNull()?.at?.toJava()
-        if (!oracleShown) {
-            oracleShown = true
-            val b = BriefingCache.record
-            oracle = b?.saturnWords?.let { "$it." } ?: "${m0.title}. ${m0.lives.maxByOrNull { it.score }?.headline ?: ""}"
-            delay(4200)
-            oracle = null
-        }
     }
     LaunchedEffect(profile, place, settings, travelSeconds) {
         // The real sky for the backdrop, once per load.
@@ -181,11 +171,6 @@ fun LoopScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
-            androidx.compose.animation.AnimatedVisibility(visible = oracle != null, enter = androidx.compose.animation.fadeIn(), exit = androidx.compose.animation.fadeOut()) {
-                Column(Modifier.padding(horizontal = 24.dp).padding(bottom = 10.dp)) {
-                    Text(oracle ?: "", fontFamily = FontFamily.Serif, fontSize = 20.sp, lineHeight = 28.sp, color = KshanaColors.Gold)
-                }
-            }
             Column(Modifier.padding(horizontal = 24.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("K S H A N A", fontFamily = FontFamily.Serif, fontSize = 20.sp, letterSpacing = 4.sp, color = KshanaColors.Gold)
@@ -199,6 +184,14 @@ fun LoopScreen(
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(local.format(CLOCK), fontFamily = FontFamily.Monospace, fontSize = 30.sp, color = KshanaColors.Text)
                     Text("  ${local.format(LONG_DATE)} · ${place.name}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted, modifier = Modifier.padding(bottom = 6.dp))
+                }
+                // The season in one quiet line: the running periods and Saturn, stated, not announced.
+                BriefingCache.record?.let { b ->
+                    Text(
+                        seasonLine(b),
+                        style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
                 }
                 ErrorLine(error)
                 // Time travel: step the whole loop forward or back.
@@ -603,6 +596,25 @@ private fun HourLoreCard(h: uniffi.kshana_ffi.HoraRecord, tick: Instant) {
         }
         Text(if (open) "LESS −" else "THE MANTRA +", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
     }
+}
+
+/**
+ * The season in one sentence: "Moon mahadasha, Mercury antardasha to 9 Jan 2028.
+ * Ardhashtama until 23 Feb 2028." Facts with dates, in the body type, no colour.
+ */
+private fun seasonLine(b: BriefingRecord): String {
+    val periods = b.dasha
+        .replace(" (to ", " to ").replace(")", "")
+        .split(" › ")
+    val maha = periods.getOrNull(0)?.substringBefore(" to ") ?: ""
+    val antar = periods.getOrNull(1) ?: ""
+    val first = listOf(maha, antar).filter { it.isNotBlank() }.joinToString(", ") + "."
+    val saturn = if (b.saturnActive) {
+        val phase = b.saturnWords.substringBefore(':').trim().replaceFirstChar { it.uppercase() }
+        val until = b.saturnUntil?.let { localText(it, DATE_ONLY) }
+        if (until != null) " $phase until $until." else " $phase."
+    } else ""
+    return first + saturn
 }
 
 private fun greeting(hour: Int): String = when (hour) {
