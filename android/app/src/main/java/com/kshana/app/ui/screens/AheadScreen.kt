@@ -46,7 +46,7 @@ internal object OutlookCache {
     val records = HashMap<String, OutlookRecord>()
 }
 
-private val SPANS = listOf("day" to "TODAY", "week" to "THIS WEEK", "month" to "THIS MONTH", "year" to "THIS YEAR")
+private val SPANS = listOf("day" to "TODAY", "week" to "WEEK", "month" to "MONTH", "year" to "YEAR")
 
 /**
  * Ahead: your life today, this week, this month, this year, in plain words. Each life
