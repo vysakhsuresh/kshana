@@ -15,10 +15,10 @@ import com.kshana.app.R
 
 /** The design canvas palette: night ground, one gold accent, a sky blue for data. */
 object KshanaColors {
-    val Night = Color(0xFF080A14)
-    val Surface = Color(0xFF0E1120)
-    val Line = Color(0xFF2A2E44)
-    val LineSoft = Color(0xFF1B1F30)
+    val Night = Color(0xFF07091A)
+    val Surface = Color(0xFF0E1224)
+    val Line = Color(0xFF342F48)
+    val LineSoft = Color(0xFF221F36)
     val Text = Color(0xFFEFE9DC)
     val TextSoft = Color(0xFFC9C3B4)
     val Muted = Color(0xFF9A9EB0)

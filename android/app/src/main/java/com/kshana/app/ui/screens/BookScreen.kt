@@ -39,6 +39,7 @@ import com.kshana.app.data.EngineSettings
 import com.kshana.app.engine.EngineProvider
 import com.kshana.app.engine.Instants
 import com.kshana.app.ui.theme.KshanaColors
+import com.kshana.app.ui.theme.glass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.kshana.app.data.Place
@@ -88,11 +89,11 @@ private fun YearSection(profile: BirthProfile, place: Place, settings: EngineSet
     ErrorLine(error)
     val r = y
     if (r == null) {
-        if (error == null) Text("solving the solar return…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+        if (error == null) Working("solving the solar return…")
         return
     }
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(KshanaColors.Surface).padding(14.dp),
+        Modifier.fillMaxWidth().glass(14.dp).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -157,7 +158,7 @@ fun BookScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
         ErrorLine(error)
         val t = book
         if (t == null) {
-            if (error == null) Text("reading sixty years of sky, to the second…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            if (error == null) Working("reading sixty years of sky, to the second…")
             return@Column
         }
         Text(t.headline, fontFamily = FontFamily.Serif, fontSize = 19.sp, lineHeight = 27.sp, color = KshanaColors.Text)

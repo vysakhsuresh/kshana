@@ -47,6 +47,7 @@ import com.kshana.app.data.Place
 import com.kshana.app.engine.EngineProvider
 import com.kshana.app.engine.Instants
 import com.kshana.app.ui.theme.KshanaColors
+import com.kshana.app.ui.theme.glass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.BriefingRecord
@@ -122,12 +123,12 @@ fun HindsightScreen(profile: BirthProfile, place: Place, settings: EngineSetting
         ErrorLine(error)
         val b = brief
         if (b == null) {
-            if (error == null) Text("casting that day…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            if (error == null) Working("casting that day…")
             return@Column
         }
         val m = b.moment
         Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(KshanaColors.Surface).padding(18.dp),
+            Modifier.fillMaxWidth().glass(18.dp).padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(m.dayTitle.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)

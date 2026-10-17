@@ -88,7 +88,7 @@ fun ReadingScreen(profile: BirthProfile, settings: EngineSettings, onAreas: () -
         val r = best
         val at = now
         if (r == null || at == null) {
-            if (loading) Text("judging every life area for this instant…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            if (loading) Working("judging every life area for this instant…")
             else if (error == null) Text("The engine returned no readings.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         } else {
             val p = r.promise

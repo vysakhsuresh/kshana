@@ -37,6 +37,7 @@ import com.kshana.app.data.Place
 import com.kshana.app.engine.EngineProvider
 import com.kshana.app.engine.Instants
 import com.kshana.app.ui.theme.KshanaColors
+import com.kshana.app.ui.theme.glass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.OutlookRecord
@@ -121,7 +122,7 @@ fun AheadScreen(
 
         // The whole, in a card: the ring, the dates, the headline, the season.
         Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(KshanaColors.Surface).padding(18.dp),
+            Modifier.fillMaxWidth().glass(18.dp).padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -159,7 +160,7 @@ fun AheadScreen(
                     }
                 }
                 if (whyOpen == l.life) {
-                    Column(Modifier.padding(start = 26.dp).clip(RoundedCornerShape(10.dp)).background(KshanaColors.Surface).padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(Modifier.padding(start = 26.dp).glass(10.dp).padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         for (w in l.why) Text(w.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
                     }
                 }

@@ -53,6 +53,8 @@ import com.kshana.app.data.Place
 import com.kshana.app.data.ProfileStore
 import com.kshana.app.engine.Instants
 import com.kshana.app.ui.theme.KshanaColors
+import com.kshana.app.ui.theme.halo
+import com.kshana.app.ui.theme.glass
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -197,7 +199,10 @@ fun LoopScreen(
         item {
             Column(Modifier.padding(horizontal = 24.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("K S H A N A", fontFamily = FontFamily.Serif, fontSize = 20.sp, letterSpacing = 4.sp, color = KshanaColors.Gold)
+                    Column {
+                        Text("K S H A N A", fontFamily = FontFamily.Serif, fontSize = 20.sp, letterSpacing = 4.sp, color = KshanaColors.Gold)
+                        Text("क्षण · the moment", fontFamily = FontFamily.Serif, fontSize = 11.sp, letterSpacing = 1.sp, color = KshanaColors.Gold.copy(alpha = 0.55f))
+                    }
                     Icon(Icons.Filled.Settings, contentDescription = "settings", tint = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onSettings).padding(8.dp))
                 }
                 val local = ZonedDateTime.ofInstant(shownTick, java.time.ZoneId.systemDefault())
@@ -224,12 +229,12 @@ fun LoopScreen(
                     for ((label, secs) in listOf("−1d" to -86_400L, "+1h" to 3_600L, "+1d" to 86_400L, "+7d" to 604_800L, "+30d" to 2_592_000L)) {
                         Text(
                             label, fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky,
-                            modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(KshanaColors.Surface).clickable { travelSeconds += secs; moment = null }.padding(horizontal = 10.dp, vertical = 6.dp),
+                            modifier = Modifier.glass(10.dp).clickable { travelSeconds += secs; moment = null }.padding(horizontal = 10.dp, vertical = 6.dp),
                         )
                     }
                     Text(
                         "DATE", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Gold,
-                        modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(KshanaColors.Surface).border(1.dp, KshanaColors.Gold.copy(alpha = 0.6f), RoundedCornerShape(10.dp)).clickable { pickDate = true }.padding(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.glass(10.dp).border(1.dp, KshanaColors.Gold.copy(alpha = 0.6f), RoundedCornerShape(10.dp)).clickable { pickDate = true }.padding(horizontal = 10.dp, vertical = 6.dp),
                     )
                     if (travelling) {
                         Text(
@@ -262,7 +267,7 @@ fun LoopScreen(
 
         item {
             if (m == null) {
-                Text("reading the sky for this second…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted, modifier = Modifier.padding(horizontal = 24.dp))
+                Working("reading the sky for this second…", modifier = Modifier.padding(horizontal = 24.dp))
             } else {
                 HeroCard(m, shownTick, travelling, sky, onLife)
             }
@@ -377,7 +382,7 @@ private fun WallStrip(profile: BirthProfile, place: Place, settings: EngineSetti
                 items(list.take(6)) { c ->
                     val at = Instants.toLocal(c.at).toInstant()
                     Column(
-                        Modifier.width(150.dp).clip(RoundedCornerShape(12.dp)).background(KshanaColors.Surface).clickable(onClick = onWall).padding(12.dp),
+                        Modifier.width(150.dp).glass(12.dp).clickable(onClick = onWall).padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         Text(c.title.uppercase(), style = MaterialTheme.typography.labelSmall, color = if (c.good) KshanaColors.Leaf else KshanaColors.Ember, maxLines = 2)
@@ -444,7 +449,7 @@ private fun PeopleToday(profile: BirthProfile, place: Place, settings: EngineSet
             val pm = moments[p.name]
             val rel = ProfileStore.relationOf(context, p.name)
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(KshanaColors.Surface).clickable(onClick = onTogether).padding(12.dp),
+                Modifier.fillMaxWidth().glass(12.dp).clickable(onClick = onTogether).padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
@@ -526,14 +531,14 @@ private fun BriefingCard(
         }
     }
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(KshanaColors.Surface).padding(18.dp),
+        Modifier.fillMaxWidth().glass(18.dp).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text("YOUR READING · AS AN ASTROLOGER WOULD SAY IT", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         ErrorLine(error)
         val r = b
         if (r == null) {
-            if (error == null) Text("reading your chart aloud…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            if (error == null) Working("reading your chart aloud…")
             return@Column
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -591,7 +596,7 @@ private fun BriefingCard(
 private fun HourLoreCard(h: uniffi.kshana_ffi.HoraRecord, tick: Instant) {
     var open by remember { mutableStateOf(false) }
     Column(
-        Modifier.padding(horizontal = 24.dp).fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(KshanaColors.Surface).clickable { open = !open }.padding(14.dp),
+        Modifier.padding(horizontal = 24.dp).fillMaxWidth().glass(14.dp).clickable { open = !open }.padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -652,7 +657,7 @@ private fun greeting(hour: Int): String = when (hour) {
 @Composable
 private fun HeroCard(m: MomentRecord, tick: Instant, travelling: Boolean, sky: uniffi.kshana_ffi.ChartRecord?, onLife: (String) -> Unit) {
     val next = m.shifts.firstOrNull()
-    Box(Modifier.padding(horizontal = 24.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(KshanaColors.Surface)) {
+    Box(Modifier.padding(horizontal = 24.dp).fillMaxWidth().glass(18.dp)) {
     if (sky != null) SkyBackdrop(sky, m.band)
     Column(
         Modifier.fillMaxWidth().padding(18.dp),
@@ -673,7 +678,7 @@ private fun HeroCard(m: MomentRecord, tick: Instant, travelling: Boolean, sky: u
                 } else if (next != null) {
                     Spacer(Modifier.height(6.dp))
                     Text(tr("changes in"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
-                    Text(countdown(tick, next.at.toJava()), fontFamily = FontFamily.Monospace, fontSize = 26.sp, color = KshanaColors.Gold)
+                    Text(countdown(tick, next.at.toJava()), fontFamily = FontFamily.Monospace, fontSize = 26.sp, color = KshanaColors.Gold.copy(alpha = com.kshana.app.ui.theme.breath()))
                     Text("${hm(next.at)} · ${next.what}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
                 }
             }
@@ -701,7 +706,7 @@ private fun HeroCard(m: MomentRecord, tick: Instant, travelling: Boolean, sky: u
                     Text(if (g.now) "Now, until ${hm(g.end)} · ${g.lord} hour" else "${hm(g.start)} · ${g.lord} hour · fit ${g.fit.toInt()}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
                 }
             }
-            if (g != null) Text(if (g.now) "now" else countdown(tick, g.start.toJava()), fontFamily = FontFamily.Monospace, fontSize = 20.sp, color = KshanaColors.Gold)
+            if (g != null) Text(if (g.now) "now" else countdown(tick, g.start.toJava()), fontFamily = FontFamily.Monospace, fontSize = 20.sp, color = KshanaColors.Gold.copy(alpha = com.kshana.app.ui.theme.breath()))
         }
     }
     }
@@ -778,13 +783,25 @@ private fun RingWithTrace(m: MomentRecord, tick: Instant, size: androidx.compose
 @Composable
 internal fun ScoreRing(score: Double, size: androidx.compose.ui.unit.Dp, stroke: androidx.compose.ui.unit.Dp, label: String? = null) {
     val color = scoreColor(score)
-    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+    // The ring draws itself to its number, and carries a soft light of its own colour.
+    val sweep by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = (360.0 * (score / 100.0)).toFloat(),
+        animationSpec = androidx.compose.animation.core.tween(1100, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "ring",
+    )
+    Box(Modifier.size(size).halo(color, radiusFactor = 0.62f, alpha = 0.20f), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val s = stroke.toPx()
             val inset = s / 2
             val arcSize = Size(this.size.width - s, this.size.height - s)
-            drawArc(KshanaColors.Line, -90f, 360f, false, Offset(inset, inset), arcSize, style = Stroke(s, cap = StrokeCap.Round))
-            drawArc(color, -90f, (360.0 * (score / 100.0)).toFloat(), false, Offset(inset, inset), arcSize, style = Stroke(s, cap = StrokeCap.Round))
+            drawArc(KshanaColors.Line.copy(alpha = 0.7f), -90f, 360f, false, Offset(inset, inset), arcSize, style = Stroke(s, cap = StrokeCap.Round))
+            drawArc(color, -90f, sweep, false, Offset(inset, inset), arcSize, style = Stroke(s, cap = StrokeCap.Round))
+            // a brighter head on the arc, like a planet on its orbit
+            if (sweep > 2f) {
+                val a = Math.toRadians((-90f + sweep).toDouble())
+                val r = (this.size.width - s) / 2f
+                drawCircle(KshanaColors.Text, s * 0.42f, Offset(center.x + r * Math.cos(a).toFloat(), center.y + r * Math.sin(a).toFloat()))
+            }
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(score.toInt().toString(), fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium, fontSize = (size.value / 3.2).sp, color = KshanaColors.Text)
@@ -809,7 +826,7 @@ private fun LivesGrid(lives: List<LifeScoreRecord>, onLife: (String) -> Unit) {
 private fun LifeTile(l: LifeScoreRecord, modifier: Modifier, onClick: () -> Unit) {
     val c = bandColor(l.band)
     Column(
-        modifier.clip(RoundedCornerShape(14.dp)).background(KshanaColors.Surface).clickable(onClick = onClick).padding(12.dp),
+        modifier.glass(14.dp).clickable(onClick = onClick).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

@@ -124,3 +124,16 @@ which kernel, which UT1 source and which models produced a number.
 The app ships `de421.bsp` (17 MB, 1900–2050) inside the APK's assets and opens it from
 the files directory. DE440s (32 MB, 1849–2150) replaces it when fetched from NAIF.
 Nothing is computed on a server.
+
+## The look: a night sky
+
+Every screen sits on one living sky (`ui/theme/Mystic.kt`): a seeded starfield that
+twinkles slowly, a faint tint at the top that follows the hour (rose at dawn, indigo by
+day, amber at dusk, deep night after) and a soft gold glow in one corner. Screens are
+transparent over it. Cards are glass (`Modifier.glass`): translucent, with a hairline
+that catches gold at the top. Section titles carry a small diamond and a gold hairline.
+Score rings draw themselves to their number, carry a halo of their own colour and a
+bright head on the arc. Countdowns to the next good minute breathe. While the engine
+works, a wheel of twenty-seven points (the nakshatras) turns with one lit, never a
+spinner. Screens fade into each other. The one gold button keeps its warmth with a
+gradient and a halo; everything else is outlined in gold hairline.

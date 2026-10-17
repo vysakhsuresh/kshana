@@ -157,7 +157,7 @@ fun TrustScreen(profile: BirthProfile?, settings: EngineSettings, onBack: () -> 
                 MonoRow("ascendant band", "±%.2f°".format(s.ascBandDeg))
                 MonoRow("cusps that may change sign", unstable.toString(), if (unstable == 0) KshanaColors.Sky else KshanaColors.Gold)
             } else if (error == null) {
-                Text("measuring the band…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+                Working("measuring the band…")
             }
             Text(
                 "The engine does not know your birth time better than you do. A rule that fires is a statement in a tradition, not a measurement.",
@@ -192,7 +192,7 @@ fun TrustScreen(profile: BirthProfile?, settings: EngineSettings, onBack: () -> 
         SectionLabel("Error budget")
         val budget = load?.budget
         if (budget == null) {
-            if (error == null) Text("reading…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            if (error == null) Working("reading…")
         } else {
             for (b in budget) BudgetLines(b)
         }

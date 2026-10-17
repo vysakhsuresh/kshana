@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kshana.app.data.PredictionStore
 import com.kshana.app.ui.theme.KshanaColors
+import com.kshana.app.ui.theme.glass
 import uniffi.kshana_ffi.calibrate
 import java.time.Instant
 import java.time.ZoneId
@@ -55,7 +56,7 @@ fun RecordScreen(onBack: () -> Unit, onLife: (String) -> Unit) {
         Text("Every window the app named and that has passed. Say yes or no; the record is scored honestly, and after five answers for a life it is shown beside that life's score.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
 
         Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(KshanaColors.Surface).padding(16.dp),
+            Modifier.fillMaxWidth().glass(16.dp).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text("SO FAR", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)

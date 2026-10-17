@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DateRange
@@ -130,11 +132,13 @@ private fun App() {
         }
     }
 
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+    com.kshana.app.ui.theme.NightSky()
     Scaffold(
-        containerColor = KshanaColors.Night,
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         bottomBar = {
             if (showBar) {
-                NavigationBar(containerColor = KshanaColors.Night) {
+                NavigationBar(containerColor = KshanaColors.Night.copy(alpha = 0.86f), tonalElevation = 0.dp) {
                     for (t in tabs) {
                         NavigationBarItem(
                             selected = current == t.route,
@@ -146,7 +150,7 @@ private fun App() {
                                 selectedTextColor = KshanaColors.Gold,
                                 unselectedIconColor = KshanaColors.Muted,
                                 unselectedTextColor = KshanaColors.Muted,
-                                indicatorColor = KshanaColors.Surface,
+                                indicatorColor = KshanaColors.Gold.copy(alpha = 0.12f),
                             ),
                         )
                     }
@@ -154,7 +158,13 @@ private fun App() {
             }
         },
     ) { padding ->
-        NavHost(nav, startDestination = start, modifier = Modifier.padding(padding)) {
+        NavHost(
+            nav, startDestination = start, modifier = Modifier.padding(padding),
+            enterTransition = { androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(320)) },
+            exitTransition = { androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(220)) },
+            popEnterTransition = { androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(320)) },
+            popExitTransition = { androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(220)) },
+        ) {
             composable("loop") {
                 withProfile {
                     LoopScreen(
@@ -310,5 +320,6 @@ private fun App() {
                 TrustScreen(profile = profile, settings = settings, onBack = { nav.popBackStack() })
             }
         }
+    }
     }
 }

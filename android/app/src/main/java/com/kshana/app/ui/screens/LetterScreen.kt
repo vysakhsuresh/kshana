@@ -38,6 +38,7 @@ import com.kshana.app.data.Place
 import com.kshana.app.engine.EngineProvider
 import com.kshana.app.engine.Instants
 import com.kshana.app.ui.theme.KshanaColors
+import com.kshana.app.ui.theme.glass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.LetterRecord
@@ -80,13 +81,13 @@ fun LetterScreen(profile: BirthProfile, place: Place, settings: EngineSettings, 
         val l = letter
         if (l == null) {
             Text("The month's letter", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
-            if (error == null) Text("writing thirty days…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            if (error == null) Working("writing thirty days…")
             return@Column
         }
         Text(l.title, style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         Text("${profile.name} · birth Moon ${l.briefing.moon} · written ${localText(l.from, DATE_ONLY)} for ${place.name}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(KshanaColors.Surface).padding(20.dp),
+            Modifier.fillMaxWidth().glass(18.dp).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text("Dear ${profile.name.substringBefore(' ').lowercase().replaceFirstChar { it.uppercase() }},", fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 18.sp, color = KshanaColors.TextSoft)

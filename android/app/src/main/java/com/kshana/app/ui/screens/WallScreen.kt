@@ -38,6 +38,7 @@ import com.kshana.app.engine.EngineProvider
 import com.kshana.app.engine.Instants
 import com.kshana.app.system.Alerts
 import com.kshana.app.ui.theme.KshanaColors
+import com.kshana.app.ui.theme.glass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -125,14 +126,14 @@ fun WallScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
         ErrorLine(error)
         val list = items
         if (list == null) {
-            if (error == null) Text("solving the sky ahead…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            if (error == null) Working("solving the sky ahead…")
             return@Column
         }
         for (c in list) {
             val at = Instants.toLocal(c.at).toInstant()
             val set = remember(version, c.at.taiSeconds) { Alerts.has(context, at.toEpochMilli()) }
             Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(KshanaColors.Surface)
+                Modifier.fillMaxWidth().glass(16.dp)
                     .then(if (c.kind == "saturn" || c.kind == "sadesati") Modifier.border(1.dp, (if (c.good) KshanaColors.Leaf else KshanaColors.Ember).copy(alpha = 0.6f), RoundedCornerShape(16.dp)) else Modifier)
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),

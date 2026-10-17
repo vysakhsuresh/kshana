@@ -108,7 +108,7 @@ fun ChartScreen(profile: BirthProfile, settings: EngineSettings) {
         val c = chart
         if (c == null) {
             Spacer(Modifier.height(320.dp))
-            if (error == null) Text("casting the sky…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            if (error == null) Working("casting the sky…")
         } else {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { NatalWheel(c, aspects, sidereal) }
             val asc = if (sidereal) c.cuspsSidereal[0] else c.cuspsTropical[0]

@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kshana.app.engine.Instants
 import com.kshana.app.ui.theme.KshanaColors
+import com.kshana.app.ui.theme.halo
 import uniffi.kshana_ffi.ExactInstant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -90,9 +91,27 @@ internal fun sentence(factor: String): String {
     return if (s.endsWith(".") || s.endsWith("!") || s.endsWith("?")) s else "$s."
 }
 
+/** A section title: small capitals, a diamond, and a gold hairline that fades out. */
 @Composable
 internal fun SectionLabel(text: String, modifier: Modifier = Modifier) {
-    Text(text.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = modifier.padding(top = 18.dp, bottom = 6.dp))
+    Row(modifier.padding(top = 18.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("◆", fontSize = 7.sp, color = KshanaColors.Gold, modifier = Modifier.padding(end = 8.dp))
+        Text(text.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Box(
+            Modifier.padding(start = 10.dp).height(1.dp).width(72.dp)
+                .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(KshanaColors.Gold.copy(alpha = 0.45f), androidx.compose.ui.graphics.Color.Transparent))),
+        )
+    }
+}
+
+/** The engine at work: the wheel of twenty-seven points and a few words. */
+@Composable
+internal fun Working(text: String, modifier: Modifier = Modifier) {
+    Row(modifier.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        com.kshana.app.ui.theme.StarWheel(size = 36.dp, modifier = Modifier.size(36.dp))
+        Spacer(Modifier.width(12.dp))
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+    }
 }
 
 @Composable
@@ -184,15 +203,19 @@ internal fun OptionBox(label: String, selected: Boolean, onClick: () -> Unit, mo
     }
 }
 
-/** The one gold call-to-action: full width, 52 dp, serif capitals. */
+/** The one gold call-to-action: full width, 52 dp, serif capitals, a soft light behind it. */
 @Composable
 internal fun GoldButton(label: String, enabled: Boolean = true, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val shape = RoundedCornerShape(8.dp)
+    val shape = RoundedCornerShape(10.dp)
     Box(
         modifier = modifier
             .height(52.dp)
+            .then(if (enabled) Modifier.com_kshana_halo() else Modifier)
             .clip(shape)
-            .background(if (enabled) KshanaColors.Gold else KshanaColors.Line)
+            .background(
+                if (enabled) androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFEBC77E), KshanaColors.Gold, Color(0xFFCFA557)))
+                else androidx.compose.ui.graphics.Brush.verticalGradient(listOf(KshanaColors.Line, KshanaColors.Line)),
+            )
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -200,15 +223,18 @@ internal fun GoldButton(label: String, enabled: Boolean = true, onClick: () -> U
     }
 }
 
-/** A quiet secondary action: outlined, 44 dp. */
+private fun Modifier.com_kshana_halo(): Modifier = this.halo(KshanaColors.Gold, radiusFactor = 0.9f, alpha = 0.16f)
+
+/** A quiet secondary action: a gold hairline, 44 dp. */
 @Composable
 internal fun QuietButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val shape = RoundedCornerShape(8.dp)
+    val shape = RoundedCornerShape(10.dp)
     Box(
         modifier = modifier
             .height(44.dp)
             .clip(shape)
-            .border(1.dp, KshanaColors.Line, shape)
+            .background(KshanaColors.Surface.copy(alpha = 0.5f))
+            .border(1.dp, KshanaColors.Gold.copy(alpha = 0.38f), shape)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,

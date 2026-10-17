@@ -48,6 +48,7 @@ import com.kshana.app.data.Place
 import com.kshana.app.engine.EngineProvider
 import com.kshana.app.engine.Instants
 import com.kshana.app.ui.theme.KshanaColors
+import com.kshana.app.ui.theme.glass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.AppointmentRecord
@@ -179,7 +180,7 @@ fun PlanScreen(
             )) {
                 Text(
                     label, fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky,
-                    modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(KshanaColors.Surface).clickable { action(); result = null }.padding(horizontal = 10.dp, vertical = 8.dp),
+                    modifier = Modifier.glass(10.dp).clickable { action(); result = null }.padding(horizontal = 10.dp, vertical = 8.dp),
                 )
             }
         }
@@ -251,7 +252,7 @@ fun PlanScreen(
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 for ((label, r) in kept) {
                     Column(
-                        Modifier.width(150.dp).clip(RoundedCornerShape(12.dp)).background(KshanaColors.Surface).padding(12.dp),
+                        Modifier.width(150.dp).glass(12.dp).padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Text(label, style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, maxLines = 2)
@@ -274,7 +275,7 @@ fun PlanScreen(
             }, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(4.dp))
             Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(KshanaColors.Surface).padding(18.dp),
+                Modifier.fillMaxWidth().glass(18.dp).padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {

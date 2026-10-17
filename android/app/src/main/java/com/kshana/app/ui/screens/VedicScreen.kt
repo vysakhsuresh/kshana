@@ -157,7 +157,7 @@ fun VedicScreen(profile: BirthProfile, settings: EngineSettings) {
         val c = chart
         if (c == null) {
             Spacer(Modifier.height(320.dp))
-            if (error == null) Text("casting the sky…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            if (error == null) Working("casting the sky…")
         } else {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (n in VARGAS) Chip("D$n", selected = vargaN == n, onClick = { vargaN = n })

@@ -46,6 +46,7 @@ import com.kshana.app.data.ProfileStore
 import com.kshana.app.engine.EngineProvider
 import com.kshana.app.engine.Instants
 import com.kshana.app.ui.theme.KshanaColors
+import com.kshana.app.ui.theme.glass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.PariharaRecord
@@ -144,7 +145,7 @@ fun PariharaScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -
         ErrorLine(error)
         val rec = record
         if (rec == null) {
-            if (error == null) Text("weighing the running lords…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            if (error == null) Working("weighing the running lords…")
         } else {
             val required = rec.remedies.filter { !it.optional }
             val keptRequired = required.count { it.title in kept }
@@ -168,7 +169,7 @@ fun PariharaScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -
             )
 
             SectionLabel("Cause")
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(KshanaColors.Surface).padding(16.dp)) {
+            Column(Modifier.fillMaxWidth().glass(8.dp).padding(16.dp)) {
                 Text("${rec.planet} · severity ${"%.2f".format(rec.severity)}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Gold)
                 Text(rec.cause, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text, modifier = Modifier.padding(top = 6.dp))
                 Text(rec.signature, fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Sky, modifier = Modifier.padding(top = 8.dp))
@@ -183,7 +184,7 @@ fun PariharaScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -
                 Text("Today is ${rec.planet}'s day. What you keep today counts double in the tradition; tick what you did.", fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Gold)
             }
             if (kept.isNotEmpty()) {
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(KshanaColors.Surface).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().glass(12.dp).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("🔥", fontSize = 22.sp)
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {

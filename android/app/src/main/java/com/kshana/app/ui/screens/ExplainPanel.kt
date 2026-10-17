@@ -41,6 +41,7 @@ import com.kshana.app.data.Place
 import com.kshana.app.engine.EngineProvider
 import com.kshana.app.engine.Instants
 import com.kshana.app.ui.theme.KshanaColors
+import com.kshana.app.ui.theme.glass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.CauseRecord
@@ -77,7 +78,7 @@ fun ExplainPanel(profile: BirthProfile, place: Place, settings: EngineSettings, 
     }
 
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(KshanaColors.Surface).padding(14.dp),
+        Modifier.fillMaxWidth().glass(14.dp).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(Modifier.fillMaxWidth().clickable { open = !open }, verticalAlignment = Alignment.CenterVertically) {
@@ -94,7 +95,7 @@ fun ExplainPanel(profile: BirthProfile, place: Place, settings: EngineSettings, 
         ErrorLine(error)
         val e = ex
         if (e == null) {
-            if (error == null) Text("solving the next moves of every graha…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            if (error == null) Working("solving the next moves of every graha…")
             return@Column
         }
         Text(e.headline, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)

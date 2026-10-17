@@ -46,6 +46,7 @@ import com.kshana.app.data.PredictionStore
 import com.kshana.app.engine.Instants
 import uniffi.kshana_ffi.calibrate
 import com.kshana.app.ui.theme.KshanaColors
+import com.kshana.app.ui.theme.glass
 import uniffi.kshana_ffi.HorizonRecord
 import uniffi.kshana_ffi.HourRecord
 import uniffi.kshana_ffi.MomentRecord
@@ -148,7 +149,7 @@ fun LifeScreen(
                 }
             }
         } else if (error == null) {
-            Text("reading your chart…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            Working("reading your chart…")
         }
 
         if (now != null) ExplainPanel(profile, place, settings, life, onRemedy = onRemedy)
@@ -163,7 +164,7 @@ fun LifeScreen(
             else -> {
                 val h = horizons[range]
                 if (h == null) {
-                    Text("looking ahead…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+                    Working("looking ahead…")
                 } else {
                     HorizonPanel(h, idx, range)
                 }
@@ -191,7 +192,7 @@ internal fun RecordPanel(life: String) {
     val mine = calibration.lives.firstOrNull { it.life == life }
     if (pending.isEmpty() && (mine == null || mine.n == 0u)) return
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(KshanaColors.Surface).padding(14.dp),
+        Modifier.fillMaxWidth().glass(14.dp).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text("YOUR RECORD · DID IT HAPPEN?", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)

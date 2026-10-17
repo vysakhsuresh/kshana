@@ -50,6 +50,7 @@ import com.kshana.app.data.ProfileStore
 import com.kshana.app.engine.EngineProvider
 import com.kshana.app.engine.Instants
 import com.kshana.app.ui.theme.KshanaColors
+import com.kshana.app.ui.theme.glass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.CoupleAnswerRecord
@@ -187,10 +188,10 @@ fun TogetherScreen(
 
         val k = kundali
         if (k == null) {
-            if (error == null) Text("laying the two charts side by side…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            if (error == null) Working("laying the two charts side by side…")
         } else {
             Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(KshanaColors.Surface).padding(18.dp),
+                Modifier.fillMaxWidth().glass(18.dp).padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -239,11 +240,11 @@ fun TogetherScreen(
 
         val c = couple
         if (c == null) {
-            if (k != null && error == null) Text("reading this moment for both of you, and three years of months…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            if (k != null && error == null) Working("reading this moment for both of you, and three years of months…")
         } else {
             SectionLabel("Right now, together")
             Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(KshanaColors.Surface).padding(18.dp),
+                Modifier.fillMaxWidth().glass(18.dp).padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -344,7 +345,7 @@ fun TogetherScreen(
             val ca = coupleAnswer
             if (ca != null) {
                 Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(KshanaColors.Surface).padding(18.dp),
+                    Modifier.fillMaxWidth().glass(18.dp).padding(18.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -418,7 +419,7 @@ private fun PeopleGrid(people: List<BirthProfile>, place: Place, settings: Engin
     for ((i, p) in people.withIndex()) {
         val pm = moments[p.name]
         Row(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(KshanaColors.Surface).clickable { onPick(i) }.padding(12.dp),
+            Modifier.fillMaxWidth().glass(12.dp).clickable { onPick(i) }.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
@@ -516,7 +517,7 @@ private fun coupleWords(key: String, fallback: String): String = when (key) {
 private fun PersonBriefing(name: String, b: uniffi.kshana_ffi.BriefingRecord, c: Color) {
     var open by remember { mutableStateOf(false) }
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(KshanaColors.Surface).padding(14.dp),
+        Modifier.fillMaxWidth().glass(14.dp).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
