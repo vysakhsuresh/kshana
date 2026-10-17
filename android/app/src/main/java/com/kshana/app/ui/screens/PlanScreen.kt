@@ -126,7 +126,7 @@ fun PlanScreen(
                 }) { Text("SET", color = KshanaColors.Gold) }
             },
             dismissButton = { TextButton(onClick = { pickDate = false }) { Text("CANCEL", color = KshanaColors.Muted) } },
-        ) { DatePicker(state = state) }
+        ) { DatePicker(state = state, title = null, headline = null, showModeToggle = false) }
     }
     if (pickTime) {
         val state = rememberTimePickerState(initialHour = time.hour, initialMinute = time.minute, is24Hour = true)

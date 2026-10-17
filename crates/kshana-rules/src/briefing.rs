@@ -234,7 +234,7 @@ pub fn briefing(
             .map(|h| format!(" The {:?} hour is running: {}.", h.lord, h.words))
             .unwrap_or_default();
         paragraphs.push(format!(
-            "This second reads {:.0}, {}. {} is your strongest life now at {:.0} ({}), {} the weakest at {:.0} ({}).{} The Moon is in {} today, your {} tara: {}.",
+            "This second reads {:.0}, {}. {} is your strongest life now at {:.0} ({}), {} the weakest at {:.0} ({}).{} The Moon is in {} today: {}.",
             m.overall * 100.0,
             m.band.word(),
             t.life.name(),
@@ -245,7 +245,6 @@ pub fn briefing(
             l.because,
             hora,
             m.moon_star,
-            crate::gochara::TARA_NAMES[m.tara],
             m.tara_words
         ));
     }

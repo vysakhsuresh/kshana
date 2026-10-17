@@ -110,7 +110,7 @@ object Sunrise {
             val text = "${m.title}. ${top?.headline ?: ""}".trim()
             val big = "${b.paragraphs.getOrNull(2) ?: text}\n\n${b.saturnWords}."
             val n = NotificationCompat.Builder(context, CHANNEL)
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setSmallIcon(R.drawable.ic_stat_kshana)
                 .setContentTitle("Sunrise · ${m.overall.toInt()}, ${m.band}")
                 .setContentText(text)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(big))
@@ -122,7 +122,8 @@ object Sunrise {
                 nm.notify(REQUEST, n)
             }
             b
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.e("Kshana", "sunrise post failed", e)
             null
         }
     }
@@ -134,11 +135,15 @@ class SunriseReceiver : BroadcastReceiver() {
         val result = goAsync()
         Thread {
             try {
+                android.util.Log.i("Kshana", "sunrise alarm fired; enabled=${Sunrise.enabled(context)}")
                 if (Sunrise.enabled(context)) {
                     val b = Sunrise.post(context)
+                    android.util.Log.i("Kshana", "sunrise reading posted=${b != null}")
                     if (b != null) SadeSatiWidget.push(context, b)
                     Sunrise.scheduleNext(context)
                 }
+            } catch (e: Exception) {
+                android.util.Log.e("Kshana", "sunrise failed", e)
             } finally {
                 result.finish()
             }

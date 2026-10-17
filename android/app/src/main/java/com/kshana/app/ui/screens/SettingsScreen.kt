@@ -179,6 +179,15 @@ fun SettingsScreen(
                 ),
             )
         }
+        var readNow by remember { mutableStateOf<String?>(null) }
+        QuietButton(readNow ?: "READ IT TO ME NOW", onClick = {
+            readNow = "READING…"
+            Thread {
+                val b = com.kshana.app.system.Sunrise.post(context)
+                if (b != null) com.kshana.app.system.SadeSatiWidget.push(context, b)
+                readNow = if (b != null) "SENT · LOOK AT YOUR NOTIFICATIONS" else "COULD NOT READ · ALLOW NOTIFICATIONS FIRST"
+            }.start()
+        })
         Text("A home-screen widget is also available: long-press the home screen, Widgets, Kshana. It shows Saturn's phase with the days left and this moment's reading.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
 
         SectionLabel("Ayanamsa")

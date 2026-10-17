@@ -118,7 +118,7 @@ fun RectifyScreen(profile: BirthProfile, settings: EngineSettings, onBack: () ->
                 }) { Text("ADD", color = KshanaColors.Gold) }
             },
             dismissButton = { TextButton(onClick = { pickDate = false }) { Text("CANCEL", color = KshanaColors.Muted) } },
-        ) { DatePicker(state = state) }
+        ) { DatePicker(state = state, title = null, headline = null, showModeToggle = false) }
     }
 
     Column(
