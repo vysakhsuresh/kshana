@@ -155,7 +155,7 @@ fun LoopScreen(
                 ErrorLine(error)
                 // Time travel: step the whole loop forward or back.
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (travelling) "TRAVELLING" else "TRAVEL", style = MaterialTheme.typography.labelSmall, color = if (travelling) KshanaColors.Ember else KshanaColors.Muted, modifier = Modifier.width(72.dp))
+                    Text(if (travelling) tr("TRAVELLING") else tr("TRAVEL"), style = MaterialTheme.typography.labelSmall, color = if (travelling) KshanaColors.Ember else KshanaColors.Muted, modifier = Modifier.width(72.dp))
                     for ((label, secs) in listOf("−1d" to -86_400L, "+1h" to 3_600L, "+1d" to 86_400L, "+7d" to 604_800L, "+30d" to 2_592_000L)) {
                         Text(
                             label, fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky,
@@ -206,7 +206,7 @@ fun LoopScreen(
         if (m != null) {
             item {
                 Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SectionLabel("Your nine lives · right now")
+                    SectionLabel(tr("Your nine lives · right now"))
                     LivesGrid(m.lives, onLife)
                 }
             }
@@ -217,28 +217,26 @@ fun LoopScreen(
             }
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SectionLabel("The hours of today", Modifier.padding(horizontal = 24.dp))
+                    SectionLabel(tr("The hours of today"), Modifier.padding(horizontal = 24.dp))
                     HoursStrip(m.hours, shownTick, m.lives)
-                    m.hora?.let {
-                        Text("Now: ${it.lord} hour · ${it.words}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.padding(horizontal = 24.dp))
-                    }
+                    m.hora?.let { HourLoreCard(it, shownTick) }
                 }
             }
             item {
                 Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SectionLabel("Watch the clock")
+                    SectionLabel(tr("Watch the clock"))
                     for (w in m.windows) WindowRow(w, shownTick)
                 }
             }
             item {
                 Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SectionLabel("Coming up")
+                    SectionLabel(tr("Coming up"))
                     for (s in m.shifts.take(10)) ShiftRow(s, shownTick)
                 }
             }
             item {
                 Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SectionLabel("Under the hood")
+                    SectionLabel(tr("Under the hood"))
                     Text("Moon in ${m.moonStar} · ${m.taraName} tara · ${m.taraWords}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
                     if (m.saturnActive) Text(m.saturnWords.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Ember)
                     Text(
@@ -247,15 +245,15 @@ fun LoopScreen(
                     )
                     Spacer(Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        GoldButton("ASK", onClick = onAsk, modifier = Modifier.weight(1f))
-                        QuietButton("REMEDIES", onClick = onRemedy, modifier = Modifier.weight(1f))
+                        GoldButton(tr("ASK"), onClick = onAsk, modifier = Modifier.weight(1f))
+                        QuietButton(tr("REMEDIES"), onClick = onRemedy, modifier = Modifier.weight(1f))
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        QuietButton("PLAN A TIME", onClick = onPlan, modifier = Modifier.weight(1f))
-                        QuietButton("THE TWO OF US", onClick = onTogether, modifier = Modifier.weight(1f))
+                        QuietButton(tr("PLAN A TIME"), onClick = onPlan, modifier = Modifier.weight(1f))
+                        QuietButton(tr("THE TWO OF US"), onClick = onTogether, modifier = Modifier.weight(1f))
                     }
-                    QuietButton("THE BOOK OF YOUR LIFE · PAST, PRESENT, FUTURE", onClick = onBook, modifier = Modifier.fillMaxWidth())
-                    Text("Everything is computed on this phone from your birth time. Nothing leaves it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                    QuietButton(tr("THE BOOK OF YOUR LIFE · PAST, PRESENT, FUTURE"), onClick = onBook, modifier = Modifier.fillMaxWidth())
+                    Text(tr("Everything is computed on this phone from your birth time. Nothing leaves it."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
                 }
             }
         }
@@ -304,6 +302,7 @@ private fun BriefingCard(
             BriefingCache.record = r
             b = r
             error = null
+            com.kshana.app.system.SadeSatiWidget.push(context, r)
         } catch (e: Exception) {
             error = e.message ?: e.toString()
         }
@@ -369,11 +368,33 @@ private fun BriefingCard(
     }
 }
 
+/** The running hour's lord with its deity, colour, direction, metal and mantra. */
+@Composable
+private fun HourLoreCard(h: uniffi.kshana_ffi.HoraRecord, tick: Instant) {
+    var open by remember { mutableStateOf(false) }
+    Column(
+        Modifier.padding(horizontal = 24.dp).fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(KshanaColors.Surface).clickable { open = !open }.padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("${PLANET_GLYPHS[h.lord] ?: ""} ${h.lord}'s hour", fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+            Text("${hm(h.start)} – ${hm(h.end)} · ${countdown(tick, h.end.toJava())} left", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
+        }
+        Text(h.words.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+        Text("${h.deity} · ${h.colour} · ${h.direction} · ${h.metal}", style = MaterialTheme.typography.labelMedium, color = KshanaColors.Gold)
+        if (open) {
+            Text(h.mantra, fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text)
+            Text("For ${h.forWords}. Keep away from ${h.avoid}.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+        }
+        Text(if (open) "LESS −" else "THE MANTRA +", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+    }
+}
+
 private fun greeting(hour: Int): String = when (hour) {
-    in 4..11 -> "Good morning"
-    in 12..16 -> "Good afternoon"
-    in 17..20 -> "Good evening"
-    else -> "Good night"
+    in 4..11 -> tr("Good morning")
+    in 12..16 -> tr("Good afternoon")
+    in 17..20 -> tr("Good evening")
+    else -> tr("Good night")
 }
 
 @Composable
@@ -386,6 +407,7 @@ private fun HeroCard(m: MomentRecord, tick: Instant, travelling: Boolean) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
             ScoreRing(m.overall, size = 92.dp, stroke = 7.dp)
             Column(Modifier.weight(1f)) {
+                Text(m.title.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
                 Text(m.headline.substringBefore(" ·"), style = MaterialTheme.typography.titleLarge, color = bandColor(m.band))
                 Text(m.headline.substringAfter(" · ", ""), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
                 if (travelling) {
@@ -395,7 +417,7 @@ private fun HeroCard(m: MomentRecord, tick: Instant, travelling: Boolean) {
                     if (next != null) Text("then: ${hm(next.at)} · ${next.what}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
                 } else if (next != null) {
                     Spacer(Modifier.height(6.dp))
-                    Text("changes in", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
+                    Text(tr("changes in"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
                     Text(countdown(tick, next.at.toJava()), fontFamily = FontFamily.Monospace, fontSize = 26.sp, color = KshanaColors.Gold)
                     Text("${hm(next.at)} · ${next.what}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
                 }
@@ -452,7 +474,7 @@ private fun LifeTile(l: LifeScoreRecord, modifier: Modifier, onClick: () -> Unit
             Text(lifeGlyph(l.life), fontSize = 14.sp, color = c)
             Text(l.score.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 22.sp, color = KshanaColors.Text)
         }
-        Text(l.life, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
+        Text(lifeName(l.life), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
         Box(Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)).background(KshanaColors.Line)) {
             Box(Modifier.fillMaxWidth((l.score / 100.0).toFloat().coerceIn(0.02f, 1f)).height(4.dp).background(c))
         }

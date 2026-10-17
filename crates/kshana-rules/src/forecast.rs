@@ -310,6 +310,8 @@ pub struct Moment {
     pub band: Band,
     /// One sentence for the moment.
     pub headline: String,
+    /// The moment's name: "Sampat under the Moon's hour, waxing".
+    pub title: String,
     /// Nine lives, in `Life::ALL` order.
     pub lives: Vec<LifeScore>,
     /// The planetary hour, when the Sun rises and sets here.
@@ -547,12 +549,15 @@ pub(crate) fn sky(
 /// What the birth chart itself promises for the life: the KP cusp sub-lord net and the
 /// Parashari assessment, half each. Constant over time; it sets each life's baseline.
 pub fn natal_component(natal: &Natal, life: Life) -> Component {
-    let area = life.area();
+    natal_component_for(natal, life.area(), &life.name().to_ascii_lowercase())
+}
+
+/// The same for any KP house group (a topic of the question dictionary), named `name`.
+pub fn natal_component_for(natal: &Natal, area: Area, name: &str) -> Component {
     let p = crate::kp::promise(&natal.facts, area);
     let b = crate::parashari::assess(&natal.facts, area);
     let kp = (0.5 + 0.5 * p.net.clamp(-1.0, 1.0)).clamp(0.0, 1.0);
     let score = (0.5 * kp + 0.5 * b.score).clamp(0.0, 1.0);
-    let name = life.name().to_ascii_lowercase();
     let houses = |v: &[crate::kp::Significance]| {
         v.iter()
             .map(|s| s.house.to_string())
@@ -1416,12 +1421,19 @@ pub fn moment(
             t = e.add_ns(NS_PER_SEC);
         }
     }
+    let title = crate::hora::moment_title(
+        tara,
+        hora.as_ref().map(|h| h.lord),
+        sky.facts.moon_phase_deg < 180.0,
+        nakshatra(sky.moon_sidereal).name(),
+    );
     Ok(Moment {
         hours,
         at,
         overall,
         band,
         headline: moment_words(band, hora.as_ref(), tara),
+        title,
         lives,
         hora,
         moon_star,

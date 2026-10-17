@@ -39,9 +39,21 @@ eight kootas, Kuja dosha, how the two charts stand this second, twelve months ba
 twenty-four ahead, what lifts each side next, and any of the six questions answered
 from both charts together.
 
-**The book of your life** (from the Loop or More) lays out the chapters and pages
-(Vimshottari), every sade sati and dhaiya from birth to the second, Jupiter's passages,
-and the Saturn, Jupiter and Rahu returns, with the present marked.
+**The book of your life** (from the Loop or More) lays out this year's chapter (solar
+return to solar return, with its rising sign, lord and a tone per life), the chapters
+and pages (Vimshottari), every sade sati and dhaiya from birth to the second, Jupiter's
+passages, and the Saturn, Jupiter and Rahu returns, with the present marked.
+
+The Loop also carries **the reading** (the birth Moon stated first, the periods with
+their ends, Saturn's phase and exit, the moment in words, days to circle, the remedy
+in brief), **the hour's lore** (deity, colour, direction, metal, mantra), a **name for
+the moment**, a **date picker** on the travel row, and a **widget** and **sunrise
+notification** (Settings) that carry the reading to the home screen and the morning.
+Ask holds a **dictionary of forty-nine matters** under the nine lives. Under More:
+**Find the true minute** (rectification from dated events) and **Your record** (every
+window judged afterwards, scored by the engine). The app's own words are available in
+**English, Malayalam and Hindi** (Settings → Language); the engine's sentences are
+English for now.
 
 More holds the expert screens: Birth (profile, place, uncertainty), the sky now (live
 clock, wheel, panchanga), Chart (Western wheel, aspects, stability under the

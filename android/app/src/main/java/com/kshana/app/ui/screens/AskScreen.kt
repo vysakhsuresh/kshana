@@ -44,7 +44,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.AnswerRecord
 import uniffi.kshana_ffi.QuestionRecord
+import uniffi.kshana_ffi.TopicRecord
 import uniffi.kshana_ffi.questions
+import uniffi.kshana_ffi.topics
 
 /**
  * Ask: pick a life and a question, get a plain answer deduced from the birth chart, the
@@ -61,8 +63,12 @@ fun AskScreen(
 ) {
     val context = LocalContext.current
     val qs: List<QuestionRecord> = remember { questions() }
+    val allTopics: List<TopicRecord> = remember { topics() }
     var life by remember { mutableStateOf(initialLife ?: "Love") }
     var question by remember { mutableStateOf(qs.firstOrNull()?.key ?: "will_it_happen") }
+    // A topic of the dictionary narrows the life to one matter; null means the life itself.
+    var topic by remember { mutableStateOf<TopicRecord?>(null) }
+    var showTopics by remember { mutableStateOf(false) }
     var answer by remember { mutableStateOf<AnswerRecord?>(null) }
     var asking by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -75,12 +81,21 @@ fun AskScreen(
         try {
             val engine = EngineProvider.get(context)
             val at = Instants.now()
+            val t = topic
             answer = withContext(Dispatchers.Default) {
-                engine.ask(
-                    profile.birthInstant(), profile.latitude, profile.longitude,
-                    place.latitude, place.longitude,
-                    settings.houseSystem, settings.ayanamsa, life, question, at,
-                )
+                if (t != null) {
+                    engine.askTopic(
+                        profile.birthInstant(), profile.latitude, profile.longitude,
+                        place.latitude, place.longitude,
+                        settings.houseSystem, settings.ayanamsa, t.key, question, at,
+                    )
+                } else {
+                    engine.ask(
+                        profile.birthInstant(), profile.latitude, profile.longitude,
+                        place.latitude, place.longitude,
+                        settings.houseSystem, settings.ayanamsa, life, question, at,
+                    )
+                }
             }
             error = null
         } catch (e: Exception) {
@@ -98,28 +113,47 @@ fun AskScreen(
             Text("ASK", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
             if (onBack != null) Text("BACK", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onBack).padding(12.dp))
         }
-        Text("Ask the sky", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+        Text(tr("Ask the sky"), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         Text("Pick what it is about and what you want to know. The answer comes from your birth chart, the running periods, the months ahead and the sky at this very second.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
 
-        SectionLabel("About")
+        SectionLabel(tr("About"))
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            for (l in LIFE_ORDER) Chip("${lifeGlyph(l)} ${l.uppercase()}", selected = life == l, onClick = { life = l; answer = null })
+            for (l in LIFE_ORDER) Chip("${lifeGlyph(l)} ${lifeName(l).uppercase()}", selected = life == l, onClick = { life = l; topic = null; answer = null })
         }
-        SectionLabel("Question")
+        // The dictionary: the matters people actually ask about under this life.
+        val lifeTopics = allTopics.filter { it.life == life }
+        Text(
+            if (showTopics) "EXACTLY WHAT? −" else "EXACTLY WHAT? ${lifeTopics.size} MATTERS UNDER ${life.uppercase()} +",
+            style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
+            modifier = Modifier.clickable { showTopics = !showTopics }.padding(vertical = 4.dp),
+        )
+        if (showTopics || topic != null) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OptionBox("$life as a whole", selected = topic == null, onClick = { topic = null; answer = null })
+                for (row in lifeTopics.chunked(2)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        for (t in row) OptionBox(t.words, selected = topic?.key == t.key, onClick = { topic = t; answer = null }, modifier = Modifier.weight(1f))
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+            }
+            topic?.let { Text("KP ${it.houses}", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted) }
+        }
+        SectionLabel(tr("Question"))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             for (row in qs.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     for (q in row) {
-                        OptionBox(q.words, selected = question == q.key, onClick = { question = q.key; answer = null }, modifier = Modifier.weight(1f))
+                        OptionBox(tr(q.words), selected = question == q.key, onClick = { question = q.key; answer = null }, modifier = Modifier.weight(1f))
                     }
                     if (row.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
         }
         GoldButton(
-            if (asking) "READING THE SKY…" else "ASK · ${life.uppercase()}",
+            if (asking) "READING THE SKY…" else "ASK · ${(topic?.words ?: life).uppercase()}",
             enabled = !asking,
-            onClick = { askedKey = "$life|$question|${System.currentTimeMillis()}" },
+            onClick = { askedKey = "$life|${topic?.key}|$question|${System.currentTimeMillis()}" },
             modifier = Modifier.fillMaxWidth(),
         )
         ErrorLine(error)
@@ -134,7 +168,7 @@ fun AskScreen(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     ScoreRing(a.score, size = 84.dp, stroke = 7.dp, label = "${a.confidence.toInt()}% sure")
                     Column(Modifier.weight(1f)) {
-                        Text("${lifeGlyph(a.life)} ${a.life} · ${qs.firstOrNull { it.key == a.question }?.words ?: a.question}", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
+                        Text("${lifeGlyph(a.life)} ${topic?.words ?: a.life} · ${qs.firstOrNull { it.key == a.question }?.words ?: a.question}", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
                         Text(a.verdict, style = MaterialTheme.typography.displayMedium, color = scoreColor(a.score))
                     }
                 }

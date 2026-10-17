@@ -209,6 +209,18 @@ fun TrustScreen(profile: BirthProfile?, settings: EngineSettings, onBack: () -> 
             MonoRow("models", c.provenanceModels)
         }
 
+        SectionLabel("Your record")
+        val record = remember { uniffi.kshana_ffi.calibrate(com.kshana.app.data.PredictionStore.records(context)) }
+        Text(record.words, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
+        for (l in record.lives.filter { it.n > 0u }) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("${lifeGlyph(l.life)} ${l.life}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1f))
+                Text("${l.hits} / ${l.n}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky)
+                if (l.offset != 0.0) Text("  ${signedPoints(l.offset)}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Gold)
+            }
+        }
+        Text("Every window the app names on a life page can be judged after it passes. Five answers for a life make a record; a record moves nothing silently, it is shown beside the score.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+
         SectionLabel("Rules")
         Text("Every sentence traces to a rule. docs/RULES.md in the repository lists them.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
         Text(calibration, fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)

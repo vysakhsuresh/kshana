@@ -143,14 +143,14 @@ fun TogetherScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("US", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-        Text("The two of you", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+        Text(tr("The two of you"), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         Text(
             "Put the other person's birth beside yours. The classical match, how the two charts stand this very moment, the months behind and ahead, what lifts each side next, and any question about the two of you.",
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
         )
         ErrorLine(error)
 
-        SectionLabel("With")
+        SectionLabel(tr("With"))
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for ((i, p) in partners.withIndex()) {
                 Chip(p.name.uppercase(), selected = i == selected, onClick = { selected = i; ProfileStore.selectPartner(context, i) })

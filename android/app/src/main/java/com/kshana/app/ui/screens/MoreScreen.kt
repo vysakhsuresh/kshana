@@ -40,6 +40,7 @@ fun MoreScreen(profile: BirthProfile?, onOpen: (String) -> Unit) {
 
         SectionLabel("You")
         Entry("Birth details", "date, time, place and how sure you are", "birth", onOpen)
+        Entry("Find the true minute", "rectify the birth time from things that happened", "rectify", onOpen)
         Entry("Settings", "ayanamsa, house system, where you are now", "settings", onOpen)
         Entry("Why trust this", "the engine, its data and its checks", "trust", onOpen)
 

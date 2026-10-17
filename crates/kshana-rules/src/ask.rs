@@ -17,7 +17,7 @@ use crate::areas::Area;
 use crate::explain::explain;
 use crate::facts::Facts;
 use crate::forecast::{
-    date_words, moment, natal_component, series, slow_series, story, Band, ForecastError, Life, Moment,
+    date_words, moment, natal_component_for, series, slow_series, story, Band, ForecastError, Life, Moment,
     Natal, Sample, Shift,
 };
 use crate::kp::{agreeing_levels, period_supports, timing};
@@ -230,14 +230,55 @@ pub fn answer(
     question: Question,
     at: Instant,
 ) -> Result<Answer, ForecastError> {
-    let area: Area = life.area();
+    answer_with(spk, eop, natal, obs, system, ayanamsa, life, life.area(), &life.name().to_ascii_lowercase(), question, at)
+}
+
+/// Answer a question about a topic of the dictionary: the topic's houses carry the
+/// promise and the timing, the life's daily sky carries the rest.
+#[allow(clippy::too_many_arguments)]
+pub fn answer_topic(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    natal: &Natal,
+    obs: &Observer,
+    system: HouseSystem,
+    ayanamsa: Ayanamsa,
+    topic: &crate::topics::Topic,
+    question: Question,
+    at: Instant,
+) -> Result<Answer, ForecastError> {
+    let label = topic.words.to_ascii_lowercase();
+    answer_with(spk, eop, natal, obs, system, ayanamsa, topic.life, topic.area, &label, question, at)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn answer_with(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    natal: &Natal,
+    obs: &Observer,
+    system: HouseSystem,
+    ayanamsa: Ayanamsa,
+    life: Life,
+    area: Area,
+    label: &str,
+    question: Question,
+    at: Instant,
+) -> Result<Answer, ForecastError> {
     let idx = life_index(life);
-    let name = life.name().to_ascii_lowercase();
+    let name = label.to_string();
+    let title = {
+        let mut c = name.chars();
+        match c.next() {
+            Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+            None => String::new(),
+        }
+    };
     let lon = obs.longitude_deg;
 
     // The common ground: the birth chart, the moment, the periods, the sky ahead and
     // the witness. Every question reads these differently.
-    let natal_c = natal_component(natal, life);
+    let natal_c = natal_component_for(natal, area, &name);
     let m: Moment = moment(spk, eop, natal, obs, system, ayanamsa, at)?;
     let now = m.lives[idx].score;
     let funnel = timing(&natal.facts, area, natal.moon_sidereal, natal.birth, at, 5);
@@ -316,13 +357,13 @@ pub fn answer(
             let floor = if score >= 0.62 { 0.56 } else { 0.50 };
             let w = best_window(&samples, idx, floor, 2).or(st.best);
             let (v, h) = if score >= 0.62 {
-                ("Yes", format!("Yes. {} is promised in your chart and the running period carries it. The window below is where it shows first.", life.name()))
+                ("Yes", format!("Yes. {} is promised in your chart and the running period carries it. The window below is where it shows first.", title))
             } else if score >= 0.50 {
-                ("Yes, with patience", format!("Yes, but not quickly. {} needs the window below and your effort inside it; the period carries it only in part.", life.name()))
+                ("Yes, with patience", format!("Yes, but not quickly. {} needs the window below and your effort inside it; the period carries it only in part.", title))
             } else if score >= 0.40 {
                 ("Not yet", format!("Not yet. The running period does not carry {name} well. The nearest opening is below; the remedy is the lever until then."))
             } else {
-                ("Not in this period", format!("Not in this period. {} asks for remedy and time before it can be asked again.", life.name()))
+                ("Not in this period", format!("Not in this period. {} asks for remedy and time before it can be asked again.", title))
             };
             (v.to_string(), score, agreement(&parts), h, w.map(|x| (x.0, x.1)), if score >= 0.50 { "the window to act in" } else { "the nearest opening" }.to_string())
         }
@@ -362,7 +403,7 @@ pub fn answer(
                     let score = if months < 1.0 { 0.85 } else if months < 3.0 { 0.7 } else if months < 6.0 { 0.55 } else if months < 12.0 { 0.42 } else { 0.32 };
                     let v = if months < 1.0 { "Within the month" } else if months < 3.0 { "Within three months" } else if months < 6.0 { "Within six months" } else if months < 12.0 { "Within the year" } else { "Beyond a year" };
                     let mut h = if kind == "daily" {
-                        format!("{} opens {} to {}, when the daily sky reaches {:.0}. That is the first time to act.", life.name(), date_words(s, lon), date_words(e, lon), pk * 100.0)
+                        format!("{} opens {} to {}, when the daily sky reaches {:.0}. That is the first time to act.", title, date_words(s, lon), date_words(e, lon), pk * 100.0)
                     } else {
                         format!("The first period that truly carries {name} begins {}. Before it the daily sky gives no sound stretch; use the time to prepare.", date_words(s, lon))
                     };
@@ -453,10 +494,10 @@ pub fn answer(
                 // A yes is at least a half; nearer and fuller returns score higher.
                 let score = (0.58 + 0.25 * (1.0 - months / 24.0).max(0.0) + 0.5 * (fut_peak - past_peak).clamp(-0.1, 0.1) + 0.1 * (witness - 0.5)).clamp(0.5, 0.9);
                 let v = if months <= 12.0 { "Yes, it comes back" } else { "Yes, in its season" };
-                (v.to_string(), score, agreement(&[natal_c.score, fut_peak, witness]), format!("Yes. {} fell from {:.0} to {:.0} in the slow line, and climbs back to where it was around {}. Keep the door open and do not chase; the return is the season's, not an argument's.", life.name(), past_peak * 100.0, now_slow * 100.0, date_words(t, lon)), Some((t, t.add_ns(60 * NS_PER_DAY))), "when the line is back where it was".to_string())
+                (v.to_string(), score, agreement(&[natal_c.score, fut_peak, witness]), format!("Yes. {} fell from {:.0} to {:.0} in the slow line, and climbs back to where it was around {}. Keep the door open and do not chase; the return is the season's, not an argument's.", title, past_peak * 100.0, now_slow * 100.0, date_words(t, lon)), Some((t, t.add_ns(60 * NS_PER_DAY))), "when the line is back where it was".to_string())
             } else if dip {
                 let score = (0.42 + 0.1 * (witness - 0.5)).clamp(0.3, 0.55);
-                ("Not as it was".to_string(), score, agreement(&[natal_c.score, fut_peak, witness]), format!("Not as it was. {} eases to {:.0} around {} but does not reach the {:.0} of the past year within two years. What comes back comes changed, or what comes is new.", life.name(), fut_peak * 100.0, date_words(fut_t, lon), past_peak * 100.0), Some((fut_t, fut_t.add_ns(60 * NS_PER_DAY))), "the best the line reaches".to_string())
+                ("Not as it was".to_string(), score, agreement(&[natal_c.score, fut_peak, witness]), format!("Not as it was. {} eases to {:.0} around {} but does not reach the {:.0} of the past year within two years. What comes back comes changed, or what comes is new.", title, fut_peak * 100.0, date_words(fut_t, lon), past_peak * 100.0), Some((fut_t, fut_t.add_ns(60 * NS_PER_DAY))), "the best the line reaches".to_string())
             } else {
                 let score = (0.6 + 0.2 * (witness - 0.5)).clamp(0.45, 0.8);
                 ("Nothing has left the chart".to_string(), score, agreement(&[natal_c.score, now_slow, witness]), format!("Nothing has truly left. The slow line of {name} stands at {:.0}, as high as any month of the past year ({:.0}). What you miss is within reach; the move is yours, and the window below is the time for it.", now_slow * 100.0, past_peak * 100.0), best_window(&samples, idx, 0.56, 2).map(|w| (w.0, w.1)), "the time to reach out".to_string())
@@ -481,7 +522,7 @@ pub fn answer(
                     let months = months_between(at, t.at);
                     let score = (0.8 - months / 60.0).clamp(0.5, 0.85);
                     let soon = months <= 12.0;
-                    let mut h = format!("{} {} climbs to {} from {}", if soon { "Yes, it mends." } else { "It mends, slowly." }, life.name(), t.band.word(), date_words(t.at, lon));
+                    let mut h = format!("{} {} climbs to {} from {}", if soon { "Yes, it mends." } else { "It mends, slowly." }, title, t.band.word(), date_words(t.at, lon));
                     if let Some(r) = &lift {
                         h.push_str(&format!("; the first lift comes earlier, on {}, when {}", date_words(r.at, lon), r.what));
                     }

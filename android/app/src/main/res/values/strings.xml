@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Kshana</string>
+    <string name="widget_description">Saturn\'s phase with the days left, and this moment\'s reading</string>
 </resources>

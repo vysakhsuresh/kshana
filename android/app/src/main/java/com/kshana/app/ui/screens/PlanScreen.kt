@@ -150,13 +150,13 @@ fun PlanScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("PLAN", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-        Text("How is that time for me?", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+        Text(tr("How is that time for me?"), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         Text(
             "A meeting, an interview, a journey, a date. You may not know what will be said or who will be there; your chart knows how the hour sits with you. Pick the time and what it is for.",
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
         )
 
-        SectionLabel("When")
+        SectionLabel(tr("When"))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ValuePill(chosen.format(WEEKDAY_DAY), onClick = { pickDate = true }, modifier = Modifier.weight(1.4f))
             ValuePill(chosen.format(TIME_HM), onClick = { pickTime = true }, modifier = Modifier.weight(1f))
@@ -179,12 +179,12 @@ fun PlanScreen(
         }
         Text("${chosen.format(DAY_LONG)} · ${place.name} time", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
 
-        SectionLabel("For")
+        SectionLabel(tr("For"))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             for (row in ps.chunked(2)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     for (p in row) {
-                        OptionBox(p.words, selected = purpose == p.key, onClick = { purpose = p.key; result = null }, modifier = Modifier.weight(1f))
+                        OptionBox(tr(p.words), selected = purpose == p.key, onClick = { purpose = p.key; result = null }, modifier = Modifier.weight(1f))
                     }
                     if (row.size == 1) Spacer(Modifier.weight(1f))
                 }

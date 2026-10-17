@@ -33,13 +33,21 @@ internal fun bandColor(band: String): Color = when (band) {
     else -> KshanaColors.Ember
 }
 
-internal fun bandWord(band: String): String = when (band) {
-    "bright" -> "Bright"
-    "good" -> "Good"
-    "steady" -> "Steady"
-    "slow" -> "Slow"
-    else -> "Hold"
-}
+internal fun bandWord(band: String): String = com.kshana.app.data.Lang.t(
+    when (band) {
+        "bright" -> "Bright"
+        "good" -> "Good"
+        "steady" -> "Steady"
+        "slow" -> "Slow"
+        else -> "Hold"
+    },
+)
+
+/** A life's name in the chosen language. */
+internal fun lifeName(life: String): String = com.kshana.app.data.Lang.t(life)
+
+/** A word of the app's own in the chosen language. */
+internal fun tr(s: String): String = com.kshana.app.data.Lang.t(s)
 
 internal fun scoreColor(score: Double): Color = when {
     score >= 70 -> KshanaColors.Gold

@@ -40,6 +40,7 @@ import com.kshana.app.ui.screens.BirthScreen
 import com.kshana.app.ui.screens.BookScreen
 import com.kshana.app.ui.screens.ChartScreen
 import com.kshana.app.ui.screens.PlanScreen
+import com.kshana.app.ui.screens.RectifyScreen
 import com.kshana.app.ui.screens.TogetherScreen
 import com.kshana.app.ui.screens.LifeScreen
 import com.kshana.app.ui.screens.LoopScreen
@@ -80,6 +81,12 @@ private fun App() {
     val context = LocalContext.current
     val nav = rememberNavController()
     var profile by remember { mutableStateOf(ProfileStore.load(context)) }
+    // The chosen language, and the sunrise alarm re-armed on every launch when it is on.
+    remember {
+        com.kshana.app.data.Lang.load(context)
+        if (com.kshana.app.system.Sunrise.enabled(context)) com.kshana.app.system.Sunrise.scheduleNext(context)
+        true
+    }
     var settings by remember { mutableStateOf(ProfileStore.settings(context)) }
     // First launch with no profile lands on the birth form; afterwards on the loop.
     val start = remember { if (profile == null) "birth" else "loop" }
@@ -126,7 +133,7 @@ private fun App() {
                             selected = current == t.route,
                             onClick = { goTab(t.route) },
                             icon = { Icon(t.icon, contentDescription = t.label) },
-                            label = { Text(t.label) },
+                            label = { Text(com.kshana.app.data.Lang.t(t.label)) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = KshanaColors.Gold,
                                 selectedTextColor = KshanaColors.Gold,
@@ -180,7 +187,15 @@ private fun App() {
                 )
             }
             composable("book") {
-                withProfile { BookScreen(profile = it, settings = settings, onBack = { nav.popBackStack() }, onLife = { life -> open("life/$life") }) }
+                withProfile { BookScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }, onLife = { life -> open("life/$life") }) }
+            }
+            composable("rectify") {
+                withProfile {
+                    RectifyScreen(profile = it, settings = settings, onBack = { nav.popBackStack() }, onSaved = { p ->
+                        profile = p
+                        nav.popBackStack()
+                    })
+                }
             }
             composable("life/{life}", arguments = listOf(navArgument("life") { type = NavType.StringType })) { entry ->
                 val life = entry.arguments?.getString("life") ?: "Love"

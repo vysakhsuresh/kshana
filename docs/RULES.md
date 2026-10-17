@@ -192,6 +192,57 @@ Gana, unbalanced Kuja, low Graha Maitri, low Yoni) each carry their classical re
 (Dharma Sindhu and Nirnaya Sindhu dosha parihara, the Vivaha tradition, Lal Kitab) with
 ritual items marked optional.
 
+## The question dictionary
+
+Forty-nine matters under the nine lives, each a KP house group of its own (KP Reader
+VI, the horary tables): marriage 2 7 11; a new relationship 5 7 11; a second marriage
+2 9 11; a separation ending 1 6 10; a new job 2 6 10; a promotion 2 6 10 11; a
+transfer 3 10 12; a business 2 7 10 11; a government post 6 10 11; a job abroad 9 10
+12; a loan 6 11; a debt cleared 2 11 12; an investment 2 5 11; an inheritance 2 8 11;
+a windfall 2 5 8 11; recovery 1 5 11; peace of mind 1 4 5; a mother's health 2 4 8 (the
+4th's 1, 5, 11); a father's health 1 7 9; a sibling 3 11; moving house 3 4 12; an exam
+or admission 4 9 11; a competitive exam 4 6 9 11; study abroad 4 9 12; a scholarship 2
+4 11; buying property 4 11 12; selling it 3 10; a vehicle 2 4 11; a visa or journey or
+settling abroad 3 9 12; a pilgrimage 9 12; coming home 2 4 11; a child 2 5 11; a
+child's marriage 3 6 11 (the 5th's 2, 7, 11); a child's studies 1 3 8; a child's health
+3 5 9. The negating houses are the twelfth from each. A topic is asked the same six
+questions as a life: its houses carry the promise (KS-N-0001 on the topic's group) and
+the timing funnel; the life's daily and slow sky carry the rest.
+
+## The hour's lore and the moment's name
+
+Each hora lord carries its deity, colour, direction, metal, beeja mantra, and what the
+hour is for and what to keep from (Navagraha beeja mantras of the Agama tradition, the
+Navagraha dik and dhatu tables, Hora shastra). A moment is named from its tara, its
+hour and the Moon's phase: "Sampat under the Moon's hour, waxing".
+
+## The year's chapter
+
+The solar return is the exact instant the Sun stands again at its natal tropical
+longitude, solved on the kernel; the year runs return to return. The return chart is
+cast where the person is; its rising sign names the year and its lord is the year's
+lord (convention: the simplest Tajika choice of varshesha). Twelve monthly slow samples
+from the return give each life its tone for the year, and the best and the weakest.
+
+## Rectification
+
+Every candidate birth time inside the stated window (at most 241, evenly spaced) is
+cast. For each dated event the candidate's slow score for the event's life on that day
+and the Vimshottari funnel's agreement (levels carrying the life's houses, out of
+three) are combined: a good event scores 0.6 × slow + 0.4 × agreement, a hard one the
+complement. The fit is the mean over the events; the best candidate of each rising
+sign the window crosses is shown, since the rising sign and the Moon's star are what
+the window can change. The fit ranks the window against the person's own history; it is
+not a proof, and two times that explain everything equally are both kept.
+
+## The person's record
+
+Every window the app named on a life page can be judged after it passes. A window at
+or above good that happened is a hit, and so is one below good that did not. Once a
+life has five answers, half the mean gap between what happened (1 or 0) and what was
+predicted becomes an offset bounded to ±8 points, shown beside the score as "by your
+record". The core score is never altered silently.
+
 ## The book of a life
 
 Chapters are the mahadashas of the 120-year Vimshottari cycle, pages the antardashas of

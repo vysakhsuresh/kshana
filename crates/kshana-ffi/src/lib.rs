@@ -1799,6 +1799,13 @@ pub struct HoraRecord {
     pub start: ExactInstant,
     pub end: ExactInstant,
     pub words: String,
+    pub deity: String,
+    pub colour: String,
+    pub direction: String,
+    pub metal: String,
+    pub mantra: String,
+    pub for_words: String,
+    pub avoid: String,
 }
 
 /// One planetary hour of the day with its fit (0–100) for each life.
@@ -1822,6 +1829,7 @@ pub struct MomentRecord {
     pub overall: f64,
     pub band: String,
     pub headline: String,
+    pub title: String,
     pub lives: Vec<LifeScoreRecord>,
     pub hora: Option<HoraRecord>,
     pub moon_star: String,
@@ -1971,6 +1979,7 @@ impl Engine {
             overall: m.overall * 100.0,
             band: m.band.word().to_string(),
             headline: m.headline.clone(),
+            title: m.title.clone(),
             lives: m
                 .lives
                 .iter()
@@ -1993,12 +2002,7 @@ impl Engine {
                         .collect(),
                 })
                 .collect(),
-            hora: m.hora.as_ref().map(|h| HoraRecord {
-                lord: lord_name(h.lord),
-                start: h.start.into(),
-                end: h.end.into(),
-                words: h.words.to_string(),
-            }),
+            hora: m.hora.as_ref().map(hora_record),
             moon_star: m.moon_star.clone(),
             tara: m.tara as u8,
             tara_name: kshana_rules::TARA_NAMES[m.tara].to_string(),
@@ -2500,12 +2504,7 @@ impl Engine {
                     score: s * 100.0,
                 })
                 .collect(),
-            hora: a.hora.as_ref().map(|h| HoraRecord {
-                lord: lord_name(h.lord),
-                start: h.start.into(),
-                end: h.end.into(),
-                words: h.words.to_string(),
-            }),
+            hora: a.hora.as_ref().map(hora_record),
             caution: a.caution.clone(),
             abhijit: a.abhijit,
             tara_name: kshana_rules::TARA_NAMES[a.tara].to_string(),
@@ -3155,6 +3154,7 @@ fn moment_record(m: &kshana_rules::Moment) -> MomentRecord {
         overall: m.overall * 100.0,
         band: m.band.word().to_string(),
         headline: m.headline.clone(),
+        title: m.title.clone(),
         lives: m
             .lives
             .iter()
@@ -3177,12 +3177,7 @@ fn moment_record(m: &kshana_rules::Moment) -> MomentRecord {
                     .collect(),
             })
             .collect(),
-        hora: m.hora.as_ref().map(|h| HoraRecord {
-            lord: lord_name(h.lord),
-            start: h.start.into(),
-            end: h.end.into(),
-            words: h.words.to_string(),
-        }),
+        hora: m.hora.as_ref().map(hora_record),
         moon_star: m.moon_star.clone(),
         tara: m.tara as u8,
         tara_name: kshana_rules::TARA_NAMES[m.tara].to_string(),
@@ -3293,5 +3288,370 @@ impl Engine {
         )
         .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         Ok(briefing_record(&b))
+    }
+}
+
+// ---------------------------------------------------------------------------------
+// The hour's lore, the question dictionary, the year's chapter, rectification and
+// the person's own record.
+// ---------------------------------------------------------------------------------
+
+fn hora_record(h: &kshana_rules::Hora) -> HoraRecord {
+    let l = kshana_rules::hora_lore(h.lord);
+    HoraRecord {
+        lord: lord_name(h.lord),
+        start: h.start.into(),
+        end: h.end.into(),
+        words: h.words.to_string(),
+        deity: l.deity.to_string(),
+        colour: l.colour.to_string(),
+        direction: l.direction.to_string(),
+        metal: l.metal.to_string(),
+        mantra: l.mantra.to_string(),
+        for_words: l.for_.to_string(),
+        avoid: l.avoid.to_string(),
+    }
+}
+
+/// The lore of a planetary hour's lord.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct HoraLoreRecord {
+    pub lord: String,
+    pub deity: String,
+    pub colour: String,
+    pub direction: String,
+    pub metal: String,
+    pub mantra: String,
+    pub for_words: String,
+    pub avoid: String,
+    pub source: String,
+}
+
+/// The lore of every hora lord, Sun to Saturn then the nodes.
+#[uniffi::export]
+pub fn hora_lore_all() -> Vec<HoraLoreRecord> {
+    [
+        DashaLord::Sun,
+        DashaLord::Moon,
+        DashaLord::Mars,
+        DashaLord::Mercury,
+        DashaLord::Jupiter,
+        DashaLord::Venus,
+        DashaLord::Saturn,
+        DashaLord::Rahu,
+        DashaLord::Ketu,
+    ]
+    .iter()
+    .map(|&l| {
+        let h = kshana_rules::hora_lore(l);
+        HoraLoreRecord {
+            lord: lord_name(l),
+            deity: h.deity.to_string(),
+            colour: h.colour.to_string(),
+            direction: h.direction.to_string(),
+            metal: h.metal.to_string(),
+            mantra: h.mantra.to_string(),
+            for_words: h.for_.to_string(),
+            avoid: h.avoid.to_string(),
+            source: h.source.to_string(),
+        }
+    })
+    .collect()
+}
+
+/// One matter of the question dictionary.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct TopicRecord {
+    pub key: String,
+    pub words: String,
+    pub life: String,
+    /// "houses 2, 7, 11 · against 1, 6, 10"
+    pub houses: String,
+}
+
+/// Every topic, grouped by life in display order.
+#[uniffi::export]
+pub fn topics() -> Vec<TopicRecord> {
+    kshana_rules::TOPICS
+        .iter()
+        .map(|t| TopicRecord {
+            key: t.key.to_string(),
+            words: t.words.to_string(),
+            life: t.life.name().to_string(),
+            houses: format!(
+                "houses {} · against {}",
+                t.area.group.iter().map(|h| h.to_string()).collect::<Vec<_>>().join(", "),
+                t.area.negating.iter().map(|h| h.to_string()).collect::<Vec<_>>().join(", ")
+            ),
+        })
+        .collect()
+}
+
+/// The year's chapter.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct YearChapterRecord {
+    pub start: ExactInstant,
+    pub end: ExactInstant,
+    pub age: u32,
+    pub lagna_sign: String,
+    pub moon_star: String,
+    pub lord: String,
+    /// 0–100, `life_names()` order.
+    pub tones: Vec<f64>,
+    /// 0–100.
+    pub tone: f64,
+    pub band: String,
+    pub best: String,
+    pub weak: String,
+    pub months: Vec<SampleRecord>,
+    pub headline: String,
+    pub theme: String,
+}
+
+/// Something that happened, for rectification.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct LifeEventRecord {
+    pub at: ExactInstant,
+    pub life: String,
+    pub good: bool,
+}
+
+/// One candidate birth time.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct CandidateRecord {
+    pub birth: ExactInstant,
+    /// 0–100.
+    pub fit: f64,
+    pub lagna_sign: String,
+    pub moon_star: String,
+    pub dasha_at_birth: String,
+    pub explained: u32,
+    pub words: String,
+}
+
+/// Rectification: every candidate ranked, and the best of each rising sign.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct RectifyRecord {
+    pub candidates: Vec<CandidateRecord>,
+    pub by_sign: Vec<CandidateRecord>,
+}
+
+fn candidate_record(c: &kshana_rules::Candidate) -> CandidateRecord {
+    CandidateRecord {
+        birth: c.birth.into(),
+        fit: c.fit * 100.0,
+        lagna_sign: kshana_rules::forecast::SIGN_NAMES[c.lagna_sign as usize % 12].to_string(),
+        moon_star: kshana_vedic::panchanga::NAKSHATRA_NAMES[c.moon_star.min(26)].to_string(),
+        dasha_at_birth: lord_name(c.dasha_at_birth),
+        explained: c.explained as u32,
+        words: c.words.clone(),
+    }
+}
+
+/// One answer of the person's record.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct RecordInput {
+    pub life: String,
+    /// 0–100.
+    pub predicted: f64,
+    pub happened: bool,
+}
+
+/// One life's record.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct LifeCalibrationRecord {
+    pub life: String,
+    pub n: u32,
+    pub hits: u32,
+    /// 0–100.
+    pub rate: f64,
+    /// Points, −8..8.
+    pub offset: f64,
+    pub words: String,
+}
+
+/// The whole record.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct CalibrationRecord {
+    pub lives: Vec<LifeCalibrationRecord>,
+    pub n: u32,
+    pub hits: u32,
+    pub words: String,
+}
+
+/// Score the person's record of answered windows.
+#[uniffi::export]
+pub fn calibrate(records: Vec<RecordInput>) -> CalibrationRecord {
+    let rs: Vec<kshana_rules::Record> = records
+        .iter()
+        .filter_map(|r| {
+            kshana_rules::Life::parse(&r.life).map(|life| kshana_rules::Record {
+                life,
+                predicted: (r.predicted / 100.0).clamp(0.0, 1.0),
+                happened: r.happened,
+            })
+        })
+        .collect();
+    let c = kshana_rules::calibrate(&rs);
+    CalibrationRecord {
+        lives: c
+            .lives
+            .iter()
+            .map(|l| LifeCalibrationRecord {
+                life: l.life.name().to_string(),
+                n: l.n as u32,
+                hits: l.hits as u32,
+                rate: l.rate * 100.0,
+                offset: l.offset * 100.0,
+                words: l.words.clone(),
+            })
+            .collect(),
+        n: c.n as u32,
+        hits: c.hits as u32,
+        words: c.words,
+    }
+}
+
+#[uniffi::export]
+impl Engine {
+    /// Answer `question` about a topic of the dictionary (a key from `topics()`).
+    #[allow(clippy::too_many_arguments)]
+    pub fn ask_topic(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        topic: String,
+        question: String,
+        at: ExactInstant,
+    ) -> Result<AnswerRecord, KshanaError> {
+        let t = kshana_rules::topic(&topic).ok_or_else(|| KshanaError::Engine(format!("unknown topic {topic}")))?;
+        let question = kshana_rules::Question::parse(&question)
+            .ok_or_else(|| KshanaError::Engine(format!("unknown question {question}")))?;
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let obs = Observer {
+            latitude_deg: lat,
+            longitude_deg: lon,
+            height_m: 0.0,
+        };
+        let a = kshana_rules::answer_topic(
+            &self.spk,
+            self.eop.as_ref(),
+            &natal,
+            &obs,
+            to_house_system(system),
+            ayanamsa.into(),
+            t,
+            question,
+            at.into(),
+        )
+        .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(answer_record(&a))
+    }
+
+    /// The year's chapter containing `at`: solar return to solar return.
+    #[allow(clippy::too_many_arguments)]
+    pub fn year_chapter(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        at: ExactInstant,
+    ) -> Result<YearChapterRecord, KshanaError> {
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let obs = Observer {
+            latitude_deg: lat,
+            longitude_deg: lon,
+            height_m: 0.0,
+        };
+        let y = kshana_rules::year_chapter(&self.spk, self.eop.as_ref(), &natal, &obs, to_house_system(system), ayanamsa.into(), at.into())
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(YearChapterRecord {
+            start: y.start.into(),
+            end: y.end.into(),
+            age: y.age,
+            lagna_sign: kshana_rules::forecast::SIGN_NAMES[y.lagna_sign as usize % 12].to_string(),
+            moon_star: y.moon_star.clone(),
+            lord: lord_name(y.lord),
+            tones: y.tones.iter().map(|v| v * 100.0).collect(),
+            tone: y.tone * 100.0,
+            band: y.band.word().to_string(),
+            best: y.best.name().to_string(),
+            weak: y.weak.name().to_string(),
+            months: y
+                .months
+                .iter()
+                .map(|(t, v)| SampleRecord {
+                    at: (*t).into(),
+                    scores: v.iter().map(|x| x * 100.0).collect(),
+                    tara: 0,
+                })
+                .collect(),
+            headline: y.headline.clone(),
+            theme: y.theme.clone(),
+        })
+    }
+
+    /// Rectify a birth time inside `[window_start, window_end]` at the birth place from
+    /// dated events; at most `max_candidates` times are tried.
+    #[allow(clippy::too_many_arguments)]
+    pub fn rectify(
+        &self,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        window_start: ExactInstant,
+        window_end: ExactInstant,
+        events: Vec<LifeEventRecord>,
+        max_candidates: u32,
+    ) -> RectifyRecord {
+        let obs = Observer {
+            latitude_deg: lat,
+            longitude_deg: lon,
+            height_m: 0.0,
+        };
+        let evs: Vec<kshana_rules::LifeEvent> = events
+            .iter()
+            .filter_map(|e| {
+                kshana_rules::Life::parse(&e.life).map(|life| kshana_rules::LifeEvent {
+                    at: e.at.into(),
+                    life,
+                    good: e.good,
+                })
+            })
+            .collect();
+        let v = kshana_rules::rectify(
+            &self.spk,
+            self.eop.as_ref(),
+            &obs,
+            to_house_system(system),
+            ayanamsa.into(),
+            window_start.into(),
+            window_end.into(),
+            &evs,
+            max_candidates as usize,
+        );
+        RectifyRecord {
+            by_sign: kshana_rules::by_rising_sign(&v).iter().map(candidate_record).collect(),
+            candidates: v.iter().map(candidate_record).collect(),
+        }
     }
 }

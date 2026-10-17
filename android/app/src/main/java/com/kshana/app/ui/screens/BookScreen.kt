@@ -41,8 +41,10 @@ import com.kshana.app.engine.Instants
 import com.kshana.app.ui.theme.KshanaColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.kshana.app.data.Place
 import uniffi.kshana_ffi.ChapterRecord
 import uniffi.kshana_ffi.TimelineRecord
+import uniffi.kshana_ffi.YearChapterRecord
 
 /** The book depends only on the birth, so one reading per profile is kept for the process. */
 internal object BookCache {
@@ -56,8 +58,70 @@ private val PAST_ALPHA = 0.55f
  * The book of a life: chapters and pages (Vimshottari), Saturn's trials from birth,
  * Jupiter's passages, and the returns, with the present marked. Past, present, future.
  */
+internal object YearCache {
+    var key: String? = null
+    var record: YearChapterRecord? = null
+}
+
+/** This year, birthday to birthday: the solar return's rising sign and lord, a tone per life. */
 @Composable
-fun BookScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> Unit, onLife: (String) -> Unit = {}) {
+private fun YearSection(profile: BirthProfile, place: Place, settings: EngineSettings, onLife: (String) -> Unit) {
+    val context = LocalContext.current
+    val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${settings.houseSystem}|${java.time.LocalDate.now()}"
+    var y by remember { mutableStateOf(if (YearCache.key == key) YearCache.record else null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(key) {
+        if (y != null) return@LaunchedEffect
+        try {
+            val engine = EngineProvider.get(context)
+            val r = withContext(Dispatchers.Default) {
+                engine.yearChapter(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now())
+            }
+            YearCache.key = key
+            YearCache.record = r
+            y = r
+        } catch (e: Exception) {
+            error = e.message ?: e.toString()
+        }
+    }
+    SectionLabel("This year · birthday to birthday")
+    ErrorLine(error)
+    val r = y
+    if (r == null) {
+        if (error == null) Text("solving the solar return…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+        return
+    }
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(KshanaColors.Surface).padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("${r.lagnaSign} rising · ${r.lord}", fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text)
+                Text("${localText(r.start, DATE_ONLY)} – ${localText(r.end, DATE_ONLY)} · Moon in ${r.moonStar} at the return", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
+            }
+            Text(r.tone.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 22.sp, color = scoreColor(r.tone))
+        }
+        Text(r.headline, fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 24.sp, color = KshanaColors.Text)
+        Text(r.theme, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+        HorizontalDivider(color = KshanaColors.LineSoft)
+        for ((i, name) in LIFE_ORDER.withIndex()) {
+            val v = r.tones.getOrNull(i) ?: 50.0
+            Row(Modifier.fillMaxWidth().clickable { onLife(name) }.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("${lifeGlyph(name)} $name", style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft, modifier = Modifier.width(96.dp))
+                Box(Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(2.dp)).background(KshanaColors.Line)) {
+                    Box(Modifier.fillMaxWidth((v / 100.0).toFloat().coerceIn(0.02f, 1f)).height(5.dp).background(scoreColor(v)))
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(v.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = scoreColor(v), modifier = Modifier.width(24.dp))
+            }
+        }
+        Text("The solar return is the exact second the Sun stands again where it stood at your birth, cast where you are now. The year's lord is the lord of that chart's rising sign.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+    }
+}
+
+@Composable
+fun BookScreen(profile: BirthProfile, place: Place, settings: EngineSettings, onBack: () -> Unit, onLife: (String) -> Unit = {}) {
     val context = LocalContext.current
     val key = "${profile.birthInstant().taiSeconds}|${profile.latitude}|${profile.longitude}|${settings.ayanamsa}|${settings.houseSystem}"
     var book by remember { mutableStateOf(if (BookCache.key == key) BookCache.record else null) }
@@ -97,6 +161,8 @@ fun BookScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> Un
             return@Column
         }
         Text(t.headline, fontFamily = FontFamily.Serif, fontSize = 19.sp, lineHeight = 27.sp, color = KshanaColors.Text)
+
+        YearSection(profile, place, settings, onLife)
 
         SectionLabel("Saturn's trials")
         Text("Sade sati and the two dhaiyas, every one from birth, solved to the second on the real sky.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)

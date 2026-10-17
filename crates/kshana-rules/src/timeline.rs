@@ -124,7 +124,7 @@ fn years(from: Instant, to: Instant) -> f64 {
     to.ns_since(from) as f64 / (365.25 * NS_PER_DAY as f64)
 }
 
-fn lord_theme(l: DashaLord) -> &'static str {
+pub(crate) fn lord_theme(l: DashaLord) -> &'static str {
     match l {
         DashaLord::Sun => "years of standing and authority: the father, the state, the self",
         DashaLord::Moon => "years of home and mind: mother, feeling, the public",

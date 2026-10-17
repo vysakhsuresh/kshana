@@ -42,7 +42,9 @@ import androidx.compose.ui.unit.sp
 import com.kshana.app.data.BirthProfile
 import com.kshana.app.data.EngineSettings
 import com.kshana.app.data.Place
+import com.kshana.app.data.PredictionStore
 import com.kshana.app.engine.Instants
+import uniffi.kshana_ffi.calibrate
 import com.kshana.app.ui.theme.KshanaColors
 import uniffi.kshana_ffi.HorizonRecord
 import uniffi.kshana_ffi.HourRecord
@@ -89,6 +91,17 @@ fun LifeScreen(
                 else -> loadHorizon(context, profile, place, settings, now, 7.0, 53)
             }
             horizons = horizons + (range to h)
+            // Remember the named windows of the week, so they can be judged afterwards.
+            if (range == "WEEK") {
+                for (s in h.stories) {
+                    val bs = s.bestStart
+                    val be = s.bestEnd
+                    if (bs != null && be != null) PredictionStore.remember(context, s.life, bs.toJava().toEpochMilli(), be.toJava().toEpochMilli() + 86_400_000L, s.bestScore)
+                    val ls = s.lowStart
+                    val le = s.lowEnd
+                    if (ls != null && le != null) PredictionStore.remember(context, s.life, ls.toJava().toEpochMilli(), le.toJava().toEpochMilli() + 86_400_000L, s.lowScore)
+                }
+            }
             error = null
         } catch (e: Exception) {
             error = e.message ?: e.toString()
@@ -139,6 +152,7 @@ fun LifeScreen(
         }
 
         if (now != null) ExplainPanel(profile, place, settings, life, onRemedy = onRemedy)
+        RecordPanel(life)
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (r in RANGES) Chip(r, selected = range == r, onClick = { range = r })
@@ -162,6 +176,47 @@ fun LifeScreen(
             QuietButton("REMEDY", onClick = onRemedy, modifier = Modifier.weight(1f))
         }
     }
+}
+
+/**
+ * "Did this happen?": the windows the app named for this life that have passed, each
+ * answered with one tap, and what the record says so far (`calibrate()` in the engine).
+ */
+@Composable
+internal fun RecordPanel(life: String) {
+    val context = LocalContext.current
+    var version by remember { mutableStateOf(0) }
+    val pending = remember(version) { PredictionStore.pending(context, life).takeLast(4) }
+    val calibration = remember(version) { calibrate(PredictionStore.records(context)) }
+    val mine = calibration.lives.firstOrNull { it.life == life }
+    if (pending.isEmpty() && (mine == null || mine.n == 0u)) return
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(KshanaColors.Surface).padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text("YOUR RECORD · DID IT HAPPEN?", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        for (p in pending) {
+            val s = java.time.Instant.ofEpochMilli(p.start).atZone(java.time.ZoneId.systemDefault())
+            val e = java.time.Instant.ofEpochMilli(p.end - 1).atZone(java.time.ZoneId.systemDefault())
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("${s.format(WEEKDAY_DAY)} – ${e.format(WEEKDAY_DAY)}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky)
+                    Text("The app read $life at ${p.score.toInt()} (${bandWord(scoreBandWord(p.score)).lowercase()}). Did it go that way?", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+                }
+                Text("YES", style = MaterialTheme.typography.labelMedium, color = KshanaColors.Leaf, modifier = Modifier.clickable { PredictionStore.answer(context, life, p.start, true); version++ }.padding(8.dp))
+                Text("NO", style = MaterialTheme.typography.labelMedium, color = KshanaColors.Ember, modifier = Modifier.clickable { PredictionStore.answer(context, life, p.start, false); version++ }.padding(8.dp))
+            }
+        }
+        if (mine != null && mine.n > 0u) {
+            HorizontalDivider(color = KshanaColors.LineSoft)
+            Text(mine.words, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
+            if (mine.offset != 0.0) Text("By your record: ${signedPoints(mine.offset)} on $life. Shown, never hidden in the score.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Gold)
+        }
+    }
+}
+
+private fun scoreBandWord(score: Double): String = when {
+    score >= 70 -> "bright"; score >= 56 -> "good"; score >= 44 -> "steady"; score >= 32 -> "slow"; else -> "hold"
 }
 
 private fun componentName(key: String): String = when (key) {

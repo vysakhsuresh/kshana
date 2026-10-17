@@ -136,6 +136,51 @@ fun SettingsScreen(
             }
         }
 
+        SectionLabel("Language")
+        Text("The app's own words. The engine's sentences stay in English until their templates are translated.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for ((code, name) in com.kshana.app.data.Lang.choices) {
+                Chip(name, selected = com.kshana.app.data.Lang.code == code, onClick = { com.kshana.app.data.Lang.set(context, code) })
+            }
+        }
+
+        SectionLabel("Sunrise reading")
+        var sunriseOn by remember { mutableStateOf(com.kshana.app.system.Sunrise.enabled(context)) }
+        val askNotify = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) { com.kshana.app.system.Sunrise.setEnabled(context, true); sunriseOn = true }
+        }
+        Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Column(Modifier.weight(1f)) {
+                Text("One reading at your sunrise", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
+                Text(
+                    if (sunriseOn) {
+                        val next = com.kshana.app.system.Sunrise.nextMillis(context)
+                        if (next > 0) "Next: ${java.time.Instant.ofEpochMilli(next).atZone(java.time.ZoneId.systemDefault()).format(DATE_TIME)}" else "Finding your next sunrise…"
+                    } else "The moment's name, the day's reading and Saturn's line, computed on this phone when the Sun rises where you are.",
+                    style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+                )
+            }
+            Switch(
+                checked = sunriseOn,
+                onCheckedChange = { on ->
+                    if (on && android.os.Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        askNotify.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        com.kshana.app.system.Sunrise.setEnabled(context, on)
+                        sunriseOn = on
+                    }
+                },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = KshanaColors.Night,
+                    checkedTrackColor = KshanaColors.Gold,
+                    uncheckedThumbColor = KshanaColors.Muted,
+                    uncheckedTrackColor = KshanaColors.Surface,
+                    uncheckedBorderColor = KshanaColors.Line,
+                ),
+            )
+        }
+        Text("A home-screen widget is also available: long-press the home screen, Widgets, Kshana. It shows Saturn's phase with the days left and this moment's reading.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+
         SectionLabel("Ayanamsa")
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for ((label, a) in AYANAMSAS) Chip(label.uppercase(), selected = settings.ayanamsa == a, onClick = { save(settings.copy(ayanamsa = a)) })
