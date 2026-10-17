@@ -131,6 +131,28 @@ fun LoopScreen(
         lastShift = m0.shifts.firstOrNull()?.at?.toJava()
     }
     LaunchedEffect(profile, place, settings, travelSeconds) {
+        // The reading is loaded as soon as the Loop opens, so the season line is there
+        // before the person scrolls to the card.
+        val hourKey = (System.currentTimeMillis() + travelSeconds * 1000L) / 3_600_000L
+        val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${settings.houseSystem}|$hourKey"
+        if (BriefingCache.key == key && BriefingCache.record != null) { brief = BriefingCache.record; return@LaunchedEffect }
+        runCatching {
+            val engine = EngineProvider.get(context)
+            val at = Instants.fromInstant(Instant.now().plusSeconds(travelSeconds))
+            val r = withContext(Dispatchers.Default) {
+                engine.briefing(
+                    profile.birthInstant(), profile.latitude, profile.longitude,
+                    place.latitude, place.longitude,
+                    settings.houseSystem, settings.ayanamsa, listOf("Love", "Career", "Money", "Health"), at,
+                )
+            }
+            BriefingCache.key = key
+            BriefingCache.record = r
+            brief = r
+            com.kshana.app.system.SadeSatiWidget.push(context, r)
+        }
+    }
+    LaunchedEffect(profile, place, settings, travelSeconds) {
         // The real sky for the backdrop, once per load.
         runCatching {
             val engine = EngineProvider.get(context)
