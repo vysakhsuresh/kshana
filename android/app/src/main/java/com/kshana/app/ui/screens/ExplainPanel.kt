@@ -109,7 +109,7 @@ fun ExplainPanel(profile: BirthProfile, place: Place, settings: EngineSettings, 
         }
 
         SectionLabel("What changes, and by how much")
-        val relief = if (showAllRelief) e.relief else e.relief.filter { kotlin.math.abs(it.gain) >= 1.0 || it.kind == "dasha" || it.planet == "Saturn" }.take(8)
+        val relief = if (showAllRelief) e.relief else e.relief.filter { it.lasting && (kotlin.math.abs(it.gain) >= 1.0 || it.planet == "Saturn" || it.planet == "Jupiter") }.take(8)
         if (relief.isEmpty()) Text("Nothing moves within two years; the birth chart and the remedies are the levers.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         for (r in relief) ReliefRow(r)
         if (e.relief.size > relief.size || showAllRelief) {

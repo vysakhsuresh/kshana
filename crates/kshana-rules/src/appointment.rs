@@ -277,12 +277,7 @@ pub fn appointment(
     let pw = purpose.words();
     let headline = match (caution.as_deref(), verdict) {
         (Some(c), _) => format!(
-            "{pw} falls inside {c}. Finish, do not begin: start it after {} if you can, or take one of the hours below.",
-            m.windows
-                .iter()
-                .find(|w| w.label == c)
-                .map(|w| crate::forecast::date_words(w.end, obs.longitude_deg))
-                .unwrap_or_default()
+            "{pw} falls inside {c}. Finish, do not begin: start it once {c} ends if you can, or take one of the hours below."
         ),
         (None, "Go") => format!(
             "Go. {} is {} at that hour and the sky carries {}. {}",

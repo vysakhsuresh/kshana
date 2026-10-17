@@ -221,8 +221,13 @@ fun PlanScreen(
                     }
                 }
                 Text(a.headline, fontFamily = FontFamily.Serif, fontSize = 20.sp, lineHeight = 28.sp, color = KshanaColors.Text)
-                a.caution?.let {
-                    Text("$it runs then. Finish, do not begin.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Ember)
+                a.caution?.let { label ->
+                    val w = a.moment.windows.firstOrNull { it.label == label }
+                    Text(
+                        if (w != null) "$label runs ${localText(w.start, TIME_HM, zone)} – ${localText(w.end, TIME_HM, zone)} that day. Finish, do not begin; start after ${localText(w.end, TIME_HM, zone)}."
+                        else "$label runs then. Finish, do not begin.",
+                        style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Ember,
+                    )
                 }
                 if (a.abhijit) Text("Abhijit muhurta: the day's winning minutes.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Gold)
                 HorizontalDivider(color = KshanaColors.LineSoft)

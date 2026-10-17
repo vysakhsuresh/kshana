@@ -414,17 +414,21 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
         "Both charts carry Kuja dosha, so it is balanced: Mars meets Mars and neither is burned.".to_string()
     } else if ka || kb {
         format!(
-            "{} The other chart does not carry it, so Mars needs a remedy or a Mars-strong partner chart.",
-            if ka { &kwa } else { &kwb }
+            "{} in {} chart. The other chart does not carry it, so Mars asks for a remedy, or a Mars-strong chart beside it.",
+            if ka { &kwa } else { &kwb },
+            if ka { "the first" } else { "the second" }
         )
     } else {
         format!("{kwa}. {kwb}.")
     };
 
+    // The heaviest kootas speak first.
     let mut strengths = Vec::new();
     let mut frictions = Vec::new();
-    for k in &kootas {
-        if k.points >= k.max * 0.75 {
+    let mut by_weight: Vec<&Koota> = kootas.iter().collect();
+    by_weight.sort_by(|a, b| b.max.partial_cmp(&a.max).unwrap_or(std::cmp::Ordering::Equal));
+    for k in by_weight {
+        if k.points >= k.max * 0.75 && k.max >= 2.0 {
             strengths.push(format!("{}: {}", k.name, k.words));
         } else if k.points <= k.max * 0.25 {
             frictions.push(format!("{}: {}", k.name, k.words));
@@ -454,12 +458,12 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
         if strengths.is_empty() {
             String::new()
         } else {
-            strengths[0].clone() + " "
+            format!("Strongest, {}. ", strengths[0].replacen(": ", ": ", 1))
         },
         if frictions.is_empty() {
             "Nothing in the tables stands against you.".to_string()
         } else {
-            frictions[0].clone()
+            format!("Hardest, {}.", frictions[0].trim_end_matches('.'))
         }
     );
 
@@ -557,7 +561,7 @@ pub fn couple(
         .min_by_key(|s| (s.0.ns_since(at)).abs())
         .map(|s| s.3)
         .unwrap_or(together);
-    let band_slow = Band::of(now_slow);
+    let band_slow = Band::of(now_slow).max(band);
     let ahead: Vec<&(Instant, f64, f64, f64)> = series.iter().filter(|s| s.0 > at).collect();
     let eases = ahead
         .iter()
@@ -582,7 +586,7 @@ pub fn couple(
         let mut v: Vec<Relief> = e
             .relief
             .iter()
-            .filter(|r| r.gain >= 0.01 && matches!(r.kind, "dasha" | "gochara"))
+            .filter(|r| r.gain >= 0.01 && r.lasting)
             .cloned()
             .collect();
         v.truncate(3);
@@ -643,7 +647,7 @@ pub fn couple(
             headline.push_str(&format!(" The best month in the next two years is around {}.", date_words(t, lon)));
         }
     } else if let Some((t, s)) = low {
-        if Band::of(s) < band_slow {
+        if Band::of(s) < Band::of(now_slow).min(band) {
             headline.push_str(&format!(" Hold what you have around {}, the lowest month ahead.", date_words(t, lon)));
         }
     }
@@ -707,12 +711,21 @@ pub fn couple_ask(
     let ab = answer(spk, eop, b, obs, system, ayanamsa, Life::Love, question, at)?;
     let score = (0.5 * aa.score + 0.5 * ab.score).clamp(0.0, 1.0);
     let confidence = ((aa.confidence + ab.confidence) / 2.0 - (aa.score - ab.score).abs() * 0.5).clamp(0.3, 0.95);
-    let verdict = if score >= 0.62 {
+    let verdict = if question == Question::GoodTimeNow {
+        if score >= 0.62 {
+            "Now serves you both"
+        } else if score >= 0.50 {
+            "Now is fair; speak gently"
+        } else if score >= 0.40 {
+            "Wait for a better hour"
+        } else {
+            "Not today"
+        }
+    } else if score >= 0.62 {
         match question {
             Question::WillItReturn => "Yes, you come back together",
             Question::WillItRecover => "Yes, it mends between you",
             Question::ShouldI => "Take the step",
-            Question::GoodTimeNow => "Now serves you both",
             _ => "Yes, for both of you",
         }
     } else if score >= 0.50 {

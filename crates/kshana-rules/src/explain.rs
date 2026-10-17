@@ -58,6 +58,9 @@ pub struct Relief {
     pub planet: Option<DashaLord>,
     /// `dasha`, `gochara`, `tara`, `hora` or `kala`.
     pub kind: &'static str,
+    /// True for a change that sets a season rather than a day: a mahadasha, antardasha
+    /// or pratyantar boundary, or a sign change of any graha but the Moon.
+    pub lasting: bool,
 }
 
 /// A turning point of the slow series.
@@ -155,9 +158,11 @@ pub fn explain(
         rule_id: "KS-N-0001",
     });
 
-    // 2. The running periods, level by level.
+    // 2. The running periods, level by level. When several levels end at the same
+    // instant (a deeper level always ends with its parent) the change is one event.
     let items = dasha_items(natal, life, &levels);
     let lw: f64 = items.iter().map(|i| i.weight).sum();
+    let mut ends_seen: Vec<Instant> = Vec::new();
     for it in &items {
         let share = if lw > 0.0 { it.weight / lw } else { 0.0 };
         causes.push(Cause {
@@ -169,7 +174,8 @@ pub fn explain(
             until_words: format!("until this {} ends, {}", LEVEL_NAMES[it.level], date_words(it.end, lon)),
             rule_id: "KS-F-0001",
         });
-        if it.end <= two_years {
+        if it.end <= two_years && !ends_seen.contains(&it.end) {
+            ends_seen.push(it.end);
             // The whole chain after this level ends: the exact dasha component then.
             let after = it.end.add_ns(NS_PER_SEC);
             let next_levels = vimshottari_levels(natal.moon_sidereal, natal.birth, YEAR_365_25_NS, after, 5);
@@ -193,6 +199,7 @@ pub fn explain(
                     gain,
                     planet: Some(nl),
                     kind: "dasha",
+                    lasting: it.level <= 2,
                 });
             }
         }
@@ -288,6 +295,7 @@ pub fn explain(
                         gain,
                         planet: Some(it.graha),
                         kind: "gochara",
+                        lasting: it.graha != DashaLord::Moon,
                     });
                 }
             }
@@ -326,6 +334,7 @@ pub fn explain(
             gain: norm(tara_c.weight) * (TARA_SCORE[t_next] - TARA_SCORE[t_now]),
             planet: Some(DashaLord::Moon),
             kind: "tara",
+            lasting: false,
         });
     }
 
@@ -358,6 +367,7 @@ pub fn explain(
                     gain: norm(hc.weight) * (nc.score - hc.score),
                     planet: Some(nl),
                     kind: "hora",
+                    lasting: false,
                 });
             }
         }
@@ -384,6 +394,7 @@ pub fn explain(
                     gain: norm(kc.weight) * (after.score - kc.score),
                     planet: None,
                     kind: "kala",
+                    lasting: false,
                 });
             }
         }
@@ -411,7 +422,10 @@ pub fn explain(
     let month = (30.4375 * NS_PER_DAY as f64) as i128;
     let slow_all = crate::forecast::slow_series(spk, eop, natal, obs, ayanamsa, at.add_ns(month), month, 36)?;
     let slow: Vec<(Instant, f64)> = slow_all.iter().map(|(t, v)| (*t, v[idx])).collect();
-    let band_now = Band::of(slow_now);
+    // The season is judged against the better of the slow band and the band the person
+    // sees now, so "climbs" always names a band above what is on the screen.
+    let band_now = Band::of(slow_now).max(ls.band);
+    let band_floor = Band::of(slow_now).min(ls.band);
     let turning = |t: Instant, s: f64, verb: &str| Turning {
         at: t,
         score: s,
@@ -424,7 +438,7 @@ pub fn explain(
         .map(|&(t, s)| turning(t, s, "climbs"));
     let toughens = slow
         .iter()
-        .find(|(_, s)| Band::of(*s) < band_now)
+        .find(|(_, s)| Band::of(*s) < band_floor)
         .map(|&(t, s)| turning(t, s, "slips"));
     let peak = slow
         .iter()
@@ -463,7 +477,7 @@ pub fn explain(
             headline.push_str(&drags.iter().map(|c| c.what.as_str()).collect::<Vec<_>>().join(", and "));
         }
         headline.push('.');
-        if let Some(r) = relief.iter().find(|r| r.gain >= 0.02 && matches!(r.kind, "dasha" | "gochara")) {
+        if let Some(r) = relief.iter().find(|r| r.gain >= 0.02 && r.lasting) {
             headline.push_str(&format!(" The first real lift comes on {}: {} ({} points).", date_words(r.at, lon), r.what, points(r.gain)));
         }
         if let Some(e) = &eases {

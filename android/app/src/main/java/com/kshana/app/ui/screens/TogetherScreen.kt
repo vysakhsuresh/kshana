@@ -243,9 +243,11 @@ fun TogetherScreen(
                         Text("love in each chart, this second", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
                     }
                 }
-                Text(c.headline, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)
+                val me = profile.name.substringBefore(' ').ifBlank { "You" }
+                val them = partner.name.substringBefore(' ')
+                Text(personalise(c.headline, me, them), fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)
                 if (c.aSaturnActive || c.bSaturnActive) {
-                    Text(c.notes.firstOrNull() ?: "", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Ember)
+                    Text(personalise(c.notes.firstOrNull() ?: "", me, them), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Ember)
                 }
             }
 
@@ -273,7 +275,7 @@ fun TogetherScreen(
             Text(partner.name.substringBefore(' '), fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Leaf)
             if (c.bCause.isNotBlank()) Text(c.bCause.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
             for (r in c.bRelief) ReliefRow(r)
-            for (n in c.notes.drop(1)) Text(n, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            for (n in c.notes.drop(1)) Text(personalise(n, profile.name.substringBefore(' ').ifBlank { "You" }, partner.name.substringBefore(' ')), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
 
             SectionLabel("Ask about the two of you")
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -346,6 +348,17 @@ fun TogetherScreen(
 }
 
 private val MONTH_SHORT = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+/** The engine speaks of "the first chart" and "the second"; the screen uses names. */
+private fun personalise(s: String, me: String, them: String): String =
+    s.replace("in the first chart and", "in your chart and")
+        .replace("in the second.", "in $them's.")
+        .replace("the first chart", "your chart")
+        .replace("the second chart", "$them's chart")
+        .replace("First chart, transits", "Your transits")
+        .replace("Second chart, transits", "$them's transits")
+        .replace("First chart", me)
+        .replace("Second chart", them)
 
 private fun trimPoints(x: Double): String = if (x == x.toLong().toDouble()) x.toLong().toString() else "%.1f".format(x)
 

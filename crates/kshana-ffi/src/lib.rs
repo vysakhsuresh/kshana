@@ -2242,6 +2242,9 @@ pub struct ReliefRecord {
     pub gain: f64,
     pub planet: Option<String>,
     pub kind: String,
+    /// A season-setting change (period boundary above sookshma, or a sign change of any
+    /// graha but the Moon) rather than a daily one.
+    pub lasting: bool,
 }
 
 /// A turning point of the slow series.
@@ -2296,6 +2299,7 @@ fn relief_record(r: &kshana_rules::Relief) -> ReliefRecord {
         gain: r.gain * 100.0,
         planet: r.planet.map(lord_name),
         kind: r.kind.to_string(),
+        lasting: r.lasting,
     }
 }
 
