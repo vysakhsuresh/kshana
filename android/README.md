@@ -44,7 +44,10 @@ return to solar return, with its rising sign, lord and a tone per life), the cha
 and pages (Vimshottari), every sade sati and dhaiya from birth to the second, Jupiter's
 passages, and the Saturn, Jupiter and Rahu returns, with the present marked.
 
-The Loop opens with a one-line oracle, names the day and the moment, draws the real
+The five doors are **Now** (the Loop), **Ahead** (your day, week, month and year in
+plain words, each life with the day to use, the day to go easy and what to do, the
+astrology behind each line under one tap), **Ask** (a question, or a time you have),
+**Us** and **More**. The Loop names the day and the moment, draws the real
 sky behind the hero (the signs and the planets at their true places, the ascendant to
 the left), traces the day's hours round the score ring, names **your next good
 minute** for the weakest main life, dims a shade inside Rahu kala, Yamaganda and

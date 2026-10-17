@@ -243,6 +243,19 @@ life has five answers, half the mean gap between what happened (1 or 0) and what
 predicted becomes an offset bounded to ±8 points, shown beside the score as "by your
 record". The core score is never altered silently.
 
+## The outlook in plain words
+
+Today, this week, this month and this year are written for the person, never for the
+planet. Today: each life's band sentence and its best remaining hour (KS-H-0001 ≥ 0.56,
+outside the cautions). Week and month: the daily series' story per life (mean, trend,
+best and lowest stretch) in a sentence with dates. Year: thirteen monthly slow samples
+per life (mean, trend, best and lowest month), and for the two weakest lives the first
+climb of a band from Explain. Each life carries one line of advice by band and the
+astrology that produced it as `why`, shown only on a tap. The season line names the
+nearer period's end and Saturn's phase in plain words (sade sati "the long
+seven-and-a-half-year test"; the 4th "a testing stretch for home and peace of mind";
+the 8th "a testing stretch for health and sudden turns"), with the Sanskrit in brackets.
+
 ## The feed, the wall and the observances
 
 The next good minute for a life is the first planetary hour, outside the cautions, at
