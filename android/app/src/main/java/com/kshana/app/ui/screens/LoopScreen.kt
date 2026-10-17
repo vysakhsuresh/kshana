@@ -52,7 +52,12 @@ import com.kshana.app.data.EngineSettings
 import com.kshana.app.data.Place
 import com.kshana.app.engine.Instants
 import com.kshana.app.ui.theme.KshanaColors
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import com.kshana.app.engine.EngineProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -75,6 +80,7 @@ private val LONG_DATE: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE, d 
  * The time loop: what this moment holds, a countdown to the next shift, nine lives,
  * the day's hours and windows, and what is coming. Recomputes at every shift.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoopScreen(
     profile: BirthProfile,
@@ -94,6 +100,7 @@ fun LoopScreen(
     var tick by remember { mutableStateOf(Instant.now()) }
     // Time travel: an offset from now, in seconds. Zero means live.
     var travelSeconds by remember { mutableStateOf(0L) }
+    var pickDate by remember { mutableStateOf(false) }
     val travelling = travelSeconds != 0L
 
     LaunchedEffect(Unit) {
@@ -155,12 +162,35 @@ fun LoopScreen(
                             modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(KshanaColors.Surface).clickable { travelSeconds += secs; moment = null }.padding(horizontal = 10.dp, vertical = 6.dp),
                         )
                     }
+                    Text(
+                        "DATE", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Gold,
+                        modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(KshanaColors.Surface).border(1.dp, KshanaColors.Gold.copy(alpha = 0.6f), RoundedCornerShape(10.dp)).clickable { pickDate = true }.padding(horizontal = 10.dp, vertical = 6.dp),
+                    )
                     if (travelling) {
                         Text(
                             "NOW", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Night,
                             modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(KshanaColors.Gold).clickable { travelSeconds = 0L; moment = null }.padding(horizontal = 10.dp, vertical = 6.dp),
                         )
                     }
+                }
+                if (pickDate) {
+                    val state = rememberDatePickerState(initialSelectedDateMillis = shownTick.toEpochMilli())
+                    DatePickerDialog(
+                        onDismissRequest = { pickDate = false },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                state.selectedDateMillis?.let { ms ->
+                                    // Travel to noon of the chosen day, local time, keeping the clock live from there.
+                                    val day = Instant.ofEpochMilli(ms).atZone(java.time.ZoneOffset.UTC).toLocalDate()
+                                    val target = day.atTime(12, 0).atZone(java.time.ZoneId.systemDefault()).toInstant()
+                                    travelSeconds = Duration.between(Instant.now(), target).seconds
+                                    moment = null
+                                }
+                                pickDate = false
+                            }) { Text("GO", color = KshanaColors.Gold) }
+                        },
+                        dismissButton = { TextButton(onClick = { pickDate = false }) { Text("CANCEL", color = KshanaColors.Muted) } },
+                    ) { DatePicker(state = state) }
                 }
             }
         }

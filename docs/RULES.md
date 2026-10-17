@@ -90,22 +90,31 @@ The Family area (new): primary cusp 2, group 2 4 11, negating 1 3 10.
 
 ## Ask
 
-A question about one life is always answered. Four sources, each in [0, 1]:
+A question about one life is always answered, and each question is its own
+computation. The common ground is four sources, each in [0, 1]:
 
-| Source | Weight | What |
-|---|---|---|
-| natal | 0.35 | KS-N-0001, the birth chart's promise for the life |
-| period | 0.25 | 0.6 × (agreeing Vimshottari levels ÷ 5) + 0.4 × the life score now |
-| ahead | 0.25 | mean of the next 180 daily samples, half with the best stretch |
-| witness | 0.15 | the KP horary verdict for the instant and place of asking (KS-K-0001, KS-P-0012): Yes 1.0, Delayed 0.6, Unclear 0.5, No 0.2 |
+| Source | What |
+|---|---|
+| natal | KS-N-0001, the birth chart's promise for the life |
+| period | 0.6 × (agreeing Vimshottari levels ÷ 5) + 0.4 × the life score now |
+| ahead | the next 180 daily samples: their mean and their best stretch |
+| witness | the KP horary verdict for the instant and place of asking (KS-K-0001, KS-P-0012): Yes 1.0, Delayed 0.6, Unclear 0.5, No 0.2 |
 
-Verdicts: Yes ≥ 0.62, Yes with patience ≥ 0.50, Not yet ≥ 0.40, else Not in this
-period. Confidence is 1 − 2.5 × the standard deviation of the four sources, clamped
-to [0.3, 0.95]. "Is now a good time" is answered from the life score at the instant and
-the best remaining hour of the day. The window to act in is the nearest run of at least
-two days at or above the verdict's floor; the first opening is the first Moon window
-of the horary chart's ruling planets within 30 days (KS-P-0020). The Moon sub-lord's
-"genuineness" (KS-P-0001) is reported as a reason, never used to refuse an answer.
+| Question | How it is answered |
+|---|---|
+| Will it happen? | natal 0.35 + period 0.30 + ahead 0.20 + witness 0.15; Yes ≥ 0.62, Yes with patience ≥ 0.50, Not yet ≥ 0.40, else Not in this period; the window is the nearest run of two days at or above the verdict's floor |
+| When? | the soonest of (a) the first run of three days at or above good in the 180-day series and (b) the first antardasha or pratyantar beginning within two years whose lord signifies the area's houses; the verdict names the horizon (within the month, three months, six, the year, beyond); the score falls with distance (0.85, 0.7, 0.55, 0.42, 0.32); the 24-month slow line's first climb of a band is named; when nothing opens, "Not within two years" |
+| Is now a good time? | a caution window running caps it at "Not this minute"; the life score ≥ 0.56 is "Go ahead"; else the best remaining hour by its fit; else "Not today" with the next good stretch |
+| Should I? | the next seven days' mean against the best stretch of the 180 days, on the natal ground: "Take it now" when the week is within 0.06 of the best and the chart carries it; "Take it, from the window" when a clearly better stretch exists; "Hold" when the ground is below 0.45 and the week below 0.5; else "Take it, with small stakes" |
+| Will it come back? | the slow line twelve months back and twenty-four ahead: a dip of 0.05 below the past year's peak that climbs back within 0.03 is "Yes, it comes back" around that month; a dip that does not is "Not as it was"; no dip is "Nothing has left the chart" |
+| Will it be set right? | Explain's first lasting lift and the slow line's first climb of a band: "Yes, it mends" from that month; a lift without a climb is "It steadies, slowly"; neither is "Not in this period" |
+
+Confidence is 1 − 2.5 × the standard deviation of the sources each question weighs,
+clamped to [0.3, 0.95]. The first opening is the first Moon window of the horary
+chart's ruling planets within 30 days (KS-P-0020). The Moon sub-lord's "genuineness"
+(KS-P-0001) is reported as a reason, never used to refuse an answer. Under Us each
+chart answers in its own terms and the pair's verdict says whether the two agree and
+on whose side the wait is.
 
 
 ## Explain (why now, who, when it eases)

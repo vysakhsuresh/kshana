@@ -878,29 +878,29 @@ pub fn couple_ask(
     let ab = answer(spk, eop, b, obs, system, ayanamsa, Life::Love, question, at)?;
     let score = (0.5 * aa.score + 0.5 * ab.score).clamp(0.0, 1.0);
     let confidence = ((aa.confidence + ab.confidence) / 2.0 - (aa.score - ab.score).abs() * 0.5).clamp(0.3, 0.95);
-    let verdict = if question == Question::GoodTimeNow {
-        if score >= 0.62 {
-            "Now serves you both"
-        } else if score >= 0.50 {
-            "Now is fair; speak gently"
-        } else if score >= 0.40 {
-            "Wait for a better hour"
-        } else {
-            "Not today"
-        }
-    } else if score >= 0.62 {
-        match question {
-            Question::WillItReturn => "Yes, you come back together",
-            Question::WillItRecover => "Yes, it mends between you",
-            Question::ShouldI => "Take the step",
-            _ => "Yes, for both of you",
-        }
-    } else if score >= 0.50 {
-        "Yes, with patience on both sides"
-    } else if score >= 0.40 {
-        "Not yet; one chart is not ready"
-    } else {
-        "Not in this period"
+    // Each chart has answered the question in its own terms; the pair's verdict says
+    // whether the two agree, and on whose side the wait is.
+    let yes = |v: &str| {
+        v.starts_with("Yes")
+            || v.starts_with("Take it")
+            || v.starts_with("Go ahead")
+            || v.starts_with("Within")
+            || v.starts_with("Nothing has left")
+    };
+    let (ya, yb) = (yes(&aa.verdict), yes(&ab.verdict));
+    let verdict: String = match (ya, yb, question) {
+        (true, true, Question::WillItReturn) => "Yes, you come back together".into(),
+        (true, true, Question::WillItRecover) => "Yes, it mends between you".into(),
+        (true, true, Question::ShouldI) => "Take the step, both of you".into(),
+        (true, true, Question::GoodTimeNow) => "Now serves you both".into(),
+        (true, true, Question::When) => format!("Both charts open: {}", if aa.when_start.map(|t| t.tai_ns()) <= ab.when_start.map(|t| t.tai_ns()) { ab.verdict.to_ascii_lowercase() } else { aa.verdict.to_ascii_lowercase() }),
+        (true, true, _) => "Yes, for both of you".into(),
+        (true, false, _) => "Your chart says yes; theirs waits".into(),
+        (false, true, _) => "Their chart says yes; yours waits".into(),
+        (false, false, Question::WillItReturn) => "Not as it was, for either of you".into(),
+        (false, false, Question::GoodTimeNow) => "Not this hour, for either of you".into(),
+        (false, false, Question::When) => "Neither chart opens soon".into(),
+        (false, false, _) => "Not yet, for either of you".into(),
     };
     let (ws, we) = match (aa.when_start, aa.when_end, ab.when_start, ab.when_end) {
         (Some(s1), Some(e1), Some(s2), Some(e2)) => {
@@ -937,7 +937,7 @@ pub fn couple_ask(
     Ok(CoupleAnswer {
         a: aa,
         b: ab,
-        verdict: verdict.to_string(),
+        verdict,
         score,
         confidence,
         headline,
