@@ -129,9 +129,9 @@ fun RectifyScreen(profile: BirthProfile, settings: EngineSettings, onBack: () ->
             Text("RECTIFY", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
             Text("BACK", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onBack).padding(12.dp))
         }
-        Text("Find the true minute", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+        Text("Find your exact birth time", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         Text(
-            "Name a few things that happened and when: a marriage, a move, a loss, a job. Every birth time inside your window is cast and scored by how well its periods and sky explain those days. The rising sign and the Moon's star are what the window can change; the answer shows which fits.",
+            "Name a few things that happened and when: a marriage, a move, a loss, a job. Every minute inside your window is tried, and the one whose life story best matches those days comes first.",
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
         )
         Text("Stated birth: ${profile.birthLocal().format(LONG_DATE_TIME)} · ${profile.placeName}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
@@ -163,7 +163,7 @@ fun RectifyScreen(profile: BirthProfile, settings: EngineSettings, onBack: () ->
         QuietButton("PICK THE DATE AND ADD", onClick = { pickDate = true }, modifier = Modifier.fillMaxWidth())
 
         GoldButton(
-            if (running) "CASTING EVERY MINUTE OF THE WINDOW…" else "FIND THE MINUTE",
+            if (running) "TRYING EVERY MINUTE OF THE WINDOW…" else "FIND THE MINUTE",
             enabled = !running && events.isNotEmpty(),
             onClick = { request = System.currentTimeMillis() },
             modifier = Modifier.fillMaxWidth(),
@@ -173,7 +173,7 @@ fun RectifyScreen(profile: BirthProfile, settings: EngineSettings, onBack: () ->
         val r = result
         if (r != null) {
             SectionLabel("What the window can change")
-            Text("The best time for each rising sign the window crosses. A higher fit explains more of what happened.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            Text("The best-fitting times in your window. A higher fit explains more of what happened to you.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             for (c in r.bySign) CandidateRow(c, profile, best = c == r.bySign.firstOrNull(), onUse = { chosen ->
                 val local = Instants.toLocal(chosen.birth, profile.zone())
                 val p = profile.copy(hour = local.hour, minute = local.minute, second = local.second, uncertaintyLevel = 1)
@@ -190,12 +190,12 @@ fun RectifyScreen(profile: BirthProfile, settings: EngineSettings, onBack: () ->
                     HorizontalDivider(color = KshanaColors.LineSoft)
                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(Instants.toLocal(c.birth, profile.zone()).format(DateTimeFormatter.ofPattern("HH:mm")), fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = KshanaColors.Sky, modifier = Modifier.width(60.dp))
-                        Text("${c.lagnaSign} rising · ${c.moonStar} · ${c.dashaAtBirth}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1f))
+                        Text(c.words, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1f))
                         Text(c.fit.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 14.sp, color = scoreColor(c.fit))
                     }
                 }
             }
-            Text("The fit is a reading of the chart against your own history, not a proof; two times that explain everything equally are both kept. Use the one that also matches what you know of your rising sign.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            Text("The fit measures how well each time explains your own history; it is not a proof; two times that explain everything equally are both kept. Use the one closest to what your family remembers.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         }
     }
 }

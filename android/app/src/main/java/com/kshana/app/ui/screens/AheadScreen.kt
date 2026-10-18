@@ -155,14 +155,7 @@ fun AheadScreen(
                     if (l.band == "slow" || l.band == "hold") {
                         Text("WHAT TO DO", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable { onRemedy(l.life) }.padding(vertical = 4.dp))
                     }
-                    if (l.why.isNotEmpty()) {
-                        Text(if (whyOpen == l.life) "HIDE THE ASTROLOGY −" else "THE ASTROLOGY BEHIND IT +", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable { whyOpen = if (whyOpen == l.life) null else l.life }.padding(vertical = 4.dp))
-                    }
-                }
-                if (whyOpen == l.life) {
-                    Column(Modifier.padding(start = 26.dp).glass(10.dp).padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        for (w in l.why) Text(w.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
-                    }
+                    Text("MORE ABOUT ${lifeName(l.life).uppercase()} ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable { onLife(l.life) }.padding(vertical = 4.dp))
                 }
             }
         }
@@ -173,7 +166,5 @@ fun AheadScreen(
             QuietButton("LOOK BACK AT A DAY", onClick = onHindsight, modifier = Modifier.weight(1f))
         }
         QuietButton("THE BOOK OF YOUR LIFE · THE YEARS AHEAD AND BEHIND", onClick = onBook, modifier = Modifier.fillMaxWidth())
-        Box(Modifier.height(4.dp))
-        Text("The astrology behind every line sits under its tap. ${o.seasonWhy.replaceFirstChar { it.uppercase() }}.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
     }
 }

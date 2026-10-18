@@ -85,11 +85,11 @@ private fun YearSection(profile: BirthProfile, place: Place, settings: EngineSet
             error = e.message ?: e.toString()
         }
     }
-    SectionLabel("This year · birthday to birthday")
+    SectionLabel("Your year · birthday to birthday")
     ErrorLine(error)
     val r = y
     if (r == null) {
-        if (error == null) Working("solving the solar return…")
+        if (error == null) Working("reading your year…")
         return
     }
     Column(
@@ -98,8 +98,8 @@ private fun YearSection(profile: BirthProfile, place: Place, settings: EngineSet
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("${r.lagnaSign} rising · ${r.lord}", fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text)
-                Text("${localText(r.start, DATE_ONLY)} – ${localText(r.end, DATE_ONLY)} · Moon in ${r.moonStar} at the return", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
+                Text("A year of ${chapterShort(r.lord).lowercase()}", fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text)
+                Text("${localText(r.start, DATE_ONLY)} – ${localText(r.end, DATE_ONLY)}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
             }
             Text(r.tone.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 22.sp, color = scoreColor(r.tone))
         }
@@ -117,7 +117,6 @@ private fun YearSection(profile: BirthProfile, place: Place, settings: EngineSet
                 Text(v.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = scoreColor(v), modifier = Modifier.width(24.dp))
             }
         }
-        Text("The solar return is the exact second the Sun stands again where it stood at your birth, cast where you are now. The year's lord is the lord of that chart's rising sign.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
     }
 }
 
@@ -158,15 +157,15 @@ fun BookScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
         ErrorLine(error)
         val t = book
         if (t == null) {
-            if (error == null) Working("reading sixty years of sky, to the second…")
+            if (error == null) Working("reading your whole life…")
             return@Column
         }
         Text(t.headline, fontFamily = FontFamily.Serif, fontSize = 19.sp, lineHeight = 27.sp, color = KshanaColors.Text)
 
         YearSection(profile, place, settings, onLife)
 
-        SectionLabel("Saturn's trials")
-        Text("Sade sati and the two dhaiyas, every one from birth, solved to the second on the real sky.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        SectionLabel("The hard stretches of your life")
+        Text("Every long testing period from your birth to the years ahead, to the day.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         for (s in t.saturn) {
             val past = s.end.seconds() < t.at.seconds()
             val alpha = if (past) PAST_ALPHA else 1f
@@ -178,7 +177,7 @@ fun BookScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(s.kind.replaceFirstChar { it.uppercase() }, fontFamily = FontFamily.Serif, fontSize = 17.sp, color = (if (s.current) KshanaColors.Ember else KshanaColors.Text).copy(alpha = alpha))
+                    Text(trialName(s.kind), fontFamily = FontFamily.Serif, fontSize = 17.sp, color = (if (s.current) KshanaColors.Ember else KshanaColors.Text).copy(alpha = alpha))
                     Text("age ${s.age.toInt()}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Muted.copy(alpha = alpha))
                 }
                 Text("${dayMon(s.start)} ${localText(s.start, YEAR_ONLY)} – ${dayMon(s.end)} ${localText(s.end, YEAR_ONLY)}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky.copy(alpha = alpha))
@@ -193,18 +192,18 @@ fun BookScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
             }
         }
 
-        SectionLabel("Chapters · the mahadashas")
+        SectionLabel("The big chapters of your life")
         for ((i, c) in t.chapters.withIndex()) {
             ChapterRow(c, t, open = openChapter == i, onToggle = { openChapter = if (openChapter == i) null else i }, onLife = onLife)
         }
 
-        SectionLabel("Pages of the running chapter")
+        SectionLabel("Inside the present chapter")
         for ((i, c) in t.pages.withIndex()) {
             ChapterRow(c, t, open = openChapter == 100 + i, onToggle = { openChapter = if (openChapter == 100 + i) null else 100 + i }, onLife = onLife)
         }
 
-        SectionLabel("Jupiter's passages")
-        Text("Jupiter from your Moon, three years back to twelve ahead. The giving houses are 2, 5, 7, 9 and 11.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        SectionLabel("Your lucky years and lean years")
+        Text("When fortune helps you and when it holds back, from three years ago to twelve years ahead.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         val jup = if (showAllJupiter) t.jupiter else t.jupiter.filter { it.end.seconds() >= t.at.seconds() }.take(8)
         for (p in jup) {
             val past = p.end.seconds() < t.at.seconds()
@@ -219,26 +218,26 @@ fun BookScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
             }
         }
         Text(
-            if (showAllJupiter) "FEWER −" else "ALL ${t.jupiter.size} PASSAGES +",
+            if (showAllJupiter) "FEWER −" else "ALL ${t.jupiter.size} +",
             style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
             modifier = Modifier.clickable { showAllJupiter = !showAllJupiter }.padding(vertical = 4.dp),
         )
 
-        SectionLabel("Returns")
-        Text("When Saturn, Jupiter and Rahu stand again where they stood at your birth.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        SectionLabel("Turning points")
+        Text("The years when an old cycle of your life comes round again.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         for (r in t.returns) {
             val past = r.at.seconds() < t.at.seconds()
             val alpha = if (past) PAST_ALPHA else 1f
             Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.Top) {
                 Text(localText(r.at, DATE_ONLY), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky.copy(alpha = alpha), modifier = Modifier.width(92.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("${PLANET_GLYPHS[r.graha] ?: ""} ${r.words.substringBefore(':')}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text.copy(alpha = alpha))
+                    Text(r.words.substringBefore(':'), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text.copy(alpha = alpha))
                     Text(r.words.substringAfter(": ", ""), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted.copy(alpha = alpha))
                 }
             }
         }
         Text(
-            "The ephemeris on this phone sees to ${localText(t.horizon, YEAR_ONLY)}; the trials and returns stop there. Everything is computed here. Nothing leaves it.",
+            "This looks as far ahead as ${localText(t.horizon, YEAR_ONLY)}. Everything is worked out on this phone. Nothing leaves it.",
             style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(top = 8.dp),
         )
     }
@@ -260,7 +259,7 @@ private fun ChapterRow(c: ChapterRecord, t: TimelineRecord, open: Boolean, onTog
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("${PLANET_GLYPHS[c.lord] ?: ""} ${c.lord}", fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text.copy(alpha = alpha), modifier = Modifier.weight(1f))
+            Text(chapterShort(c.lord), fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text.copy(alpha = alpha), modifier = Modifier.weight(1f))
             Text("age ${c.age.toInt()} – ${(c.age + yearsBetween(c.start, c.end)).toInt()}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Muted.copy(alpha = alpha))
             Spacer(Modifier.width(10.dp))
             Text(c.tone.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 16.sp, color = col.copy(alpha = alpha))

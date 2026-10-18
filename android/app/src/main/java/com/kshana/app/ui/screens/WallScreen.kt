@@ -122,11 +122,11 @@ fun WallScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
             Text("BACK", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onBack).padding(12.dp))
         }
         Text("What you are waiting for", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
-        Text("Every instant below is solved on the real sky, to the second. Tap the bell to be told when it comes; the calendar mark puts it beside your other days.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+        Text("The days that will change things for you, counting down. Tap the bell to be told when one comes; the calendar mark puts it beside your other days.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         ErrorLine(error)
         val list = items
         if (list == null) {
-            if (error == null) Working("solving the sky ahead…")
+            if (error == null) Working("looking ahead…")
             return@Column
         }
         for (c in list) {
@@ -153,7 +153,7 @@ fun WallScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
         }
         val f = fest
         if (f != null && f.isNotEmpty()) {
-            SectionLabel("The month's observances")
+            SectionLabel("Holy days this month")
             for (x in f) {
                 val at = Instants.toLocal(x.at).toInstant()
                 Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
@@ -172,7 +172,5 @@ fun WallScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
                 }
             }
         }
-        Spacer(Modifier.padding(4.dp))
-        Text("Positions to 0.1 arcsecond against JPL; sunrise and the lunar days to the second. Nothing here is an estimate.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
     }
 }

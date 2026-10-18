@@ -221,7 +221,7 @@ private fun App() {
                     },
                     heading = "THE OTHER PERSON",
                     title = "Their moment of arrival",
-                    intro = "Their date, clock time and place. If the time is unknown, enter 12:00 and set the slider to unknown; the Moon and the match still hold.",
+                    intro = "Their date, clock time and place. If the time is unknown, enter 12:00 and set the slider to unknown; the match and the broad readings still hold.",
                     nameLabel = "Their name",
                     button = "ADD TO US",
                     persist = false,

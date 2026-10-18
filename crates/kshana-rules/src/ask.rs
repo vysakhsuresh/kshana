@@ -284,13 +284,10 @@ fn answer_with(
     let funnel = timing(&natal.facts, area, natal.moon_sidereal, natal.birth, at, 5);
     let agreeing = agreeing_levels(&funnel);
     let period = (0.6 * (agreeing as f64 / 5.0) + 0.4 * now).clamp(0.0, 1.0);
-    let period_words = {
-        let lords: Vec<String> = funnel.iter().take(3).map(|l| format!("{:?}", l.period.lord)).collect();
-        if agreeing == 0 {
-            format!("the running periods ({}) do not carry your {name} houses yet", lords.join(" › "))
-        } else {
-            format!("{agreeing} of the 5 running period levels ({}) carry your {name} houses", lords.join(" › "))
-        }
+    let period_words = match agreeing {
+        0 => format!("the phase of life you are in does not favour {name} yet"),
+        1 | 2 => format!("the phase of life you are in partly favours {name}"),
+        _ => format!("the phase of life you are in strongly favours {name}"),
     };
     let samples = series(spk, eop, natal, obs, ayanamsa, at, NS_PER_DAY, 180)?;
     let st = story(life, &samples);
@@ -313,20 +310,10 @@ fn answer_with(
     let pv = prashna(&hf, area, question.shape(), at, obs.longitude_deg);
     let witness = witness_score(pv.verdict);
     let witness_words = match pv.verdict {
-        Verdict::Yes => format!(
-            "the sky at the moment you asked agrees: {:?}, sub-lord of the {} cusp now, signifies your {name} houses",
-            pv.promise.sub_lord,
-            crate::forecast::ordinal(area.primary)
-        ),
-        Verdict::Delayed => format!(
-            "the sky at the moment you asked says yes but slowly: {:?} is retrograde or in a retrograde star",
-            pv.promise.sub_lord
-        ),
-        Verdict::Unclear => "the sky at the moment you asked is silent on it".to_string(),
-        Verdict::No => format!(
-            "the sky at the moment you asked holds back: {:?} leans to the negating houses",
-            pv.promise.sub_lord
-        ),
+        Verdict::Yes => format!("the very moment you asked also points to yes for {name}"),
+        Verdict::Delayed => format!("the very moment you asked says yes for {name}, but late"),
+        Verdict::Unclear => "the very moment you asked gives no clear sign".to_string(),
+        Verdict::No => format!("the very moment you asked holds back on {name}"),
     };
     let openings = prashna_windows(spk, ayanamsa, &pv.agents, at, 30);
     let first_opening = openings.first().map(|w| (w.start, w.end));
@@ -334,7 +321,7 @@ fn answer_with(
     let mut reasons: Vec<String> = Vec::new();
     let mut rule_ids: Vec<&'static str> = Vec::new();
     let push_common = |reasons: &mut Vec<String>, rule_ids: &mut Vec<&'static str>| {
-        reasons.push(natal_c.note.clone());
+        reasons.push(crate::plain::birth_base(&name, natal_c.score));
         rule_ids.push("KS-N-0001");
         reasons.push(period_words.clone());
         rule_ids.push("KS-F-0001");
@@ -357,13 +344,13 @@ fn answer_with(
             let floor = if score >= 0.62 { 0.56 } else { 0.50 };
             let w = best_window(&samples, idx, floor, 2).or(st.best);
             let (v, h) = if score >= 0.62 {
-                ("Yes", format!("Yes. {} is promised in your chart and the running period carries it. The window below is where it shows first.", title))
+                ("Yes", format!("Yes. {} is written in your birth chart and the phase you are in brings it forward. The dates below are when it shows first.", title))
             } else if score >= 0.50 {
-                ("Yes, with patience", format!("Yes, but not quickly. {} needs the window below and your effort inside it; the period carries it only in part.", title))
+                ("Yes, with patience", format!("Yes, but not quickly. {} comes through the dates below and your effort inside them; the phase you are in helps only in part.", title))
             } else if score >= 0.40 {
-                ("Not yet", format!("Not yet. The running period does not carry {name} well. The nearest opening is below; the remedy is the lever until then."))
+                ("Not yet", format!("Not yet. The phase you are in does not favour {name}. The nearest opening is below; until then the remedies do the work."))
             } else {
-                ("Not in this period", format!("Not in this period. {} asks for remedy and time before it can be asked again.", title))
+                ("Not in this phase", format!("Not in this phase of life. {} needs remedies and time before it is worth asking again.", title))
             };
             (v.to_string(), score, agreement(&parts), h, w.map(|x| (x.0, x.1)), if score >= 0.50 { "the window to act in" } else { "the nearest opening" }.to_string())
         }
@@ -378,8 +365,8 @@ fn answer_with(
             let climb = slow.iter().find(|(_, v)| Band::of(v[idx]) > slow_now_band).map(|(t, v)| (*t, v[idx]));
             if let Some((p, level)) = &period_next {
                 reasons.push(format!(
-                    "the next period that carries your {name} houses is {:?} {level}, from {}",
-                    p.lord,
+                    "a {} that favours {name} begins on {}",
+                    if *level == "antardasha" { "stretch of a year or more" } else { "season of a few months" },
                     date_words(p.start, lon)
                 ));
                 rule_ids.push("KS-F-0001");
@@ -403,13 +390,13 @@ fn answer_with(
                     let score = if months < 1.0 { 0.85 } else if months < 3.0 { 0.7 } else if months < 6.0 { 0.55 } else if months < 12.0 { 0.42 } else { 0.32 };
                     let v = if months < 1.0 { "Within the month" } else if months < 3.0 { "Within three months" } else if months < 6.0 { "Within six months" } else if months < 12.0 { "Within the year" } else { "Beyond a year" };
                     let mut h = if kind == "daily" {
-                        format!("{} opens {} to {}, when the daily sky reaches {:.0}. That is the first time to act.", title, date_words(s, lon), date_words(e, lon), pk * 100.0)
+                        format!("{} opens {} to {}, your best stretch for it at {:.0} out of 100. That is the first time to act.", title, date_words(s, lon), date_words(e, lon), pk * 100.0)
                     } else {
-                        format!("The first period that truly carries {name} begins {}. Before it the daily sky gives no sound stretch; use the time to prepare.", date_words(s, lon))
+                        format!("The first stretch of life that truly favours {name} begins {}. Before it no strong days come; use the time to prepare.", date_words(s, lon))
                     };
-                    if let Some((p, level)) = next_carrying_period(natal, area, at) {
+                    if let Some((p, _level)) = next_carrying_period(natal, area, at) {
                         if kind == "daily" {
-                            h.push_str(&format!(" The period behind it, {:?} {level}, begins {} and holds it longer.", p.lord, date_words(p.start, lon)));
+                            h.push_str(&format!(" A longer supportive stretch begins {} and holds it in place.", date_words(p.start, lon)));
                         }
                     }
                     if let Some((t, v2)) = climb {
@@ -419,8 +406,8 @@ fn answer_with(
                 }
                 None => {
                     let h = match climb {
-                        Some((t, v2)) => format!("No sound stretch within six months, and no period change that carries {name} within two years. The season climbs to {} from {}; the remedy is the lever until then.", Band::of(v2).word(), date_words(t, lon)),
-                        None => format!("Not within two years as the chart runs now: no period that carries {name} begins, and the season holds its band. The remedy is the lever, and the question can be asked again after it."),
+                        Some((t, v2)) => format!("No strong stretch within six months, and no new phase that favours {name} within two years. Things turn {} from {}; until then the remedies do the work.", Band::of(v2).word().to_ascii_lowercase(), date_words(t, lon)),
+                        None => format!("Not within two years: no phase that favours {name} begins, and things hold where they are. Lean on the remedies, and ask again after them."),
                     };
                     ("Not within two years".to_string(), 0.25, 0.6, h, climb.map(|(t, _)| (t, t.add_ns(30 * NS_PER_DAY))), "the season's turn".to_string())
                 }
@@ -429,7 +416,11 @@ fn answer_with(
 
         // ------------------------------------------------------------- is now a good time
         Question::GoodTimeNow => {
-            reasons.push(m.lives[idx].because.clone());
+            if let Some(h) = &m.hora {
+                reasons.push(format!("this hour is {}", crate::plain::hour_nature(h.lord)));
+            } else {
+                reasons.push(m.lives[idx].because.clone());
+            }
             rule_ids.push("KS-H-0001");
             reasons.push(format!("{name} reads {:.0} this second ({})", now * 100.0, m.lives[idx].band.word()));
             rule_ids.push("KS-M-0001");
@@ -444,7 +435,7 @@ fn answer_with(
             let in_caution = m.windows.iter().find(|w| w.caution && w.start <= at && at < w.end).map(|w| w.label.clone());
             if let Some(c) = in_caution {
                 let end = m.windows.iter().find(|w| w.label == c).map(|w| w.end).unwrap_or(at);
-                ("Not this minute".to_string(), now.min(0.4), 0.8, format!("Not this minute: {c} is running. Finish, do not begin; it ends shortly and the hours after it are below."), Some((end, m.hora.as_ref().map(|h| h.end.max(end)).unwrap_or(end))), "after the caution ends".to_string())
+                ("Not this minute".to_string(), now.min(0.4), 0.8, "Not this minute: an unlucky stretch of the day is running. Finish things, do not begin them; it closes shortly and the better hours after it are below.".to_string(), Some((end, m.hora.as_ref().map(|h| h.end.max(end)).unwrap_or(end))), "after the caution ends".to_string())
             } else if now >= 0.56 {
                 ("Go ahead".to_string(), now, 0.85, format!("{} This hour serves it.", m.lives[idx].headline), Some((at, m.hora.as_ref().map(|h| h.end).unwrap_or(at))), "now, until the hour turns".to_string())
             } else if let Some((s, e, f)) = hour_fit.filter(|h| h.2 >= 0.5 && h.0 > at) {
@@ -463,14 +454,14 @@ fn answer_with(
             rule_ids.insert(0, "KS-G-0001");
             let ground = natal_c.score;
             if ground >= 0.5 && week >= ahead_best - 0.06 && week >= 0.5 {
-                ("Take it now".to_string(), (0.5 * week + 0.3 * ground + 0.2 * witness).clamp(0.0, 1.0), agreement(&[ground, week, witness]), format!("Take it now. The next seven days ({:.0}) are as good as anything the half-year offers ({:.0}), and your chart carries {name}.", week * 100.0, ahead_best * 100.0), Some((at, at.add_ns(7 * NS_PER_DAY))), "this week".to_string())
+                ("Take it now".to_string(), (0.5 * week + 0.3 * ground + 0.2 * witness).clamp(0.0, 1.0), agreement(&[ground, week, witness]), format!("Take it now. The next seven days ({:.0}) are as good as anything the half-year offers ({:.0}), and your birth chart favours {name}.", week * 100.0, ahead_best * 100.0), Some((at, at.add_ns(7 * NS_PER_DAY))), "this week".to_string())
             } else if ground >= 0.5 && best.map_or(false, |b| b.2 >= week + 0.06) {
                 let b = best.unwrap();
                 ("Take it, from the window".to_string(), (0.4 * b.2 + 0.4 * ground + 0.2 * witness).clamp(0.0, 1.0), agreement(&[ground, b.2, witness]), format!("Take it, but not this week. This week reads {:.0}; from {} the same step reads {:.0}. Prepare now, move then.", week * 100.0, date_words(b.0, lon), b.2 * 100.0), Some((b.0, b.1)), "the window to move in".to_string())
             } else if ground < 0.45 && week < 0.5 {
-                ("Hold".to_string(), (0.4 * week + 0.4 * ground + 0.2 * witness).clamp(0.0, 1.0), agreement(&[ground, week, witness]), format!("Hold. Your chart does not carry {name} easily ({:.0}) and the coming week is slow ({:.0}). If you must move, keep the stakes small and the exit open.", ground * 100.0, week * 100.0), best.map(|b| (b.0, b.1)), "the least bad window".to_string())
+                ("Hold".to_string(), (0.4 * week + 0.4 * ground + 0.2 * witness).clamp(0.0, 1.0), agreement(&[ground, week, witness]), format!("Hold. Your birth chart does not make {name} easy ({:.0}) and the coming week is slow ({:.0}). If you must move, keep the stakes small and the exit open.", ground * 100.0, week * 100.0), best.map(|b| (b.0, b.1)), "the least bad window".to_string())
             } else {
-                ("Take it, with small stakes".to_string(), (0.4 * week + 0.4 * ground + 0.2 * witness).clamp(0.0, 1.0), agreement(&[ground, week, witness]), format!("Take it with small stakes. The week is fair ({:.0}) and the chart is {} on {name}; a step you can undo is the right size.", week * 100.0, if ground >= 0.5 { "willing" } else { "cautious" }), Some((at, at.add_ns(7 * NS_PER_DAY))), "this week, lightly".to_string())
+                ("Take it, with small stakes".to_string(), (0.4 * week + 0.4 * ground + 0.2 * witness).clamp(0.0, 1.0), agreement(&[ground, week, witness]), format!("Take it with small stakes. The week is fair ({:.0}) and your birth chart is {} on {name}; a step you can undo is the right size.", week * 100.0, if ground >= 0.5 { "willing" } else { "cautious" }), Some((at, at.add_ns(7 * NS_PER_DAY))), "this week, lightly".to_string())
             }
         }
 
@@ -485,7 +476,7 @@ fn answer_with(
             let past_peak = past.iter().cloned().fold(0.0_f64, f64::max);
             let (fut_t, fut_peak) = future.iter().cloned().fold((at, 0.0_f64), |a, (t, v)| if v > a.1 { (t, v) } else { a });
             let back_at = future.iter().find(|(_, v)| *v >= past_peak - 0.03).map(|(t, _)| *t);
-            reasons.insert(0, format!("the slow line of {name} peaked at {:.0} in the past year, stands at {:.0} now, and reaches {:.0} around {}", past_peak * 100.0, now_slow * 100.0, fut_peak * 100.0, date_words(fut_t, lon)));
+            reasons.insert(0, format!("the long-term trend of {name} peaked at {:.0} in the past year, stands at {:.0} now, and reaches {:.0} around {}", past_peak * 100.0, now_slow * 100.0, fut_peak * 100.0, date_words(fut_t, lon)));
             rule_ids.insert(0, "KS-G-0001");
             let dip = now_slow < past_peak - 0.05;
             if dip && back_at.is_some() {
@@ -494,13 +485,13 @@ fn answer_with(
                 // A yes is at least a half; nearer and fuller returns score higher.
                 let score = (0.58 + 0.25 * (1.0 - months / 24.0).max(0.0) + 0.5 * (fut_peak - past_peak).clamp(-0.1, 0.1) + 0.1 * (witness - 0.5)).clamp(0.5, 0.9);
                 let v = if months <= 12.0 { "Yes, it comes back" } else { "Yes, in its season" };
-                (v.to_string(), score, agreement(&[natal_c.score, fut_peak, witness]), format!("Yes. {} fell from {:.0} to {:.0} in the slow line, and climbs back to where it was around {}. Keep the door open and do not chase; the return is the season's, not an argument's.", title, past_peak * 100.0, now_slow * 100.0, date_words(t, lon)), Some((t, t.add_ns(60 * NS_PER_DAY))), "when the line is back where it was".to_string())
+                (v.to_string(), score, agreement(&[natal_c.score, fut_peak, witness]), format!("Yes. {} fell from {:.0} to {:.0} in the long-term trend, and climbs back to where it was around {}. Keep the door open and do not chase; the return is the season's, not an argument's.", title, past_peak * 100.0, now_slow * 100.0, date_words(t, lon)), Some((t, t.add_ns(60 * NS_PER_DAY))), "when it is back where it was".to_string())
             } else if dip {
                 let score = (0.42 + 0.1 * (witness - 0.5)).clamp(0.3, 0.55);
-                ("Not as it was".to_string(), score, agreement(&[natal_c.score, fut_peak, witness]), format!("Not as it was. {} eases to {:.0} around {} but does not reach the {:.0} of the past year within two years. What comes back comes changed, or what comes is new.", title, fut_peak * 100.0, date_words(fut_t, lon), past_peak * 100.0), Some((fut_t, fut_t.add_ns(60 * NS_PER_DAY))), "the best the line reaches".to_string())
+                ("Not as it was".to_string(), score, agreement(&[natal_c.score, fut_peak, witness]), format!("Not as it was. {} eases to {:.0} around {} but does not reach the {:.0} of the past year within two years. What comes back comes changed, or what comes is new.", title, fut_peak * 100.0, date_words(fut_t, lon), past_peak * 100.0), Some((fut_t, fut_t.add_ns(60 * NS_PER_DAY))), "the best it reaches".to_string())
             } else {
                 let score = (0.6 + 0.2 * (witness - 0.5)).clamp(0.45, 0.8);
-                ("Nothing has left the chart".to_string(), score, agreement(&[natal_c.score, now_slow, witness]), format!("Nothing has truly left. The slow line of {name} stands at {:.0}, as high as any month of the past year ({:.0}). What you miss is within reach; the move is yours, and the window below is the time for it.", now_slow * 100.0, past_peak * 100.0), best_window(&samples, idx, 0.56, 2).map(|w| (w.0, w.1)), "the time to reach out".to_string())
+                ("Nothing has truly left".to_string(), score, agreement(&[natal_c.score, now_slow, witness]), format!("Nothing has truly left. The long-term trend of {name} stands at {:.0}, as high as any month of the past year ({:.0}). What you miss is within reach; the move is yours, and the window below is the time for it.", now_slow * 100.0, past_peak * 100.0), best_window(&samples, idx, 0.56, 2).map(|w| (w.0, w.1)), "the time to reach out".to_string())
             }
         }
 
@@ -540,8 +531,8 @@ fn answer_with(
         }
     };
 
-    if let Some(h) = pv.hits.iter().find(|h| h.rule_id == "KS-P-0012") {
-        reasons.push(h.factors.join("; "));
+    if pv.hits.iter().any(|h| h.rule_id == "KS-P-0012") {
+        reasons.push("the very moment you asked shows a hold-up: expect a delay before it moves".to_string());
         rule_ids.push("KS-P-0012");
     }
 
@@ -596,6 +587,9 @@ mod tests {
                 assert!((0.0..=1.0).contains(&a.score), "{q:?} {}", a.score);
                 assert!((0.3..=0.95).contains(&a.confidence));
                 assert!(a.reasons.len() >= 4);
+                for s in std::iter::once(&a.verdict).chain(std::iter::once(&a.headline)).chain(std::iter::once(&a.when_words)).chain(a.reasons.iter()) {
+                    assert_eq!(crate::plain::jargon(s), None, "{q:?}: {s}");
+                }
                 if let (Some(s), Some(e)) = (a.when_start, a.when_end) {
                     assert!(s <= e);
                 }

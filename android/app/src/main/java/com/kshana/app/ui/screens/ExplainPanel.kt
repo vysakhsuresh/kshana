@@ -83,9 +83,9 @@ fun ExplainPanel(profile: BirthProfile, place: Place, settings: EngineSettings, 
     ) {
         Row(Modifier.fillMaxWidth().clickable { open = !open }, verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("WHY NOW · WHO · WHEN IT EASES", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+                Text("WHY NOW · WHAT WEIGHS · WHEN IT EASES", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
                 Text(
-                    if (open) "Every graha behind the number, and the exact day each one moves on." else "Open the number: which planets cause this, when each one moves, what lifts it and by how much.",
+                    if (open) "What presses on this part of your life, and the day each pressure lifts." else "Open it: what is pressing on this, when it lifts, and what helps.",
                     style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
                 )
             }
@@ -95,7 +95,7 @@ fun ExplainPanel(profile: BirthProfile, place: Place, settings: EngineSettings, 
         ErrorLine(error)
         val e = ex
         if (e == null) {
-            if (error == null) Working("solving the next moves of every graha…")
+            if (error == null) Working("working out what comes next…")
             return@Column
         }
         Text(e.headline, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)
@@ -106,17 +106,17 @@ fun ExplainPanel(profile: BirthProfile, place: Place, settings: EngineSettings, 
         val causes = e.causes.filter(keep)
         val helpers = e.helpers.filter(keep)
         if (causes.isNotEmpty()) {
-            SectionLabel("Who weighs on it")
+            SectionLabel("What weighs on it")
             for (c in causes) CauseRow(c, negative = true)
         }
         if (helpers.isNotEmpty()) {
-            SectionLabel("Who carries it")
+            SectionLabel("What holds it up")
             for (c in helpers) CauseRow(c, negative = false)
         }
 
         SectionLabel("What changes, and by how much")
         val relief = if (showAllRelief) e.relief else e.relief.filter { it.lasting && (kotlin.math.abs(it.gain) >= 1.0 || it.planet == "Saturn" || it.planet == "Jupiter") }.take(8)
-        if (relief.isEmpty()) Text("Nothing moves within two years; the birth chart and the remedies are the levers.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+        if (relief.isEmpty()) Text("Nothing shifts within two years; the remedies are what you can do.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         for (r in relief) ReliefRow(r)
         if (e.relief.size > relief.size || showAllRelief) {
             Text(
@@ -125,7 +125,7 @@ fun ExplainPanel(profile: BirthProfile, place: Place, settings: EngineSettings, 
                 modifier = Modifier.clickable { showAllRelief = !showAllRelief }.padding(vertical = 4.dp),
             )
         }
-        Text("Each gain is the score recomputed with that one graha moved on, everything else held. Hours and stars turn daily; periods and the slow planets set the season.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        Text("Each line is a date when something lifts or presses, and how much this part of your life gains or loses then.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
 
         SectionLabel("The next three years, month by month")
         SlowLine(e)
@@ -137,12 +137,12 @@ fun ExplainPanel(profile: BirthProfile, place: Place, settings: EngineSettings, 
         e.peak?.let { Bullet(it.words, KshanaColors.Gold) }
         e.toughens?.let { Bullet(it.words, KshanaColors.Ember) }
         if (e.eases == null && e.peak == null && e.toughens == null) {
-            Text("The slow line holds its band for three years: no turning point, only the daily weather above it.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            Text("The long view holds steady for three years: no big turn, only day-to-day ups and downs.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         }
-        Text("The slow line leaves out the Moon, the hours and the stars: it is the season, not the weather.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        Text("This line is the long season, not the day-to-day weather.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         if (e.score < 56) {
             Spacer(Modifier.height(2.dp))
-            QuietButton("REMEDY FOR THE CAUSE", onClick = onRemedy, modifier = Modifier.fillMaxWidth())
+            QuietButton("WHAT TO DO ABOUT IT", onClick = onRemedy, modifier = Modifier.fillMaxWidth())
         }
     }
 }
@@ -152,11 +152,11 @@ private fun CauseRow(c: CauseRecord, negative: Boolean) {
     val col = if (negative) KshanaColors.Ember else KshanaColors.Leaf
     HorizontalDivider(color = KshanaColors.LineSoft)
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
-        Text(c.planet?.let { PLANET_GLYPHS[it] ?: it.take(2) } ?: "·", fontSize = 16.sp, color = col, modifier = Modifier.width(26.dp).padding(top = 1.dp))
+        Text(if (negative) "▼" else "▲", fontSize = 12.sp, color = col, modifier = Modifier.width(26.dp).padding(top = 1.dp))
         Column(Modifier.weight(1f)) {
             Text(c.what.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
             if (c.untilWords.isNotBlank()) Text(c.untilWords.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
-            Text("${kindName(c.kind)} · ${c.ruleId}", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+            Text(kindName(c.kind), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
         }
         Text(signedPoints(c.pull), fontFamily = FontFamily.Monospace, fontSize = 15.sp, color = col, modifier = Modifier.padding(start = 8.dp))
     }
@@ -170,12 +170,12 @@ internal fun signedPoints(v: Double): String {
 }
 
 private fun kindName(k: String): String = when (k) {
-    "natal" -> "birth chart"
-    "dasha" -> "running period"
-    "gochara" -> "transit from your Moon"
-    "tara" -> "tara bala"
-    "hora" -> "planetary hour"
-    "kala" -> "limbs of the day"
+    "natal" -> "from birth"
+    "dasha" -> "this stretch of your life"
+    "gochara" -> "this season"
+    "tara" -> "today's luck"
+    "hora" -> "this hour"
+    "kala" -> "the time of day"
     else -> k
 }
 

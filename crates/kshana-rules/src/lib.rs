@@ -29,6 +29,7 @@ pub mod letter;
 pub mod muhurta;
 pub mod parashari;
 pub mod parihara;
+pub mod plain;
 pub mod prashna;
 pub mod prose;
 pub mod rectify;

@@ -71,20 +71,6 @@ pub struct Briefing {
     pub moment: Moment,
 }
 
-fn lord_words(l: DashaLord) -> &'static str {
-    match l {
-        DashaLord::Sun => "standing, the father, the self",
-        DashaLord::Moon => "home, feeling, the mind",
-        DashaLord::Mars => "effort, property, courage",
-        DashaLord::Mercury => "learning, trade, talk",
-        DashaLord::Jupiter => "growth, children, faith, money",
-        DashaLord::Venus => "love, comfort, partnership",
-        DashaLord::Saturn => "work, duty, slow lasting gains",
-        DashaLord::Rahu => "ambition, foreign things, sudden turns",
-        DashaLord::Ketu => "letting go, insight, the inner road",
-    }
-}
-
 /// Saturn's phase named with its exit date, or its clearance.
 pub fn saturn_sentence(spk: &Spk, ayanamsa: Ayanamsa, natal: &Natal, phase: SaturnPhase, at: Instant, lon: f64) -> (String, Option<Instant>) {
     let next = next_sign_change(spk, ayanamsa, DashaLord::Saturn, at);
@@ -96,16 +82,16 @@ pub fn saturn_sentence(spk: &Spk, ayanamsa: Ayanamsa, natal: &Natal, phase: Satu
                     let coming = SaturnPhase::from_house(h);
                     if coming != SaturnPhase::Clear {
                         format!(
-                            "Saturn is clear of your Moon until {}, when it enters {} and {} begins",
+                            "No long testing time is on you now. From {} {} begins. {}",
                             date_words(c.at, lon),
-                            SIGN_NAMES[c.to as usize],
-                            coming.words().split(':').next().unwrap_or("a Saturn phase")
+                            crate::plain::long_test(coming),
+                            crate::plain::long_test_prediction(coming)
                         )
                     } else {
-                        format!("Saturn is clear of your Moon, and stays clear when it enters {} on {}", SIGN_NAMES[c.to as usize], date_words(c.at, lon))
+                        format!("No long testing time is on you now, and none begins before {}", date_words(c.at, lon))
                     }
                 }
-                None => "Saturn is clear of your Moon".to_string(),
+                None => "No long testing time is on you now".to_string(),
             };
             (words, next.map(|c| c.at))
         }
@@ -148,18 +134,23 @@ pub fn saturn_sentence(spk: &Spk, ayanamsa: Ayanamsa, natal: &Natal, phase: Satu
                 i += 1;
             }
             let words = match end {
-                Some((t, sign)) => {
-                    let mut s = format!("{}. It ends on {}, when Saturn enters {} for good", capitalise(p.words()), date_words(t, lon), SIGN_NAMES[sign as usize]);
+                Some((t, _sign)) => {
+                    let mut s = format!(
+                        "{} runs until {}. {}",
+                        capitalise(crate::plain::long_test(p)),
+                        date_words(t, lon),
+                        crate::plain::long_test_prediction(p)
+                    );
                     if let Some((a, b)) = pauses.first() {
                         s.push_str(&format!(
-                            "; before that Saturn steps out from {} to {}, a pause, then returns",
+                            " Between {} and {} it lifts for a while, then returns for its last stretch.",
                             date_words(*a, lon),
                             date_words(*b, lon)
                         ));
                     }
-                    s
+                    s.trim_end_matches('.').to_string()
                 }
-                None => capitalise(p.words()),
+                None => format!("{}. {}", capitalise(crate::plain::long_test(p)), crate::plain::long_test_prediction(p)).trim_end_matches('.').to_string(),
             };
             (words, end.map(|e| e.0))
         }
@@ -202,25 +193,24 @@ pub fn briefing(
         .join(" › ");
     let (saturn_words, saturn_until) = saturn_sentence(spk, ayanamsa, natal, m.saturn, at, lon);
 
-    // Paragraph 1: the ground. Stated so it can be checked against any other reading.
     let mut paragraphs = Vec::new();
-    paragraphs.push(format!(
-        "Your birth Moon is in {} in the star {}. Every count below starts there: the periods from the star, the transits from the sign. If another reading names a different Moon sign, one of the two birth times is off by hours.",
-        SIGN_NAMES[moon_sign as usize],
-        NAKSHATRA_NAMES[n.index]
-    ));
-    // Paragraph 2: the season.
+    // Paragraph 1: the season of life, as what it brings and until when.
     if let (Some(maha), Some(antar)) = (levels.first(), levels.get(1)) {
-        paragraphs.push(format!(
-            "You are in the {:?} mahadasha, the years of {}, until {}. Inside it the {:?} antardasha runs until {}: {}. {}.",
-            maha.lord,
-            lord_words(maha.lord),
+        let mut s = format!(
+            "Until {} your life centres on {}. {}",
             date_words(maha.end, lon),
-            antar.lord,
-            date_words(antar.end, lon),
-            lord_words(antar.lord),
-            saturn_words
-        ));
+            crate::plain::chapter_theme(maha.lord),
+            crate::plain::chapter_prediction(maha.lord)
+        );
+        if antar.lord != maha.lord {
+            s.push_str(&format!(
+                " Until {} the most movement is in {}.",
+                date_words(antar.end, lon),
+                crate::plain::chapter_theme(antar.lord)
+            ));
+        }
+        s.push_str(&format!(" {saturn_words}."));
+        paragraphs.push(s);
     } else {
         paragraphs.push(format!("{saturn_words}."));
     }
@@ -231,21 +221,16 @@ pub fn briefing(
         let hora = m
             .hora
             .as_ref()
-            .map(|h| format!(" The {:?} hour is running: {}.", h.lord, h.words))
+            .map(|h| format!(" Right now it is {}.", crate::plain::hour_nature(h.lord)))
             .unwrap_or_default();
         paragraphs.push(format!(
-            "This second reads {:.0}, {}. {} is your strongest life now at {:.0} ({}), {} the weakest at {:.0} ({}).{} The Moon is in {} today: {}.",
-            m.overall * 100.0,
-            m.band.word(),
+            "Today is {}. {} is your strongest side now: {}. {} needs the most care: {}.{}",
+            crate::plain::day_quality(m.tara),
             t.life.name(),
-            t.score * 100.0,
             t.because,
             l.life.name(),
-            l.score * 100.0,
             l.because,
-            hora,
-            m.moon_star,
-            m.tara_words
+            hora
         ));
     }
 
@@ -264,11 +249,10 @@ pub fn briefing(
                 at: best.at,
                 score: s,
                 words: format!(
-                    "{}: {} ({:.0}, {} tara). {}",
+                    "{}: {}, {}. {}",
                     life.name(),
                     date_words(best.at, lon),
-                    s * 100.0,
-                    crate::gochara::TARA_NAMES[best.tara],
+                    crate::plain::day_short(best.tara),
                     crate::forecast::headline(life, Band::of(s), (best.at.tai_ns() / NS_PER_DAY) as u64)
                 ),
             });
@@ -312,14 +296,14 @@ pub fn briefing(
             if let Ok(e) = explain(spk, eop, natal, obs, system, ayanamsa, life, at) {
                 let mut s = String::new();
                 if let Some(c) = e.causes.iter().find(|c| matches!(c.kind, "dasha" | "gochara")) {
-                    s.push_str(&format!("{} is held back by {}", life.name(), c.what));
+                    s.push_str(&format!("What holds {} back: {}", life.name().to_ascii_lowercase(), c.what));
                     if !c.until_words.is_empty() {
                         s.push_str(&format!(", {}", c.until_words));
                     }
                     s.push_str(". ");
                 }
                 if let Some(r) = e.relief.iter().find(|r| r.lasting && r.gain >= 0.015) {
-                    s.push_str(&format!("The first lasting lift comes on {}: {} ({:+.0} points). ", date_words(r.at, lon), r.what, r.gain * 100.0));
+                    s.push_str(&format!("It first lifts for good on {}: {}. ", date_words(r.at, lon), r.what));
                 }
                 if let Some(t) = &e.eases {
                     s.push_str(&t.words);
@@ -369,10 +353,16 @@ mod tests {
         let natal = Natal::compute(&spk, None, birth, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri).unwrap();
         let at = Utc::new(2026, 10, 17, 5, 0, 0, 0).unwrap().to_instant().unwrap();
         let b = briefing(&spk, None, &natal, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, &[Life::Love, Life::Career, Life::Money, Life::Health], at).unwrap();
-        assert!(b.paragraphs.len() >= 3, "{:?}", b.paragraphs);
-        assert!(b.paragraphs[0].contains("Sagittarius"), "{}", b.paragraphs[0]);
+        assert!(b.paragraphs.len() >= 2, "{:?}", b.paragraphs);
+        for p in &b.paragraphs {
+            assert_eq!(crate::plain::jargon(p), None, "{p}");
+        }
+        assert!(b.paragraphs[0].starts_with("Until "), "{}", b.paragraphs[0]);
         assert!(b.dasha.contains("mahadasha") && b.dasha.contains("antardasha"));
-        assert!(b.saturn_words.contains("Saturn"));
+        assert_eq!(crate::plain::jargon(&b.saturn_words), None, "{}", b.saturn_words);
+        for c in &b.circled {
+            assert_eq!(crate::plain::jargon(&c.words), None, "{}", c.words);
+        }
         assert!(b.saturn_until.is_some());
         assert_eq!(b.circled.len(), 4);
         for c in &b.circled {

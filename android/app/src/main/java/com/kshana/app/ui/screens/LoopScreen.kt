@@ -313,15 +313,10 @@ fun LoopScreen(
             }
             item {
                 Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    var astroOpen by remember { mutableStateOf(false) }
-                    Text(if (astroOpen) "THE ASTROLOGY BEHIND TODAY −" else "THE ASTROLOGY BEHIND TODAY +", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable { astroOpen = !astroOpen }.padding(vertical = 6.dp))
-                    if (astroOpen) {
-                        Text("Moon in ${m.moonStar} · ${m.taraName} tara · ${m.taraWords}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
-                        if (m.saturnActive) Text(m.saturnWords.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Ember)
-                        Text(
-                            "Running periods: " + m.dasha.joinToString(" › ") { it.lord },
-                            fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Muted,
-                        )
+                    var readOpen by remember { mutableStateOf(false) }
+                    Text(if (readOpen) "YOUR READING −" else "YOUR READING IN FULL +", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable { readOpen = !readOpen }.padding(vertical = 6.dp))
+                    if (readOpen) {
+                        Text(m.taraWords.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
                         BriefingCard(profile, place, settings, travelSeconds, onLife, onRemedy, onLoaded = { brief = it })
                     }
                     Spacer(Modifier.height(6.dp))
@@ -333,8 +328,7 @@ fun LoopScreen(
                         QuietButton("THE WEEK, MONTH, YEAR", onClick = onAhead, modifier = Modifier.weight(1f))
                         QuietButton("DID IT HAPPEN?", onClick = onRecord, modifier = Modifier.weight(1f))
                     }
-                    Text(tr("Everything is computed on this phone from your birth time. Nothing leaves it."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
-                    Text("Moon to 0.1 arcsecond · sunrise to the second · checked against JPL, ERFA and the Swiss Ephemeris.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                    Text(tr("Everything is worked out on this phone from your birth time. Nothing leaves it."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
                 }
             }
         }
@@ -459,8 +453,8 @@ private fun PeopleToday(profile: BirthProfile, place: Place, settings: EngineSet
                     } else {
                         val top = pm.lives.maxByOrNull { it.score }
                         val low = pm.lives.minByOrNull { it.score }
-                        Text("${pm.title}. ${top?.life} ${top?.score?.toInt()} is the strongest, ${low?.life?.lowercase()} ${low?.score?.toInt()} asks care.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
-                        if (pm.saturnActive) Text(pm.saturnWords.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Ember)
+                        Text("${top?.life?.let { lifeName(it) }} is going well for them; ${low?.life?.let { lifeName(it).lowercase() }} needs gentleness today.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
+                        if (pm.saturnActive) Text(firstSentence(pm.saturnWords.replaceFirstChar { it.uppercase() }), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Ember)
                     }
                 }
                 if (pm != null) ScoreRing(pm.overall, size = 48.dp, stroke = 4.dp)
@@ -473,7 +467,7 @@ private fun PeopleToday(profile: BirthProfile, place: Place, settings: EngineSet
                 Column(Modifier.weight(1f)) {
                     Text("THE TALK WINDOW", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
                     Text("${localText(w.start, WEEKDAY_DAY)} · ${hm(w.start)} – ${hm(w.end)}", fontFamily = FontFamily.Monospace, fontSize = 15.sp, color = KshanaColors.Text)
-                    Text("The first hour when both your charts read well for love at once (fit ${w.fit.toInt()}).", style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
+                    Text("The best hour this week for the two of you to talk: both of you will be at your warmest and most patient.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
                 }
                 Text(if (s.isAfter(tick)) "in ${countdown(tick, s)}" else "now", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Gold)
             }
@@ -534,25 +528,15 @@ private fun BriefingCard(
         Modifier.fillMaxWidth().glass(18.dp).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text("YOUR READING · AS AN ASTROLOGER WOULD SAY IT", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text("YOUR READING", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         ErrorLine(error)
         val r = b
         if (r == null) {
-            if (error == null) Working("reading your chart aloud…")
+            if (error == null) Working("writing your reading…")
             return@Column
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Column(Modifier.weight(1f)) {
-                Text("BIRTH MOON", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
-                Text(r.moon, fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text)
-            }
-            Column(Modifier.weight(1.4f)) {
-                Text("RUNNING", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
-                Text(r.dasha.replace(" (to ", "\nto ").replace(")", ""), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
-            }
-        }
-        Text(r.saturnWords + ".", style = MaterialTheme.typography.bodyMedium, color = if (r.saturnActive) KshanaColors.Ember else KshanaColors.TextSoft)
-        val shown = if (open) r.paragraphs else r.paragraphs.drop(2).take(1)
+        Text(r.saturnWords.trimEnd('.') + ".", style = MaterialTheme.typography.bodyMedium, color = if (r.saturnActive) KshanaColors.Ember else KshanaColors.TextSoft)
+        val shown = if (open) r.paragraphs else r.paragraphs.take(1)
         for (p in shown) Text(p, fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 25.sp, color = KshanaColors.Text)
         Text(
             if (open) "LESS −" else "THE WHOLE READING +",
@@ -561,7 +545,7 @@ private fun BriefingCard(
         )
         if (open) {
             HorizontalDivider(color = KshanaColors.LineSoft)
-            Text("DAYS TO CIRCLE · THE NEXT THIRTY", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            Text("YOUR BEST DAYS · THE NEXT THIRTY", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
             for (c in r.circled) {
                 Row(Modifier.fillMaxWidth().clickable { onLife(c.life) }.padding(vertical = 3.dp), verticalAlignment = Alignment.Top) {
                     Text(lifeGlyph(c.life), fontSize = 14.sp, color = scoreColor(c.score), modifier = Modifier.width(22.dp).padding(top = 2.dp))
@@ -574,11 +558,11 @@ private fun BriefingCard(
             }
             r.remedy?.let { rem ->
                 HorizontalDivider(color = KshanaColors.LineSoft)
-                Text("THE REMEDY IN BRIEF · ${rem.planet.uppercase()}", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+                Text("WHAT TO DO ABOUT IT", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
                 Text(rem.cause, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
                 for (t in rem.top) {
                     Row(Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.Top) {
-                        Text(t.kind.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.width(78.dp).padding(top = 3.dp))
+                        Text(kindWord(t.kind), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.width(78.dp).padding(top = 3.dp))
                         Column(Modifier.weight(1f)) {
                             Text(t.title, style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
                             Text(t.why, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
@@ -600,14 +584,14 @@ private fun HourLoreCard(h: uniffi.kshana_ffi.HoraRecord, tick: Instant) {
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("${PLANET_GLYPHS[h.lord] ?: ""} ${h.lord}'s hour", fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+            Text("This hour: ${hourShort(h.lord).lowercase()}", fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
             Text("${hm(h.start)} – ${hm(h.end)} · ${countdown(tick, h.end.toJava())} left", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
         }
-        Text(h.words.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
-        Text("${h.deity} · ${h.colour} · ${h.direction} · ${h.metal}", style = MaterialTheme.typography.labelMedium, color = KshanaColors.Gold)
+        Text(hourNature(h.lord).replaceFirstChar { it.uppercase() } + ".", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+        Text("To pray to: ${h.deity} · wear ${h.colour.lowercase()} · face ${h.direction.lowercase()}", style = MaterialTheme.typography.labelMedium, color = KshanaColors.Gold)
         if (open) {
             Text(h.mantra, fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text)
-            Text("For ${h.forWords}. Keep away from ${h.avoid}.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            Text("Good for ${h.forWords}. Keep away from ${h.avoid}.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             val context = LocalContext.current
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (com.kshana.app.system.Chant.running) {
@@ -624,26 +608,16 @@ private fun HourLoreCard(h: uniffi.kshana_ffi.HoraRecord, tick: Instant) {
 }
 
 /**
- * The season in one sentence: "Moon mahadasha, Mercury antardasha to 9 Jan 2028.
- * Ardhashtama until 23 Feb 2028." Facts with dates, in the body type, no colour.
+ * The season in plain words: what the present stretch of life is about and until when,
+ * and the long testing time if one is on. The period's key is parsed, never shown.
  */
 private fun seasonLine(b: BriefingRecord): String {
-    // "Moon mahadasha (to 10 Oct 2030) › Mercury antardasha (to 9 Jan 2028)" → the nearer end.
-    val antarEnd = b.dasha.split(" › ").getOrNull(1)?.substringAfter("(to ")?.substringBefore(")")?.trim()
-    val first = if (!antarEnd.isNullOrBlank()) "This stretch of your life runs to $antarEnd." else ""
-    val saturn = if (b.saturnActive) {
-        val w = b.saturnWords.lowercase()
-        val what = when {
-            "ardhashtama" in w -> "A testing time for home and peace of mind"
-            "ashtama" in w -> "A testing time for health and sudden turns"
-            "peak" in w -> "The long test (sade sati) is at its peak and"
-            "last phase" in w -> "The last part of the long test (sade sati)"
-            "sade sati" in w -> "The long test (sade sati)"
-            else -> "A testing time"
-        }
-        val until = b.saturnUntil?.let { localText(it, DATE_ONLY) }
-        if (until != null) " $what lasts until $until." else " $what is on you."
-    } else ""
+    // The engine's key: "Moon mahadasha (to 10 Oct 2030) › Mercury antardasha (to 9 Jan 2028)".
+    val antar = b.dasha.split(" › ").getOrNull(1)
+    val antarLord = antar?.substringBefore(" ")?.trim()
+    val antarEnd = antar?.substringAfter("(to ")?.substringBefore(")")?.trim()
+    val first = if (!antarEnd.isNullOrBlank() && antarLord != null) "Until $antarEnd, life moves through ${chapterTheme(antarLord)}." else ""
+    val saturn = if (b.saturnActive) " " + firstSentence(b.saturnWords.replaceFirstChar { it.uppercase() }) else ""
     return (first + saturn).trim()
 }
 
@@ -703,7 +677,7 @@ private fun HeroCard(m: MomentRecord, tick: Instant, travelling: Boolean, sky: u
                 if (g == null) {
                     Text("None left today; tomorrow's sunrise starts a new set.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
                 } else {
-                    Text(if (g.now) "Now, until ${hm(g.end)} · ${g.lord} hour" else "${hm(g.start)} · ${g.lord} hour · fit ${g.fit.toInt()}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
+                    Text(if (g.now) "Now, until ${hm(g.end)} · ${hourShort(g.lord).lowercase()}" else "${hm(g.start)} – ${hm(g.end)} · ${hourShort(g.lord).lowercase()}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
                 }
             }
             if (g != null) Text(if (g.now) "now" else countdown(tick, g.start.toJava()), fontFamily = FontFamily.Monospace, fontSize = 20.sp, color = KshanaColors.Gold.copy(alpha = com.kshana.app.ui.theme.breath()))
@@ -867,7 +841,7 @@ private fun HoursStrip(hours: List<HourRecord>, tick: Instant, lives: List<LifeS
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 Text(hm(h.start), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = if (past) KshanaColors.Muted.copy(alpha = 0.5f) else KshanaColors.Muted)
-                Text(h.lord, fontFamily = FontFamily.Serif, fontSize = 15.sp, color = if (past) KshanaColors.TextSoft.copy(alpha = 0.5f) else KshanaColors.Text)
+                Text(hourShort(h.lord), fontFamily = FontFamily.Serif, fontSize = 13.sp, lineHeight = 15.sp, textAlign = TextAlign.Center, color = if (past) KshanaColors.TextSoft.copy(alpha = 0.5f) else KshanaColors.Text)
                 Box(Modifier.size(8.dp).clip(CircleShape).background(if (h.caution) KshanaColors.Ember else scoreColor(mean)))
                 Text(if (h.caution) "pause" else best, style = MaterialTheme.typography.labelSmall, color = if (h.caution) KshanaColors.Ember else KshanaColors.Muted, textAlign = TextAlign.Center)
             }

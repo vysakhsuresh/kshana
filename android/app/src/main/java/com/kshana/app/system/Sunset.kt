@@ -65,7 +65,7 @@ object Sunset {
         val first = pending.last()
         Alerts.post(
             context, 4102, "Did it happen? · ${pending.size} to grade",
-            "The app read ${first.life.lowercase()} at ${first.score.toInt()} today. Say yes or no on the ${first.life} page, and the record learns your chart.",
+            "The app read ${first.life.lowercase()} at ${first.score.toInt()} today. Say yes or no on the ${first.life} page, and the app learns how true it is for you.",
         )
     }
 }

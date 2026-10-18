@@ -2568,6 +2568,9 @@ impl Engine {
 #[derive(Clone, Debug, uniffi::Record)]
 #[allow(missing_docs)]
 pub struct KootaRecord {
+    /// The classical name (Varna … Nadi), a key.
+    pub key: String,
+    /// The plain name the person reads.
     pub name: String,
     pub points: f64,
     pub max: f64,
@@ -2760,6 +2763,7 @@ impl Engine {
                 .kootas
                 .iter()
                 .map(|x| KootaRecord {
+                    key: x.key.to_string(),
                     name: x.name.to_string(),
                     points: x.points,
                     max: x.max,
@@ -2836,8 +2840,8 @@ impl Engine {
             together: c.together * 100.0,
             band: c.band.word().to_string(),
             headline: c.headline.clone(),
-            a_saturn: c.a_saturn.words().to_string(),
-            b_saturn: c.b_saturn.words().to_string(),
+            a_saturn: kshana_rules::plain::long_test(c.a_saturn).to_string(),
+            b_saturn: kshana_rules::plain::long_test(c.b_saturn).to_string(),
             a_saturn_active: c.a_saturn != kshana_rules::SaturnPhase::Clear,
             b_saturn_active: c.b_saturn != kshana_rules::SaturnPhase::Clear,
             notes: c.notes.clone(),
@@ -4043,5 +4047,153 @@ impl Engine {
             season: o.season.clone(),
             season_why: o.season_why.clone(),
         })
+    }
+}
+
+/// The plain-words audit: every engine call the app makes for a person, for three
+/// people at three instants, read the way the person would read it. Any astrology word
+/// in a sentence meant for them fails the test with the field and the sentence.
+#[cfg(test)]
+mod plain_audit {
+    use super::*;
+
+    /// Fields that carry keys, identifiers or the expert layer, never shown to the
+    /// person on the common screens.
+    const NOT_SHOWN: &[&str] = &[
+        "lord", "planet", "graha", "kind", "key", "rule_id", "rule_ids", "source", "life", "band", "trend", "purpose",
+        "verdict", "span", "dosha", "tara_name", "moon_star", "moon", "dasha", "lagna_sign", "houses", "sign", "sub",
+        "star", "dasha_at_birth", "moon_a", "moon_b", "why_expert", "season_why", "kp_star", "kp_sub", "kp_sub_sub",
+        "provenance_engine", "provenance_kernel", "provenance_models", "body", "body_a", "body_b", "aspect", "unit",
+        "signature", "tithi", "nakshatra", "yoga", "hora", "factors", "cautions", "sub_lord", "agents", "ruling_planets",
+        "moon_sub_lord", "question", "effort", "day",
+    ];
+
+    /// `(field, value)` for every string in a Debug rendering.
+    fn strings(debug: &str) -> Vec<(String, String)> {
+        let b = debug.as_bytes();
+        let mut out = Vec::new();
+        let mut field = String::new();
+        let mut i = 0;
+        while i < b.len() {
+            let c = b[i];
+            if c == b'"' {
+                let mut j = i + 1;
+                let mut s = Vec::new();
+                while j < b.len() && b[j] != b'"' {
+                    if b[j] == b'\\' && j + 1 < b.len() {
+                        j += 1;
+                    }
+                    s.push(b[j]);
+                    j += 1;
+                }
+                out.push((field.clone(), String::from_utf8_lossy(&s).into_owned()));
+                i = j + 1;
+                continue;
+            }
+            if c.is_ascii_alphabetic() || c == b'_' {
+                let start = i;
+                while i < b.len() && (b[i].is_ascii_alphanumeric() || b[i] == b'_') {
+                    i += 1;
+                }
+                if i + 1 < b.len() && b[i] == b':' && b[i + 1] == b' ' {
+                    field = debug[start..i].to_string();
+                }
+                continue;
+            }
+            i += 1;
+        }
+        out
+    }
+
+    fn audit(what: &str, debug: String, hits: &mut Vec<String>) {
+        for (f, v) in strings(&debug) {
+            if NOT_SHOWN.contains(&f.as_str()) {
+                continue;
+            }
+            if let Some(w) = kshana_rules::plain::jargon(&v) {
+                hits.push(format!("{what}.{f} [{w}]: {v}"));
+            }
+        }
+    }
+
+    fn at(y: i64, mo: u32, d: u32, h: u32) -> ExactInstant {
+        instant_from_utc(UtcFields { year: y, month: mo, day: d, hour: h, minute: 0, second: 0, nanos: 0 }).unwrap()
+    }
+
+    #[test]
+    fn nothing_the_person_reads_names_the_astrology() {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/de421.bsp");
+        let engine = Engine::open(p.to_string_lossy().into_owned(), None).expect("the kernel is needed for this test");
+        let people = [
+            (at(1990, 2, 20, 5), 9.9312, 76.2673),
+            (at(1997, 9, 22, 13), 9.9312, 76.2673),
+            (at(1975, 6, 3, 23), 28.6139, 77.2090),
+        ];
+        let instants = [at(2026, 10, 17, 5), at(2027, 3, 5, 12), at(2031, 6, 20, 2)];
+        let (hs, ay) = (HouseSystem::Placidus, AyanamsaChoice::Lahiri);
+        let mut hits = Vec::new();
+        let full = std::env::var("KSHANA_AUDIT_FULL").is_ok();
+        for (pi, &(b, la, lo)) in people.iter().enumerate() {
+            let (ob, ola, olo) = people[(pi + 1) % people.len()];
+            for (ti, &t) in instants.iter().enumerate() {
+                let tag = |s: &str| format!("p{pi}t{ti}.{s}");
+                audit(&tag("moment"), format!("{:?}", engine.forecast_moment(b, la, lo, la, lo, hs, ay, t).unwrap()), &mut hits);
+                audit(&tag("briefing"), format!("{:?}", engine.briefing(b, la, lo, la, lo, hs, ay, vec!["Love".into(), "Career".into(), "Money".into(), "Health".into()], t).unwrap()), &mut hits);
+                audit(&tag("letter"), format!("{:?}", engine.letter(b, la, lo, la, lo, hs, ay, t).unwrap()), &mut hits);
+                for s in ["day", "week", "month", "year"] {
+                    audit(&tag(&format!("outlook_{s}")), format!("{:?}", engine.outlook(b, la, lo, la, lo, hs, ay, s.into(), t).unwrap()), &mut hits);
+                }
+                audit(&tag("countdowns"), format!("{:?}", engine.countdowns(b, la, lo, la, lo, hs, ay, t).unwrap()), &mut hits);
+                audit(&tag("festivals"), format!("{:?}", engine.festivals(b, la, lo, hs, ay, t, 35).unwrap()), &mut hits);
+                audit(&tag("year"), format!("{:?}", engine.year_chapter(b, la, lo, la, lo, hs, ay, t).unwrap()), &mut hits);
+                audit(&tag("parihara"), format!("{:?}", engine.parihara(b, la, lo, ay, t, None).unwrap()), &mut hits);
+                for life in life_names() {
+                    if ti == 0 || full {
+                        audit(&tag(&format!("explain_{life}")), format!("{:?}", engine.explain(b, la, lo, la, lo, hs, ay, life.clone(), t).unwrap()), &mut hits);
+                        audit(&tag(&format!("parihara_{life}")), format!("{:?}", engine.parihara(b, la, lo, ay, t, Some(life.clone())).unwrap()), &mut hits);
+                    }
+                    for q in questions() {
+                        if ti == 0 || full {
+                            if let Ok(a) = engine.ask(b, la, lo, la, lo, hs, ay, life.clone(), q.key.clone(), t) {
+                                audit(&tag(&format!("ask_{life}_{}", q.key)), format!("{a:?}"), &mut hits);
+                            }
+                        }
+                    }
+                }
+                if ti == 0 {
+                    for tp in topics().iter().take(if full { 200 } else { 12 }) {
+                        if let Ok(a) = engine.ask_topic(b, la, lo, la, lo, hs, ay, tp.key.clone(), "when".into(), t) {
+                            audit(&tag(&format!("topic_{}", tp.key)), format!("{a:?}"), &mut hits);
+                        }
+                    }
+                    for pu in purposes() {
+                        audit(&tag(&format!("appointment_{}", pu.key)), format!("{:?}", engine.appointment(b, la, lo, la, lo, hs, ay, pu.key.clone(), t).unwrap()), &mut hits);
+                        audit(&tag(&format!("slots_{}", pu.key)), format!("{:?}", engine.best_slots(b, la, lo, la, lo, hs, ay, pu.key.clone(), t, 7, 5).unwrap()), &mut hits);
+                    }
+                    audit(&tag("timeline"), format!("{:?}", engine.timeline(b, la, lo, hs, ay, t).unwrap()), &mut hits);
+                    audit(&tag("kundali"), format!("{:?}", engine.kundali(b, la, lo, ob, ola, olo, hs, ay, true).unwrap()), &mut hits);
+                    audit(&tag("talk"), format!("{:?}", engine.talk_window(b, la, lo, ob, ola, olo, la, lo, hs, ay, t, 14).unwrap()), &mut hits);
+                }
+                audit(&tag("couple"), format!("{:?}", engine.couple(b, la, lo, ob, ola, olo, la, lo, hs, ay, true, t).unwrap()), &mut hits);
+                for q in questions() {
+                    if let Ok(a) = engine.couple_ask(b, la, lo, ob, ola, olo, la, lo, hs, ay, q.key.clone(), t) {
+                        audit(&tag(&format!("couple_ask_{}", q.key)), format!("{a:?}"), &mut hits);
+                    }
+                }
+            }
+        }
+        audit("questions", format!("{:?}", questions()), &mut hits);
+        audit("purposes", format!("{:?}", purposes()), &mut hits);
+        audit("topics", format!("{:?}", topics()), &mut hits);
+        audit("hora_lore", format!("{:?}", hora_lore_all()), &mut hits);
+        let rec = engine.rectify(9.9312, 76.2673, HouseSystem::Placidus, AyanamsaChoice::Lahiri, at(1990, 2, 20, 4), at(1990, 2, 20, 6), vec![LifeEventRecord { at: at(2015, 5, 10, 6), life: "Love".into(), good: true }], 3);
+        audit("rectify", format!("{rec:?}"), &mut hits);
+        hits.sort();
+        hits.dedup();
+        if !hits.is_empty() {
+            let path = std::env::temp_dir().join("kshana_plain_audit.txt");
+            let _ = std::fs::write(&path, hits.join("\n"));
+            panic!("{} sentences name the astrology (all in {}); first 40:\n{}", hits.len(), path.display(), hits.iter().take(40).cloned().collect::<Vec<_>>().join("\n"));
+        }
     }
 }

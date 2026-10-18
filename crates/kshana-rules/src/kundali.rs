@@ -11,6 +11,7 @@ use crate::briefing::{briefing, Briefing};
 use crate::explain::{explain, Relief};
 use crate::forecast::{date_words, moment, slow_series, Band, ForecastError, Life, Natal, SIGN_NAMES};
 use crate::gochara::{favourable_from_moon, SaturnPhase};
+use crate::plain::{chapter_theme, long_test};
 use crate::parashari::{dignity, natural_relation, Dignity};
 use kshana_ephem::Spk;
 use kshana_houses::HouseSystem;
@@ -22,7 +23,9 @@ use kshana_vedic::{nakshatra, sign_lord, Ayanamsa, DashaLord};
 /// One koota.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Koota {
-    /// Name.
+    /// The classical name (Varna … Nadi): a key, never shown to the person.
+    pub key: &'static str,
+    /// The plain name the person reads.
     pub name: &'static str,
     /// Points given.
     pub points: f64,
@@ -87,32 +90,32 @@ const LAL_KITAB: &str = "Lal Kitab";
 fn dosha_remedies(nadi: bool, bhakoot: bool, gana: bool, kuja_unbalanced: bool, maitri_low: bool, yoni_low: bool) -> Vec<DoshaRemedy> {
     let mut v = Vec::new();
     if nadi {
-        v.push(DoshaRemedy { dosha: "Nadi", title: "Mahamrityunjaya japa together, 108 a day for 40 days", why: "The Nadi dosha touches health and the line of children; the Mrityunjaya mantra is the classical shield for both.", source: DHARMA_SINDHU, optional: true });
-        v.push(DoshaRemedy { dosha: "Nadi", title: "Nadi dosha nivarana: feed and clothe the poor on a Monday, and give grain in the Moon's name", why: "The pulse (nadi) is the Moon's; its dosha is paid down in the Moon's currency, food and care.", source: VIVAHA, optional: false });
-        v.push(DoshaRemedy { dosha: "Nadi", title: "Keep the body's rhythm: shared meals, shared sleep hours, no all-nighters", why: "Same-nadi pairs tire the same way at the same time; a kept routine is the daily remedy.", source: "Dharma reading of the dosha", optional: false });
+        v.push(DoshaRemedy { dosha: "Nadi", title: "Chant the Mahamrityunjaya mantra together, 108 times a day for 40 days", why: "Protects health and the coming of children, the two things this warning touches.", source: DHARMA_SINDHU, optional: true });
+        v.push(DoshaRemedy { dosha: "Nadi", title: "Feed and clothe the poor on a Monday, and give rice or grain", why: "The tradition pays this warning down in food and care given to others.", source: VIVAHA, optional: false });
+        v.push(DoshaRemedy { dosha: "Nadi", title: "Keep the body's rhythm: shared meals, shared sleep hours, no all-nighters", why: "Two people with this warning tire the same way at the same time; a kept routine protects both.", source: "Dharma reading of the dosha", optional: false });
     }
     if bhakoot {
-        v.push(DoshaRemedy { dosha: "Bhakoot", title: "Lakshmi-Narayana or Gauri-Shankara pooja on a Friday or Monday", why: "The Bhakoot dosha is a quarrel of the two Moons; the divine couple is worshipped to reconcile them.", source: DHARMA_SINDHU, optional: true });
-        v.push(DoshaRemedy { dosha: "Bhakoot", title: "Strengthen the weaker Moon: water, rice and white cloth given on Mondays; a Monday fast kept lightly", why: "A sound Moon rides out a hard Moon-to-Moon angle; the texts treat the dosha as half-cancelled when the Moon is strong.", source: VIVAHA, optional: false });
-        v.push(DoshaRemedy { dosha: "Bhakoot", title: "Decide money matters only after sleeping on them, and never during a quarrel", why: "The 2/12, 5/9 and 6/8 angles work through money, children and sudden turns; a one-night rule takes the heat out.", source: "Dharma reading of the dosha", optional: false });
+        v.push(DoshaRemedy { dosha: "Bhakoot", title: "Lakshmi-Narayana or Gauri-Shankara pooja on a Friday or Monday", why: "Worship of the divine couple is the tradition's way to reconcile two people whose fortunes pull apart.", source: DHARMA_SINDHU, optional: true });
+        v.push(DoshaRemedy { dosha: "Bhakoot", title: "Give water, rice and white cloth on Mondays, and keep a light Monday fast", why: "Calms the mind of the more anxious partner; a calm mind rides out the hard combination.", source: VIVAHA, optional: false });
+        v.push(DoshaRemedy { dosha: "Bhakoot", title: "Decide money matters only after sleeping on them, and never during a quarrel", why: "This combination works through money, children and sudden turns; a one-night rule takes the heat out.", source: "Dharma reading of the dosha", optional: false });
     }
     if gana {
-        v.push(DoshaRemedy { dosha: "Gana", title: "Gauri pooja, and Durga Saptashati read once a month (or heard)", why: "A gentle and a fierce temper under one roof: Gauri and Durga are the two tempers made one.", source: DHARMA_SINDHU, optional: true });
-        v.push(DoshaRemedy { dosha: "Gana", title: "A rule of words: no verdicts after nine at night, and the sharp word apologised for before sleep", why: "The Gana dosha shows as sharp words at the wrong hour; the remedy is a rule about hours and words.", source: "Dharma reading of the dosha", optional: false });
+        v.push(DoshaRemedy { dosha: "Gana", title: "Gauri pooja, and Durga Saptashati read once a month (or heard)", why: "A gentle and a fiery temper under one roof: Gauri and Durga are the two tempers made one.", source: DHARMA_SINDHU, optional: true });
+        v.push(DoshaRemedy { dosha: "Gana", title: "A rule of words: no verdicts after nine at night, and the sharp word apologised for before sleep", why: "The clash of tempers shows as sharp words at the wrong hour; the remedy is a rule about hours and words.", source: "Dharma reading of the dosha", optional: false });
     }
     if kuja_unbalanced {
-        v.push(DoshaRemedy { dosha: "Kuja", title: "Mangala shanti: Hanuman Chalisa or the Mangala stotra on Tuesdays, and red lentils given", why: "Mars in the houses of the home and the partner heats them; the shanti cools the graha that carries the dosha.", source: DHARMA_SINDHU, optional: true });
-        v.push(DoshaRemedy { dosha: "Kuja", title: "Mangala Gauri vrata on the Tuesdays of Shravana, or any four Tuesdays", why: "The vrata the tradition prescribes for the Mars-touched partner, kept for the marriage.", source: VIVAHA, optional: false });
-        v.push(DoshaRemedy { dosha: "Kuja", title: "Spend Mars: hard exercise, repairs, a kitchen garden, anything that burns heat with the hands", why: "The dosha is unspent Mars; spent on effort it does not spend itself on the partner.", source: LAL_KITAB, optional: false });
-        v.push(DoshaRemedy { dosha: "Kuja", title: "The tradition also names a Kumbha vivaha (a symbolic first wedding) before the marriage; many families keep it, many do not", why: "Stated for completeness; it is a rite of the family's choosing, not a requirement of the chart.", source: VIVAHA, optional: true });
+        v.push(DoshaRemedy { dosha: "Kuja", title: "Hanuman Chalisa on Tuesdays, and red lentils given", why: "Cools the heat, haste and quarrels one partner brings into the home.", source: DHARMA_SINDHU, optional: true });
+        v.push(DoshaRemedy { dosha: "Kuja", title: "Mangala Gauri vrata on the Tuesdays of Shravana, or any four Tuesdays", why: "The fast the tradition prescribes for the hot-tempered partner, kept for the marriage.", source: VIVAHA, optional: false });
+        v.push(DoshaRemedy { dosha: "Kuja", title: "Burn the heat with the hands: hard exercise, repairs, a kitchen garden", why: "Energy spent on effort is not spent on the partner.", source: LAL_KITAB, optional: false });
+        v.push(DoshaRemedy { dosha: "Kuja", title: "The tradition also names a Kumbha vivaha (a symbolic first wedding) before the marriage; many families keep it, many do not", why: "Stated for completeness; it is a rite of the family's choosing, not a requirement.", source: VIVAHA, optional: true });
     }
     if maitri_low {
-        v.push(DoshaRemedy { dosha: "Graha Maitri", title: "Each of you keeps the other's Moon lord's day: a small act in its colour and grain", why: "Enemy Moon lords are made friends by serving each other's lord; the day, the colour and the grain are the lord's.", source: LAL_KITAB, optional: false });
+        v.push(DoshaRemedy { dosha: "Graha Maitri", title: "Each of you does one small kind act a week in the way the other likes, without being asked", why: "When minds pull apart, serving the other's way of seeing things brings them back together.", source: LAL_KITAB, optional: false });
         v.push(DoshaRemedy { dosha: "Graha Maitri", title: "Say the hard thing in writing first, then talk", why: "When the minds pull apart, the written word gives each mind its own hour to understand.", source: "Dharma reading of the dosha", optional: false });
     }
     if yoni_low {
-        v.push(DoshaRemedy { dosha: "Yoni", title: "Rati-Kama or Uma-Maheshwara worship on a Friday", why: "The Yoni koota is the body's ease; the tradition turns to the divine pair for it.", source: VIVAHA, optional: true });
-        v.push(DoshaRemedy { dosha: "Yoni", title: "Unhurried time without a screen, at the same hour, twice a week", why: "Enemy yonis need time to learn each other; the remedy is kept time, not a rite.", source: "Dharma reading of the dosha", optional: false });
+        v.push(DoshaRemedy { dosha: "Yoni", title: "Rati-Kama or Uma-Maheshwara worship on a Friday", why: "For physical ease between the two of you; the tradition turns to the divine pair for it.", source: VIVAHA, optional: true });
+        v.push(DoshaRemedy { dosha: "Yoni", title: "Unhurried time without a screen, at the same hour, twice a week", why: "Bodies and habits that must learn each other need kept time, not a rite.", source: "Dharma reading of the dosha", optional: false });
     }
     v
 }
@@ -129,6 +132,7 @@ fn varna(sign: u8) -> u8 {
     }
 }
 
+#[allow(dead_code)] // the classical names, kept for the expert layer
 const VARNA_NAMES: [&str; 4] = ["Shudra", "Vaishya", "Kshatriya", "Brahmin"];
 
 /// Vashya class by Moon sign and half: 0 Chatushpada, 1 Manava, 2 Jalachara, 3 Vanachara, 4 Keeta.
@@ -159,6 +163,7 @@ fn vashya(sidereal: f64) -> usize {
     }
 }
 
+#[allow(dead_code)] // the classical names, kept for the expert layer
 const VASHYA_NAMES: [&str; 5] = ["Chatushpada", "Manava", "Jalachara", "Vanachara", "Keeta"];
 
 /// Vashya points (convention: the common symmetric table).
@@ -176,6 +181,7 @@ fn vashya_points(a: usize, b: usize) -> f64 {
 /// Yoni by nakshatra: 0 Horse, 1 Elephant, 2 Sheep, 3 Serpent, 4 Dog, 5 Cat, 6 Rat, 7 Cow,
 /// 8 Buffalo, 9 Tiger, 10 Deer, 11 Monkey, 12 Mongoose, 13 Lion.
 const YONI: [usize; 27] = [0, 1, 2, 3, 3, 4, 5, 2, 5, 6, 6, 7, 8, 9, 8, 9, 10, 10, 4, 11, 12, 11, 13, 0, 13, 7, 1];
+#[allow(dead_code)] // the classical names, kept for the expert layer
 const YONI_NAMES: [&str; 14] = [
     "Horse", "Elephant", "Sheep", "Serpent", "Dog", "Cat", "Rat", "Cow", "Buffalo", "Tiger", "Deer", "Monkey",
     "Mongoose", "Lion",
@@ -200,10 +206,12 @@ const YONI_POINTS: [[u8; 14]; 14] = [
 
 /// Gana by nakshatra: 0 Deva, 1 Manushya, 2 Rakshasa.
 const GANA: [u8; 27] = [0, 1, 2, 1, 0, 1, 0, 0, 2, 2, 1, 1, 0, 2, 0, 2, 0, 2, 2, 1, 1, 0, 2, 2, 1, 1, 0];
+#[allow(dead_code)] // the classical names, kept for the expert layer
 const GANA_NAMES: [&str; 3] = ["Deva", "Manushya", "Rakshasa"];
 
 /// Nadi by nakshatra: 0 Aadi, 1 Madhya, 2 Antya.
 const NADI: [u8; 27] = [0, 1, 2, 2, 1, 0, 0, 1, 2, 2, 1, 0, 0, 1, 2, 2, 1, 0, 0, 1, 2, 2, 1, 0, 0, 1, 2];
+#[allow(dead_code)] // the classical names, kept for the expert layer
 const NADI_NAMES: [&str; 3] = ["Aadi", "Madhya", "Antya"];
 
 fn moon_words(sidereal: f64) -> String {
@@ -224,27 +232,12 @@ fn kuja(n: &Natal) -> (bool, String) {
     let d = dignity(DashaLord::Mars, mars.sidereal);
     let cancelled = matches!(d, Dignity::Own | Dignity::Moolatrikona | Dignity::Exalted);
     if !(hit_l || hit_m) {
-        return (false, format!("Mars in the {} from the lagna and the {} from the Moon: no Kuja dosha", crate::forecast::ordinal(from_lagna), crate::forecast::ordinal(from_moon)));
+        return (false, "no sign of heat in married life".to_string());
     }
     if cancelled {
-        return (
-            false,
-            format!(
-                "Mars in the {} from the lagna, but {:?} in {}: the dosha is cancelled",
-                crate::forecast::ordinal(if hit_l { from_lagna } else { from_moon }),
-                d,
-                SIGN_NAMES[mars.sign as usize]
-            ),
-        );
+        return (false, "a sign of heat in married life, cancelled by its own strength".to_string());
     }
-    (
-        true,
-        format!(
-            "Kuja dosha: Mars in the {} from the {}",
-            crate::forecast::ordinal(if hit_l { from_lagna } else { from_moon }),
-            if hit_l { "lagna" } else { "Moon" }
-        ),
-    )
+    (true, "a sign of heat, haste and quarrels in married life".to_string())
 }
 
 /// Match two charts. `a_is_groom` orients the two one-directional kootas (Varna, and the
@@ -263,15 +256,15 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
     let (va, vb) = (varna(g), varna(br));
     let p = if va >= vb { 1.0 } else { 0.0 };
     kootas.push(Koota {
-        name: "Varna",
+        key: "Varna",
+        name: "Outlook on life",
         points: p,
         max: 1.0,
-        words: format!(
-            "{} and {}: {}",
-            VARNA_NAMES[varna(sa) as usize],
-            VARNA_NAMES[varna(sb) as usize],
-            if p > 0.0 { "the temperaments sit in the right order" } else { "the order of temperaments is reversed (convention: groom's varna not below the bride's)" }
-        ),
+        words: if p > 0.0 {
+            "your ways of seeing life fit together; who leads and who supports comes naturally".to_string()
+        } else {
+            "your ways of seeing life sit in the opposite order to the tradition's; agree early who decides what".to_string()
+        },
         source: MC,
     });
 
@@ -279,20 +272,19 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
     let (xa, xb) = (vashya(ma), vashya(mb));
     let p = vashya_points(xa, xb);
     kootas.push(Koota {
-        name: "Vashya",
+        key: "Vashya",
+        name: "Mutual pull",
         points: p,
         max: 2.0,
-        words: format!(
-            "{} and {}: {}",
-            VASHYA_NAMES[xa],
-            VASHYA_NAMES[xb],
+        words: {
             match p {
-                x if x >= 2.0 => "the same kind; each holds the other easily",
-                x if x >= 1.0 => "different kinds that get on",
-                x if x > 0.0 => "a pull in one direction only",
-                _ => "kinds that do not hold each other",
+                x if x >= 2.0 => "you are drawn to each other equally; each holds the other easily",
+                x if x >= 1.0 => "you are different but get on; the pull is there on both sides",
+                x if x > 0.0 => "one of you is drawn more than the other; balance it with attention",
+                _ => "neither naturally holds the other; closeness has to be built on purpose",
             }
-        ),
+            .to_string()
+        },
         source: MC,
     });
 
@@ -302,15 +294,18 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
     let good = |t: usize| !matches!(t, 2 | 4 | 6);
     let p = (if good(ta) { 1.5 } else { 0.0 }) + (if good(tb) { 1.5 } else { 0.0 });
     kootas.push(Koota {
-        name: "Tara",
+        key: "Tara",
+        name: "Luck together",
         points: p,
         max: 3.0,
-        words: format!(
-            "their star is your {} tara, yours is their {}: {}",
-            crate::gochara::TARA_NAMES[ta],
-            crate::gochara::TARA_NAMES[tb],
-            if p >= 3.0 { "both stars bless each other" } else if p > 0.0 { "one direction is blessed, the other tests" } else { "the stars test each other both ways" }
-        ),
+        words: if p >= 3.0 {
+            "you bring each other luck: good things tend to happen when you are together"
+        } else if p > 0.0 {
+            "one of you brings the other luck; the other brings tests"
+        } else {
+            "you test each other's luck; big decisions go better when made calmly, apart first"
+        }
+        .to_string(),
         source: MC,
     });
 
@@ -318,21 +313,20 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
     let (ya, yb) = (YONI[na], YONI[nb]);
     let p = YONI_POINTS[ya][yb] as f64;
     kootas.push(Koota {
-        name: "Yoni",
+        key: "Yoni",
+        name: "Physical ease",
         points: p,
         max: 4.0,
-        words: format!(
-            "{} and {}: {}",
-            YONI_NAMES[ya],
-            YONI_NAMES[yb],
+        words: {
             match p as u8 {
-                4 => "the same nature; deep physical ease",
-                3 => "friendly natures",
-                2 => "neutral natures; ease comes with time",
-                1 => "natures that must learn each other",
-                _ => "sworn enemies in the old tables; the body needs patience",
+                4 => "deep physical ease and closeness",
+                3 => "easy, friendly closeness",
+                2 => "physical ease comes with time",
+                1 => "your bodies and habits must learn each other",
+                _ => "physical closeness needs patience and gentleness",
             }
-        ),
+            .to_string()
+        },
         source: MC,
     });
 
@@ -353,20 +347,18 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
         }
     };
     kootas.push(Koota {
-        name: "Graha Maitri",
+        key: "Graha Maitri",
+        name: "Meeting of minds",
         points: p,
         max: 5.0,
-        words: format!(
-            "Moon lords {la:?} and {lb:?}: {}",
-            match p {
-                x if x >= 5.0 => "friends; the minds meet",
-                x if x >= 4.0 => "friend and neutral; the minds meet most days",
-                x if x >= 3.0 => "neutral to each other; respect rather than instinct",
-                x if x >= 1.0 => "a friend to an enemy; one gives more",
-                x if x > 0.0 => "neutral to an enemy; the minds pull apart",
-                _ => "enemies; the minds pull apart",
-            }
-        ),
+        words: match p {
+            x if x >= 5.0 => "your minds meet: you understand each other without many words",
+            x if x >= 4.0 => "your minds meet most days",
+            x if x >= 3.0 => "you respect each other's thinking more than you share it",
+            x if x >= 1.0 => "one of you gives more understanding than the other",
+            _ => "your minds pull in different directions; talk things through slowly",
+        }
+        .to_string(),
         source: "BPHS, Naisargika maitri; Muhurta Chintamani",
     });
 
@@ -381,19 +373,18 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
         _ => 0.0,
     };
     kootas.push(Koota {
-        name: "Gana",
+        key: "Gana",
+        name: "Temperament",
         points: p,
         max: 6.0,
-        words: format!(
-            "{} and {}: {}",
-            GANA_NAMES[ga as usize],
-            GANA_NAMES[gb as usize],
+        words: {
             match p as u8 {
-                6 | 5 => "the same temper, or a gentle one with a human one",
-                1 => "a gentle temper with a fierce one; sharp words at times",
-                _ => "a human temper with a fierce one; the old tables warn",
+                6 | 5 => "your tempers suit each other",
+                1 => "one of you is gentle and the other fiery; sharp words come at times",
+                _ => "one of you is easy-going and the other fiery; anger needs a rule between you",
             }
-        ),
+            .to_string()
+        },
         source: MC,
     });
 
@@ -403,26 +394,22 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
     let friends = la == lb || (natural_relation(la, lb) == 1 && natural_relation(lb, la) == 1);
     let p = if !dosha || friends { 7.0 } else { 0.0 };
     kootas.push(Koota {
-        name: "Bhakoot",
+        key: "Bhakoot",
+        name: "Shared fortunes",
         points: p,
         max: 7.0,
-        words: format!(
-            "Moons {} apart ({}/{}): {}",
-            crate::forecast::ordinal(d),
-            d,
-            ((1 - d as i64).rem_euclid(12) + 1),
-            if !dosha {
-                "a flowing distance; money, health and children find room"
-            } else if friends {
-                "a hard distance, cancelled because the Moon lords are friends"
-            } else {
-                match d {
-                    2 | 12 => "the 2/12 pair: money and words need care",
-                    5 | 9 => "the 5/9 pair: children and faith need care",
-                    _ => "the 6/8 pair: health and sudden turns need care",
-                }
+        words: if !dosha {
+            "money, health and children flow well between you"
+        } else if friends {
+            "a hard combination for shared fortunes, softened because your natures are friendly"
+        } else {
+            match d {
+                2 | 12 => "money and harsh words need care between you",
+                5 | 9 => "children and beliefs need care between you",
+                _ => "health and sudden turns need care between you",
             }
-        ),
+        }
+        .to_string(),
         source: MC,
     });
 
@@ -432,21 +419,20 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
     let cancelled = same_nadi && ((sa == sb && na != nb) || (na == nb && sa != sb));
     let p = if !same_nadi || cancelled { 8.0 } else { 0.0 };
     kootas.push(Koota {
-        name: "Nadi",
+        key: "Nadi",
+        name: "Health and children",
         points: p,
         max: 8.0,
-        words: format!(
-            "{} and {} nadi: {}",
-            NADI_NAMES[da as usize],
-            NADI_NAMES[db as usize],
+        words: {
             if !same_nadi {
-                "different pulses; the bodies and the line of children are protected"
+                "your bodies balance each other; health and children are protected"
             } else if cancelled {
-                "the same pulse, cancelled by the Moons' sign and star (the classical exception)"
+                "a classic warning about health and children, cancelled in your case"
             } else {
-                "the same pulse: the old tables call this the heaviest dosha; health and children ask for remedy"
+                "the most serious warning in matching: health and children need care and the remedies below"
             }
-        ),
+            .to_string()
+        },
         source: MC,
     });
 
@@ -466,15 +452,15 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
     let (ka, kwa) = kuja(a);
     let (kb, kwb) = kuja(b);
     let kuja_words = if ka && kb {
-        "Both charts carry Kuja dosha, so it is balanced: Mars meets Mars and neither is burned.".to_string()
+        "Both of you carry the same sign of heat in married life, so it balances out: neither burns the other.".to_string()
     } else if ka || kb {
         format!(
-            "{} in {} chart. The other chart does not carry it, so Mars asks for a remedy, or a Mars-strong chart beside it.",
-            if ka { &kwa } else { &kwb },
-            if ka { "the first" } else { "the second" }
+            "The {} person carries {}; the other does not. Expect sharper quarrels than usual; the remedies below cool it.",
+            if ka { "first" } else { "second" },
+            if ka { &kwa } else { &kwb }
         )
     } else {
-        format!("{kwa}. {kwb}.")
+        format!("First person: {kwa}. Second person: {kwb}.")
     };
 
     // The heaviest kootas speak first.
@@ -491,21 +477,21 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
     }
     // Moon-to-Moon synastry beyond the kootas.
     match d {
-        7 => strengths.push("Your Moons face each other across the 7th: the classical bond of partners.".into()),
-        1 => strengths.push("Your Moons share a sign: you feel the same weather on the same day.".into()),
-        3 | 11 => strengths.push(format!("Their Moon is in your {}: friendship and gain flow easily between you.", crate::forecast::ordinal(d))),
+        7 => strengths.push("Emotionally you complete each other: the classic bond of life partners.".into()),
+        1 => strengths.push("You feel the same moods on the same days: easy to understand, but low days come together.".into()),
+        3 | 11 => strengths.push("Friendship and gain flow easily between you.".into()),
         _ => {}
     }
     if favourable_from_moon(DashaLord::Moon).contains(&d) && d != 1 && d != 7 {
-        strengths.push("Each Moon sits in a house the other's transit tables call favourable.".into());
+        strengths.push("Your moods lift each other more often than they drag.".into());
     }
     let venus_a = a.facts.planet(DashaLord::Venus).sign as i64;
     let venus_b = b.facts.planet(DashaLord::Venus).sign as i64;
     let vd = ((venus_b - venus_a).rem_euclid(12) + 1) as u8;
     if matches!(vd, 1 | 5 | 7 | 9) {
-        strengths.push(format!("Your Venuses stand {} apart: the same taste in love and comfort.", if vd == 1 { "a sign".to_string() } else { format!("{} signs", vd - 1) }));
+        strengths.push("You share the same taste in love, comfort and pleasure.".into());
     } else if matches!(vd, 6 | 8) {
-        frictions.push("Your Venuses stand 6/8 apart: what pleases one puzzles the other.".into());
+        frictions.push("What pleases one of you in love and comfort puzzles the other: ask, do not assume.".into());
     }
 
     let headline = format!(
@@ -516,13 +502,13 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
             format!("Strongest, {}. ", strengths[0].replacen(": ", ": ", 1))
         },
         if frictions.is_empty() {
-            "Nothing in the tables stands against you.".to_string()
+            "Nothing in the matching stands against you.".to_string()
         } else {
             format!("Hardest, {}.", frictions[0].trim_end_matches('.'))
         }
     );
 
-    let points_of = |name: &str| kootas.iter().find(|k| k.name == name).map(|k| k.points).unwrap_or(0.0);
+    let points_of = |name: &str| kootas.iter().find(|k| k.key == name).map(|k| k.points).unwrap_or(0.0);
     let remedies = dosha_remedies(
         points_of("Nadi") == 0.0,
         points_of("Bhakoot") == 0.0,
@@ -709,27 +695,37 @@ pub fn couple(
 
     let mut notes = Vec::new();
     match (ma.saturn, mb.saturn) {
-        (SaturnPhase::Clear, SaturnPhase::Clear) => notes.push("Saturn is clear of both Moons.".into()),
-        (x, SaturnPhase::Clear) => notes.push(format!("Saturn is testing the first chart ({}), not the second. The weight is one-sided; the other can carry.", x.words())),
-        (SaturnPhase::Clear, y) => notes.push(format!("Saturn is testing the second chart ({}), not the first. The weight is one-sided; the other can carry.", y.words())),
-        (x, y) => notes.push(format!("Saturn is testing both Moons at once ({}; {}). The old texts call this a shared trial: it passes, and it binds those who stay.", x.words(), y.words())),
+        (SaturnPhase::Clear, SaturnPhase::Clear) => notes.push("Neither of you is in a long testing period now.".into()),
+        (x, SaturnPhase::Clear) => notes.push(format!(
+            "The first person is in {}; the second is not. The weight is one-sided, so the other can carry the pair through it.",
+            long_test(x)
+        )),
+        (SaturnPhase::Clear, y) => notes.push(format!(
+            "The second person is in {}; the first is not. The weight is one-sided, so the other can carry the pair through it.",
+            long_test(y)
+        )),
+        (x, y) => notes.push(format!(
+            "Both of you are under pressure at once ({}; {}). A shared hard time passes, and it binds those who stay.",
+            long_test(x),
+            long_test(y)
+        )),
     }
-    let jup_a = ma.lives[0].components.iter().find(|c| c.key == "gochara").map(|c| c.note.clone()).unwrap_or_default();
-    if !jup_a.is_empty() {
-        notes.push(format!("First chart, transits for love: {jup_a}."));
+    if !a_cause.is_empty() {
+        notes.push(format!("For the first person's love just now: {a_cause}."));
     }
-    let jup_b = mb.lives[0].components.iter().find(|c| c.key == "gochara").map(|c| theirs(&c.note)).unwrap_or_default();
-    if !jup_b.is_empty() {
-        notes.push(format!("Second chart, transits for love: {jup_b}."));
+    if !b_cause.is_empty() {
+        notes.push(format!("For the second person's love just now: {b_cause}."));
     }
-    notes.push(format!(
-        "Running periods: {} · {}",
-        ma.dasha.iter().take(3).map(|p| format!("{:?}", p.lord)).collect::<Vec<_>>().join(" › "),
-        mb.dasha.iter().take(3).map(|p| format!("{:?}", p.lord)).collect::<Vec<_>>().join(" › ")
-    ));
+    if let (Some(pa), Some(pb)) = (ma.dasha.first(), mb.dasha.first()) {
+        notes.push(format!(
+            "The first person's life is centred on {}; the second's on {}.",
+            chapter_theme(pa.lord),
+            chapter_theme(pb.lord)
+        ));
+    }
 
     let mut headline = format!(
-        "Together you read {:.0} now ({}): love is {:.0} in the first chart and {:.0} in the second.",
+        "Together you score {:.0} now ({}): love is {:.0} for the first person and {:.0} for the second.",
         together * 100.0,
         band.word(),
         a_love * 100.0,
@@ -761,50 +757,57 @@ pub fn couple(
     third_person_briefing(&mut b_briefing);
     let mut together_words = Vec::new();
     together_words.push(format!(
-        "Two seasons run at once. The first chart is in {}; the second in {}. {} {}",
-        a_briefing.dasha,
-        b_briefing.dasha,
+        "You are living two different seasons at once. {} {} {}",
+        match (ma.dasha.first(), mb.dasha.first()) {
+            (Some(pa), Some(pb)) => format!(
+                "The first person's life is about {} until {}; the second's is about {} until {}.",
+                chapter_theme(pa.lord),
+                date_words(pa.end, lon),
+                chapter_theme(pb.lord),
+                date_words(pb.end, lon)
+            ),
+            _ => String::new(),
+        },
         match (ma.saturn, mb.saturn) {
-            (SaturnPhase::Clear, SaturnPhase::Clear) => "Saturn tests neither Moon now.".to_string(),
-            (x, SaturnPhase::Clear) => format!("Saturn tests the first chart's Moon ({}); the second is free of it, and can carry.", x.words().split(':').next().unwrap_or("")),
-            (SaturnPhase::Clear, y) => format!("Saturn tests the second chart's Moon ({}); the first is free of it, and can carry.", y.words().split(':').next().unwrap_or("")),
-            (x, y) => format!("Saturn tests both Moons ({}; {}): a shared trial, which binds those who stay.", x.words().split(':').next().unwrap_or(""), y.words().split(':').next().unwrap_or("")),
+            (SaturnPhase::Clear, SaturnPhase::Clear) => "Neither of you is in a long testing period now.".to_string(),
+            (x, SaturnPhase::Clear) => format!("The first person is in {}; the second is free of it and can carry the pair.", long_test(x)),
+            (SaturnPhase::Clear, y) => format!("The second person is in {}; the first is free of it and can carry the pair.", long_test(y)),
+            (x, y) => format!("Both of you are in a hard time ({}; {}): a shared trial, which binds those who stay.", long_test(x), long_test(y)),
         },
         match (a_briefing.saturn_until, b_briefing.saturn_until) {
-            (Some(ta), _) if ma.saturn != SaturnPhase::Clear => format!("The first chart's Saturn phase ends {}.", date_words(ta, lon)),
-            (_, Some(tb)) if mb.saturn != SaturnPhase::Clear => format!("The second chart's Saturn phase ends {}.", date_words(tb, lon)),
+            (Some(ta), _) if ma.saturn != SaturnPhase::Clear => format!("The first person's testing time ends {}.", date_words(ta, lon)),
+            (_, Some(tb)) if mb.saturn != SaturnPhase::Clear => format!("The second person's testing time ends {}.", date_words(tb, lon)),
             _ => String::new(),
         }
     ));
     let d = ((b.moon_sign() - a.moon_sign()).rem_euclid(12) + 1) as u8;
     together_words.push(format!(
-        "Your Moons stand {} apart ({}). Love reads {:.0} in the first chart and {:.0} in the second this second; the pair, with the match of {:.1} of 36 folded in, reads {:.0}. {}",
-        crate::forecast::ordinal(d),
+        "{} Love scores {:.0} for the first person and {:.0} for the second right now; as a pair, with your match of {:.1} out of 36 counted in, you score {:.0}. {}",
         match d {
-            1 => "the same sign: the same weather on the same day",
-            7 => "facing each other: the classical angle of partners",
-            3 | 11 => "a friendly angle: ease and gain flow between you",
-            2 | 12 => "the 2/12 angle: money and words need care",
-            5 | 9 => "the 5/9 angle: children and faith need care",
-            6 | 8 => "the 6/8 angle: health and sudden turns need care",
-            _ => "a square angle: effort, not ease, but it builds",
+            1 => "You feel the same moods on the same days.",
+            7 => "Emotionally you complete each other, the classic bond of partners.",
+            3 | 11 => "Friendship and gain flow easily between you.",
+            2 | 12 => "Money and harsh words need care between you.",
+            5 | 9 => "Children and beliefs need care between you.",
+            6 | 8 => "Health and sudden turns need care between you.",
+            _ => "Your bond takes effort rather than ease, but it builds.",
         },
         a_love * 100.0,
         b_love * 100.0,
         match_total,
         together * 100.0,
         if a_love < b_love {
-            format!("The wait is on the first chart's side: {}.", a_cause)
+            format!("The wait is on the first person's side: {}.", a_cause)
         } else if b_love < a_love {
-            format!("The wait is on the second chart's side: {}.", b_cause)
+            format!("The wait is on the second person's side: {}.", b_cause)
         } else {
-            "The two charts carry the same weight today.".to_string()
+            "You both carry the same weight today.".to_string()
         }
     ));
     let first_lift = a_relief.iter().map(|r| (r, "first")).chain(b_relief.iter().map(|r| (r, "second"))).min_by_key(|(r, _)| r.at.tai_ns());
     if let Some((r, who)) = first_lift {
         together_words.push(format!(
-            "The first lasting lift for the pair comes on {}, in the {who} chart: {} ({:+.0} points). {}",
+            "The first lasting lift for the pair comes on {}, on the {who} person's side: {} ({:+.0} points). {}",
             date_words(r.at, lon),
             r.what,
             r.gain * 100.0,
@@ -921,7 +924,7 @@ pub fn couple_ask(
             || v.starts_with("Take it")
             || v.starts_with("Go ahead")
             || v.starts_with("Within")
-            || v.starts_with("Nothing has left")
+            || v.starts_with("Nothing has truly left")
     };
     let (ya, yb) = (yes(&aa.verdict), yes(&ab.verdict));
     let verdict: String = match (ya, yb, question) {
@@ -929,13 +932,13 @@ pub fn couple_ask(
         (true, true, Question::WillItRecover) => "Yes, it mends between you".into(),
         (true, true, Question::ShouldI) => "Take the step, both of you".into(),
         (true, true, Question::GoodTimeNow) => "Now serves you both".into(),
-        (true, true, Question::When) => format!("Both charts open: {}", if aa.when_start.map(|t| t.tai_ns()) <= ab.when_start.map(|t| t.tai_ns()) { ab.verdict.to_ascii_lowercase() } else { aa.verdict.to_ascii_lowercase() }),
+        (true, true, Question::When) => format!("Both of you: {}", if aa.when_start.map(|t| t.tai_ns()) <= ab.when_start.map(|t| t.tai_ns()) { ab.verdict.to_ascii_lowercase() } else { aa.verdict.to_ascii_lowercase() }),
         (true, true, _) => "Yes, for both of you".into(),
-        (true, false, _) => "Your chart says yes; theirs waits".into(),
-        (false, true, _) => "Their chart says yes; yours waits".into(),
+        (true, false, _) => "Yes for you; they need more time".into(),
+        (false, true, _) => "Yes for them; you need more time".into(),
         (false, false, Question::WillItReturn) => "Not as it was, for either of you".into(),
         (false, false, Question::GoodTimeNow) => "Not this hour, for either of you".into(),
-        (false, false, Question::When) => "Neither chart opens soon".into(),
+        (false, false, Question::When) => "Not soon, for either of you".into(),
         (false, false, _) => "Not yet, for either of you".into(),
     };
     let (ws, we) = match (aa.when_start, aa.when_end, ab.when_start, ab.when_end) {
@@ -955,19 +958,19 @@ pub fn couple_ask(
         _ => (None, None),
     };
     let headline = format!(
-        "{verdict}. Your chart says \"{}\" ({:.0}); theirs says \"{}\" ({:.0}). {}",
+        "{verdict}. For you: \"{}\" ({:.0}); for them: \"{}\" ({:.0}). {}",
         aa.verdict,
         aa.score * 100.0,
         ab.verdict,
         ab.score * 100.0,
         if (aa.score - ab.score).abs() > 0.15 {
             if aa.score > ab.score {
-                "The wait is on their side: their period has to open first."
+                "The wait is on their side: their time has to open first."
             } else {
-                "The wait is on your side: your period has to open first."
+                "The wait is on your side: your time has to open first."
             }
         } else {
-            "The two charts agree."
+            "You both read the same."
         }
     );
     Ok(CoupleAnswer {
@@ -1033,7 +1036,7 @@ mod tests {
         assert!(!k.headline.is_empty() && !k.kuja_words.is_empty());
         // matching a chart with itself gives every symmetric koota its maximum except Nadi
         let s = kundali(&a, &a, true);
-        assert!(s.kootas.iter().filter(|k| k.name != "Nadi").all(|k| k.points == k.max), "{:?}", s.kootas);
+        assert!(s.kootas.iter().filter(|k| k.key != "Nadi").all(|k| k.points == k.max), "{:?}", s.kootas);
         let at = Utc::new(2026, 10, 17, 5, 0, 0, 0).unwrap().to_instant().unwrap();
         let c = couple(&spk, None, &a, &b, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, k.total, at).unwrap();
         assert_eq!(c.series.len(), 37);
@@ -1042,5 +1045,15 @@ mod tests {
         let q = couple_ask(&spk, None, &a, &b, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, Question::WillItReturn, at).unwrap();
         assert!(!q.verdict.is_empty());
         assert!((0.3..=0.95).contains(&q.confidence));
+        use crate::plain::jargon;
+        let mut said: Vec<String> = vec![k.headline.clone(), k.kuja_words.clone(), c.headline.clone(), q.headline.clone(), q.verdict.clone(), c.a_cause.clone(), c.b_cause.clone()];
+        said.extend(k.kootas.iter().flat_map(|x| [x.name.to_string(), x.words.clone()]));
+        said.extend(k.strengths.iter().chain(k.frictions.iter()).cloned());
+        said.extend(k.remedies.iter().flat_map(|r| [r.title.to_string(), r.why.to_string()]));
+        said.extend(c.notes.iter().chain(c.together_words.iter()).cloned());
+        said.extend(c.a_relief.iter().chain(c.b_relief.iter()).map(|r| r.what.clone()));
+        for s in &said {
+            assert_eq!(jargon(s), None, "{s}");
+        }
     }
 }

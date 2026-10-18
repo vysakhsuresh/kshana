@@ -131,7 +131,7 @@ fun LifeScreen(
                 }
             }
             Text(
-                if (showWhy) "HIDE THE REASONS −" else "WHY? +",
+                if (showWhy) "LESS −" else "WHAT LIES BEHIND IT +",
                 style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
                 modifier = Modifier.clickable { showWhy = !showWhy }.padding(vertical = 4.dp),
             )
@@ -143,13 +143,13 @@ fun LifeScreen(
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
                             Text(c.note.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
-                            Text("${componentName(c.key)} · ${(c.score * 100).toInt()} · weight ${"%.0f".format(c.weight * 100)}% · ${c.ruleId}", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+                            Text("${componentName(c.key)} · ${(c.score * 100).toInt()}", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
                         }
                     }
                 }
             }
         } else if (error == null) {
-            Working("reading your chart…")
+            Working("reading your day…")
         }
 
         if (now != null) ExplainPanel(profile, place, settings, life, onRemedy = onRemedy)
@@ -174,7 +174,7 @@ fun LifeScreen(
         Spacer(Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             GoldButton("ASK", onClick = onAsk, modifier = Modifier.weight(1f))
-            QuietButton("REMEDY", onClick = onRemedy, modifier = Modifier.weight(1f))
+            QuietButton("WHAT TO DO", onClick = onRemedy, modifier = Modifier.weight(1f))
         }
     }
 }
@@ -221,11 +221,12 @@ private fun scoreBandWord(score: Double): String = when {
 }
 
 private fun componentName(key: String): String = when (key) {
-    "dasha" -> "Running periods"
-    "gochara" -> "Transits from your Moon"
-    "tara" -> "Tara bala"
-    "hora" -> "Planetary hour"
-    "kala" -> "Limbs of the day"
+    "natal" -> "What you were born with"
+    "dasha" -> "This stretch of your life"
+    "gochara" -> "This season"
+    "tara" -> "Today's luck"
+    "hora" -> "This hour"
+    "kala" -> "The time of day"
     else -> key
 }
 
@@ -284,7 +285,7 @@ private fun TodayPanel(hours: List<HourRecord>, idx: Int, life: String) {
         val h = b.value
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("${hm(h.start)} – ${hm(h.end)}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky, modifier = Modifier.width(110.dp))
-            Text("${h.lord} hour", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+            Text(hourNature(h.lord).replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text, modifier = Modifier.weight(1f))
             Text(fits[b.index].toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 14.sp, color = scoreColor(fits[b.index]))
         }
     }

@@ -5,8 +5,8 @@
 //! choice of varshesha); twelve monthly slow samples give each life its tone for the
 //! year.
 
-use crate::forecast::{date_words, slow_series, Band, ForecastError, Life, Natal, SIGN_NAMES};
-use crate::timeline::lord_theme;
+use crate::forecast::{date_words, slow_series, Band, ForecastError, Life, Natal};
+
 use kshana_chart::{compute, ChartInput};
 use kshana_ephem::Spk;
 use kshana_events::{solar_return, MICROSECOND_NS};
@@ -99,20 +99,21 @@ pub fn year_chapter(
     let age = (start.ns_since(natal.birth) as f64 / (365.25 * NS_PER_DAY as f64)).round() as u32;
     let band = Band::of(tone);
     let lon = obs.longitude_deg;
-    let theme = format!("{lord:?}, lord of the year: {}", lord_theme(lord));
+    let theme = format!("This year leans towards {}. {}", crate::plain::chapter_theme(lord), crate::plain::chapter_prediction(lord));
+    let kind = match band {
+        Band::Bright => "a bright year",
+        Band::Good => "a good year",
+        Band::Steady => "an even year",
+        Band::Slow => "a slow year",
+        Band::Hold => "a year to hold still",
+    };
     let headline = format!(
-        "Your {} year runs from {} to {}, rising in {} under {:?}. It reads {:.0} overall ({}): {} is the year's gift at {:.0}; {} asks patience at {:.0}.",
+        "Your {} year runs from {} to {}. Overall it is {kind}: {} is its gift, and {} asks the most patience.",
         ordinal_age(age + 1),
         date_words(start, lon),
         date_words(end, lon),
-        SIGN_NAMES[lagna_sign as usize],
-        lord,
-        tone * 100.0,
-        band.word(),
         Life::ALL[bi].name(),
-        tones[bi] * 100.0,
-        Life::ALL[wi].name(),
-        tones[wi] * 100.0
+        Life::ALL[wi].name().to_ascii_lowercase()
     );
     Ok(YearChapter {
         start,
@@ -173,5 +174,7 @@ mod tests {
         assert_eq!(y.age, 36);
         assert_eq!(y.months.len(), 12);
         assert!(y.headline.contains("37th year"));
+        assert_eq!(crate::plain::jargon(&y.headline), None, "{}", y.headline);
+        assert_eq!(crate::plain::jargon(&y.theme), None, "{}", y.theme);
     }
 }

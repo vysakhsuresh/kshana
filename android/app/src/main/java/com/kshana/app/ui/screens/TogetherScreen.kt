@@ -146,7 +146,7 @@ fun TogetherScreen(
         Text("US", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         Text(tr("The two of you"), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         Text(
-            "Put the other person's birth beside yours. The classical match, how the two charts stand this very moment, the months behind and ahead, what lifts each side next, and any question about the two of you.",
+            "Put the other person's birth beside yours. How well you two match, how things stand between you today, the months behind and ahead, what will help, and any question about the two of you.",
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
         )
         ErrorLine(error)
@@ -188,7 +188,7 @@ fun TogetherScreen(
 
         val k = kundali
         if (k == null) {
-            if (error == null) Working("laying the two charts side by side…")
+            if (error == null) Working("putting the two of you side by side…")
         } else {
             Column(
                 Modifier.fillMaxWidth().glass(18.dp).padding(18.dp),
@@ -202,11 +202,10 @@ fun TogetherScreen(
                     }
                 }
                 Text(k.headline, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)
-                Text("Your Moon ${k.moonA} · theirs ${k.moonB} · ${ordinalText(k.moonDistance.toInt())} from yours", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
                 Text(k.kujaWords, style = MaterialTheme.typography.bodyMedium, color = if (k.kujaA != k.kujaB) KshanaColors.Ember else KshanaColors.TextSoft)
             }
             Text(
-                if (showKootas) "HIDE THE EIGHT KOOTAS −" else "THE EIGHT KOOTAS +",
+                if (showKootas) "LESS −" else "THE EIGHT POINTS OF THE MATCH +",
                 style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
                 modifier = Modifier.clickable { showKootas = !showKootas }.padding(vertical = 4.dp),
             )
@@ -223,7 +222,6 @@ fun TogetherScreen(
                                 Box(Modifier.fillMaxWidth((x.points / x.max).toFloat().coerceIn(0.02f, 1f)).height(5.dp).background(scoreColor(x.points / x.max * 100.0)))
                             }
                             Text(x.words.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.padding(top = 4.dp))
-                            Text(x.source, fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
                         }
                     }
                 }
@@ -240,7 +238,7 @@ fun TogetherScreen(
 
         val c = couple
         if (c == null) {
-            if (k != null && error == null) Working("reading this moment for both of you, and three years of months…")
+            if (k != null && error == null) Working("reading both of you, and three years of months…")
         } else {
             SectionLabel("Right now, together")
             Column(
@@ -252,7 +250,7 @@ fun TogetherScreen(
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         PersonScore(profile.name.substringBefore(' ').ifBlank { "You" }, c.aLove, KshanaColors.Sky)
                         PersonScore(partner.name.substringBefore(' '), c.bLove, KshanaColors.Leaf)
-                        Text("love in each chart, this second", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
+                        Text("how love feels for each of you today", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
                     }
                 }
                 val me = profile.name.substringBefore(' ').ifBlank { "You" }
@@ -279,7 +277,7 @@ fun TogetherScreen(
             c.peakAt?.let { Bullet("Best month ahead: ${localText(it, DATE_ONLY)} at ${c.peakScore.toInt()}.", KshanaColors.Gold) }
             c.lowAt?.let { Bullet("Lowest month ahead: ${localText(it, DATE_ONLY)} at ${c.lowScore.toInt()}. Hold what you have there.", KshanaColors.Ember) }
 
-            SectionLabel("The briefing · said plainly")
+            SectionLabel("What each of you is going through")
             val me = profile.name.substringBefore(' ').ifBlank { "You" }
             val them = partner.name.substringBefore(' ')
             for (p in c.togetherWords) Text(personalise(p, me, them), fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 25.sp, color = KshanaColors.Text)
@@ -289,28 +287,27 @@ fun TogetherScreen(
             SectionLabel("What to do about it")
             val remedies = k?.remedies.orEmpty()
             if (remedies.isEmpty() && c.aBriefing.remedy == null && c.bBriefing.remedy == null) {
-                Text("Nothing in the match or in either chart asks for a remedy today.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+                Text("Nothing about the two of you needs a remedy today.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             }
             if (remedies.isNotEmpty()) {
                 Text("For the match itself", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Gold)
                 for (r in remedies) {
                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
-                        Text(r.dosha.uppercase(), style = MaterialTheme.typography.labelSmall, color = if (r.optional) KshanaColors.Muted else KshanaColors.Gold, modifier = Modifier.width(78.dp).padding(top = 3.dp))
+                        Text(doshaWord(r.dosha), style = MaterialTheme.typography.labelSmall, color = if (r.optional) KshanaColors.Muted else KshanaColors.Gold, modifier = Modifier.width(78.dp).padding(top = 3.dp))
                         Column(Modifier.weight(1f)) {
                             Text(r.title, style = MaterialTheme.typography.titleMedium, color = if (r.optional) KshanaColors.TextSoft else KshanaColors.Text)
                             Text(r.why, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
-                            Text(r.source + if (r.optional) " · optional" else "", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
                         }
                     }
                 }
             }
             for ((who, rb) in listOf(me to c.aBriefing.remedy, them to c.bBriefing.remedy)) {
                 if (rb == null) continue
-                Text("For $who · ${rb.planet}", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Gold)
+                Text("For $who", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Gold)
                 Text(rb.cause, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
                 for (t in rb.top) {
                     Row(Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.Top) {
-                        Text(t.kind.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.width(78.dp).padding(top = 3.dp))
+                        Text(kindWord(t.kind), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.width(78.dp).padding(top = 3.dp))
                         Column(Modifier.weight(1f)) {
                             Text(t.title, style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
                             Text(t.why, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
@@ -341,7 +338,7 @@ fun TogetherScreen(
                     }
                 }
             }
-            GoldButton(if (asking) "READING BOTH CHARTS…" else "ASK · ABOUT US", enabled = !asking, onClick = { asked = "$question|${System.currentTimeMillis()}" }, modifier = Modifier.fillMaxWidth())
+            GoldButton(if (asking) "WORKING IT OUT…" else "ASK · ABOUT US", enabled = !asking, onClick = { asked = "$question|${System.currentTimeMillis()}" }, modifier = Modifier.fillMaxWidth())
             val ca = coupleAnswer
             if (ca != null) {
                 Column(
@@ -355,11 +352,11 @@ fun TogetherScreen(
                             Text(ca.verdict, style = MaterialTheme.typography.titleLarge, color = scoreColor(ca.score))
                         }
                     }
-                    Text(ca.headline, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)
+                    Text(personalise(ca.headline, profile.name.substringBefore(' ').ifBlank { "You" }, partner.name.substringBefore(' ')), fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)
                     val ws = ca.whenStart
                     val we = ca.whenEnd
                     if (ws != null && we != null) {
-                        Text("The window both charts open", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+                        Text("When it opens for both of you", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
                         Text("${whenText(ws)} – ${whenText(we)}", fontFamily = FontFamily.Monospace, fontSize = 15.sp, color = KshanaColors.Sky)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -370,14 +367,14 @@ fun TogetherScreen(
                     }
                 }
                 Text(
-                    if (showWhy) "HIDE THE REASONS −" else "WHY? +",
+                    if (showWhy) "LESS −" else "WHAT LIES BEHIND IT +",
                     style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
                     modifier = Modifier.clickable { showWhy = !showWhy }.padding(vertical = 4.dp),
                 )
                 if (showWhy) {
-                    Text("Your chart", fontFamily = FontFamily.Serif, fontSize = 16.sp, color = KshanaColors.Sky)
+                    Text("You", fontFamily = FontFamily.Serif, fontSize = 16.sp, color = KshanaColors.Sky)
                     for (r in ca.a.reasons) Bullet(r, KshanaColors.Sky)
-                    Text("Their chart", fontFamily = FontFamily.Serif, fontSize = 16.sp, color = KshanaColors.Leaf)
+                    Text("Them", fontFamily = FontFamily.Serif, fontSize = 16.sp, color = KshanaColors.Leaf)
                     for (r in ca.b.reasons) Bullet(r, KshanaColors.Leaf)
                 }
                 if (ca.score < 56) QuietButton("REMEDY FOR LOVE", onClick = { onRemedy("Love") }, modifier = Modifier.fillMaxWidth())
@@ -390,7 +387,7 @@ fun TogetherScreen(
             partners = ProfileStore.partners(context)
             selected = ProfileStore.selectedPartner(context).coerceIn(0, (partners.size - 1).coerceAtLeast(0))
         })
-        Text("Both charts are computed on this phone. Nothing leaves it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        Text("Everything about the two of you is worked out on this phone. Nothing leaves it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
     }
 }
 
@@ -427,7 +424,7 @@ private fun PeopleGrid(people: List<BirthProfile>, place: Place, settings: Engin
                 if (pm != null) {
                     val top = pm.lives.maxByOrNull { it.score }
                     val low = pm.lives.minByOrNull { it.score }
-                    Text("${top?.life} ${top?.score?.toInt()} strongest · ${low?.life?.lowercase()} ${low?.score?.toInt()} asks care · ${pm.title}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
+                    Text("${top?.life?.let { lifeName(it) }} is going well for them; ${low?.life?.let { lifeName(it).lowercase() }} needs gentleness today.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
                 } else {
                     Text("reading…", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
                 }
@@ -483,14 +480,14 @@ private fun MatchTwo(people: List<BirthProfile>, settings: EngineSettings) {
 
 /** The engine speaks of "the first chart" and "the second"; the screen uses names. */
 private fun personalise(s: String, me: String, them: String): String =
-    s.replace("in the first chart and", "in your chart and")
-        .replace("in the second.", "in $them's.")
-        .replace("the first chart", "your chart")
-        .replace("the second chart", "$them's chart")
-        .replace("First chart, transits", "Your transits")
-        .replace("Second chart, transits", "$them's transits")
-        .replace("First chart", me)
-        .replace("Second chart", them)
+    s.replace("for the first person and", "for you and")
+        .replace("for the second.", "for $them.")
+        .replace("the first person's", "your")
+        .replace("the second person's", "$them's")
+        .replace("First person:", "$me:")
+        .replace("Second person:", "$them:")
+        .replace("the first person", "you")
+        .replace("the second person", them)
 
 private fun trimPoints(x: Double): String = if (x == x.toLong().toDouble()) x.toLong().toString() else "%.1f".format(x)
 
@@ -512,7 +509,7 @@ private fun coupleWords(key: String, fallback: String): String = when (key) {
     else -> fallback
 }
 
-/** One person's briefing under Us: the Moon, the periods, Saturn, and the paragraphs. */
+/** One person's reading under Us, in plain words. */
 @Composable
 private fun PersonBriefing(name: String, b: uniffi.kshana_ffi.BriefingRecord, c: Color) {
     var open by remember { mutableStateOf(false) }
@@ -525,10 +522,8 @@ private fun PersonBriefing(name: String, b: uniffi.kshana_ffi.BriefingRecord, c:
             Spacer(Modifier.width(8.dp))
             Text(name, fontFamily = FontFamily.Serif, fontSize = 18.sp, color = c)
         }
-        Text("Birth Moon ${b.moon}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
-        Text(b.dasha, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
         Text(b.saturnWords + ".", style = MaterialTheme.typography.bodyMedium, color = if (b.saturnActive) KshanaColors.Ember else KshanaColors.TextSoft)
-        val shown = if (open) b.paragraphs else b.paragraphs.drop(3)
+        val shown = if (open) b.paragraphs else b.paragraphs.take(1)
         for (p in shown) Text(p.replace("Their birth Moon", "$name's birth Moon").replace("They are in", "$name is in"), fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 24.sp, color = KshanaColors.Text)
         Text(
             if (open) "LESS −" else "THE WHOLE READING FOR ${name.uppercase()} +",

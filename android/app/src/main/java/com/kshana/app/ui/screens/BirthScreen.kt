@@ -47,13 +47,13 @@ private data class LevelCopy(val headline: String, val detail: String)
 
 /** Ascendant ≈ 0°15′ per minute of clock time; the odds below follow that rate. */
 private val LEVEL_COPY = listOf(
-    LevelCopy("The sky is fixed.", "The Ascendant moves about 0°15′ per minute. With an exact time every cusp is a point, not a band."),
-    LevelCopy("A quarter degree of doubt.", "The Ascendant drifts about 0°15′ across this window. Roughly one in a hundred and twenty people change rising sign; houses and the Moon hold."),
-    LevelCopy("A degree and a quarter.", "The Ascendant drifts about 1°15′. Roughly one in twenty-four people change rising sign; the Moon stays within 0°03′."),
-    LevelCopy("Nearly four degrees.", "The Ascendant drifts about 3°45′. One in eight people change rising sign here, and house cusps shift visibly."),
-    LevelCopy("Half a sign of doubt.", "The Ascendant drifts about 15°. One in two people change rising sign; houses are read with caution, planets by sign are safe."),
-    LevelCopy("More than a sign.", "The Ascendant drifts about 45°, more than a whole sign. The rising sign cannot be known; the Moon still holds to within 1°40′."),
-    LevelCopy("No time at all.", "Without a time, planets by sign and the Moon's nakshatra mostly survive. The Ascendant, the houses and the dasha start date do not."),
+    LevelCopy("The time is exact.", "Every reading is as sharp as it can be, down to the hour."),
+    LevelCopy("A little doubt.", "Everything holds; a few hour-by-hour readings may shift slightly."),
+    LevelCopy("Some doubt.", "Daily and monthly readings hold; the exact hour of a few turns may move."),
+    LevelCopy("Real doubt.", "Most readings hold; some dates may move by a few days."),
+    LevelCopy("Large doubt.", "The broad picture holds; dates for some parts of life may be off by weeks."),
+    LevelCopy("Very large doubt.", "Only the broad picture holds. Use Find your exact birth time under More to sharpen it."),
+    LevelCopy("No time at all.", "The broad seasons and your daily luck hold. Dates for each part of life cannot be trusted."),
 )
 
 /**
@@ -66,9 +66,9 @@ fun BirthScreen(
     onCast: (BirthProfile) -> Unit,
     heading: String = "BIRTH",
     title: String = "The moment you arrived",
-    intro: String = "Date, clock time and place, as written on the record. Say how sure the time is; the sky is drawn to that width.",
+    intro: String = "Date, clock time and place, as written on the record. Say how sure the time is; the readings are drawn to that width.",
     nameLabel: String = "Name",
-    button: String = "CAST THE SKY",
+    button: String = "SEE MY READING",
     persist: Boolean = true,
     onBack: (() -> Unit)? = null,
 ) {
@@ -213,7 +213,7 @@ fun BirthScreen(
                 onCast(p)
             }
         }, modifier = Modifier.fillMaxWidth())
-        Text("Everything is computed on this phone. Nothing leaves it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(top = 4.dp))
+        Text("Everything is worked out on this phone. Nothing leaves it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(top = 4.dp))
     }
 }
 

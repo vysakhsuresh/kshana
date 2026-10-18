@@ -85,7 +85,7 @@ fun LetterScreen(profile: BirthProfile, place: Place, settings: EngineSettings, 
             return@Column
         }
         Text(l.title, style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
-        Text("${profile.name} · birth Moon ${l.briefing.moon} · written ${localText(l.from, DATE_ONLY)} for ${place.name}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        Text("For ${profile.name} · written ${localText(l.from, DATE_ONLY)} at ${place.name}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         Column(
             Modifier.fillMaxWidth().glass(18.dp).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -100,7 +100,7 @@ fun LetterScreen(profile: BirthProfile, place: Place, settings: EngineSettings, 
                     appendLine(l.title)
                     appendLine()
                     for (p in l.paragraphs) { appendLine(p); appendLine() }
-                    appendLine("Kshana · computed on the phone, to the second.")
+                    appendLine("Kshana")
                 }
                 val i = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_SUBJECT, l.title).putExtra(Intent.EXTRA_TEXT, text)
                 runCatching { context.startActivity(Intent.createChooser(i, "Share the letter")) }
@@ -114,7 +114,7 @@ fun LetterScreen(profile: BirthProfile, place: Place, settings: EngineSettings, 
             Row(Modifier.fillMaxWidth().clickable { onLife(s.life) }.padding(vertical = 8.dp), verticalAlignment = Alignment.Top) {
                 Text(lifeGlyph(s.life), fontSize = 16.sp, color = scoreColor(s.mean), modifier = Modifier.width(26.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("${s.life} · ${s.trend}", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
+                    Text("${lifeName(s.life)} · ${trendWord(s.trend)}", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
                     Text(s.trendWords, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
                     val bs = s.bestStart
                     if (bs != null) Text("best ${localText(bs, DAY_MON)} · ${s.bestScore.toInt()}" + (s.lowStart?.let { "  ·  go easy ${localText(it, DAY_MON)} · ${s.lowScore.toInt()}" } ?: ""), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
@@ -123,7 +123,7 @@ fun LetterScreen(profile: BirthProfile, place: Place, settings: EngineSettings, 
             }
         }
         if (l.festivals.isNotEmpty()) {
-            SectionLabel("Observances")
+            SectionLabel("Holy days this month")
             for (f in l.festivals) {
                 Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
                     Text(localText(f.at, WEEKDAY_DAY), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.width(96.dp))
@@ -135,6 +135,6 @@ fun LetterScreen(profile: BirthProfile, place: Place, settings: EngineSettings, 
             }
         }
         Spacer(Modifier.height(4.dp))
-        Text("A fresh letter is written each day you open it; the one on your birth star's day is the month's.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        Text("A fresh letter is written each day you open it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
     }
 }

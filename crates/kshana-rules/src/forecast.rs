@@ -30,7 +30,7 @@ use kshana_houses::HouseSystem;
 use kshana_sky::Observer;
 use kshana_time::{EopTable, Instant, Utc, NS_PER_DAY, NS_PER_SEC};
 use kshana_vedic::dasha::YEAR_365_25_NS;
-use kshana_vedic::panchanga::{NAKSHATRA_NAMES, TITHI_NAMES};
+use kshana_vedic::panchanga::TITHI_NAMES;
 use kshana_vedic::{karana, nakshatra, tithi, vimshottari_levels, Ayanamsa, DashaLord, DashaPeriod};
 
 /// Sign names, 0 = Aries.
@@ -430,6 +430,7 @@ pub(crate) const GRAHAS: [DashaLord; 9] = [
     DashaLord::Ketu,
 ];
 
+#[allow(dead_code)]
 pub(crate) const LEVEL_NAMES: [&str; 5] = ["mahadasha", "antardasha", "pratyantar", "sookshma", "prana"];
 pub(crate) const LEVEL_WEIGHTS: [f64; 5] = [0.35, 0.30, 0.20, 0.10, 0.05];
 
@@ -462,6 +463,7 @@ fn bav_index(g: DashaLord) -> Option<usize> {
     })
 }
 
+#[allow(dead_code)]
 pub(crate) fn ordinal(h: u8) -> String {
     match h {
         1 => "1st".into(),
@@ -560,39 +562,12 @@ pub fn natal_component_for(natal: &Natal, area: Area, name: &str) -> Component {
     let b = crate::parashari::assess(&natal.facts, area);
     let kp = (0.5 + 0.5 * p.net.clamp(-1.0, 1.0)).clamp(0.0, 1.0);
     let score = (0.5 * kp + 0.5 * b.score).clamp(0.0, 1.0);
-    let houses = |v: &[crate::kp::Significance]| {
-        v.iter()
-            .map(|s| s.house.to_string())
-            .collect::<Vec<_>>()
-            .join(", ")
-    };
+    let n = crate::plain::cap(name);
     let note = match (p.promised, b.score >= 0.5) {
-        (true, true) => format!(
-            "your birth chart promises {name}: {:?}, sub-lord of the {}, signifies houses {} and the Parashari reading agrees ({:.0}%)",
-            p.sub_lord,
-            crate::forecast::ordinal(area.primary),
-            houses(&p.fulfilling),
-            b.score * 100.0
-        ),
-        (true, false) => format!(
-            "your birth chart promises {name} by KP ({:?} signifies {}) though the Parashari reading is cautious ({:.0}%)",
-            p.sub_lord,
-            houses(&p.fulfilling),
-            b.score * 100.0
-        ),
-        (false, true) => format!(
-            "your birth chart carries {name} through Parashari ({:.0}%) while the KP sub-lord {:?} leans to houses {}",
-            b.score * 100.0,
-            p.sub_lord,
-            if p.denying.is_empty() { "outside the matter".to_string() } else { houses(&p.denying) }
-        ),
-        (false, false) => format!(
-            "your birth chart makes {name} hard-won: {:?}, sub-lord of the {}, signifies {} and the Parashari reading is {:.0}%",
-            p.sub_lord,
-            crate::forecast::ordinal(area.primary),
-            if p.denying.is_empty() { "none of its houses".to_string() } else { format!("the negating houses {}", houses(&p.denying)) },
-            b.score * 100.0
-        ),
+        (true, true) => format!("{n} is clearly promised in your life; it comes to you more easily than to most"),
+        (true, false) => format!("{n} is promised in your life, though it arrives with some effort"),
+        (false, true) => format!("{n} is possible for you with steady effort; it is not handed over"),
+        (false, false) => format!("{n} is hard-won in your life; patience and effort decide it"),
     };
     Component {
         key: "natal",
@@ -642,21 +617,14 @@ pub(crate) fn dasha_items(natal: &Natal, life: Life, levels: &[DashaPeriod]) -> 
         .take(5)
         .map(|(i, p)| {
             let (s, houses) = lord_score(natal, life, p.lord);
+            let level = ["chapter of your life", "stretch of your life", "few-month phase", "few-week phase", "few-day phase"][i.min(4)];
+            let name = life.name().to_ascii_lowercase();
             let words = if houses.is_empty() {
-                format!(
-                    "{:?} {} does not touch your {} houses",
-                    p.lord,
-                    LEVEL_NAMES[i],
-                    life.name().to_ascii_lowercase()
-                )
+                format!("this {level} leaves {name} to run on its own")
+            } else if s >= 0.5 {
+                format!("this {level} brings {} to {name}", crate::plain::support(p.lord))
             } else {
-                format!(
-                    "{:?} {} carries your {} houses ({})",
-                    p.lord,
-                    LEVEL_NAMES[i],
-                    life.name().to_ascii_lowercase(),
-                    houses
-                )
+                format!("this {level} brings {} to {name}", crate::plain::pressure(p.lord))
             };
             DashaItem {
                 lord: p.lord,
@@ -792,24 +760,17 @@ pub(crate) fn gochara_items(
         let contrib = r * v * av;
         den += r;
         let words = if saturn_phase != SaturnPhase::Clear {
-            saturn_phase.words().to_string()
+            format!("{} is running", saturn_phase.words())
         } else if g == DashaLord::Moon && h == 8 {
-            "Chandrashtama: the Moon is in the 8th from your Moon".to_string()
+            "these are the two heaviest days of your month: moods dip and plans slip".to_string()
+        } else if fav && obstructed {
+            format!("a season of {} is held back for now", crate::plain::support(g))
+        } else if fav {
+            format!("the present season brings {}", crate::plain::support(g))
+        } else if adverse {
+            format!("the present season brings {}", crate::plain::pressure(g))
         } else {
-            format!(
-                "{:?} in the {} from your Moon{}",
-                g,
-                ordinal(h),
-                if obstructed {
-                    " (obstructed by vedha)"
-                } else if fav {
-                    " (favourable)"
-                } else if adverse {
-                    " (testing)"
-                } else {
-                    ""
-                }
-            )
+            "a neutral season, neither helping nor hindering".to_string()
         };
         items.push(GocharaItem {
             graha: g,
@@ -885,7 +846,7 @@ pub(crate) fn hora_component(natal: &Natal, life: Life, hora: &Hora) -> Componen
         key: "hora",
         score,
         weight: 0.13,
-        note: format!("{:?} hora: {}", hora.lord, hora.words),
+        note: format!("this is {}", crate::plain::hour_nature(hora.lord)),
         rule_id: "KS-H-0001",
     }
 }
@@ -900,37 +861,32 @@ pub(crate) fn kala_component(sky: &Sky, day: Option<&SolarDay>, obs: &Observer, 
         let wd = weekday(d, obs) as usize;
         if in_window(at, rahu_kala(d, obs)) {
             score = 0.1;
-            notes.push("Rahu kala: finish, do not begin".into());
+            notes.push("the day's unlucky stretch: finish what you started, begin nothing".into());
         } else if in_window(at, slot_window(d, YAMAGANDA[wd])) {
             score = 0.15;
-            notes.push("Yamaganda: a pause, not a start".into());
+            notes.push("a risky stretch of the day: pause, do not start".into());
         } else if in_window(at, slot_window(d, GULIKA[wd])) {
             score = 0.2;
-            notes.push("Gulika kala: let things stand".into());
+            notes.push("a heavy stretch of the day: let things stand".into());
         } else if in_window(at, abhijit_window(d)) {
             score = 1.0;
-            notes.push("Abhijit muhurta: the day's winning minutes".into());
+            notes.push("the day's lucky minutes: begin what matters".into());
         }
     }
     if GOOD_STARS.contains(&n.index) {
         score += 0.15;
-        notes.push(format!("{} is an auspicious star", n.name()));
+        notes.push("the calendar marks today as lucky for beginnings".into());
     }
     if matches!(ti.number % 15, 4 | 9 | 14) || ti.number == 30 {
         score -= 0.2;
-        notes.push(format!("{} is a rikta tithi", ti.name()));
+        notes.push("the calendar marks today as an empty day: avoid starting new things".into());
     }
     if k.name == "Vishti" {
         score -= 0.2;
-        notes.push("Vishti (Bhadra) karana".into());
+        notes.push("a blocked half-day on the calendar: avoid starting new things".into());
     }
     if notes.is_empty() {
-        notes.push(format!(
-            "{} {} tithi, {} star",
-            if ti.is_shukla() { "Shukla" } else { "Krishna" },
-            TITHI_NAMES[((ti.number - 1) % 15) as usize],
-            n.name()
-        ));
+        notes.push("an ordinary day on the calendar".into());
     }
     Component {
         key: "kala",
@@ -1079,15 +1035,15 @@ pub fn headline(life: Life, band: Band, seed: u64) -> &'static str {
         ],
         (Life::Home, Band::Bright) => &[
             "Property and home matters move well. Sign, build, shift.",
-            "A strong time for the house: repairs, purchase, rent.",
+            "A strong time for the home: repairs, purchase, rent.",
         ],
         (Life::Home, Band::Good) => &[
-            "Good for house work and paperwork about property.",
+            "Good for work on the home and paperwork about property.",
             "Home projects progress. Measure, plan, fix.",
         ],
         (Life::Home, Band::Steady) => &[
             "Home matters are stable. Maintain, do not expand.",
-            "A quiet day for the house.",
+            "A quiet day at home.",
         ],
         (Life::Home, Band::Slow) => &[
             "Expect small delays with land, rent or repairs.",
@@ -1095,7 +1051,7 @@ pub fn headline(life: Life, band: Band, seed: u64) -> &'static str {
         ],
         (Life::Home, Band::Hold) => &[
             "No property deals today. Wait for a better hour.",
-            "Hold moves, purchases and agreements about the house.",
+            "Hold moves, purchases and agreements about the home.",
         ],
         (Life::Travel, Band::Bright) => &[
             "Journeys go smoothly. Book it, go.",
@@ -1151,24 +1107,98 @@ fn moment_words(band: Band, hora: Option<&Hora>, tara: usize) -> String {
     };
     let mut s = lead.to_string();
     if let Some(h) = hora {
-        s.push_str(&format!(" · {:?} hour", h.lord));
+        s.push_str(" · ");
+        s.push_str(crate::plain::hour_short(h.lord));
     }
     s.push_str(" · ");
-    s.push_str(TARA_NAMES[tara]);
-    s.push_str(" day");
+    s.push_str(crate::plain::day_short(tara));
     s
 }
 
-fn because(components: &[Component]) -> String {
-    components
-        .iter()
-        .max_by(|a, b| {
-            let fa = (a.score - 0.5).abs() * a.weight;
-            let fb = (b.score - 0.5).abs() * b.weight;
-            fa.partial_cmp(&fb).unwrap_or(std::cmp::Ordering::Equal)
-        })
-        .map(|c| c.note.clone())
-        .unwrap_or_default()
+/// The calendar side of the moment in plain words: a caution window, the winning
+/// minutes, or the day's own quality.
+pub(crate) fn kala_plain(sky: &Sky, day: Option<&SolarDay>, obs: &Observer, at: Instant) -> String {
+    if let Some(d) = day {
+        let wd = weekday(d, obs) as usize;
+        if in_window(at, rahu_kala(d, obs)) {
+            return "this is the day's unlucky window: finish what you started, begin nothing".into();
+        }
+        if in_window(at, slot_window(d, YAMAGANDA[wd])) || in_window(at, slot_window(d, GULIKA[wd])) {
+            return "this is a stalled window of the day: let things stand for now".into();
+        }
+        if in_window(at, abhijit_window(d)) {
+            return "these are the day's winning minutes: begin what matters".into();
+        }
+    }
+    let n = nakshatra(sky.moon_sidereal);
+    let ti = tithi(sky.moon_sidereal, sky.sun_sidereal);
+    let k = karana(sky.moon_sidereal, sky.sun_sidereal);
+    if matches!(ti.number % 15, 4 | 9 | 14) || ti.number == 30 || k.name == "Vishti" {
+        "the calendar marks today as an empty day: avoid starting new things".into()
+    } else if GOOD_STARS.contains(&n.index) {
+        "the calendar marks today as a lucky day for beginnings".into()
+    } else {
+        "an ordinary day on the calendar".into()
+    }
+}
+
+/// Why a life stands where it does, in plain words: the strongest pull among the
+/// components, said as what it means for the person. Never names the astrology.
+#[allow(clippy::too_many_arguments)]
+fn plain_because(natal: &Natal, life: Life, comps: &[Component], levels: &[DashaPeriod], sky: &Sky, hora: Option<&Hora>, tara: usize, kala: &str) -> String {
+    let name = life.name().to_ascii_lowercase();
+    let Some(c) = comps.iter().max_by(|a, b| {
+        let fa = (a.score - 0.5).abs() * a.weight;
+        let fb = (b.score - 0.5).abs() * b.weight;
+        fa.partial_cmp(&fb).unwrap_or(std::cmp::Ordering::Equal)
+    }) else {
+        return String::new();
+    };
+    let good = c.score >= 0.5;
+    match c.key {
+        "natal" => {
+            if good {
+                format!("{name} comes naturally to you; your birth promise for it is strong")
+            } else {
+                format!("{name} has always asked more effort of you than of most")
+            }
+        }
+        "dasha" => {
+            let items = dasha_items(natal, life, levels);
+            let pick = if good {
+                items.iter().max_by(|a, b| (a.weight * (a.score - 0.5)).partial_cmp(&(b.weight * (b.score - 0.5))).unwrap_or(std::cmp::Ordering::Equal))
+            } else {
+                items.iter().min_by(|a, b| (a.weight * (a.score - 0.5)).partial_cmp(&(b.weight * (b.score - 0.5))).unwrap_or(std::cmp::Ordering::Equal))
+            };
+            match pick {
+                Some(it) if good => format!("this stretch of your life brings {} to {name}", crate::plain::support(it.lord)),
+                Some(it) => format!("this stretch of your life brings {} to {name}", crate::plain::pressure(it.lord)),
+                None => String::new(),
+            }
+        }
+        "gochara" => {
+            let (items, _) = gochara_items(natal, &sky.from_moon, &sky.signs(), life);
+            let pick = if good {
+                items.iter().max_by(|a, b| a.contrib.partial_cmp(&b.contrib).unwrap_or(std::cmp::Ordering::Equal))
+            } else {
+                items.iter().min_by(|a, b| a.contrib.partial_cmp(&b.contrib).unwrap_or(std::cmp::Ordering::Equal))
+            };
+            match pick {
+                Some(it) if it.saturn_phase != SaturnPhase::Clear => format!("{} is running", crate::plain::long_test(it.saturn_phase)),
+                Some(it) if it.graha == DashaLord::Moon && it.house == 8 => "these two days are your heaviest of the month: moods dip and plans slip".to_string(),
+                Some(it) if good => format!("the present season brings {}", crate::plain::support(it.graha)),
+                Some(it) => format!("the present season brings {} to {name}", crate::plain::pressure(it.graha)),
+                None => String::new(),
+            }
+        }
+        "tara" => format!("today is {}", crate::plain::day_quality(tara)),
+        "hora" => match hora {
+            Some(h) if good => format!("this is {}", crate::plain::hour_nature(h.lord)),
+            Some(_) => format!("this hour does not suit {name}; a better one comes later today"),
+            None => String::new(),
+        },
+        _ => kala.to_string(),
+    }
 }
 
 // ---------------------------------------------------------------------------------
@@ -1201,6 +1231,7 @@ pub fn moment(
     });
     let (tara, tara_c) = tara_component(natal, &sky);
     let kala_c = kala_component(&sky, day.as_ref(), obs, at);
+    let kala_words = kala_plain(&sky, day.as_ref(), obs, at);
     let seed = (at.tai_ns() / NS_PER_DAY) as u64;
 
     let lives: Vec<LifeScore> = Life::ALL
@@ -1223,7 +1254,7 @@ pub fn moment(
                 score,
                 band,
                 headline: headline(life, band, seed).to_string(),
-                because: because(&comps),
+                because: plain_because(natal, life, &comps, &levels, &sky, hora.as_ref(), tara, &kala_words),
                 components: comps,
             }
         })
@@ -1237,28 +1268,28 @@ pub fn moment(
         let wd = weekday(d, obs) as usize;
         let (rs, re) = rahu_kala(d, obs);
         windows.push(Window {
-            label: "Rahu kala".into(),
+            label: "Unlucky stretch".into(),
             start: rs,
             end: re,
             caution: true,
         });
         let (ys, ye) = slot_window(d, YAMAGANDA[wd]);
         windows.push(Window {
-            label: "Yamaganda".into(),
+            label: "Risky stretch".into(),
             start: ys,
             end: ye,
             caution: true,
         });
         let (gs, ge) = slot_window(d, GULIKA[wd]);
         windows.push(Window {
-            label: "Gulika kala".into(),
+            label: "Heavy stretch".into(),
             start: gs,
             end: ge,
             caution: true,
         });
         let (as_, ae) = abhijit_window(d);
         windows.push(Window {
-            label: "Abhijit muhurta".into(),
+            label: "Lucky minutes".into(),
             start: as_,
             end: ae,
             caution: false,
@@ -1278,9 +1309,13 @@ pub fn moment(
                 break;
             }
             let (next, _, _) = hora_at(d, obs, e.add_ns(NS_PER_SEC));
+            let what = match hora_lord(next) {
+                Some(l) => format!("{} begins", crate::plain::cap(crate::plain::hour_short(l))),
+                None => "A new hour begins".to_string(),
+            };
             shifts.push(Shift {
                 at: e,
-                what: format!("{next} hour begins"),
+                what,
                 kind: "hora",
             });
             t = e.add_ns(NS_PER_SEC);
@@ -1321,7 +1356,7 @@ pub fn moment(
             let t = tara_index(natal.janma(), next);
             shifts.push(Shift {
                 at: e.root.t,
-                what: format!("Moon enters {} · {} tara", NAKSHATRA_NAMES[next], TARA_NAMES[t]),
+                what: format!("The day turns: {}", crate::plain::day_short(t)),
                 kind: "star",
             });
         }
@@ -1333,9 +1368,9 @@ pub fn moment(
             shifts.push(Shift {
                 at: e.root.t,
                 what: format!(
-                    "{} {} tithi begins",
-                    if n <= 15 { "Shukla" } else { "Krishna" },
-                    TITHI_NAMES[(n - 1) % 15]
+                    "The lunar day changes to {} ({})",
+                    TITHI_NAMES[(n - 1) % 15],
+                    if n <= 15 { "waxing" } else { "waning" }
                 ),
                 kind: "tithi",
             });
@@ -1356,24 +1391,24 @@ pub fn moment(
                 let h = ((next_sign - natal.moon_sign()).rem_euclid(12) + 1) as u8;
                 shifts.push(Shift {
                     at: e.root.t,
-                    what: format!(
-                        "Moon enters {} · the {} from your Moon",
-                        SIGN_NAMES[next_sign as usize],
-                        ordinal(h)
-                    ),
+                    what: match h {
+                        8 => "Two heavy days begin: moods dip; keep plans small".to_string(),
+                        1 | 3 | 6 | 7 | 10 | 11 => "Two lighter days begin: the mood lifts".to_string(),
+                        _ => "The mood of the next two days changes".to_string(),
+                    },
                     kind: "sign",
                 });
             }
         }
     }
-    for (i, p) in levels.iter().enumerate().skip(2) {
+    for p in levels.iter().skip(2) {
         if p.end > at && p.end <= horizon {
             // the lord that follows at this level
             let idx = DashaLord::ORDER.iter().position(|l| *l == p.lord).unwrap_or(0);
             let next = DashaLord::ORDER[(idx + 1) % 9];
             shifts.push(Shift {
                 at: p.end,
-                what: format!("{next:?} {} begins", LEVEL_NAMES[i]),
+                what: format!("A new few-day phase begins, about {}", crate::plain::chapter_theme(next)),
                 kind: "dasha",
             });
         }
@@ -1634,7 +1669,11 @@ pub fn story(life: Life, samples: &[Sample]) -> Story {
             if a != b {
                 shifts.push(Shift {
                     at: q.at,
-                    what: format!("{b:?} {} begins", LEVEL_NAMES[lvl]),
+                    what: format!(
+                        "A new {} begins, about {}",
+                        ["chapter of your life", "stretch of your life", "few-week phase", "few-day phase", "short phase"][lvl.min(4)],
+                        crate::plain::chapter_theme(*b)
+                    ),
                     kind: "dasha",
                 });
                 break;
@@ -1646,21 +1685,17 @@ pub fn story(life: Life, samples: &[Sample]) -> Story {
                 && g != DashaLord::Moon
             {
                 let h = q.houses_from_moon[i];
-                let tone = if favourable_from_moon(g).contains(&h) {
-                    "favourable"
+                let name = life.name().to_ascii_lowercase();
+                let what = if favourable_from_moon(g).contains(&h) {
+                    format!("A helpful season for {name} begins: {}", crate::plain::support(g))
                 } else if adverse_from_moon(g).contains(&h) {
-                    "testing"
+                    format!("A harder season for {name} begins: {}", crate::plain::pressure(g))
                 } else {
-                    "neutral"
+                    format!("The season for {name} turns neutral")
                 };
                 shifts.push(Shift {
                     at: q.at,
-                    what: format!(
-                        "{:?} moves into the {} from your Moon ({tone} for {})",
-                        g,
-                        ordinal(h),
-                        life.name().to_ascii_lowercase()
-                    ),
+                    what,
                     kind: "sign",
                 });
             }

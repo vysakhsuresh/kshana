@@ -33,7 +33,7 @@ object Lang {
         "Bright" to "തിളക്കം", "Good" to "നല്ലത്", "Steady" to "സ്ഥിരം", "Slow" to "മന്ദം", "Hold" to "കാത്തിരിക്കൂ",
         "Good morning" to "സുപ്രഭാതം", "Good afternoon" to "ശുഭ മധ്യാഹ്നം", "Good evening" to "ശുഭ സായാഹ്നം", "Good night" to "ശുഭ രാത്രി",
         "Your nine lives · right now" to "നിങ്ങളുടെ ഒമ്പത് ജീവിതങ്ങൾ · ഇപ്പോൾ",
-        "The hours of today" to "ഇന്നത്തെ ഹോരകൾ", "Watch the clock" to "സമയം ശ്രദ്ധിക്കൂ", "Coming up" to "വരാനിരിക്കുന്നത്",
+        "The hours of today" to "ഇന്നത്തെ മണിക്കൂറുകൾ", "Watch the clock" to "സമയം ശ്രദ്ധിക്കൂ", "Coming up" to "വരാനിരിക്കുന്നത്",
         "Under the hood" to "അകത്ത്", "changes in" to "മാറുന്നത്", "TRAVEL" to "യാത്ര", "TRAVELLING" to "യാത്രയിൽ",
         "REMEDIES" to "പരിഹാരങ്ങൾ", "PLAN A TIME" to "ഒരു സമയം നോക്കൂ", "THE TWO OF US" to "നമ്മൾ രണ്ടുപേർ",
         "THE BOOK OF YOUR LIFE · PAST, PRESENT, FUTURE" to "നിങ്ങളുടെ ജീവിതപുസ്തകം · ഭൂതം, വർത്തമാനം, ഭാവി",
@@ -44,8 +44,8 @@ object Lang {
         "Should I?" to "ഞാൻ ചെയ്യണോ?", "Will it come back?" to "അത് തിരിച്ചുവരുമോ?", "Will it be set right?" to "അത് ശരിയാകുമോ?",
         "Meeting someone" to "ഒരാളെ കാണാൻ", "Interview, pitch" to "ഇന്റർവ്യൂ", "Exam, test" to "പരീക്ഷ", "Journey" to "യാത്ര",
         "Deal, signing, purchase" to "കരാർ, ഒപ്പ്, വാങ്ങൽ", "Doctor, treatment" to "ഡോക്ടർ, ചികിത്സ", "Date, proposal" to "പ്രണയം, വിവാഹാലോചന",
-        "Family matter" to "കുടുംബകാര്യം", "House, land, rent" to "വീട്, ഭൂമി, വാടക", "Starting something new" to "പുതിയ തുടക്കം", "Anything at all" to "എന്തും",
-        "Everything is computed on this phone from your birth time. Nothing leaves it." to "എല്ലാം ഈ ഫോണിൽ നിങ്ങളുടെ ജനനസമയത്തിൽ നിന്ന് കണക്കാക്കുന്നു. ഒന്നും പുറത്തുപോകുന്നില്ല.",
+        "Family matter" to "കുടുംബകാര്യം", "Home, land, rent" to "വീട്, ഭൂമി, വാടക", "Starting something new" to "പുതിയ തുടക്കം", "Anything at all" to "എന്തും",
+        "Everything is worked out on this phone from your birth time. Nothing leaves it." to "എല്ലാം ഈ ഫോണിൽ നിങ്ങളുടെ ജനനസമയത്തിൽ നിന്ന് കണക്കാക്കുന്നു. ഒന്നും പുറത്തുപോകുന്നില്ല.",
     )
 
     private val hi: Map<String, String> = mapOf(
@@ -55,7 +55,7 @@ object Lang {
         "Bright" to "उज्ज्वल", "Good" to "अच्छा", "Steady" to "स्थिर", "Slow" to "धीमा", "Hold" to "रुकें",
         "Good morning" to "सुप्रभात", "Good afternoon" to "शुभ दोपहर", "Good evening" to "शुभ संध्या", "Good night" to "शुभ रात्रि",
         "Your nine lives · right now" to "आपके नौ जीवन · अभी",
-        "The hours of today" to "आज के होरा", "Watch the clock" to "घड़ी देखें", "Coming up" to "आगे",
+        "The hours of today" to "आज के घंटे", "Watch the clock" to "घड़ी देखें", "Coming up" to "आगे",
         "Under the hood" to "भीतर", "changes in" to "बदलेगा", "TRAVEL" to "यात्रा", "TRAVELLING" to "यात्रा में",
         "REMEDIES" to "उपाय", "PLAN A TIME" to "समय देखें", "THE TWO OF US" to "हम दोनों",
         "THE BOOK OF YOUR LIFE · PAST, PRESENT, FUTURE" to "आपके जीवन की पुस्तक · भूत, वर्तमान, भविष्य",
@@ -66,8 +66,8 @@ object Lang {
         "Should I?" to "क्या मैं करूँ?", "Will it come back?" to "क्या यह लौटेगा?", "Will it be set right?" to "क्या यह ठीक होगा?",
         "Meeting someone" to "किसी से मिलना", "Interview, pitch" to "इंटरव्यू", "Exam, test" to "परीक्षा", "Journey" to "यात्रा",
         "Deal, signing, purchase" to "सौदा, हस्ताक्षर, खरीद", "Doctor, treatment" to "डॉक्टर, इलाज", "Date, proposal" to "मुलाक़ात, प्रस्ताव",
-        "Family matter" to "पारिवारिक बात", "House, land, rent" to "घर, ज़मीन, किराया", "Starting something new" to "नई शुरुआत", "Anything at all" to "कुछ भी",
-        "Everything is computed on this phone from your birth time. Nothing leaves it." to "सब कुछ इसी फ़ोन पर आपके जन्म समय से गिना जाता है। कुछ भी बाहर नहीं जाता।",
+        "Family matter" to "पारिवारिक बात", "Home, land, rent" to "घर, ज़मीन, किराया", "Starting something new" to "नई शुरुआत", "Anything at all" to "कुछ भी",
+        "Everything is worked out on this phone from your birth time. Nothing leaves it." to "सब कुछ इसी फ़ोन पर आपके जन्म समय से गिना जाता है। कुछ भी बाहर नहीं जाता।",
     )
 
     /** The word in the chosen language, or the English when there is none yet. */

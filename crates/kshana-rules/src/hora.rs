@@ -6,7 +6,7 @@
 //! woven from its tara, its hour and the Moon's phase, so an instant reads like an
 //! entry in a calendar of omens.
 
-use crate::gochara::TARA_NAMES;
+
 use kshana_vedic::DashaLord;
 
 /// What an hour's lord carries.
@@ -39,7 +39,7 @@ pub fn hora_lore(lord: DashaLord) -> HoraLore {
     match lord {
         DashaLord::Sun => HoraLore {
             lord,
-            deity: "Surya",
+            deity: "Shiva, and Rama",
             colour: "copper red",
             direction: "east",
             metal: "copper",
@@ -50,7 +50,7 @@ pub fn hora_lore(lord: DashaLord) -> HoraLore {
         },
         DashaLord::Moon => HoraLore {
             lord,
-            deity: "Chandra, and Parvati",
+            deity: "Parvati",
             colour: "white",
             direction: "north-west",
             metal: "silver",
@@ -83,7 +83,7 @@ pub fn hora_lore(lord: DashaLord) -> HoraLore {
         },
         DashaLord::Jupiter => HoraLore {
             lord,
-            deity: "Brihaspati, and Dakshinamurti",
+            deity: "Dakshinamurti",
             colour: "yellow",
             direction: "north-east",
             metal: "gold",
@@ -105,7 +105,7 @@ pub fn hora_lore(lord: DashaLord) -> HoraLore {
         },
         DashaLord::Saturn => HoraLore {
             lord,
-            deity: "Shani, and Ayyappa",
+            deity: "Ayyappa, and Hanuman",
             colour: "blue-black",
             direction: "west",
             metal: "iron",
@@ -139,33 +139,13 @@ pub fn hora_lore(lord: DashaLord) -> HoraLore {
     }
 }
 
-/// A name for the moment: "Sampat under the Moon's hour, waxing".
-pub fn moment_title(tara: usize, hora: Option<DashaLord>, waxing: bool, star: &str) -> String {
-    let phase = if waxing { "waxing" } else { "waning" };
-    let t = TARA_NAMES[tara.min(8)];
+/// A name for the moment in plain words: "A giving day · an hour for money and blessings".
+/// The arguments stay as the engine knows them; the words never name them.
+pub fn moment_title(tara: usize, hora: Option<DashaLord>, _waxing: bool, _star: &str) -> String {
+    let day = crate::plain::cap(crate::plain::day_short(tara));
     match hora {
-        Some(l) => {
-            let joiner = match l {
-                DashaLord::Saturn | DashaLord::Mars => "in",
-                _ => "under",
-            };
-            format!("{t} {joiner} {}'s hour, {phase}", lord_possessive(l))
-        }
-        None => format!("{t} in {star}, {phase}"),
-    }
-}
-
-fn lord_possessive(l: DashaLord) -> &'static str {
-    match l {
-        DashaLord::Sun => "the Sun",
-        DashaLord::Moon => "the Moon",
-        DashaLord::Mars => "Mars",
-        DashaLord::Mercury => "Mercury",
-        DashaLord::Jupiter => "Jupiter",
-        DashaLord::Venus => "Venus",
-        DashaLord::Saturn => "Saturn",
-        DashaLord::Rahu => "Rahu",
-        DashaLord::Ketu => "Ketu",
+        Some(l) => format!("{day} · {}", crate::plain::hour_short(l)),
+        None => day,
     }
 }
 
@@ -179,11 +159,16 @@ mod tests {
             let h = hora_lore(l);
             assert!(!h.deity.is_empty() && h.mantra.starts_with("Om "));
         }
-        assert_eq!(
-            moment_title(1, Some(DashaLord::Moon), true, "Mula"),
-            "Sampat under the Moon's hour, waxing"
-        );
-        assert_eq!(moment_title(6, Some(DashaLord::Saturn), false, "Mula"), "Naidhana in Saturn's hour, waning");
-        assert_eq!(moment_title(8, None, true, "Revati"), "Parama Mitra in Revati, waxing");
+        assert_eq!(moment_title(1, Some(DashaLord::Moon), true, "Mula"), "A giving day · an hour for home");
+        assert_eq!(moment_title(8, None, true, "Revati"), "One of your best days");
+        for l in DashaLord::ORDER {
+            let h = hora_lore(l);
+            for s in [h.deity, h.colour, h.direction, h.metal, h.for_, h.avoid] {
+                assert_eq!(crate::plain::jargon(s), None, "{s}");
+            }
+            for t in 0..9 {
+                assert_eq!(crate::plain::jargon(&moment_title(t, Some(l), true, "Mula")), None);
+            }
+        }
     }
 }

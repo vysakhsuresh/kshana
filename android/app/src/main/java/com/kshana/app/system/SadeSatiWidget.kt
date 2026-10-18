@@ -35,17 +35,15 @@ class SadeSatiWidget : AppWidgetProvider() {
         fun push(context: Context, b: BriefingRecord) {
             val until = b.saturnUntil?.let { Instants.toLocal(it).toInstant() }
             val days = until?.let { Duration.between(Instant.now(), it).toDays() }
-            val phase = b.saturnWords.substringBefore(':').substringBefore('.').trim()
             val line1 = when {
-                b.saturnActive && days != null -> "$phase · $days days left"
-                b.saturnActive -> phase
-                days != null -> "Saturn clear of your Moon · $days days"
-                else -> "Saturn clear of your Moon"
+                b.saturnActive && days != null -> "Testing time · $days days left"
+                b.saturnActive -> "Testing time"
+                else -> "No long test running"
             }
             val m = b.moment
             val top = m.lives.maxByOrNull { it.score }
             val line2 = "${m.title} · ${m.overall.toInt()}"
-            val line3 = top?.let { "${it.life} ${it.score.toInt()} · ${it.headline}" } ?: ""
+            val line3 = top?.let { "${it.life}: ${it.headline}" } ?: ""
             ProfileStore.prefs(context).edit()
                 .putString(K_LINE1, line1).putString(K_LINE2, line2).putString(K_LINE3, line3).putInt(K_SCORE, m.overall.toInt())
                 .apply()

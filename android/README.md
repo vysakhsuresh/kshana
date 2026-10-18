@@ -137,3 +137,13 @@ bright head on the arc. Countdowns to the next good minute breathe. While the en
 works, a wheel of twenty-seven points (the nakshatras) turns with one lit, never a
 spinner. Screens fade into each other. The one gold button keeps its warmth with a
 gradient and a halo; everything else is outlined in gold hairline.
+
+## Plain words only
+
+The common screens (Now, Ahead, Ask, Us, the life pages, remedies, the wall, the letter,
+look back, the book, notifications and the widget) show predictions in plain English
+only: what happens, when, how strongly, what to do. Engine keys such as a period's lord
+or an hour's planet are turned into words by `ui/screens/Plain.kt` and never printed.
+The chart pages (wheels, Vedic chart, KP areas, muhurta, horary, the technical settings
+and the trust report) are hidden until Settings › "Show the chart pages" is switched on
+(`data/Expert.kt`, off by default).

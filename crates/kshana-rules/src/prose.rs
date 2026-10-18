@@ -134,11 +134,11 @@ fn band_words(life: Life, band: Band, span: Span) -> &'static str {
         (Study, Steady) => "Study is steady: practice rather than new topics.",
         (Study, Slow) => "Concentration wanders: short sessions, more breaks.",
         (Study, Hold) => "Study is on hold: cramming will not stick.",
-        (Home, Bright) => "House and property move well: sign, build, shift.",
-        (Home, Good) => "House matters progress: measure, plan, fix.",
-        (Home, Steady) => "House matters are stable: maintain, do not expand.",
-        (Home, Slow) => "House matters drag: small delays with land, rent or repairs.",
-        (Home, Hold) => "House matters are on hold: no deals about property.",
+        (Home, Bright) => "Home and property move well: sign, build, shift.",
+        (Home, Good) => "Property matters progress: measure, plan, fix.",
+        (Home, Steady) => "Property matters are stable: maintain, do not expand.",
+        (Home, Slow) => "Property matters drag: small delays with land, rent or repairs.",
+        (Home, Hold) => "Property matters are on hold: no deals about land or a home.",
         (Travel, Bright) => "Roads open: travel and plans abroad go smoothly.",
         (Travel, Good) => "Travel is good: short trips and paperwork go through.",
         (Travel, Steady) => "Travel is plain: allow the usual margin.",
@@ -186,7 +186,7 @@ fn advice_words(life: Life, band: Band) -> &'static str {
         (Study, Bright | Good) => "Take the hard chapter now.",
         (Study, Steady) => "Practice over new material.",
         (Study, Slow | Hold) => "Re-read before you submit; short sessions.",
-        (Home, Bright | Good) => "Move on the house matter you have been putting off.",
+        (Home, Bright | Good) => "Move on the property matter you have been putting off.",
         (Home, Steady) => "Maintain; do not expand.",
         (Home, Slow | Hold) => "Check every document twice; wait for the better days below.",
         (Travel, Bright | Good) => "Book it; go.",
@@ -207,14 +207,7 @@ fn day_name_words(t: Instant, lon: f64, span: Span) -> String {
 
 /// Saturn's phase in plain words, without the planet.
 pub fn saturn_plain(phase: SaturnPhase) -> &'static str {
-    match phase {
-        SaturnPhase::SadeSatiRising => "the long seven-and-a-half-year test (sade sati) has begun: work doubles, rewards come late",
-        SaturnPhase::SadeSatiPeak => "the long seven-and-a-half-year test (sade sati) is at its peak: the mind is heavy and the ground shifts",
-        SaturnPhase::SadeSatiSetting => "the last part of the long test (sade sati): what is true stays, the rest falls away",
-        SaturnPhase::DhaiyaFourth => "a testing stretch for home and peace of mind (ardhashtama)",
-        SaturnPhase::DhaiyaEighth => "a testing stretch for health and sudden turns (ashtama Shani)",
-        SaturnPhase::Clear => "no long test running",
-    }
+    crate::plain::long_test(phase)
 }
 
 /// The outlook for `span` from `at`.
@@ -231,16 +224,18 @@ pub fn outlook(
 ) -> Result<Outlook, ForecastError> {
     let lon = obs.longitude_deg;
     let m = moment(spk, eop, natal, obs, system, ayanamsa, at)?;
-    let season_why = m.saturn.words().to_string();
+    let season_why = m.saturn.expert().to_string();
     let levels = &m.dasha;
     let season = {
-        let antar_end = levels.get(1).map(|p| date_words(p.end, lon));
-        let sat = saturn_plain(m.saturn);
-        match (m.saturn, antar_end) {
-            (SaturnPhase::Clear, Some(e)) => format!("The season you are in runs to {e}; no long test is on you."),
-            (_, Some(e)) => format!("The season you are in runs to {e}, and {sat}."),
-            (SaturnPhase::Clear, None) => "No long test is on you.".to_string(),
-            (_, None) => format!("Right now {sat}."),
+        let (test, _) = crate::briefing::saturn_sentence(spk, ayanamsa, natal, m.saturn, at, lon);
+        match levels.get(1) {
+            Some(p) => format!(
+                "Until {} the most movement in your life is in {}. {}.",
+                date_words(p.end, lon),
+                crate::plain::chapter_theme(p.lord),
+                test
+            ),
+            None => format!("{test}."),
         }
     };
 
@@ -456,17 +451,15 @@ mod tests {
         let birth = Utc::new(1990, 2, 20, 5, 4, 0, 0).unwrap().to_instant().unwrap();
         let natal = Natal::compute(&spk, None, birth, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri).unwrap();
         let at = Utc::new(2026, 10, 17, 5, 0, 0, 0).unwrap().to_instant().unwrap();
-        let planets = ["Sun ", "Moon ", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu", "dasha", "hora", "tara"];
         for span in [Span::Day, Span::Week, Span::Month, Span::Year] {
             let o = outlook(&spk, None, &natal, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, span, at).unwrap();
             assert_eq!(o.lives.len(), 9);
             assert!(!o.headline.is_empty());
-            for p in planets {
-                assert!(!o.headline.contains(p), "{span:?} headline names {p}: {}", o.headline);
-                for l in &o.lives {
-                    assert!(!l.words.contains(p), "{span:?} {:?} words name {p}: {}", l.life, l.words);
-                    assert!(!l.advice.contains(p));
-                }
+            assert_eq!(crate::plain::jargon(&o.headline), None, "{span:?} headline: {}", o.headline);
+            assert_eq!(crate::plain::jargon(&o.season), None, "{span:?} season: {}", o.season);
+            for l in &o.lives {
+                assert_eq!(crate::plain::jargon(&l.words), None, "{span:?} {:?}: {}", l.life, l.words);
+                assert_eq!(crate::plain::jargon(&l.advice), None, "{span:?} {:?}: {}", l.life, l.advice);
             }
             assert!(o.lives.windows(2).all(|w| w[0].score >= w[1].score));
             assert!(o.lives.iter().all(|l| !l.why.is_empty() || span == Span::Year));

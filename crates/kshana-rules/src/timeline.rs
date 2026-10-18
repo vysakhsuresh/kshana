@@ -4,7 +4,7 @@
 //! returns of Saturn, Jupiter and Rahu to their birth places. Past, present and future
 //! on one line, each with a tone per life from the birth chart.
 
-use crate::forecast::{date_words, lord_score, Band, Life, Natal, SIGN_NAMES};
+use crate::forecast::{date_words, lord_score, Band, Life, Natal};
 use crate::gochara::{favourable_from_moon, SaturnPhase};
 use crate::transit::{kernel_end, kernel_start, returns, sidereal_longitude, sign_changes};
 use kshana_ephem::Spk;
@@ -124,6 +124,19 @@ fn years(from: Instant, to: Instant) -> f64 {
     to.ns_since(from) as f64 / (365.25 * NS_PER_DAY as f64)
 }
 
+/// What a phase of a long test brings, as the line in the book.
+fn phase_words(ph: SaturnPhase) -> &'static str {
+    match ph {
+        SaturnPhase::SadeSatiRising => "The first part begins: expenses rise and sleep gets lighter",
+        SaturnPhase::SadeSatiPeak => "The hardest part begins: the mind feels heavy and work doubles",
+        SaturnPhase::SadeSatiSetting => "The last part begins: the pressure starts to ease",
+        SaturnPhase::DhaiyaFourth => "It begins: home and peace of mind are tested",
+        SaturnPhase::DhaiyaEighth => "It begins: health and sudden changes need care",
+        SaturnPhase::Clear => "The pressure ends",
+    }
+}
+
+#[allow(dead_code)]
 pub(crate) fn lord_theme(l: DashaLord) -> &'static str {
     match l {
         DashaLord::Sun => "years of standing and authority: the father, the state, the self",
@@ -156,10 +169,9 @@ fn chapter(natal: &Natal, lord: DashaLord, parent: Option<DashaLord>, level: u8,
     let weak = Life::ALL[wi];
     let band = Band::of(tone);
     let words = format!(
-        "{} {}: {}. {} for {}; {} asks patience.",
-        if level == 1 { format!("{lord:?}") } else { format!("{lord:?} within {:?}", parent.unwrap_or(lord)) },
-        if level == 1 { "mahadasha" } else { "antardasha" },
-        lord_theme(lord),
+        "{} {}. {} for {}; {} asks patience.",
+        if level == 1 { "A chapter about" } else { "A stretch about" },
+        crate::plain::chapter_theme(lord),
         match band {
             Band::Bright => "Giving",
             Band::Good => "Good",
@@ -247,11 +259,7 @@ pub fn timeline(spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, longitude_deg: f64
                 let ph = SaturnPhase::from_house(hh);
                 phases.push((
                     intervals[j].0,
-                    format!(
-                        "Saturn enters {} · {}",
-                        SIGN_NAMES[intervals[j].2 as usize],
-                        ph.words().split(':').next().unwrap_or("")
-                    ),
+                    phase_words(ph).to_string(),
                 ));
                 j += 1;
             }
@@ -260,9 +268,9 @@ pub fn timeline(spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, longitude_deg: f64
             let words = format!(
                 "{} from {} to {} (age {:.0} to {:.0}){}",
                 match kind {
-                    "sade sati" => "Sade sati, Saturn's seven and a half years over your Moon,",
-                    "ardhashtama" => "Ardhashtama, Saturn in the 4th from your Moon,",
-                    _ => "Ashtama Shani, Saturn in the 8th from your Moon,",
+                    "sade sati" => "A long testing period of about seven and a half years,",
+                    "ardhashtama" => "A testing time for home and peace of mind,",
+                    _ => "A testing time for health and sudden changes,",
                 },
                 date_words(st, longitude_deg),
                 date_words(en, longitude_deg),
@@ -299,21 +307,21 @@ pub fn timeline(spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, longitude_deg: f64
                 let months = (years(last.end, s.start) * 12.0).round() as i64;
                 last.phases.push((
                     last.end,
-                    format!("Saturn steps out for about {months} month{} (retrograde): the trial pauses", if months == 1 { "" } else { "s" }),
+                    format!("The pressure lifts for about {months} month{}, then returns", if months == 1 { "" } else { "s" }),
                 ));
                 last.phases.extend(
                     s.phases
                         .into_iter()
-                        .map(|(t, w)| (t, w.replacen("Saturn enters", "Saturn returns to", 1))),
+                        .map(|(t, w)| (t, w.replacen(" begins", " resumes", 1))),
                 );
                 last.end = s.end;
                 last.current = last.start <= at && at < last.end;
                 last.words = format!(
                     "{} from {} to {} (age {:.0} to {:.0}){}",
                     match last.kind {
-                        "sade sati" => "Sade sati, Saturn's seven and a half years over your Moon,",
-                        "ardhashtama" => "Ardhashtama, Saturn in the 4th from your Moon,",
-                        _ => "Ashtama Shani, Saturn in the 8th from your Moon,",
+                        "sade sati" => "A long testing period of about seven and a half years,",
+                        "ardhashtama" => "A testing time for home and peace of mind,",
+                        _ => "A testing time for health and sudden changes,",
                     },
                     date_words(last.start, longitude_deg),
                     date_words(last.end, longitude_deg),
@@ -354,20 +362,16 @@ pub fn timeline(spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, longitude_deg: f64
             house: h,
             favourable: fav,
             current: start <= at && at < end,
-            words: format!(
-                "Jupiter in {}, the {} from your Moon: {}",
-                SIGN_NAMES[sign as usize],
-                crate::forecast::ordinal(h),
-                if fav {
-                    "a giving passage; growth, help and good news come easier"
-                } else {
-                    match h {
-                        1 => "a passage of expense and self; spend with care",
-                        4 | 8 | 12 => "a quiet passage; build inside, not outside",
-                        _ => "an even passage"
-                    }
+            words: if fav {
+                "A giving year: growth, help and good news come easier".to_string()
+            } else {
+                match h {
+                    1 => "A year of expense and focus on yourself: spend with care",
+                    4 | 8 | 12 => "A quiet year: build inside, not outside",
+                    _ => "An even year for growth",
                 }
-            ),
+                .to_string()
+            },
         });
     };
     for c in &jch {
@@ -401,20 +405,24 @@ pub fn timeline(spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, longitude_deg: f64
                 at: t,
                 age,
                 words: format!(
-                    "{} {:?} return, {} (age {:.1}): {}",
+                    "{} {}, {} (age {:.1}): {}",
                     match n {
                         1 => "First",
                         2 => "Second",
                         3 => "Third",
                         _ => "Fourth",
                     },
-                    g,
+                    match g {
+                        DashaLord::Saturn => "thirty-year reckoning",
+                        DashaLord::Jupiter => "twelve-year renewal",
+                        _ => "eighteen-year turn",
+                    },
                     date_words(t, longitude_deg),
                     age,
                     match g {
                         DashaLord::Saturn => "the structure of your life is tested and rebuilt; what is true stays",
                         DashaLord::Jupiter => "a year of expansion, teachers and second chances",
-                        _ => "the nodes return: an old hunger comes round, and a chance to answer it",
+                        _ => "an old hunger comes round, and a chance to answer it",
                     }
                 ),
             });
@@ -429,15 +437,14 @@ pub fn timeline(spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, longitude_deg: f64
     let next_ret = rets.iter().find(|r| r.at > at);
     let mut headline = match (cur, page) {
         (Some(c), Some(p)) => format!(
-            "You are {:.1}: in the {:?} mahadasha (until {}), on its {:?} page (until {}). {}",
+            "You are {:.1}. Until {} your life centres on {}. Until {} the most movement is in {}.",
             age,
-            c.lord,
             date_words(c.end, longitude_deg),
-            p.lord,
+            crate::plain::chapter_theme(c.lord),
             date_words(p.end, longitude_deg),
-            p.words
+            crate::plain::chapter_theme(p.lord)
         ),
-        (Some(c), None) => format!("You are {:.1}, in the {:?} mahadasha until {}. {}", age, c.lord, date_words(c.end, longitude_deg), c.words),
+        (Some(c), None) => format!("You are {:.1}. Until {} your life centres on {}.", age, date_words(c.end, longitude_deg), crate::plain::chapter_theme(c.lord)),
         _ => format!("You are {age:.1}."),
     };
     if let Some(s) = sat_now {

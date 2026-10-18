@@ -159,7 +159,7 @@ fun PlanScreen(
         Text("PLAN", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         Text(tr("How is that time for me?"), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         Text(
-            "A meeting, an interview, a journey, a date. You may not know what will be said or who will be there; your chart knows how the hour sits with you. Pick the time and what it is for.",
+            "A meeting, an interview, a journey, a date. You may not know what will be said or who will be there; this tells you how that hour will go for you. Pick the time and what it is for.",
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
         )
 
@@ -239,12 +239,12 @@ fun PlanScreen(
                     date = l.toLocalDate(); time = l.toLocalTime().withSecond(0).withNano(0); result = null
                 }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("${localText(s.start, WEEKDAY_DAY, zone)} ${localText(s.start, TIME_HM, zone)} – ${localText(s.end, TIME_HM, zone)}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky, modifier = Modifier.weight(1f))
-                    Text("${s.lord} hour", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                    Text(hourShort(s.lord), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
                     Spacer(Modifier.width(10.dp))
                     Text(s.score.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 15.sp, color = scoreColor(s.score))
                 }
             }
-            Text("Half the hour's fit, half the day's reading; tap one to set it above and read it in full.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            Text("The best hours for this in the coming week. Tap one to set it above and see it in full.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         }
 
         if (kept.isNotEmpty()) {
@@ -289,12 +289,12 @@ fun PlanScreen(
                 a.caution?.let { label ->
                     val w = a.moment.windows.firstOrNull { it.label == label }
                     Text(
-                        if (w != null) "$label runs ${localText(w.start, TIME_HM, zone)} – ${localText(w.end, TIME_HM, zone)} that day. Finish, do not begin; start after ${localText(w.end, TIME_HM, zone)}."
-                        else "$label runs then. Finish, do not begin.",
+                        if (w != null) "That day has a ${label.lowercase()} from ${localText(w.start, TIME_HM, zone)} to ${localText(w.end, TIME_HM, zone)}. Finish things in it, do not begin; start after ${localText(w.end, TIME_HM, zone)}."
+                        else "That time falls in a ${label.lowercase()}. Finish things, do not begin.",
                         style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Ember,
                     )
                 }
-                if (a.abhijit) Text("Abhijit muhurta: the day's winning minutes.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Gold)
+                if (a.abhijit) Text("These are the luckiest minutes of the day: a winning time to begin.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Gold)
                 HorizontalDivider(color = KshanaColors.LineSoft)
                 for (line in a.advice) {
                     Row(verticalAlignment = Alignment.Top) {
@@ -305,7 +305,7 @@ fun PlanScreen(
                 }
             }
 
-            SectionLabel("What it leans on")
+            SectionLabel("What decides it")
             for (l in a.lives) {
                 Row(Modifier.fillMaxWidth().clickable { onLife(l.life) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("${lifeGlyph(l.life)} ${l.life}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text, modifier = Modifier.width(110.dp))
@@ -323,11 +323,11 @@ fun PlanScreen(
                 for (s in a.betterToday) {
                     Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("${localText(s.start, TIME_HM, zone)} – ${localText(s.end, TIME_HM, zone)}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky, modifier = Modifier.width(110.dp))
-                        Text("${s.lord} hour", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+                        Text(hourNature(s.lord).replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text, modifier = Modifier.weight(1f))
                         Text(s.score.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 14.sp, color = scoreColor(s.score))
                     }
                 }
-                Text("By the planetary hours, outside Rahu kala, Yamaganda and Gulika.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                Text("Each one avoids the day's unlucky stretches.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             }
             val bd = a.betterDay
             if (bd != null) {
@@ -341,7 +341,7 @@ fun PlanScreen(
             }
 
             Text(
-                if (showLives) "HIDE THAT MOMENT −" else "THE WHOLE MOMENT +",
+                if (showLives) "LESS −" else "EVERY PART OF YOUR LIFE AT THAT TIME +",
                 style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
                 modifier = Modifier.clickable { showLives = !showLives }.padding(vertical = 4.dp),
             )
@@ -359,9 +359,9 @@ fun PlanScreen(
                         Text(l.score.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 16.sp, color = scoreColor(l.score))
                     }
                 }
-                Text("Moon in ${m.moonStar} · ${m.taraName} tara · ${m.taraWords}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                Text(m.taraWords.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             }
-            Text("Read for ${place.name}. Computed on this phone; nothing leaves it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            Text("Read for ${place.name}. Worked out on this phone; nothing leaves it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         }
     }
 }

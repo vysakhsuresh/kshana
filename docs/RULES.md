@@ -322,3 +322,25 @@ more entries for that matter are added (the marriage vratas, Lakshmi for wealth,
 Mahamrityunjaya for health, Saraswati for study, and so on). Karma, seva and discipline
 rank above daana and vrata; mantra and pooja are marked optional. Conduct items follow the dharma-shastra reading
 of each graha's signification; ritual items follow common temple and Lal Kitab practice.
+
+## Plain words (the person never reads the astrology)
+
+The engine computes with grahas, houses, periods, stars and transits; the person reads
+only what they mean for their life. Every user-facing sentence is built from
+`kshana-rules/src/plain.rs`:
+
+| Computed | Read by the person as |
+|---|---|
+| A major period's lord | `chapter_theme` / `chapter_prediction`: what the years are about and what they tend to bring |
+| A graha pressing on a life | `pressure`: e.g. "delays, heavy duty and tiredness" |
+| A graha helping a life | `support`: e.g. "luck, wise advice and growth" |
+| The planetary hour | `hour_nature`: what the hour is good for |
+| The tara of the day | `day_quality`: "a day that gives", "a day to hold back" |
+| Saturn from the birth Moon | `long_test` / `long_test_prediction`: "a testing time for home and peace of mind" and what it brings |
+
+`plain::jargon` is the checker (planets in English and Indian names, houses, lagna,
+periods, transits, stars, taras, signs, sade sati, dosha, koota and the rest). The FFI
+test `plain_audit` calls every engine function the app shows to a person, for three
+people at three instants, and fails on any such word in a field the person reads. Keys
+and the expert layer (lord, planet, kind, rule ids, sources, the outlook's `why`) are
+listed as not shown and stay as they were for the chart pages.

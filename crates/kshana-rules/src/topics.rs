@@ -71,7 +71,7 @@ pub const TOPICS: &[Topic] = &[
     topic!("sibling", "A brother or sister", Family, "Sibling", 3, [3, 11], [2, 10], "D4"),
     topic!("mother", "Mother", Family, "Mother", 4, [4, 11], [3, 10], "D4"),
     topic!("father", "Father", Family, "Father", 9, [9, 11], [8, 10], "D4"),
-    topic!("moving_home", "Moving house", Family, "Moving", 4, [3, 4, 12], [2, 11], "D4"),
+    topic!("moving_home", "Moving home", Family, "Moving", 4, [3, 4, 12], [2, 11], "D4"),
     // Study
     topic!("exam", "An exam", Study, "Exam", 4, [4, 9, 11], [3, 8, 10], "D24"),
     topic!("admission", "An admission", Study, "Admission", 9, [4, 9, 11], [3, 8, 10], "D24"),
@@ -79,9 +79,9 @@ pub const TOPICS: &[Topic] = &[
     topic!("study_abroad", "Studying abroad", Study, "Study abroad", 12, [4, 9, 12], [3, 8, 11], "D24"),
     topic!("scholarship", "A scholarship", Study, "Scholarship", 11, [2, 4, 11], [1, 3, 10], "D24"),
     // Home
-    topic!("buy_house", "Buying a house or land", Home, "Property", 4, [4, 11, 12], [3, 10], "D4"),
-    topic!("build_house", "Building a house", Home, "Building", 4, [4, 11], [3, 10], "D4"),
-    topic!("sell_house", "Selling a house or land", Home, "Selling property", 3, [3, 10], [2, 9], "D4"),
+    topic!("buy_house", "Buying a home or land", Home, "Property", 4, [4, 11, 12], [3, 10], "D4"),
+    topic!("build_house", "Building a home", Home, "Building", 4, [4, 11], [3, 10], "D4"),
+    topic!("sell_house", "Selling a home or land", Home, "Selling property", 3, [3, 10], [2, 9], "D4"),
     topic!("rent", "A place to rent", Home, "Renting", 4, [4, 11], [3, 10], "D4"),
     topic!("vehicle", "A vehicle", Home, "Vehicle", 4, [2, 4, 11], [1, 3, 10], "D4"),
     // Travel
@@ -122,6 +122,9 @@ mod tests {
         keys.sort();
         keys.dedup();
         assert_eq!(keys.len(), TOPICS.len(), "duplicate topic key");
+        for t in TOPICS {
+            assert_eq!(crate::plain::jargon(t.words), None, "{}", t.words);
+        }
         for t in TOPICS {
             assert!(t.area.group.contains(&t.area.primary), "{}: primary outside the group", t.key);
             assert!((1..=12).contains(&t.area.primary));

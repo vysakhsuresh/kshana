@@ -102,7 +102,7 @@ fun SettingsScreen(
             Text("SETTINGS", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
             Text("BACK", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onBack).padding(12.dp))
         }
-        Text("How the sky is read", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+        Text("Settings", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
 
         SectionLabel("Birth")
         if (profile == null) {
@@ -119,7 +119,7 @@ fun SettingsScreen(
 
         SectionLabel("Where you are now")
         Text(
-            "The Loop reads the sky over this place: sunrise, the hours, Rahu kala. Your birth place stays as it is.",
+            "Your day is read for this place: sunrise, the good hours and the unlucky stretches. Your birth place stays as it is.",
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
         )
         val here = ProfileStore.currentLocation(context)
@@ -137,7 +137,7 @@ fun SettingsScreen(
         }
 
         SectionLabel("Language")
-        Text("The app's own words. The engine's sentences stay in English until their templates are translated.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+        Text("The app's own words. Readings stay in English until they are translated.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for ((code, name) in com.kshana.app.data.Lang.choices) {
                 Chip(name, selected = com.kshana.app.data.Lang.code == code, onClick = { com.kshana.app.data.Lang.set(context, code) })
@@ -156,7 +156,7 @@ fun SettingsScreen(
                     if (sunriseOn) {
                         val next = com.kshana.app.system.Sunrise.nextMillis(context)
                         if (next > 0) "Next: ${java.time.Instant.ofEpochMilli(next).atZone(java.time.ZoneId.systemDefault()).format(DATE_TIME)}" else "Finding your next sunrise…"
-                    } else "The moment's name, the day's reading and Saturn's line, computed on this phone when the Sun rises where you are.",
+                    } else "Your day in a few lines, written on this phone when the sun rises where you are.",
                     style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
                 )
             }
@@ -188,7 +188,32 @@ fun SettingsScreen(
                 readNow = if (b != null) "SENT · LOOK AT YOUR NOTIFICATIONS" else "COULD NOT READ · ALLOW NOTIFICATIONS FIRST"
             }.start()
         })
-        Text("A home-screen widget is also available: long-press the home screen, Widgets, Kshana. It shows Saturn's phase with the days left and this moment's reading.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        Text("A home-screen widget is also available: long-press the home screen, Widgets, Kshana. It shows your testing time with the days left and how this moment reads.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+
+        SectionLabel("For those who read charts")
+        var expert by remember { mutableStateOf(com.kshana.app.data.Expert.on(context)) }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Column(Modifier.weight(1f)) {
+                Text("Show the chart pages", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
+                Text("Wheels, periods, houses and the technical settings, under More. Off, the app speaks only in plain predictions.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            }
+            Switch(
+                checked = expert,
+                onCheckedChange = { expert = it; com.kshana.app.data.Expert.set(context, it) },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = KshanaColors.Night,
+                    checkedTrackColor = KshanaColors.Gold,
+                    uncheckedThumbColor = KshanaColors.Muted,
+                    uncheckedTrackColor = KshanaColors.Surface,
+                    uncheckedBorderColor = KshanaColors.Line,
+                ),
+            )
+        }
+        if (!expert) {
+            Spacer(Modifier.height(8.dp))
+            Text("Everything is worked out on this phone. Nothing leaves it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            return@Column
+        }
 
         SectionLabel("Ayanamsa")
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

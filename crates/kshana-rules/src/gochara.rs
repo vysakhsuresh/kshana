@@ -110,8 +110,13 @@ impl SaturnPhase {
         }
     }
 
-    /// Plain words.
+    /// Plain words for the person: what the phase means, never what it is.
     pub fn words(self) -> &'static str {
+        crate::plain::long_test(self)
+    }
+
+    /// The astrologer's name for the phase, for the expert screens.
+    pub fn expert(self) -> &'static str {
         match self {
             SaturnPhase::SadeSatiRising => "sade sati, first phase: Saturn in the 12th from your Moon",
             SaturnPhase::SadeSatiPeak => "sade sati, peak: Saturn on your Moon",
@@ -144,19 +149,9 @@ pub fn tara_index(janma: usize, transit: usize) -> usize {
     (transit + 27 - janma) % 27 % 9
 }
 
-/// Plain words for a tara.
+/// Plain words for a tara: what the day is like for the person.
 pub fn tara_words(i: usize) -> &'static str {
-    match i {
-        0 => "your birth star returns: a day to keep things light",
-        1 => "Sampat tara: a day that gives",
-        2 => "Vipat tara: a day to avoid risk",
-        3 => "Kshema tara: a safe, settled day",
-        4 => "Pratyak tara: a day of small obstacles",
-        5 => "Sadhana tara: a day that rewards effort",
-        6 => "Naidhana tara: a day to hold back",
-        7 => "Mitra tara: a friendly day",
-        _ => "Parama Mitra tara: one of your best days",
-    }
+    crate::plain::day_quality(i)
 }
 
 /// Hora lord by name, as `kshana_events::hora_at` returns it.
@@ -183,6 +178,6 @@ pub fn hora_words(g: DashaLord) -> &'static str {
         DashaLord::Jupiter => "an hour for money, learning, children and good beginnings",
         DashaLord::Venus => "an hour for love, art, pleasure and partnership",
         DashaLord::Saturn => "an hour for routine work and patience; start nothing new",
-        DashaLord::Rahu | DashaLord::Ketu => "",
+        DashaLord::Rahu | DashaLord::Ketu => "an uncertain hour; finish rather than begin",
     }
 }

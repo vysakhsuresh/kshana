@@ -5,15 +5,14 @@
 //! the kernel. Everything here is what a person checks again and again.
 
 use crate::briefing::saturn_sentence;
-use crate::forecast::{date_words, Life, Moment, Natal, SIGN_NAMES};
-use crate::gochara::{favourable_from_moon, SaturnPhase, TARA_NAMES};
+use crate::forecast::{date_words, Life, Moment, Natal};
+use crate::gochara::{favourable_from_moon, SaturnPhase};
 use crate::transit::{kernel_end, next_sign_change, returns, sidereal_longitude, sign_changes};
 use kshana_ephem::{Body, Spk};
 use kshana_events::{nakshatra_boundaries, solar_return, tithi_boundaries, MICROSECOND_NS};
 use kshana_sky::Observer;
 use kshana_time::{EopTable, Instant, Utc, NS_PER_DAY};
 use kshana_vedic::dasha::YEAR_365_25_NS;
-use kshana_vedic::panchanga::{NAKSHATRA_NAMES, TITHI_NAMES};
 use kshana_vedic::{ayanamsa_degrees, nakshatra, tithi, vimshottari_levels, Ayanamsa, DashaLord, Tithi};
 
 /// The next hour that serves a life.
@@ -57,23 +56,18 @@ pub fn next_good(m: &Moment, at: Instant, floor: f64) -> Vec<Option<GoodMinute>>
 }
 
 /// A name for the day: "Sampat Shashthi, the Moon's day".
-pub fn day_title(tara: usize, t: &Tithi, day_lord: DashaLord) -> String {
-    let lord = match day_lord {
-        DashaLord::Sun => "the Sun's day",
-        DashaLord::Moon => "the Moon's day",
-        DashaLord::Mars => "Mars's day",
-        DashaLord::Mercury => "Mercury's day",
-        DashaLord::Jupiter => "Jupiter's day",
-        DashaLord::Venus => "Venus's day",
-        DashaLord::Saturn => "Saturn's day",
-        _ => "the day",
+pub fn day_title(tara: usize, _t: &Tithi, day_lord: DashaLord) -> String {
+    let day = match day_lord {
+        DashaLord::Sun => "Sunday",
+        DashaLord::Moon => "Monday",
+        DashaLord::Mars => "Tuesday",
+        DashaLord::Mercury => "Wednesday",
+        DashaLord::Jupiter => "Thursday",
+        DashaLord::Venus => "Friday",
+        DashaLord::Saturn => "Saturday",
+        _ => "Today",
     };
-    format!(
-        "{} {}, {}",
-        TARA_NAMES[tara.min(8)],
-        TITHI_NAMES[((t.number - 1) % 15) as usize],
-        lord
-    )
+    format!("{day}, {}", crate::plain::day_short(tara))
 }
 
 /// One thing the person is waiting for.
@@ -116,7 +110,7 @@ pub fn countdowns(
     if let Some(t) = until {
         v.push(Countdown {
             kind: "saturn",
-            title: if phase == SaturnPhase::Clear { "Saturn moves".into() } else { "Saturn's trial ends".into() },
+            title: if phase == SaturnPhase::Clear { "A long season turns".into() } else { "Your testing time ends".into() },
             at: t,
             words,
             good: phase != SaturnPhase::Clear,
@@ -131,9 +125,9 @@ pub fn countdowns(
         {
             v.push(Countdown {
                 kind: "sadesati",
-                title: "Next sade sati begins".into(),
+                title: "Next long testing period".into(),
                 at: c.at,
-                words: format!("Saturn enters {}, the 12th from your Moon, on {}: the next sade sati opens.", SIGN_NAMES[c.to as usize], date_words(c.at, lon)),
+                words: format!("From {} a long testing period of about seven and a half years begins: expenses rise, sleep gets lighter and patience is asked. Save money before then.", date_words(c.at, lon)),
                 good: false,
             });
         }
@@ -141,14 +135,19 @@ pub fn countdowns(
     // The periods.
     let levels = vimshottari_levels(natal.moon_sidereal, natal.birth, YEAR_365_25_NS, at, 3);
     for (i, p) in levels.iter().enumerate().take(3) {
-        let name = ["mahadasha", "antardasha", "pratyantar"][i];
+        let name = ["chapter of your life", "stretch of your life", "few-month phase"][i];
         let idx = DashaLord::ORDER.iter().position(|l| *l == p.lord).unwrap_or(0);
         let next = DashaLord::ORDER[(idx + 1) % 9];
         v.push(Countdown {
             kind: "dasha",
-            title: format!("{:?} {name} ends", p.lord),
+            title: format!("This {name} ends"),
             at: p.end,
-            words: format!("{:?} {name} runs until {}; {next:?} follows.", p.lord, date_words(p.end, lon)),
+            words: format!(
+                "Until {} this {name} is about {}. Then {} come forward.",
+                date_words(p.end, lon),
+                crate::plain::chapter_theme(p.lord),
+                crate::plain::chapter_theme(next)
+            ),
             good: true,
         });
     }
@@ -159,15 +158,19 @@ pub fn countdowns(
             let fav = favourable_from_moon(g).contains(&h);
             v.push(Countdown {
                 kind: if g == DashaLord::Jupiter { "jupiter" } else { "rahu" },
-                title: format!("{g:?} enters {}", SIGN_NAMES[c.to as usize]),
+                title: match (g, fav) {
+                    (DashaLord::Jupiter, true) => "A year of growth begins".into(),
+                    (DashaLord::Jupiter, false) => "Growth slows for a year".into(),
+                    (_, true) => "A season of sudden openings".into(),
+                    _ => "A confusing season begins".into(),
+                },
                 at: c.at,
-                words: format!(
-                    "{g:?} enters {}, the {} from your Moon, on {}: {}.",
-                    SIGN_NAMES[c.to as usize],
-                    crate::forecast::ordinal(h),
-                    date_words(c.at, lon),
-                    if fav { "a giving house" } else { "a house to work through" }
-                ),
+                words: match (g, fav) {
+                    (DashaLord::Jupiter, true) => format!("From {} for about a year, money, children, teachers and good advice come more easily. Start what you want to grow.", date_words(c.at, lon)),
+                    (DashaLord::Jupiter, false) => format!("From {} for about a year, growth is slower: keep promises small and spending careful.", date_words(c.at, lon)),
+                    (_, true) => format!("From {} for about a year and a half, bold moves, foreign links and new technology pay off.", date_words(c.at, lon)),
+                    _ => format!("From {} for about a year and a half, confusion and tempting shortcuts are around: check before you trust, and sign nothing in a hurry.", date_words(c.at, lon)),
+                },
                 good: fav,
             });
         }
@@ -182,9 +185,9 @@ pub fn countdowns(
                 let age = ((r.ns_since(natal.birth)) as f64 / (365.25 * NS_PER_DAY as f64)).round() as i64;
                 v.push(Countdown {
                     kind: "year",
-                    title: "Your solar return".into(),
+                    title: "Your new year begins".into(),
                     at: r,
-                    words: format!("The Sun returns to its birth place on {}: your {} year opens.", date_words(r, lon), ordinal_year(age + 1)),
+                    words: format!("Your {} year begins on {}, to the minute: a good day to set the year's intentions.", ordinal_year(age + 1), date_words(r, lon)),
                     good: true,
                 });
                 break;
@@ -199,9 +202,9 @@ pub fn countdowns(
             if (cur + 1 + i) % 27 == natal.janma() {
                 v.push(Countdown {
                     kind: "star",
-                    title: format!("Moon returns to {}", NAKSHATRA_NAMES[natal.janma()]),
+                    title: "Your lucky day of the month".into(),
                     at: e.root.t,
-                    words: format!("Your birth star comes round on {}: a day to begin what matters, and the month's letter is written.", date_words(e.root.t, lon)),
+                    words: format!("Your own day of the month comes on {}: begin what matters; the month's letter is written that day.", date_words(e.root.t, lon)),
                     good: true,
                 });
                 break;
@@ -224,7 +227,7 @@ pub fn countdowns(
             }
             if n == 30 && !seen_new {
                 seen_new = true;
-                v.push(Countdown { kind: "moon", title: "New Moon".into(), at: e.root.t, words: format!("Amavasya begins {}: the ancestors' day.", date_words(e.root.t, lon)), good: false });
+                v.push(Countdown { kind: "moon", title: "New Moon".into(), at: e.root.t, words: format!("Amavasya begins {}: a day for the ancestors; begin nothing new.", date_words(e.root.t, lon)), good: false });
             }
         }
     }
@@ -236,9 +239,13 @@ pub fn countdowns(
                 let age = (t.ns_since(natal.birth)) as f64 / (365.25 * NS_PER_DAY as f64);
                 v.push(Countdown {
                     kind: "return",
-                    title: format!("{g:?} return"),
+                    title: if g == DashaLord::Jupiter { "Your twelve-year turning point".into() } else { "Your thirty-year reckoning".into() },
                     at: *t,
-                    words: format!("{g:?} stands again where it stood at your birth on {} (age {:.1}).", date_words(*t, lon), age),
+                    words: if g == DashaLord::Jupiter {
+                        format!("Around {} (age {:.0}) a twelve-year cycle of growth completes and a new one begins: a good year to start what you want to grow.", date_words(*t, lon), age)
+                    } else {
+                        format!("Around {} (age {:.0}) a thirty-year cycle closes: life asks you to grow up in one area, career, marriage or home. Effort made then lasts for decades.", date_words(*t, lon), age)
+                    },
                     good: g == DashaLord::Jupiter,
                 });
             }
@@ -293,13 +300,13 @@ pub fn festivals(spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, at: Instant, days
             let f = |name: &'static str, what: &'static str| Festival { name, at: e.root.t, end, what, kind: "tithi" };
             match n {
                 6 => v.push(f("Shukla Shashthi", "Subrahmanya's day: a fast or a light meal, and courage spent for someone.")),
-                8 => v.push(f("Durga Ashtami", "Durga's day: Rahu's remedies land best; feed those outside the circle.")),
+                8 => v.push(f("Durga Ashtami", "Durga's day: feed people outside your circle; it clears fear and confusion.")),
                 11 => v.push(f("Shukla Ekadashi", "Vishnu's fast: no grain, the mind kept light, a debt forgiven.")),
-                13 => v.push(f("Pradosham", "The hour before sunset is Shiva's: a lamp, Saturn's remedies, an apology made.")),
-                15 => v.push(f("Pournami", "Full Moon: the mother and the mind; feed women and children, sit by water.")),
-                19 => v.push(f("Sankashti Chaturthi", "Ganapati's day after moonrise: Ketu's remedies; finish what was left undone.")),
+                13 => v.push(f("Pradosham", "The hour before sunset is Shiva's: light a lamp and make an apology; it eases delays.")),
+                15 => v.push(f("Pournami", "Full moon: honour your mother, feed women and children, sit by water.")),
+                19 => v.push(f("Sankashti Chaturthi", "Ganapati's day after moonrise: finish what was left undone; obstacles ease.")),
                 26 => v.push(f("Krishna Ekadashi", "Vishnu's fast: no grain, the mind kept light.")),
-                28 => v.push(f("Pradosham", "The hour before sunset is Shiva's: a lamp, Saturn's remedies.")),
+                28 => v.push(f("Pradosham", "The hour before sunset is Shiva's: light a lamp; it eases delays.")),
                 29 => v.push(f("Masik Shivaratri", "The month's night of Shiva: a lamp kept through the night, or the first watch.")),
                 30 => v.push(f("Amavasya", "The ancestors' day: feed crows first, give food in their name, begin nothing new.")),
                 _ => {}
@@ -312,7 +319,7 @@ pub fn festivals(spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, at: Instant, days
                 name: "Sankranti",
                 at: c.at,
                 end: None,
-                what: "The Sun changes sign: the sixteen ghatis around it are for giving, not beginning.",
+                what: "The solar month turns: the hours around it are for giving, not beginning.",
                 kind: "sun",
             });
         }
@@ -322,10 +329,10 @@ pub fn festivals(spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, at: Instant, days
         for (i, e) in ev.iter().enumerate() {
             if (cur + 1 + i) % 27 == natal.janma() {
                 v.push(Festival {
-                    name: "Your birth star",
+                    name: "Your own day",
                     at: e.root.t,
                     end: ev.get(i + 1).map(|x| x.root.t),
-                    what: "The Moon in your own star: a day for beginnings, the monthly letter, and your own deity.",
+                    what: "Your lucky day of the month: begin what matters, read the month's letter, visit your family deity.",
                     kind: "star",
                 });
             }
@@ -365,7 +372,7 @@ mod tests {
         let f = festivals(&spk, &natal, Ayanamsa::Lahiri, at, 35);
         assert!(f.iter().any(|x| x.name.contains("Ekadashi")));
         assert!(f.iter().any(|x| x.name == "Amavasya") && f.iter().any(|x| x.name == "Pournami"));
-        assert!(f.iter().any(|x| x.name == "Your birth star"));
+        assert!(f.iter().any(|x| x.name == "Your own day"));
         assert!(f.windows(2).all(|x| x[0].at <= x[1].at));
         let m = moment(&spk, None, &natal, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, at).unwrap();
         let g = next_good(&m, at, 0.6);

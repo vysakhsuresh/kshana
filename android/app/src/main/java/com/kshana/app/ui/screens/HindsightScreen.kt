@@ -114,16 +114,16 @@ fun HindsightScreen(profile: BirthProfile, place: Place, settings: EngineSetting
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("HINDSIGHT", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            Text("LOOK BACK", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
             Text("BACK", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onBack).padding(12.dp))
         }
-        Text("What the sky said on…", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
-        Text("Pick a day that mattered. The reading of that day over your chart, and the season around it, computed exactly as any other day.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+        Text("How was that day for me?", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+        Text("Pick a day that mattered: a wedding, a fight, a job, a loss. See how that day stood for you, and the months around it.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         ValuePill(date.format(DateTimeFormatter.ofPattern("EEEE d MMMM uuuu")), onClick = { pick = true }, modifier = Modifier.fillMaxWidth())
         ErrorLine(error)
         val b = brief
         if (b == null) {
-            if (error == null) Working("casting that day…")
+            if (error == null) Working("reading that day…")
             return@Column
         }
         val m = b.moment
@@ -135,13 +135,12 @@ fun HindsightScreen(profile: BirthProfile, place: Place, settings: EngineSetting
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 ScoreRing(m.overall, size = 72.dp, stroke = 6.dp, label = bandWord(m.band))
                 Column(Modifier.weight(1f)) {
-                    Text(b.dasha.replace(" (to ", ", to ").replace(")", ""), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
                     Text(b.saturnWords + ".", style = MaterialTheme.typography.bodyMedium, color = if (b.saturnActive) KshanaColors.Ember else KshanaColors.TextSoft)
                 }
             }
-            for (p in b.paragraphs.drop(2)) Text(p, fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 24.sp, color = KshanaColors.Text)
+            for (p in b.paragraphs.drop(1)) Text(p, fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 24.sp, color = KshanaColors.Text)
         }
-        SectionLabel("The nine lives that day")
+        SectionLabel("Every part of your life that day")
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             for (l in m.lives) {
                 Row(Modifier.fillMaxWidth().clickable { life = l.life }.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -155,7 +154,7 @@ fun HindsightScreen(profile: BirthProfile, place: Place, settings: EngineSetting
             }
         }
         if (slow.size >= 2) {
-            SectionLabel("The season around it · $life")
+            SectionLabel("The months around it · ${lifeName(life)}")
             val idx = LIFE_ORDER.indexOf(life).coerceAtLeast(0)
             val values = slow.map { it.scores.getOrNull(idx) ?: 50.0 }
             SlowAround(values, 6)
@@ -169,7 +168,7 @@ fun HindsightScreen(profile: BirthProfile, place: Place, settings: EngineSetting
             val after = values.drop(7).average()
             if (here != null) {
                 Text(
-                    "$life read ${here.toInt()} that month, ${before.toInt()} in the half-year before and ${after.toInt()} in the half-year after.",
+                    "${lifeName(life)} stood at ${here.toInt()} that month, ${before.toInt()} in the six months before and ${after.toInt()} in the six months after.",
                     fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 24.sp, color = KshanaColors.Text,
                 )
             }

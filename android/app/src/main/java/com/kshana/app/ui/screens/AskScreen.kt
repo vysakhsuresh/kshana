@@ -115,7 +115,7 @@ fun AskScreen(
             if (onBack != null) Text("BACK", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onBack).padding(12.dp))
         }
         Text(tr("Ask the sky"), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
-        Text("Pick what it is about and what you want to know. The answer comes from your birth chart, the running periods, the months ahead and the sky at this very second.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+        Text("Pick what it is about and what you want to know. You get a straight answer, when it happens, and what to do.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
 
         SectionLabel(tr("About"))
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -138,7 +138,6 @@ fun AskScreen(
                     }
                 }
             }
-            topic?.let { Text("KP ${it.houses}", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted) }
         }
         SectionLabel(tr("Question"))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -152,7 +151,7 @@ fun AskScreen(
             }
         }
         GoldButton(
-            if (asking) "READING THE SKY…" else "ASK · ${(topic?.words ?: life).uppercase()}",
+            if (asking) "WORKING IT OUT…" else "ASK · ${(topic?.words ?: life).uppercase()}",
             enabled = !asking,
             onClick = { askedKey = "$life|${topic?.key}|$question|${System.currentTimeMillis()}" },
             modifier = Modifier.fillMaxWidth(),
@@ -187,18 +186,18 @@ fun AskScreen(
                 val os = a.firstOpeningStart
                 val oe = a.firstOpeningEnd
                 if (os != null && oe != null) {
-                    Text("First opening by the ruling planets", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+                    Text("The first real opening", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
                     Text("${localText(os, WEEKDAY_DAY)} ${hm(os)} – ${if (sameDay(os, oe)) "" else localText(oe, WEEKDAY_DAY) + " "}${hm(oe)}", fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = KshanaColors.Sky)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Stat("now", a.now)
-                    Stat("6 months", a.aheadMean)
-                    Stat("best ahead", a.aheadBest)
+                    Stat("today", a.now)
+                    Stat("next 6 months", a.aheadMean)
+                    Stat("at its best", a.aheadBest)
                 }
             }
 
             Text(
-                if (showWhy) "HIDE THE REASONS −" else "WHY? +",
+                if (showWhy) "LESS −" else "WHAT LIES BEHIND IT +",
                 style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
                 modifier = Modifier.clickable { showWhy = !showWhy }.padding(vertical = 4.dp),
             )
@@ -210,12 +209,11 @@ fun AskScreen(
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
                             Text(r.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
-                            a.ruleIds.getOrNull(i)?.let { Text("rule $it", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted) }
                         }
                     }
                 }
                 if (a.shifts.isNotEmpty()) {
-                    SectionLabel("What changes ahead")
+                    SectionLabel("What changes in the days ahead")
                     for (s in a.shifts) {
                         Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                             Text(localText(s.at, WEEKDAY_DAY), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.width(92.dp))
@@ -225,9 +223,9 @@ fun AskScreen(
                 }
             }
             if (a.score < 56) {
-                QuietButton("REMEDY FOR ${a.life.uppercase()}", onClick = { onRemedy(a.life) }, modifier = Modifier.fillMaxWidth())
+                QuietButton("WHAT TO DO FOR ${lifeName(a.life).uppercase()}", onClick = { onRemedy(a.life) }, modifier = Modifier.fillMaxWidth())
             }
-            Text("Asked ${localText(Instants.now(), DATE_TIME_S)} at ${place.name}. Computed on this phone; nothing leaves it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            Text("Asked ${localText(Instants.now(), DATE_TIME_S)} at ${place.name}. Worked out on this phone; nothing leaves it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         }
     }
 }

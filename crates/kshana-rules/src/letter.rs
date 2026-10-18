@@ -58,11 +58,10 @@ pub fn letter(
     let title = format!("Your month, {} to {}", date_words(at, lon), date_words(to, lon));
     let mut p = Vec::new();
     // 1. The season.
-    p.push(format!(
-        "You are in {}. {}.",
-        b.dasha.replace(" (to ", ", to ").replace(")", ""),
-        b.saturn_words
-    ));
+    match b.paragraphs.first() {
+        Some(season) => p.push(season.clone()),
+        None => p.push(format!("{}.", b.saturn_words)),
+    }
     // 2. The shape of the month.
     let mut rising: Vec<&Story> = stories.iter().filter(|s| s.trend == "rising").collect();
     let mut falling: Vec<&Story> = stories.iter().filter(|s| s.trend == "falling").collect();
@@ -72,28 +71,30 @@ pub fn letter(
     let weak = stories.iter().min_by(|a, b| a.mean.partial_cmp(&b.mean).unwrap_or(std::cmp::Ordering::Equal));
     let mut s = String::new();
     if let Some(bst) = best {
-        s.push_str(&format!("{} is the month's gift, averaging {:.0}", bst.life.name(), bst.mean * 100.0));
+        s.push_str(&format!("{} is the month's gift", bst.life.name()));
         if let Some((a, _, v)) = bst.best {
-            s.push_str(&format!(", at its best around {} ({:.0})", date_words(a, lon), v * 100.0));
+            let _ = v;
+            s.push_str(&format!(", at its best around {}", date_words(a, lon)));
         }
         s.push_str(". ");
     }
     if let Some(w) = weak {
-        s.push_str(&format!("{} asks the most patience at {:.0}", w.life.name(), w.mean * 100.0));
+        s.push_str(&format!("{} asks the most patience", w.life.name()));
         if let Some((a, _, v)) = w.low {
-            s.push_str(&format!(", lowest around {} ({:.0})", date_words(a, lon), v * 100.0));
+            let _ = v;
+            s.push_str(&format!(", hardest around {}", date_words(a, lon)));
         }
         s.push_str(". ");
     }
     if !rising.is_empty() {
         s.push_str(&format!(
-            "Rising through the month: {}. ",
+            "Getting better through the month: {}. ",
             rising.iter().map(|x| x.life.name().to_ascii_lowercase()).collect::<Vec<_>>().join(", ")
         ));
     }
     if !falling.is_empty() {
         s.push_str(&format!(
-            "Act early in: {}.",
+            "Act early in the month for: {}.",
             falling.iter().map(|x| x.life.name().to_ascii_lowercase()).collect::<Vec<_>>().join(", ")
         ));
     }
@@ -106,7 +107,7 @@ pub fn letter(
             "Days to circle: {}.",
             c.iter()
                 .take(5)
-                .map(|x| format!("{} for {} ({:.0})", date_words(x.at, lon), x.life.name().to_ascii_lowercase(), x.score * 100.0))
+                .map(|x| format!("{} for {}", date_words(x.at, lon), x.life.name().to_ascii_lowercase()))
                 .collect::<Vec<_>>()
                 .join("; ")
         ));
@@ -124,14 +125,14 @@ pub fn letter(
     }
     // 5. What is coming.
     if let Some(c) = walls.first() {
-        p.push(format!("Nearest on the wall: {} on {}. {}", c.title, date_words(c.at, lon), c.words));
+        p.push(format!("Coming up: {}", c.words));
     }
     // 6. The remedy.
     if let Some(r) = &b.remedy {
         p.push(format!(
-            "For {}: {}. First, {}.",
+            "For {}, what weighs is {}. Start with this: {}.",
             weak.map(|w| w.life.name().to_ascii_lowercase()).unwrap_or_default(),
-            r.cause,
+            crate::plain::pressure(r.planet),
             r.top.first().map(|t| t.1.to_ascii_lowercase()).unwrap_or_default()
         ));
     } else if weak.map(|w| Band::of(w.mean) >= Band::Good).unwrap_or(false) {
@@ -172,5 +173,8 @@ mod tests {
         assert_eq!(l.stories.len(), 9);
         assert!(!l.festivals.is_empty());
         assert!(l.title.starts_with("Your month"));
+        for p in &l.paragraphs {
+            assert_eq!(crate::plain::jargon(p), None, "{p}");
+        }
     }
 }

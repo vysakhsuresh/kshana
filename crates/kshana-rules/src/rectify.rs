@@ -7,7 +7,7 @@
 //! them (rising sign, Moon's star, the dasha at birth), so the choice is informed, not
 //! blind.
 
-use crate::forecast::{sky, slow_scores, Life, Natal, SIGN_NAMES};
+use crate::forecast::{sky, slow_scores, Life, Natal};
 use crate::kp::{agreeing_levels, timing};
 use kshana_ephem::Spk;
 use kshana_houses::HouseSystem;
@@ -106,12 +106,10 @@ pub fn rectify(
             dasha_at_birth,
             explained,
             words: format!(
-                "{} rising, Moon in {}, born in the {:?} mahadasha: explains {} of {} events",
-                SIGN_NAMES[lagna_sign as usize],
-                NAKSHATRA_NAMES[moon_star],
-                dasha_at_birth,
+                "This birth time explains {} of the {} things you marked, a {:.0}% fit",
                 explained,
-                events.len()
+                events.len(),
+                fit * 100.0
             ),
         });
     }

@@ -64,13 +64,7 @@ private fun kindColour(kind: String): Color = when (kind) {
     else -> KshanaColors.Muted
 }
 
-private fun kindWords(kind: String): String = when (kind) {
-    "Anna" -> "FOOD"
-    "Jeeva" -> "CREATURES"
-    "Prakriti" -> "WATER & TREES"
-    "Vastra" -> "COLOUR"
-    else -> kind.uppercase()
-}
+private fun kindWords(kind: String): String = kindWord(kind)
 
 private val GROUPS = listOf(
     "ALL" to null,
@@ -91,7 +85,7 @@ private fun planetDay(planet: String): java.time.DayOfWeek? = when (planet) {
     else -> null
 }
 
-/** "Earn the period.": the cause, the ranked remedies, and the commitments kept so far. */
+/** What will help: the cause, the ranked remedies, and the commitments kept so far. */
 @Composable
 fun PariharaScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> Unit, life: String? = null) {
     val context = LocalContext.current
@@ -138,14 +132,14 @@ fun PariharaScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("PARIHARA", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            Text("WHAT TO DO", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
             Text("BACK", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onBack).padding(12.dp))
         }
-        Text("Earn the period.", style = MaterialTheme.typography.displayLarge, color = KshanaColors.Text)
+        Text("What will help", style = MaterialTheme.typography.displayLarge, color = KshanaColors.Text)
         ErrorLine(error)
         val rec = record
         if (rec == null) {
-            if (error == null) Working("weighing the running lords…")
+            if (error == null) Working("finding what will help…")
         } else {
             val required = rec.remedies.filter { !it.optional }
             val keptRequired = required.count { it.title in kept }
@@ -155,24 +149,23 @@ fun PariharaScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -
                 WorthinessRing(worthiness)
                 Spacer(Modifier.width(20.dp))
                 Column {
-                    Text("WORTHINESS", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
+                    Text("YOUR EFFORT", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
                     Text("$keptRequired / ${required.size}", style = MaterialTheme.typography.headlineLarge, color = KshanaColors.Text)
-                    Text("commitments kept of those required", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                    Text("of the main remedies you are keeping", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
                 }
             }
             Text(
                 since?.let { d ->
                     val days = ChronoUnit.DAYS.between(d, LocalDate.now()) + 1
-                    "day $days of commitment · ${kept.size} held"
+                    "day $days of keeping it up · ${kept.size} remedies held"
                 } ?: "No commitment yet. Tap a remedy to hold it.",
                 fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky,
             )
 
-            SectionLabel("Cause")
+            SectionLabel("What is pressing on you")
             Column(Modifier.fillMaxWidth().glass(8.dp).padding(16.dp)) {
-                Text("${rec.planet} · severity ${"%.2f".format(rec.severity)}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Gold)
+                Text(when { rec.severity >= 0.66 -> "PRESSING HARD"; rec.severity >= 0.33 -> "PRESSING MODERATELY"; else -> "PRESSING LIGHTLY" }, style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
                 Text(rec.cause, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text, modifier = Modifier.padding(top = 6.dp))
-                Text(rec.signature, fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Sky, modifier = Modifier.padding(top = 8.dp))
             }
 
             // The streak: today's tick on each held remedy, and the longest run.
@@ -181,7 +174,7 @@ fun PariharaScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -
             val today = java.time.LocalDate.now().dayOfWeek
             val pd = planetDay(rec.planet)
             if (pd == today) {
-                Text("Today is ${rec.planet}'s day. What you keep today counts double in the tradition; tick what you did.", fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Gold)
+                Text("Today is ${today.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH)}, the day these remedies work best. What you keep today counts double; tick what you did.", fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Gold)
             }
             if (kept.isNotEmpty()) {
                 Row(Modifier.fillMaxWidth().glass(12.dp).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -199,10 +192,10 @@ fun PariharaScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -
             }
             val set = GROUPS.firstOrNull { it.first == group }?.second
             val shown = rec.remedies.withIndex().filter { set == null || it.value.kind in set }
-            SectionLabel("Remedies, ranked · ${shown.size} of ${rec.remedies.size} in the dictionary for this")
-            if (shown.isEmpty()) Text("none of this kind for this period", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            SectionLabel("What helps most, first · ${shown.size} of ${rec.remedies.size}")
+            if (shown.isEmpty()) Text("None of this kind for you right now.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             for ((i, r) in shown) RemedyRow(i + 1, r, r.title in kept, rec.planet, streakVersion, { streakVersion++ }) { toggle(rec, r) }
-            Text("Karma, seva and discipline are the work. Daana and vrata support it. Mantra and pooja are optional and never required.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(top = 8.dp))
+            Text("Doing, serving and good habits do the real work. Giving and fasting support them. Chanting and prayer are optional, never required.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(top = 8.dp))
         }
     }
 }
@@ -240,8 +233,7 @@ private fun RemedyRow(rank: Int, r: RemedyRecord, committed: Boolean, planet: St
             }
             Text(r.title, fontFamily = FontFamily.Serif, fontSize = 18.sp, color = if (r.optional) KshanaColors.TextSoft else KshanaColors.Text)
             Text(r.why, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
-            Text("${r.effort} · ${r.day} · fit ${(r.fit * 100).toInt()}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.padding(top = 2.dp))
-            Text(r.source, fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+            Text("${r.effort} · ${r.day}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.padding(top = 2.dp))
             if (committed) {
                 val ticked = remember(streakVersion) { com.kshana.app.data.StreakStore.tickedToday(context, planet, r.title) }
                 val streak = remember(streakVersion) { com.kshana.app.data.StreakStore.streak(context, planet, r.title) }

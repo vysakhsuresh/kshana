@@ -108,10 +108,10 @@ object Sunrise {
             val m = b.moment
             val top = m.lives.maxByOrNull { it.score }
             val text = "${m.title}. ${top?.headline ?: ""}".trim()
-            val big = "${b.paragraphs.getOrNull(2) ?: text}\n\n${b.saturnWords}."
+            val big = (b.paragraphs.firstOrNull() ?: text) + (if (b.saturnActive) "\n\n" + b.saturnWords.trimEnd('.') + "." else "")
             val n = NotificationCompat.Builder(context, CHANNEL)
                 .setSmallIcon(R.drawable.ic_stat_kshana)
-                .setContentTitle("Sunrise · ${m.overall.toInt()}, ${m.band}")
+                .setContentTitle("Your day · ${m.overall.toInt()}, ${m.band}")
                 .setContentText(text)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(big))
                 .setContentIntent(open)

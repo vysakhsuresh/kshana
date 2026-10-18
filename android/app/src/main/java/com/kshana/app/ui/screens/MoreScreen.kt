@@ -30,7 +30,7 @@ fun MoreScreen(profile: BirthProfile?, onOpen: (String) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text("MORE", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-        Text(profile?.name?.takeIf { it.isNotBlank() } ?: "Your chart", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+        Text(profile?.name?.takeIf { it.isNotBlank() } ?: "You", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         if (profile != null) {
             Text(
                 "%d %s %d · %02d:%02d · %s".format(profile.day, MONTHS[(profile.month - 1).coerceIn(0, 11)], profile.year, profile.hour, profile.minute, profile.placeName),
@@ -40,19 +40,20 @@ fun MoreScreen(profile: BirthProfile?, onOpen: (String) -> Unit) {
 
         SectionLabel("You")
         Entry("Birth details", "date, time, place and how sure you are", "birth", onOpen)
-        Entry("Find the true minute", "rectify the birth time from things that happened", "rectify", onOpen)
-        Entry("Settings", "ayanamsa, house system, where you are now", "settings", onOpen)
-        Entry("Why trust this", "the engine, its data and its checks", "trust", onOpen)
+        Entry("Find your exact birth time", "work it out from things that happened in your life", "rectify", onOpen)
+        Entry("Settings", "where you are, language, the sunrise reading", "settings", onOpen)
 
         SectionLabel("Your life")
         Entry("What to do", "the remedies for what weighs on you now", "parihara", onOpen)
         Entry("What you are waiting for", "every date that matters, counting down", "wall", onOpen)
         Entry("The month's letter", "one page for the thirty days ahead", "letter", onOpen)
         Entry("Look back at a day", "any day of your life, read as it was", "hindsight", onOpen)
-        Entry("Did it happen?", "grade what the app said; the record it keeps", "record", onOpen)
+        Entry("Did it happen?", "say whether the app was right; it keeps score", "record", onOpen)
         Entry("The book of your life", "the years behind and ahead", "book", onOpen)
 
-        SectionLabel("Go deeper")
+        if (!com.kshana.app.data.Expert.on(androidx.compose.ui.platform.LocalContext.current)) return@Column
+        SectionLabel("Chart pages")
+        Entry("Why trust this", "the engine, its data and its checks", "trust", onOpen)
         Entry("The sky now", "live wheel, ascendant, panchanga", "now", onOpen)
         Entry("Your birth chart", "Western wheel and aspects", "chart", onOpen)
         Entry("Vedic chart", "rasi, vargas, Vimshottari, Ashtakavarga", "vedic", onOpen)

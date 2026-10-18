@@ -12,10 +12,11 @@
 
 use crate::forecast::{
     abhijit_window, dasha_items, date_words, gochara_items, hora_component, kala_component,
-    moment, natal_component, ordinal, sky, slot_window, slow_scores, tara_component, weekday,
-    Band, ForecastError, Hora, Life, Moment, Natal, GULIKA, LEVEL_NAMES, SIGN_NAMES, YAMAGANDA,
+    moment, natal_component, sky, slot_window, slow_scores, tara_component, weekday,
+    Band, ForecastError, Hora, Life, Moment, Natal, GULIKA, YAMAGANDA,
 };
-use crate::gochara::{hora_lord, hora_words, tara_index, tara_words, TARA_NAMES, TARA_SCORE};
+use crate::gochara::{hora_lord, hora_words, tara_index, TARA_SCORE};
+use crate::plain::{birth_base, cap, chapter_theme, day_quality, hour_nature, influence_span, level_noun, long_test, pressure, support};
 use crate::transit::next_sign_change;
 use kshana_ephem::{Body, Spk};
 use kshana_events::{hora_at, nakshatra_boundaries, rahu_kala, solar_day, MICROSECOND_NS};
@@ -23,7 +24,6 @@ use kshana_houses::HouseSystem;
 use kshana_sky::Observer;
 use kshana_time::{EopTable, Instant, NS_PER_DAY, NS_PER_SEC};
 use kshana_vedic::dasha::YEAR_365_25_NS;
-use kshana_vedic::panchanga::NAKSHATRA_NAMES;
 use kshana_vedic::{nakshatra, vimshottari_levels, Ayanamsa, DashaLord};
 
 /// Something that pulls a life's score up or down right now.
@@ -151,10 +151,10 @@ pub fn explain(
     causes.push(Cause {
         planet: Some(natal.facts.cusp_sub_lords[(life.area().primary - 1) as usize]),
         kind: "natal",
-        what: n.note.clone(),
+        what: birth_base(&name, n.score),
         pull: norm(n.weight) * (n.score - 0.5),
         until: None,
-        until_words: "for life: this is the ground every period works on, and the remedies' lever".into(),
+        until_words: "for life: every season builds on it, and the remedies work on it".into(),
         rule_id: "KS-N-0001",
     });
 
@@ -168,10 +168,24 @@ pub fn explain(
         causes.push(Cause {
             planet: Some(it.lord),
             kind: "dasha",
-            what: it.words.clone(),
+            what: if it.score >= 0.5 {
+                format!(
+                    "the {} (about {}) brings {} to your {name}",
+                    level_noun(it.level),
+                    chapter_theme(it.lord),
+                    support(it.lord)
+                )
+            } else {
+                format!(
+                    "the {} (about {}) brings {} to your {name}",
+                    level_noun(it.level),
+                    chapter_theme(it.lord),
+                    pressure(it.lord)
+                )
+            },
             pull: norm(0.30) * share * (it.score - 0.5),
             until: Some(it.end),
-            until_words: format!("until this {} ends, {}", LEVEL_NAMES[it.level], date_words(it.end, lon)),
+            until_words: format!("this {} ends on {}", level_noun(it.level), date_words(it.end, lon)),
             rule_id: "KS-F-0001",
         });
         if it.end <= two_years && !ends_seen.contains(&it.end) {
@@ -184,16 +198,21 @@ pub fn explain(
             let next_lord = next_levels.get(it.level).map(|p| p.lord);
             if let Some(nl) = next_lord {
                 let gain = norm(0.30) * (then_c - now_c);
-                let (s, houses) = crate::forecast::lord_score(natal, life, nl);
+                let (s, _houses) = crate::forecast::lord_score(natal, life, nl);
                 relief.push(Relief {
                     at: it.end,
                     what: format!(
-                        "{nl:?} {} begins{}",
-                        LEVEL_NAMES[it.level],
-                        if houses.is_empty() {
-                            if s >= 0.5 { ": a sound lord, though it does not carry your ".to_string() + &name + " houses" } else { ": it does not carry your ".to_string() + &name + " houses" }
+                        "a new {} begins, about {}: {}",
+                        level_noun(it.level),
+                        chapter_theme(nl),
+                        if gain >= 0.01 {
+                            format!("better for your {name}, with {}", support(nl))
+                        } else if gain <= -0.01 {
+                            format!("harder for your {name}, with {}", pressure(nl))
+                        } else if s >= 0.5 {
+                            format!("about the same for your {name}, with {}", support(nl))
                         } else {
-                            format!(": it carries your {name} houses ({houses})")
+                            format!("about the same for your {name}; watch for {}", pressure(nl))
                         }
                     ),
                     gain,
@@ -216,26 +235,25 @@ pub fn explain(
         let pull = if den > 0.0 { norm(0.20) * 0.5 * it.contrib / den } else { 0.0 };
         let change = next_sign_change(spk, ayanamsa, it.graha, at);
         let (until, until_words) = match change {
-            Some(c) => {
-                let h = ((c.to as i64 - natal.moon_sign()).rem_euclid(12) + 1) as u8;
-                (
-                    Some(c.at),
-                    format!(
-                        "until {:?} enters {}, the {} from your Moon, {}",
-                        it.graha,
-                        SIGN_NAMES[c.to as usize],
-                        ordinal(h),
-                        date_words(c.at, lon)
-                    ),
-                )
-            }
+            Some(c) => (Some(c.at), format!("until {}", date_words(c.at, lon))),
             None => (None, "for longer than two years".to_string()),
+        };
+        let what_now = if it.saturn_phase != crate::gochara::SaturnPhase::Clear {
+            format!("{} for you, touching your {name}", long_test(it.saturn_phase))
+        } else if it.favourable && it.obstructed {
+            format!("help for your {name} is on its way but partly blocked")
+        } else if it.favourable || pull > 0.0 {
+            format!("{} for your {name}, for {}", support(it.graha), influence_span(it.graha))
+        } else if it.adverse || pull < 0.0 {
+            format!("{} around your {name}, for {}", pressure(it.graha), influence_span(it.graha))
+        } else {
+            format!("a neutral spell for your {name}, for {}", influence_span(it.graha))
         };
         if pull.abs() >= 0.002 || it.graha == DashaLord::Saturn || it.graha == DashaLord::Jupiter {
             causes.push(Cause {
                 planet: Some(it.graha),
                 kind: "gochara",
-                what: it.words.clone(),
+                what: what_now,
                 pull,
                 until,
                 until_words,
@@ -255,38 +273,21 @@ pub fn explain(
                 let what = if it.saturn_phase != crate::gochara::SaturnPhase::Clear
                     && then_it.saturn_phase == crate::gochara::SaturnPhase::Clear
                 {
-                    format!(
-                        "Saturn enters {}, the {} from your Moon: {} ends",
-                        SIGN_NAMES[c.to as usize],
-                        ordinal(fm[i]),
-                        match it.saturn_phase {
-                            crate::gochara::SaturnPhase::DhaiyaFourth | crate::gochara::SaturnPhase::DhaiyaEighth => "the dhaiya",
-                            _ => "sade sati",
-                        }
-                    )
+                    format!("{} ends", cap(long_test(it.saturn_phase)))
                 } else if then_it.saturn_phase != crate::gochara::SaturnPhase::Clear && it.saturn_phase == crate::gochara::SaturnPhase::Clear {
-                    format!(
-                        "Saturn enters {}, the {} from your Moon: {} begins",
-                        SIGN_NAMES[c.to as usize],
-                        ordinal(fm[i]),
-                        then_it.saturn_phase.words().split(':').next().unwrap_or("a Saturn phase")
-                    )
+                    format!("{} begins", cap(long_test(then_it.saturn_phase)))
+                } else if then_it.saturn_phase != crate::gochara::SaturnPhase::Clear {
+                    format!("{} goes on, in a new form", cap(long_test(then_it.saturn_phase)))
+                } else if then_it.favourable && then_it.obstructed {
+                    format!("help for your {name} arrives, though partly blocked, for {}", influence_span(it.graha))
+                } else if then_it.favourable {
+                    format!("{} arrives for your {name}, for {}", cap(support(it.graha)), influence_span(it.graha))
+                } else if then_it.adverse {
+                    format!("{} set in around your {name}, for {}", cap(pressure(it.graha)), influence_span(it.graha))
+                } else if gain > 0.0 {
+                    format!("a pressure on your {name} lifts")
                 } else {
-                    format!(
-                        "{:?} enters {}, the {} from your Moon{}",
-                        it.graha,
-                        SIGN_NAMES[c.to as usize],
-                        ordinal(fm[i]),
-                        if then_it.obstructed {
-                            " (favourable, but obstructed by vedha)"
-                        } else if then_it.favourable {
-                            " (favourable)"
-                        } else if then_it.adverse {
-                            " (testing)"
-                        } else {
-                            ""
-                        }
-                    )
+                    format!("a help to your {name} fades")
                 };
                 if gain.abs() >= 0.005 || it.graha == DashaLord::Saturn {
                     relief.push(Relief {
@@ -313,11 +314,11 @@ pub fn explain(
     causes.push(Cause {
         planet: Some(DashaLord::Moon),
         kind: "tara",
-        what: tara_c.note.clone(),
+        what: format!("today is {}", day_quality(t_now)),
         pull: norm(tara_c.weight) * (tara_c.score - 0.5),
         until: star_end,
         until_words: match star_end {
-            Some(e) => format!("until the Moon enters {}, {}", NAKSHATRA_NAMES[next_star], date_words(e, lon)),
+            Some(e) => format!("until the day's mood turns, {}", date_words(e, lon)),
             None => String::new(),
         },
         rule_id: "KS-T-0001",
@@ -325,12 +326,7 @@ pub fn explain(
     if let Some(e) = star_end {
         relief.push(Relief {
             at: e,
-            what: format!(
-                "Moon enters {} · {} tara: {}",
-                NAKSHATRA_NAMES[next_star],
-                TARA_NAMES[t_next],
-                tara_words(t_next)
-            ),
+            what: format!("the day's mood turns: {}", day_quality(t_next)),
             gain: norm(tara_c.weight) * (TARA_SCORE[t_next] - TARA_SCORE[t_now]),
             planet: Some(DashaLord::Moon),
             kind: "tara",
@@ -345,7 +341,7 @@ pub fn explain(
         causes.push(Cause {
             planet: Some(h.lord),
             kind: "hora",
-            what: hc.note.clone(),
+            what: format!("this hour is {}", hour_nature(h.lord)),
             pull: norm(hc.weight) * (hc.score - 0.5),
             until: Some(h.end),
             until_words: "until the hour turns".into(),
@@ -363,7 +359,7 @@ pub fn explain(
                 let nc = hora_component(natal, life, &nh);
                 relief.push(Relief {
                     at: h.end,
-                    what: format!("{nl:?} hour begins: {}", hora_words(nl)),
+                    what: format!("the next hour is {}", hour_nature(nl)),
                     gain: norm(hc.weight) * (nc.score - hc.score),
                     planet: Some(nl),
                     kind: "hora",
@@ -378,19 +374,19 @@ pub fn explain(
     if let Some(d) = &day {
         let wd = weekday(d, obs) as usize;
         let windows = [
-            ("Rahu kala", rahu_kala(d, obs)),
-            ("Yamaganda", slot_window(d, YAMAGANDA[wd])),
-            ("Gulika kala", slot_window(d, GULIKA[wd])),
-            ("Abhijit muhurta", abhijit_window(d)),
+            ("the unlucky stretch", rahu_kala(d, obs)),
+            ("the risky stretch", slot_window(d, YAMAGANDA[wd])),
+            ("the heavy stretch", slot_window(d, GULIKA[wd])),
+            ("the lucky minutes", abhijit_window(d)),
         ];
         for (label, (s, e)) in windows {
             if at >= s && at < e {
                 kala_until = Some(e);
-                kala_words = format!("until {label} ends");
+                kala_words = format!("until {label} closes");
                 let after = kala_component(&sky_now, Some(d), obs, e.add_ns(NS_PER_SEC));
                 relief.push(Relief {
                     at: e,
-                    what: format!("{label} ends"),
+                    what: format!("{label} closes"),
                     gain: norm(kc.weight) * (after.score - kc.score),
                     planet: None,
                     kind: "kala",
@@ -402,7 +398,13 @@ pub fn explain(
     causes.push(Cause {
         planet: None,
         kind: "kala",
-        what: kc.note.clone(),
+        what: if kc.score < 0.45 {
+            "an unlucky stretch of the day is running: do not start anything new in it".to_string()
+        } else if kc.score > 0.55 {
+            "the lucky minutes of the day are running: a good time to begin".to_string()
+        } else {
+            "no special stretch of the day is running".to_string()
+        },
         pull: norm(kc.weight) * (kc.score - 0.5),
         until: kala_until,
         until_words: kala_words,
@@ -559,5 +561,16 @@ mod tests {
         assert!(e.relief.iter().any(|r| r.planet == Some(DashaLord::Saturn)));
         assert_eq!(e.slow.len(), 36);
         assert!((0.0..=1.0).contains(&e.slow_now));
+        use crate::plain::jargon;
+        for c in e.causes.iter().chain(e.helpers.iter()) {
+            assert_eq!(jargon(&c.what), None, "{}", c.what);
+            assert_eq!(jargon(&c.until_words), None, "{}", c.until_words);
+        }
+        for r in &e.relief {
+            assert_eq!(jargon(&r.what), None, "{}", r.what);
+        }
+        for t in [&e.eases, &e.peak, &e.toughens].into_iter().flatten() {
+            assert_eq!(jargon(&t.words), None, "{}", t.words);
+        }
     }
 }

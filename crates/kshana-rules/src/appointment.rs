@@ -9,7 +9,7 @@
 //! next fortnight (by the daily series), so the person is never told only "no".
 
 use crate::forecast::{date_words, moment, series, Band, ForecastError, Hora, Life, Moment};
-use crate::gochara::{tara_words, SaturnPhase};
+use crate::gochara::SaturnPhase;
 use kshana_ephem::Spk;
 use kshana_houses::HouseSystem;
 use kshana_sky::Observer;
@@ -82,7 +82,7 @@ impl Purpose {
             Purpose::Doctor => "Doctor, treatment",
             Purpose::Date => "Date, proposal",
             Purpose::Family => "Family matter",
-            Purpose::Property => "House, land, rent",
+            Purpose::Property => "Home, land, rent",
             Purpose::Launch => "Starting something new",
             Purpose::Anything => "Anything at all",
         }
@@ -99,7 +99,7 @@ impl Purpose {
             Purpose::Doctor => "a visit to the doctor",
             Purpose::Date => "a date or a proposal",
             Purpose::Family => "a family matter",
-            Purpose::Property => "a house or land matter",
+            Purpose::Property => "a home or land matter",
             Purpose::Launch => "a new start",
             Purpose::Anything => "what you have planned",
         }
@@ -293,9 +293,13 @@ pub fn appointment(
         .map(|(l, _, s)| (*l, *s));
     let pw = purpose.words();
     let headline = match (caution.as_deref(), verdict) {
-        (Some(c), _) => format!(
-            "{} falls inside {c}. Finish, do not begin: start it once {c} ends if you can, or take one of the hours below.", pw
-        ),
+        (Some(c), _) => {
+            let c = c.to_lowercase();
+            format!(
+                "{} falls inside the day's {c}. Finish things then, do not begin them: start once the {c} is over if you can, or take one of the hours below.",
+                crate::plain::cap(pw)
+            )
+        }
         (None, "Go") => format!(
             "Go. {} is {} at that hour and the sky carries {}. {}",
             top.name(),
@@ -329,9 +333,8 @@ pub fn appointment(
     if let Some(h) = &m.hora {
         let fit = top.hora_affinity(h.lord);
         advice.push(format!(
-            "{:?} hour: {}{}",
-            h.lord,
-            h.words,
+            "That hour is {}{}",
+            crate::plain::hour_nature(h.lord),
             if fit >= 0.7 {
                 format!(" · suits {}", top.name().to_ascii_lowercase())
             } else if fit <= 0.3 {
@@ -342,19 +345,25 @@ pub fn appointment(
         ));
     }
     if abhijit {
-        advice.push("Abhijit muhurta: the day's winning minutes. Begin exactly then.".into());
+        advice.push("It falls in the day's lucky minutes. Begin exactly then.".into());
     }
     for w in &m.windows {
         if w.caution && w.start > at && w.start.ns_since(at) < 3 * 3_600 * kshana_time::NS_PER_SEC {
-            advice.push(format!("{} begins soon after; finish before it, do not let it spill in.", w.label));
+            advice.push(format!(
+                "The day's {} begins soon after; finish before it, do not let it spill in.",
+                w.label.to_lowercase()
+            ));
         }
     }
-    advice.push(format!("{} · Moon in {}", tara_words(m.tara).to_string().replace("your birth star returns", "Your birth star returns"), m.moon_star));
+    advice.push(format!("For you it is {}.", crate::plain::day_quality(m.tara)));
     if m.moon_from_moon == 8 {
-        advice.push("Chandrashtama: the Moon is in the 8th from your Moon that day. Keep it short and simple.".into());
+        advice.push("It is your most sensitive day of the month: moods run low and misunderstandings come easily. Keep it short and simple.".into());
     }
     if m.saturn != SaturnPhase::Clear {
-        advice.push(format!("{}. Expect it to take longer than it should.", m.saturn.words()).replace("sade sati", "Sade sati").replace("ardhashtama", "Ardhashtama").replace("ashtama Shani", "Ashtama Shani"));
+        advice.push(format!(
+            "You are in {}. Expect it to take longer than it should.",
+            crate::plain::long_test(m.saturn)
+        ));
     }
     for (l, _, s) in &lives {
         let ls = &m.lives[idx(*l)];
@@ -474,6 +483,9 @@ mod tests {
             assert!((0.0..=1.0).contains(&a.score));
             assert!(!a.verdict.is_empty() && !a.headline.is_empty());
             assert!(!a.advice.is_empty());
+            for s in std::iter::once(&a.headline).chain(a.advice.iter()).chain(a.caution.iter()).chain(std::iter::once(&a.better_day_words)) {
+                assert_eq!(crate::plain::jargon(s), None, "{p:?}: {s}");
+            }
             let w: f64 = a.lives.iter().map(|x| x.1).sum();
             assert!((w - 1.0).abs() < 1e-9);
             if a.score < 0.50 {
