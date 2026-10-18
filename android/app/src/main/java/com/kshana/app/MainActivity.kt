@@ -66,13 +66,13 @@ import com.kshana.app.ui.screens.VedicScreen
 import com.kshana.app.ui.theme.KshanaColors
 import com.kshana.app.ui.theme.KshanaTheme
 
-private data class Tab(val route: String, val label: String, val icon: ImageVector)
+private data class Tab(val route: String, val label: String, val icon: ImageVector, val iconRes: Int? = null)
 
 /** The five doors: the loop, a question, a time to plan, the two of you, and everything else. */
 private val tabs = listOf(
     Tab("loop", "NOW", Icons.Filled.Star),
     Tab("ahead", "AHEAD", Icons.Filled.DateRange),
-    Tab("future", "FUTURE", Icons.AutoMirrored.Filled.ArrowForward),
+    Tab("future", "FUTURE", Icons.AutoMirrored.Filled.ArrowForward, com.kshana.app.R.drawable.ic_future),
     Tab("prashna", "ASK", Icons.Filled.Info),
     Tab("together", "US", Icons.Filled.Favorite),
     Tab("more", "MORE", Icons.AutoMirrored.Filled.List),
@@ -174,7 +174,7 @@ private fun App() {
                         NavigationBarItem(
                             selected = current == t.route,
                             onClick = { goTab(t.route) },
-                            icon = { Icon(t.icon, contentDescription = t.label) },
+                            icon = { val r = t.iconRes; if (r != null) Icon(androidx.compose.ui.res.painterResource(r), contentDescription = t.label) else Icon(t.icon, contentDescription = t.label) },
                             label = { Text(com.kshana.app.data.Lang.t(t.label)) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = KshanaColors.Gold,
