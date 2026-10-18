@@ -65,7 +65,7 @@ fun AheadScreen(
     onHindsight: () -> Unit,
 ) {
     val context = LocalContext.current
-    var span by remember { mutableStateOf("day") }
+    var span by remember { mutableStateOf(AheadRequest.span?.also { AheadRequest.span = null } ?: "day") }
     var out by remember { mutableStateOf<OutlookRecord?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var whyOpen by remember { mutableStateOf<String?>(null) }
@@ -188,4 +188,9 @@ fun AheadScreen(
         }
         QuietButton("THE BOOK OF YOUR LIFE · THE YEARS AHEAD AND BEHIND", onClick = onBook, modifier = Modifier.fillMaxWidth())
     }
+}
+
+/** The span Ahead should open on, when a question asked for one. */
+internal object AheadRequest {
+    var span: String? = null
 }

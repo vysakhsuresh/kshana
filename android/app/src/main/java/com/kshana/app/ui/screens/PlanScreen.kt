@@ -83,7 +83,7 @@ fun PlanScreen(
     val startLocal = remember { ZonedDateTime.now(zone).plusHours(1).withMinute(0).withSecond(0).withNano(0) }
     var date by remember { mutableStateOf(startLocal.toLocalDate()) }
     var time by remember { mutableStateOf(startLocal.toLocalTime()) }
-    var purpose by remember { mutableStateOf(ps.firstOrNull()?.key ?: "meeting") }
+    var purpose by remember { mutableStateOf(PlanPrefill.purpose?.also { PlanPrefill.purpose = null } ?: ps.firstOrNull()?.key ?: "meeting") }
     var pickDate by remember { mutableStateOf(false) }
     var pickTime by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<AppointmentRecord?>(null) }
@@ -364,4 +364,9 @@ fun PlanScreen(
             Text("Read for ${place.name}. Worked out on this phone; nothing leaves it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         }
     }
+}
+
+/** The purpose Plan should open on, when a question asked for a good day for it. */
+internal object PlanPrefill {
+    var purpose: String? = null
 }

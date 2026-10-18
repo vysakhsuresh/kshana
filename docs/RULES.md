@@ -344,3 +344,33 @@ test `plain_audit` calls every engine function the app shows to a person, for th
 people at three instants, and fails on any such word in a field the person reads. Keys
 and the expert layer (lord, planet, kind, rule ids, sources, the outlook's `why`) are
 listed as not shown and stay as they were for the chart pages.
+
+## Understanding a question in the person's own words (`understand.rs`)
+
+Kshana is offline; a typed or spoken question is matched to the set of questions the
+engine can answer by cue words, in English, Malayalam and Hindi, in their own scripts and
+in the Latin letters people type ("kalyanam eppo", "shaadi kab hogi"). The rule is never
+to answer a question that was not understood.
+
+1. **Care first**: words of self-harm get a gentle reply with Tele-MANAS (14416) and 112.
+2. **Outside a reading**: the day of a death or a length of life, a baby's sex (also
+   against the PCPNDT Act), lottery or betting numbers and stock tips, diagnoses and
+   medicines, black magic and curses, another person's private acts or feelings, names
+   and looks, exact sums, lost things, elections and matches, and someone else's own life
+   without their birth details. Each gets a plain "this is outside what Kshana can
+   answer" with the reason, and related questions it can answer.
+3. **Known questions**: 50 matters × 6 kinds of question; a part of life; the day, week,
+   month, year, years ahead; what helps; "is something wrong in my chart"; two people;
+   a good day for something; a look back. Single cues and combinations (a relative and a
+   health word is that relative's health; a job and a country is a job abroad); specific
+   matters win over general ones; ties between matters of different lives are not
+   decided: the person picks.
+4. **The gate**: an answer is given only when most of the person's meaningful words were
+   explained by the matched cues. Otherwise: "not sure it understood, will not guess",
+   with the closest questions to pick from.
+
+Measured with three sets of phrasings (tests `every_phrasing…`, `held_out`, `third_set`):
+192 core phrasings all right; 139 unseen: 132 right, 7 honestly unsure, 0 wrong; a third
+set of 94 written after, first run 54 right / 27 unsure / 13 wrong (several dangerous),
+after the gate and general rules 61 right / 33 unsure / 0 wrong. A wrong answer is a
+failure; "not sure, pick one" is the safe outcome.

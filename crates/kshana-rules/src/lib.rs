@@ -40,6 +40,7 @@ pub mod remedy_tree;
 pub mod timeline;
 pub mod topics;
 pub mod transit;
+pub mod understand;
 pub mod varsha;
 
 pub use areas::{area, Area, AREAS};

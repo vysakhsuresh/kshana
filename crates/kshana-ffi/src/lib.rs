@@ -4729,3 +4729,69 @@ impl Engine {
             .collect())
     }
 }
+
+/// What a question asks the app to do.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct AskActionRecord {
+    /// `ask`, `life`, `outlook`, `future`, `remedy`, `fear`, `us`, `plan`, `past`.
+    pub kind: String,
+    pub life: Option<String>,
+    pub topic: Option<String>,
+    pub question: Option<String>,
+    /// For `outlook`: day, week, month, year. For `plan`: the purpose key.
+    pub detail: Option<String>,
+}
+
+/// One question the app can answer, offered when it was not sure.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct AskAlternativeRecord {
+    pub label: String,
+    pub action: AskActionRecord,
+}
+
+/// How a question in the person's own words was understood.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct UnderstandingRecord {
+    /// `answer`, `choose`, `outside`, `care`.
+    pub status: String,
+    pub action: Option<AskActionRecord>,
+    pub message: String,
+    pub alternatives: Vec<AskAlternativeRecord>,
+    pub confidence: f64,
+    pub reason: String,
+}
+
+fn action_record(a: &kshana_rules::understand::Action) -> AskActionRecord {
+    use kshana_rules::understand::Action as A;
+    let r = |kind: &str| AskActionRecord { kind: kind.into(), life: None, topic: None, question: None, detail: None };
+    match a {
+        A::Ask { life, topic, question } => AskActionRecord { kind: "ask".into(), life: Some(life.name().into()), topic: topic.map(Into::into), question: Some((*question).into()), detail: None },
+        A::Life(l) => AskActionRecord { life: Some(l.name().into()), ..r("life") },
+        A::Outlook(s) => AskActionRecord { detail: Some((*s).into()), ..r("outlook") },
+        A::Future => r("future"),
+        A::Remedy(l) => AskActionRecord { life: l.map(|x| x.name().into()), ..r("remedy") },
+        A::ChartFear => r("fear"),
+        A::Us => r("us"),
+        A::Plan(p) => AskActionRecord { detail: Some((*p).into()), ..r("plan") },
+        A::Past => r("past"),
+    }
+}
+
+/// Understand a question typed or spoken in the person's own words (English, Malayalam
+/// or Hindi, in their own scripts or in Latin letters). It answers only when it
+/// understood; otherwise it says so and offers the closest questions it can answer.
+#[uniffi::export]
+pub fn understand(text: String) -> UnderstandingRecord {
+    let u = kshana_rules::understand::understand(&text);
+    UnderstandingRecord {
+        status: u.status.into(),
+        action: u.action.as_ref().map(action_record),
+        message: u.message,
+        alternatives: u.alternatives.iter().map(|a| AskAlternativeRecord { label: a.label.clone(), action: action_record(&a.action) }).collect(),
+        confidence: u.confidence,
+        reason: u.reason.into(),
+    }
+}

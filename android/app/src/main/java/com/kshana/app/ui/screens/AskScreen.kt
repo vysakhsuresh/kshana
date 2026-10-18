@@ -62,6 +62,7 @@ fun AskScreen(
     initialLife: String? = null,
     onBack: (() -> Unit)? = null,
     onRemedy: (String) -> Unit = {},
+    onGo: (uniffi.kshana_ffi.AskActionRecord) -> Unit = {},
 ) {
     val context = LocalContext.current
     val qs: List<QuestionRecord> = remember { questions() }
@@ -120,19 +121,37 @@ fun AskScreen(
         Text(tr("Ask the sky"), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         Text("Pick what it is about and what you want to know. You get a straight answer, when it happens, and what to do.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
 
-        // In your own words: typed, or spoken in English, Malayalam or Hindi.
+        // In your own words: typed, or spoken in English, Malayalam or Hindi. The engine
+        // answers only what it understood; otherwise it says so and offers what it can.
         var free by remember { mutableStateOf("") }
-        var understood by remember { mutableStateOf<Understood?>(null) }
+        var reply by remember { mutableStateOf<uniffi.kshana_ffi.UnderstandingRecord?>(null) }
+        fun run(a: uniffi.kshana_ffi.AskActionRecord) {
+            if (a.kind == "ask") {
+                life = a.life ?: life
+                topic = allTopics.firstOrNull { it.key == a.topic }
+                question = a.question ?: question
+                answer = null
+                askedKey = "${a.life}|${a.topic}|${a.question}|${System.currentTimeMillis()}"
+            } else {
+                onGo(a)
+            }
+        }
+        fun understandIt(text: String) {
+            val u = uniffi.kshana_ffi.understand(text)
+            reply = u
+            if (u.status == "answer") u.action?.let { run(it) } else answer = null
+        }
         val speech = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) { r ->
             val said = r.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
             if (!said.isNullOrBlank()) {
                 free = said
-                val u = FreeAsk.understand(said, allTopics)
-                understood = u
-                life = u.life; topic = u.topic; question = u.question; answer = null
-                askedKey = "${u.life}|${u.topic?.key}|${u.question}|${System.currentTimeMillis()}"
+                understandIt(said)
             }
         }
+        Text(
+            "Kshana works offline. Every answer comes from your birth time and the sky, worked out on this phone, for a set list of questions about your life. When it is not sure what you asked, it says so and shows the closest questions it can answer; it never guesses.",
+            style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+        )
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             androidx.compose.material3.OutlinedTextField(
                 value = free, onValueChange = { free = it },
@@ -153,18 +172,34 @@ fun AskScreen(
             ) { Text("🎙", fontSize = 20.sp) }
         }
         if (free.isNotBlank()) {
-            QuietButton("ASK THIS", onClick = {
-                val u = FreeAsk.understand(free, allTopics)
-                understood = u
-                life = u.life; topic = u.topic; question = u.question; answer = null
-                askedKey = "${u.life}|${u.topic?.key}|${u.question}|${System.currentTimeMillis()}"
-            }, modifier = Modifier.fillMaxWidth())
+            QuietButton("ASK THIS", onClick = { understandIt(free) }, modifier = Modifier.fillMaxWidth())
         }
-        understood?.let { u ->
-            Text(
-                "Understood as: ${lifeName(u.life)}${u.topic?.let { " · ${it.words}" } ?: ""} · ${tr(qs.firstOrNull { it.key == u.question }?.words ?: u.question)}. Not right? Change it below.",
-                style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky,
-            )
+        reply?.let { u ->
+            when (u.status) {
+                "answer" -> Text(
+                    "${u.message} Not what you meant? Change it below, or ask in other words.",
+                    style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky,
+                )
+                else -> Column(
+                    Modifier.fillMaxWidth().glass(16.dp).padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        when (u.status) {
+                            "care" -> "PLEASE READ THIS FIRST"
+                            "outside" -> "THIS IS OUTSIDE WHAT KSHANA CAN ANSWER"
+                            else -> "KSHANA IS NOT SURE IT UNDERSTOOD"
+                        },
+                        style = MaterialTheme.typography.labelSmall, color = if (u.status == "care") KshanaColors.Sky else KshanaColors.Gold,
+                    )
+                    Text(u.message, fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 23.sp, color = KshanaColors.Text)
+                    if (u.status == "care") CareCard()
+                    if (u.alternatives.isNotEmpty()) {
+                        Text(if (u.status == "choose") "Is it one of these?" else "What Kshana can tell you instead:", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                        for (a in u.alternatives) OptionBox(a.label, selected = false, onClick = { reply = null; run(a.action) }, modifier = Modifier.fillMaxWidth())
+                    }
+                }
+            }
         }
 
         SectionLabel(tr("About"))

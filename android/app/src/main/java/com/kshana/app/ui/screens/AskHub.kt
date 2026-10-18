@@ -31,12 +31,13 @@ fun AskHub(
     onRemedy: (String) -> Unit,
     onLife: (String) -> Unit,
     onBack: (() -> Unit)? = null,
+    onGo: (uniffi.kshana_ffi.AskActionRecord) -> Unit = {},
 ) {
     var mode by rememberSaveable { mutableStateOf(initialMode) }
     Box(Modifier.fillMaxSize()) {
         when (mode) {
             "time" -> PlanScreen(profile = profile, place = place, settings = settings, onLife = onLife)
-            else -> AskScreen(profile = profile, place = place, settings = settings, onRemedy = onRemedy, onBack = onBack)
+            else -> AskScreen(profile = profile, place = place, settings = settings, onRemedy = onRemedy, onBack = onBack, onGo = onGo)
         }
         // The mode switch floats over the top of either screen.
         Row(

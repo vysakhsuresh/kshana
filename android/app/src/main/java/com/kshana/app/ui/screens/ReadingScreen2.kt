@@ -144,6 +144,16 @@ internal fun ConsultScreen(profile: BirthProfile, place: Place, settings: Engine
             "As an astrologer would sit with you: what is on your mind first, then your past, where you stand, what is coming and what will help. Tap any door to go further.",
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
         )
+        Column(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).border(1.dp, KshanaColors.Sky.copy(alpha = 0.35f), RoundedCornerShape(12.dp)).padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text("HOW THIS READING IS MADE", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Sky)
+            Text(
+                "Kshana works offline. Every answer here comes from your birth time and the positions of the sky, worked out on this phone; nothing is sent anywhere and no person or chatbot writes it. It answers a set list of questions about life. When a question is outside that list, or it is not sure what you meant, it tells you so plainly and offers the closest questions it can answer, rather than guess.",
+                style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft,
+            )
+        }
         Row(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).border(1.dp, KshanaColors.Gold.copy(alpha = 0.6f), RoundedCornerShape(26.dp)).clickable(onClick = doors.ask).padding(horizontal = 18.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,

@@ -366,7 +366,18 @@ private fun App() {
             }
             composable("prashna") {
                 withProfile {
-                    AskHub(profile = it, place = here, settings = settings, onRemedy = { l -> open("parihara/$l") }, onLife = { life -> open("life/$life") }, onBack = { nav.popBackStack() })
+                    AskHub(profile = it, place = here, settings = settings, onRemedy = { l -> open("parihara/$l") }, onLife = { life -> open("life/$life") }, onBack = { nav.popBackStack() }, onGo = { a ->
+                        when (a.kind) {
+                            "life" -> open("life/${a.life ?: "Love"}")
+                            "outlook" -> { com.kshana.app.ui.screens.AheadRequest.span = a.detail; com.kshana.app.ui.screens.FutureHubRequest.mode = "near"; goTab("future") }
+                            "future" -> { com.kshana.app.ui.screens.FutureHubRequest.mode = "far"; goTab("future") }
+                            "remedy" -> open(a.life?.let { "parihara/$it" } ?: "parihara")
+                            "fear" -> { if (!com.kshana.app.data.Situations.has(com.kshana.app.data.Situations.CHART_FEAR)) com.kshana.app.data.Situations.toggle(context, com.kshana.app.data.Situations.CHART_FEAR); goTab("reading") }
+                            "us" -> goTab("together")
+                            "plan" -> { com.kshana.app.ui.screens.PlanPrefill.purpose = a.detail; open("plan") }
+                            "past" -> open("hindsight")
+                        }
+                    })
                 }
             }
             composable("ask/{life}", arguments = listOf(navArgument("life") { type = NavType.StringType })) { entry ->
