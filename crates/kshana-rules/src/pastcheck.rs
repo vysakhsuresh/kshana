@@ -27,6 +27,8 @@ pub struct PastCheck {
     pub life: Life,
     /// The question, in plain words.
     pub question: String,
+    /// The same stretch said as a reading of the past.
+    pub statement: String,
     /// True for a good stretch, false for a hard one.
     pub good: bool,
     /// How far the stretch stood from the life's own average, in points.
@@ -130,7 +132,7 @@ pub fn past_checks(spk: &Spk, eop: Option<&EopTable>, natal: &Natal, obs: &Obser
             let from = s[i].0;
             let to = s[(i + w - 1).min(s.len() - 1)].0.add_ns(month - NS_PER_DAY);
             let life = Life::ALL[li];
-            PastCheck { from, to, life, question: question(lang, life, good, from, to, lon), good, strength }
+            PastCheck { from, to, life, question: question(lang, life, good, from, to, lon), statement: statement(lang, life, good, from, to, lon), good, strength }
         })
         .collect())
 }
@@ -164,5 +166,42 @@ mod tests {
             let lives: std::collections::HashSet<_> = c.iter().map(|x| x.life).collect();
             assert_eq!(lives.len(), c.len());
         }
+    }
+}
+
+fn said(life: Life, good: bool) -> T3 {
+    use Life::*;
+    match (life, good) {
+        (Love, false) => ["strain, distance or a break in love or marriage", "പ്രണയത്തിലോ വിവാഹത്തിലോ ഉലച്ചിൽ, അകൽച്ച, അല്ലെങ്കിൽ വേർപിരിയൽ", "प्रेम या विवाह में तनाव, दूरी या टूटन"],
+        (Love, true) => ["something good in love: a new bond, a marriage, or real closeness", "പ്രണയത്തിൽ നല്ലത്: പുതിയ ബന്ധം, വിവാഹം, അല്ലെങ്കിൽ യഥാർത്ഥ അടുപ്പം", "प्रेम में कुछ अच्छा: नया रिश्ता, विवाह या सच्ची नज़दीकी"],
+        (Career, false) => ["hard times at work: a setback, a difficult boss, a lost job or unrewarded effort", "ജോലിയിൽ കഷ്ടകാലം: തിരിച്ചടി, പ്രയാസമുള്ള മേലധികാരി, ജോലി നഷ്ടം, അല്ലെങ്കിൽ ഫലമില്ലാത്ത അധ്വാനം", "काम में कठिन समय: झटका, मुश्किल बॉस, नौकरी जाना या बिना फल की मेहनत"],
+        (Career, true) => ["a rise at work: a new job, a promotion or recognition", "ജോലിയിൽ ഉയർച്ച: പുതിയ ജോലി, സ്ഥാനക്കയറ്റം, അല്ലെങ്കിൽ അംഗീകാരം", "काम में तरक्की: नई नौकरी, पदोन्नति या पहचान"],
+        (Money, false) => ["money troubles: losses, debts or spending beyond income", "പണപ്രശ്നം: നഷ്ടം, കടം, അല്ലെങ്കിൽ വരുമാനത്തിനപ്പുറം ചെലവ്", "पैसे की तंगी: नुकसान, कर्ज़ या आमदनी से ज़्यादा ख़र्च"],
+        (Money, true) => ["money coming in well: a raise, a gain or a good deal", "പണം നന്നായി വന്ന സമയം: ശമ്പളവർധന, ലാഭം, അല്ലെങ്കിൽ നല്ല ഇടപാട്", "अच्छी आमदनी: वेतन वृद्धि, लाभ या अच्छा सौदा"],
+        (Health, false) => ["illness, injury or a long spell of low energy", "അസുഖം, പരിക്ക്, അല്ലെങ്കിൽ നീണ്ട ക്ഷീണകാലം", "बीमारी, चोट या लंबी कमज़ोरी"],
+        (Health, true) => ["unusually good health and energy", "പതിവിലും നല്ല ആരോഗ്യവും ഊർജവും", "असामान्य रूप से अच्छी सेहत और ऊर्जा"],
+        (Family, false) => ["trouble at home: quarrels, an elder's illness, or someone moving away", "വീട്ടിൽ പ്രശ്നം: വഴക്ക്, മുതിർന്നവരുടെ അസുഖം, അല്ലെങ്കിൽ ആരെങ്കിലും അകന്നുപോകൽ", "घर में परेशानी: झगड़े, किसी बड़े की बीमारी, या किसी का दूर जाना"],
+        (Family, true) => ["happy times at home: a celebration, a reunion or a new member", "വീട്ടിൽ സന്തോഷകാലം: ആഘോഷം, ഒത്തുചേരൽ, അല്ലെങ്കിൽ പുതിയ അംഗം", "घर में ख़ुशियाँ: उत्सव, मिलन या नया सदस्य"],
+        (Study, false) => ["studies or exams going badly, or focus falling apart", "പഠനമോ പരീക്ഷയോ മോശമാകൽ, അല്ലെങ്കിൽ ശ്രദ്ധ തകരൽ", "पढ़ाई या परीक्षा का बिगड़ना, या ध्यान बिखरना"],
+        (Study, true) => ["a pass, a qualification or learning that changed your path", "വിജയം, യോഗ്യത, അല്ലെങ്കിൽ വഴി മാറ്റിയ പഠനം", "पास होना, योग्यता, या ऐसी पढ़ाई जिसने राह बदली"],
+        (Home, false) => ["problems with your home, land, rent or a move", "വീട്, ഭൂമി, വാടക, അല്ലെങ്കിൽ താമസംമാറ്റം എന്നിവയിൽ പ്രശ്നം", "घर, ज़मीन, किराए या शिफ़्टिंग में परेशानी"],
+        (Home, true) => ["a better home: bought, built or moved into", "മെച്ചപ്പെട്ട വീട്: വാങ്ങി, പണിതു, അല്ലെങ്കിൽ മാറി", "बेहतर घर: ख़रीदा, बनाया या उसमें गए"],
+        (Travel, false) => ["a journey gone wrong, or plans to travel or move abroad falling through", "പിഴച്ച യാത്ര, അല്ലെങ്കിൽ യാത്രയോ വിദേശയാത്രയോ മുടങ്ങൽ", "बिगड़ी यात्रा, या यात्रा या विदेश जाने की योजना का अटकना"],
+        (Travel, true) => ["far travel, or a move abroad that worked out", "ദൂരയാത്ര, അല്ലെങ്കിൽ വിജയിച്ച വിദേശയാത്ര", "दूर की यात्रा, या विदेश जाना जो सफल रहा"],
+        (Children, false) => ["a hard time for a child, or worry about having children", "ഒരു കുട്ടിക്ക് കഷ്ടകാലം, അല്ലെങ്കിൽ മക്കളെക്കുറിച്ചുള്ള ആശങ്ക", "किसी बच्चे का कठिन समय, या संतान की चिंता"],
+        (Children, true) => ["joy from children: a birth, a milestone or a success", "മക്കളിൽ നിന്നുള്ള സന്തോഷം: ജനനം, നാഴികക്കല്ല്, അല്ലെങ്കിൽ വിജയം", "बच्चों से ख़ुशी: जन्म, कोई उपलब्धि या सफलता"],
+    }
+}
+
+/// The stretch said as a reading of the past, not a question: "From February 2025 to
+/// April 2025: strain, distance or a break in love or marriage."
+pub fn statement(lang: Lang, life: Life, good: bool, from: Instant, to: Instant, lon: f64) -> String {
+    let a = month_year(lang, from, lon);
+    let b = month_year(lang, to, lon);
+    let r = lang.pick(said(life, good));
+    match lang {
+        Lang::En => format!("{a} to {b}: {r}."),
+        Lang::Ml => format!("{a} മുതൽ {b} വരെ: {r}."),
+        Lang::Hi => format!("{a} से {b} तक: {r}।"),
     }
 }

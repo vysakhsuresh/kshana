@@ -187,3 +187,25 @@ and the trust report) are hidden until Settings › "Show the chart pages" is sw
 - **Play Store ready.** Signed release bundle, 16 KB-aligned native libraries, R8 rules,
   crash log kept on the phone (Settings › Problem report), docs/PLAY_STORE.md and
   docs/PRIVACY.md.
+
+## Five doors (1.1)
+
+- **NOW**: today. On your mind (each worry, today's standing and the date the reading
+  gives), the record, the lives you chose (the rest in one ALSO line), the wall, people,
+  hours, the clock. Ask opens from here.
+- **READING** (`ReadingScreen2.kt`, `ConsultScreen`): a sitting with an astrologer on one
+  page. What is on your mind, each answered with a verdict, how sure, the window of
+  dates and three doors (why, what helps, ask more); your past read back as plain
+  statements with "that happened" (engine `past_checks` statement); where you stand; what
+  is coming this year (top five from `future`); what will help (deeds first); how sure
+  all of it is. Every section ends with a door (`Door` in Common.kt) to the full screen.
+- **FUTURE** (`FutureHub`): DAY TO YEAR (the Ahead screen) and YEARS AHEAD (the timeline).
+- **US** and **MORE** as before.
+
+Situations (`data/Situations.kt`) are the 37 worries people most often bring to an
+astrologer, grouped as Marriage and love, Work, Money, Going abroad, Health and mind,
+Home and family, Studies, Children, and one fear: "an astrologer said something is wrong
+in my chart", answered with what is actually there, when it ends, and a plain warning
+against paying large sums to remove a "dosha". Each maps to a life, a matter (49 plus a
+new "court case") and a kind of question. The person's choices are kept on the phone and
+in the backup.

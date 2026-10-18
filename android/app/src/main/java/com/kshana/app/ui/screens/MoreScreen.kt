@@ -64,7 +64,7 @@ fun MoreScreen(profile: BirthProfile?, onOpen: (String) -> Unit) {
         Entry("Your birth chart", "Western wheel and aspects", "chart", onOpen)
         Entry("Vedic chart", "rasi, vargas, Vimshottari, Ashtakavarga", "vedic", onOpen)
         Entry("Life areas, in full", "KP promise and Parashari assessment with every rule", "areas", onOpen)
-        Entry("Reading", "the strongest area now with its rule trace", "reading", onOpen)
+        Entry("Strongest area, with rules", "the strongest area now with its rule trace", "reading_expert", onOpen)
         Entry("Exact moments", "ingresses, stations, lunations", "moments", onOpen)
         Entry("Muhurta", "the best windows for a purpose", "muhurta", onOpen)
         Entry("Prashna, horary", "the KP horary chart with a number, for the expert", "prashna_expert", onOpen)

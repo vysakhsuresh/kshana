@@ -4361,7 +4361,7 @@ pub struct PastCheckRecord {
     /// The life's key ("Love").
     pub life: String,
     /// The yes-or-no question, in the reader's language.
-    pub question: String,
+    pub question: String,    pub statement: String,
     /// True for a good stretch.
     pub good: bool,
     /// How far it stood from the life's average, in points.
@@ -4479,7 +4479,7 @@ impl Engine {
             .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         Ok(c
             .into_iter()
-            .map(|x| PastCheckRecord { from: x.from.into(), to: x.to.into(), life: x.life.name().to_string(), question: x.question, good: x.good, strength: x.strength })
+            .map(|x| PastCheckRecord { from: x.from.into(), to: x.to.into(), life: x.life.name().to_string(), question: x.question, statement: x.statement, good: x.good, strength: x.strength })
             .collect())
     }
 

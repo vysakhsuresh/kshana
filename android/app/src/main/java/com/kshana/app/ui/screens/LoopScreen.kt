@@ -103,6 +103,7 @@ fun LoopScreen(
     onAhead: () -> Unit = {},
     onJournal: () -> Unit = {},
     onCalendar: () -> Unit = {},
+    onReading: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var moment by remember { mutableStateOf<MomentRecord?>(null) }
@@ -284,7 +285,10 @@ fun LoopScreen(
                 }
             }
             item {
-                Column(Modifier.padding(horizontal = 24.dp)) { ProofStrip(onRecord, onJournal, onCalendar) }
+                Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OnYourMind(m, onReading)
+                    ProofStrip(onRecord, onJournal, onCalendar)
+                }
             }
             item {
                 WallStrip(profile, place, settings, shownTick, onWall)
@@ -952,5 +956,35 @@ private fun ProofStrip(onRecord: () -> Unit, onJournal: () -> Unit, onCalendar: 
             Text(if (journal > 0) "JOURNAL · $journal ›" else "+ SOMETHING HAPPENED", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onJournal).padding(vertical = 4.dp))
             Text("MY CALENDAR ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onCalendar).padding(vertical = 4.dp))
         }
+    }
+}
+
+/**
+ * What is on the person's mind, carried onto Now: for each worry they chose, how today
+ * stands for that part of life and the date the reading gives, one line each, with the
+ * door to the whole reading.
+ */
+@Composable
+private fun OnYourMind(m: MomentRecord, onReading: () -> Unit) {
+    val mine = com.kshana.app.data.Situations.mine.filter { it.key != com.kshana.app.data.Situations.CHART_FEAR }
+    if (mine.isEmpty()) return
+    Column(Modifier.fillMaxWidth().glass(16.dp).clickable(onClick = onReading).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("ON YOUR MIND", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        for (s in mine.take(3)) {
+            val kind = com.kshana.app.data.Situations.kind(s.key) ?: continue
+            val today = m.lives.firstOrNull { it.life == kind.life }
+            val a = ConsultCache.answers[s.key]
+            Column {
+                Text(kind.says, style = MaterialTheme.typography.bodyLarge, color = KshanaColors.Text)
+                Text(
+                    listOfNotNull(
+                        today?.let { "Today: ${bandWord(it.band).lowercase()} for ${lifeName(kind.life).lowercase()}." },
+                        a?.let { r -> r.whenStart?.let { "${r.verdict}; ${r.whenWords.lowercase()} ${whenText(it)}." } ?: "${r.verdict}." },
+                    ).joinToString(" "),
+                    style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft,
+                )
+            }
+        }
+        Text("YOUR READING ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
     }
 }

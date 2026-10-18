@@ -68,12 +68,11 @@ import com.kshana.app.ui.theme.KshanaTheme
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector, val iconRes: Int? = null)
 
-/** The five doors: the loop, a question, a time to plan, the two of you, and everything else. */
+/** The five doors: today, your reading (with Ask inside it), the future, the two of you, and everything else. */
 private val tabs = listOf(
     Tab("loop", "NOW", Icons.Filled.Star),
-    Tab("ahead", "AHEAD", Icons.Filled.DateRange),
+    Tab("reading", "READING", Icons.Filled.Info, com.kshana.app.R.drawable.ic_reading),
     Tab("future", "FUTURE", Icons.AutoMirrored.Filled.ArrowForward, com.kshana.app.R.drawable.ic_future),
-    Tab("prashna", "ASK", Icons.Filled.Info),
     Tab("together", "US", Icons.Filled.Favorite),
     Tab("more", "MORE", Icons.AutoMirrored.Filled.List),
 )
@@ -113,6 +112,7 @@ private fun App() {
     remember {
         com.kshana.app.data.Lang.load(context)
         com.kshana.app.data.Focus.load(context)
+        com.kshana.app.data.Situations.load(context)
         com.kshana.app.system.Alerts.rearm(context)
         if (com.kshana.app.system.Sunrise.enabled(context)) com.kshana.app.system.Sunrise.scheduleNext(context)
         true
@@ -205,7 +205,7 @@ private fun App() {
                         onRemedy = { open("parihara") },
                         onSettings = { open("settings") },
                         onPlan = { open("plan") },
-                        onAhead = { goTab("ahead") },
+                        onAhead = { com.kshana.app.ui.screens.FutureHubRequest.mode = "near"; goTab("future") },
                         onBook = { open("book") },
                         onTogether = { goTab("together") },
                         onWall = { open("wall") },
@@ -214,6 +214,7 @@ private fun App() {
                         onRecord = { open("record") },
                         onJournal = { open("journal") },
                         onCalendar = { open("calendar") },
+                        onReading = { goTab("reading") },
                     )
                 }
             }
@@ -239,7 +240,34 @@ private fun App() {
             }
             composable("how") { com.kshana.app.ui.screens.HowScreen(onBack = { nav.popBackStack() }) }
             composable("familydates") { withProfile { com.kshana.app.ui.screens.FamilyDatesScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }) } }
-            composable("future") { withProfile { com.kshana.app.ui.screens.FutureScreen(profile = it, place = here, settings = settings, onRemedy = { l -> open("parihara/$l") }, onSettings = { open("settings") }) } }
+            composable("future") {
+                withProfile {
+                    com.kshana.app.ui.screens.FutureHub(
+                        profile = it, place = here, settings = settings,
+                        onLife = { life -> open("life/$life") }, onRemedy = { l -> open("parihara/$l") },
+                        onLetter = { open("letter") }, onBook = { open("book") }, onHindsight = { open("hindsight") }, onSettings = { open("settings") },
+                    )
+                }
+            }
+            composable("reading") {
+                withProfile {
+                    com.kshana.app.ui.screens.ConsultScreen(
+                        profile = it, place = here, settings = settings,
+                        doors = com.kshana.app.ui.screens.ReadingDoors(
+                            ask = { open("prashna") },
+                            remedy = { l -> open("parihara/$l") },
+                            future = { com.kshana.app.ui.screens.FutureHubRequest.mode = "far"; goTab("future") },
+                            ahead = { com.kshana.app.ui.screens.FutureHubRequest.mode = "near"; goTab("future") },
+                            today = { goTab("loop") },
+                            book = { open("book") },
+                            record = { open("record") },
+                            journal = { open("journal") },
+                            how = { open("how") },
+                            life = { l -> open("life/$l") },
+                        ),
+                    )
+                }
+            }
             composable("calendar") { withProfile { com.kshana.app.ui.screens.CalendarScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }) } }
             composable("wall") { withProfile { WallScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }) } }
             composable("letter") {
@@ -324,7 +352,7 @@ private fun App() {
             composable("muhurta") {
                 MuhurtaScreen(place = here, settings = settings, profile = profile, onBack = { nav.popBackStack() })
             }
-            composable("reading") {
+            composable("reading_expert") {
                 withProfile {
                     ReadingScreen(it, settings, onAreas = { open("areas") }, onParihara = { open("parihara") })
                 }
@@ -338,7 +366,7 @@ private fun App() {
             }
             composable("prashna") {
                 withProfile {
-                    AskHub(profile = it, place = here, settings = settings, onRemedy = { l -> open("parihara/$l") }, onLife = { life -> open("life/$life") })
+                    AskHub(profile = it, place = here, settings = settings, onRemedy = { l -> open("parihara/$l") }, onLife = { life -> open("life/$life") }, onBack = { nav.popBackStack() })
                 }
             }
             composable("ask/{life}", arguments = listOf(navArgument("life") { type = NavType.StringType })) { entry ->

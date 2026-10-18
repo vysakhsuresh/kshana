@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -276,5 +277,23 @@ internal fun CareCard() {
         QuietButton("CALL 14416", onClick = {
             runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:14416"))) }
         })
+    }
+}
+
+/**
+ * An open door: wherever the app gives a short answer, one of these leads to the whole
+ * of it. A gold label, an arrow, and a hairline above, so it reads as a way further in.
+ */
+@Composable
+internal fun Door(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.layout.Column(modifier.fillMaxWidth()) {
+        Box(Modifier.fillMaxWidth().height(1.dp).background(KshanaColors.Gold.copy(alpha = 0.18f)))
+        Row(
+            Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.weight(1f))
+            Text("›", fontSize = 18.sp, color = KshanaColors.Gold)
+        }
     }
 }

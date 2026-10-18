@@ -66,15 +66,17 @@ fun AskScreen(
     val context = LocalContext.current
     val qs: List<QuestionRecord> = remember { questions() }
     val allTopics: List<TopicRecord> = remember { topics() }
-    var life by remember { mutableStateOf(initialLife ?: "Love") }
-    var question by remember { mutableStateOf(qs.firstOrNull()?.key ?: "will_it_happen") }
+    // Another screen may send the person here with a question already chosen.
+    val pre = remember { Triple(AskPrefill.life, AskPrefill.topic, AskPrefill.question).also { AskPrefill.life = null; AskPrefill.topic = null; AskPrefill.question = null } }
+    var life by remember { mutableStateOf(pre.first ?: initialLife ?: "Love") }
+    var question by remember { mutableStateOf(pre.third ?: qs.firstOrNull()?.key ?: "will_it_happen") }
     // A topic of the dictionary narrows the life to one matter; null means the life itself.
-    var topic by remember { mutableStateOf<TopicRecord?>(null) }
+    var topic by remember { mutableStateOf(allTopics.firstOrNull { it.key == pre.second }) }
     var showTopics by remember { mutableStateOf(false) }
     var answer by remember { mutableStateOf<AnswerRecord?>(null) }
     var asking by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    var askedKey by remember { mutableStateOf<String?>(null) }
+    var askedKey by remember { mutableStateOf(if (pre.first != null) "pre|${System.currentTimeMillis()}" else null) }
     var showWhy by remember { mutableStateOf(false) }
 
     LaunchedEffect(askedKey) {

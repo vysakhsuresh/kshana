@@ -53,6 +53,7 @@ pub const TOPICS: &[Topic] = &[
     topic!("government_post", "A government post", Career, "Government post", 10, [6, 10, 11], [5, 9], "D10"),
     topic!("business_partner", "A partner in business", Career, "Business partner", 7, [7, 10, 11], [6, 9], "D10"),
     topic!("foreign_job", "A job abroad", Career, "Job abroad", 10, [9, 10, 12], [8, 11], "D10"),
+    topic!("court_case", "Winning a court case or dispute", Career, "Litigation", 6, [6, 11], [5, 12], "D1"),
     // Money
     topic!("loan", "Getting a loan", Money, "Loan", 6, [6, 11], [5, 10], "D2"),
     topic!("debt_cleared", "Clearing a debt", Money, "Debt", 12, [2, 11, 12], [1, 10], "D2"),
