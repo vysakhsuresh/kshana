@@ -76,11 +76,29 @@ private val tabs = listOf(
     Tab("more", "MORE", Icons.AutoMirrored.Filled.List),
 )
 
+/** A kshana:// link the app was opened with, waiting to be handled by the UI. */
+internal object IncomingLink {
+    var value by mutableStateOf<String?>(null)
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        IncomingLink.value = intent?.dataString
         setContent { KshanaTheme { App() } }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        IncomingLink.value = intent.dataString
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Keep the copy in Downloads current, off the main thread.
+        val app = applicationContext
+        Thread { com.kshana.app.data.Backup.autoSave(app) }.start()
     }
 }
 
@@ -98,7 +116,17 @@ private fun App() {
     }
     var settings by remember { mutableStateOf(ProfileStore.settings(context)) }
     // First launch with no profile lands on the birth form; afterwards on the loop.
-    val start = remember { if (profile == null) "birth" else "loop" }
+    val start = remember { if (profile == null) "welcome" else "loop" }
+    // A shared person opened from a kshana://person link: add them under Us and show them.
+    androidx.compose.runtime.LaunchedEffect(IncomingLink.value, profile) {
+        val link = IncomingLink.value ?: return@LaunchedEffect
+        val p = com.kshana.app.data.PersonLink.parse(link) ?: run { IncomingLink.value = null; return@LaunchedEffect }
+        if (profile == null) return@LaunchedEffect
+        val added = com.kshana.app.data.PersonLink.add(context, p)
+        IncomingLink.value = null
+        android.widget.Toast.makeText(context, if (added) "Added ${p.name} under Us" else "${p.name} is already under Us", android.widget.Toast.LENGTH_LONG).show()
+        nav.navigate("together") { launchSingleTop = true }
+    }
     val backStack by nav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route ?: start
     val showBar = tabs.any { it.route == current }
@@ -181,9 +209,34 @@ private fun App() {
                         onLetter = { open("letter") },
                         onHindsight = { open("hindsight") },
                         onRecord = { open("record") },
+                        onJournal = { open("journal") },
+                        onCalendar = { open("calendar") },
                     )
                 }
             }
+            composable("welcome") {
+                com.kshana.app.ui.screens.WelcomeScreen(
+                    onStart = { open("birth") },
+                    onRestored = {
+                        profile = ProfileStore.load(context)
+                        settings = ProfileStore.settings(context)
+                        here = ProfileStore.currentLocation(context)
+                        nav.navigate("loop") { launchSingleTop = true; popUpTo("welcome") { inclusive = true } }
+                    },
+                )
+            }
+            composable("journal") {
+                withProfile {
+                    com.kshana.app.ui.screens.JournalScreen(
+                        profile = it, place = here, settings = settings, onBack = { nav.popBackStack() },
+                        onRectify = { open("rectify") },
+                        onDay = { d -> com.kshana.app.ui.screens.HindsightRequest.date = d; open("hindsight") },
+                    )
+                }
+            }
+            composable("how") { com.kshana.app.ui.screens.HowScreen(onBack = { nav.popBackStack() }) }
+            composable("familydates") { withProfile { com.kshana.app.ui.screens.FamilyDatesScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }) } }
+            composable("calendar") { withProfile { com.kshana.app.ui.screens.CalendarScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }) } }
             composable("wall") { withProfile { WallScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }) } }
             composable("letter") {
                 withProfile { LetterScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }, onLife = { life -> open("life/$life") }, onWall = { open("wall") }) }
@@ -209,7 +262,7 @@ private fun App() {
             }
             composable("together") {
                 withProfile {
-                    TogetherScreen(profile = it, place = here, settings = settings, onAddPartner = { open("partner") }, onRemedy = { l -> open("parihara/$l") })
+                    TogetherScreen(profile = it, place = here, settings = settings, onAddPartner = { open("partner") }, onRemedy = { l -> open("parihara/$l") }, onFamilyDates = { open("familydates") })
                 }
             }
             composable("partner") {
@@ -273,10 +326,11 @@ private fun App() {
                 }
             }
             composable("areas") { withProfile { AreasScreen(it, settings, onBack = { nav.popBackStack() }) } }
-            composable("parihara") { withProfile { PariharaScreen(it, settings, onBack = { nav.popBackStack() }) } }
+            composable("parihara") { withProfile { com.kshana.app.ui.screens.RemedyTreeScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }) } }
+            composable("parihara_classic") { withProfile { PariharaScreen(it, settings, onBack = { nav.popBackStack() }) } }
             composable("parihara/{life}", arguments = listOf(navArgument("life") { type = NavType.StringType })) { entry ->
                 val life = entry.arguments?.getString("life")
-                withProfile { PariharaScreen(it, settings, onBack = { nav.popBackStack() }, life = life) }
+                withProfile { com.kshana.app.ui.screens.RemedyTreeScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }, life = life) }
             }
             composable("prashna") {
                 withProfile {
@@ -296,14 +350,23 @@ private fun App() {
                 BirthScreen(
                     existing = profile,
                     onCast = { p ->
+                        val first = profile == null
                         profile = p
                         here = ProfileStore.currentLocation(context)
-                        nav.navigate("loop") {
+                        // A first birth goes through the past check before the first reading.
+                        nav.navigate(if (first) "pastcheck" else "loop") {
                             launchSingleTop = true
                             popUpTo("birth") { inclusive = true }
                         }
                     },
                 )
+            }
+            composable("pastcheck") {
+                withProfile {
+                    com.kshana.app.ui.screens.PastCheckScreen(profile = it, settings = settings, onDone = {
+                        nav.navigate("loop") { launchSingleTop = true; popUpTo(nav.graph.findStartDestination().id) { inclusive = true } }
+                    })
+                }
             }
             composable("settings") {
                 SettingsScreen(

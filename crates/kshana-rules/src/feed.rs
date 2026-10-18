@@ -112,7 +112,7 @@ pub fn countdowns(
             kind: "saturn",
             title: if phase == SaturnPhase::Clear { "A long season turns".into() } else { "Your testing time ends".into() },
             at: t,
-            words,
+            words: format!("{words}."),
             good: phase != SaturnPhase::Clear,
         });
     }

@@ -78,7 +78,7 @@ fun AheadScreen(
         try {
             val engine = EngineProvider.get(context)
             val o = withContext(Dispatchers.Default) {
-                engine.outlook(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, span, Instants.now())
+                engine.outlook(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, span, Instants.now(), com.kshana.app.data.Lang.code)
             }
             OutlookCache.records[key] = o
             out = o
@@ -136,6 +136,19 @@ fun AheadScreen(
                 }
             }
             Text(o.season, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("SHARE ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable {
+                    com.kshana.app.system.ShareCard.share(
+                        context,
+                        when (span) { "day" -> "My day"; "week" -> "My week"; "month" -> "My month"; else -> "My year" },
+                        o.headline,
+                        if (span == "day") localText(o.from, DATE_ONLY) else "${localText(o.from, DATE_ONLY)} – ${localText(o.to, DATE_ONLY)}",
+                    )
+                }.padding(vertical = 4.dp))
+                Text("READ IT ALOUD ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable {
+                    com.kshana.app.system.Speak.say(context, o.headline + " " + o.lives.take(3).joinToString(" ") { it.words }, com.kshana.app.data.Lang.code)
+                }.padding(vertical = 4.dp))
+            }
         }
 
         // Each life: the sentence, the dates, what to do.

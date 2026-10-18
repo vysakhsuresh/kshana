@@ -144,6 +144,11 @@ fun SettingsScreen(
             }
         }
 
+        DataSettings()
+        FaithSettings()
+        GivingSettings()
+        CrashSettings()
+
         SectionLabel("Sunrise reading")
         var sunriseOn by remember { mutableStateOf(com.kshana.app.system.Sunrise.enabled(context)) }
         val askNotify = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted ->

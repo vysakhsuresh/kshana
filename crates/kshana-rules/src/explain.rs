@@ -465,7 +465,7 @@ pub fn explain(
     let lasting = |c: &Cause| matches!(c.kind, "natal" | "dasha" | "gochara");
     if ls.band >= Band::Good {
         let top = helpers.iter().find(|c| lasting(c)).or(helpers.first());
-        headline.push_str(&format!("{} is {} now", life.name(), ls.band.word()));
+        headline.push_str(&format!("{} is {} now", crate::plain::subject(life.name()), ls.band.word()));
         if let Some(t) = top {
             headline.push_str(&format!(": {}", t.what));
         }
@@ -477,7 +477,7 @@ pub fn explain(
         }
     } else {
         let drags: Vec<&Cause> = causes.iter().filter(|c| lasting(c)).take(2).collect();
-        headline.push_str(&format!("{} is {} now", life.name(), ls.band.word()));
+        headline.push_str(&format!("{} is {} now", crate::plain::subject(life.name()), ls.band.word()));
         if !drags.is_empty() {
             headline.push_str(" because ");
             headline.push_str(&drags.iter().map(|c| c.what.as_str()).collect::<Vec<_>>().join(", and "));

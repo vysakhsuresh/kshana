@@ -180,7 +180,7 @@ fn chapter(natal: &Natal, lord: DashaLord, parent: Option<DashaLord>, level: u8,
             Band::Hold => "Hard",
         },
         best.name().to_ascii_lowercase(),
-        weak.name()
+        crate::plain::subject(&weak.name().to_ascii_lowercase())
     );
     Chapter {
         lord,

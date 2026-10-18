@@ -251,3 +251,30 @@ internal fun MonoRow(label: String, value: String, valueColor: androidx.compose.
         Text(value, fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = valueColor)
     }
 }
+
+/**
+ * Shown when someone keeps returning to a painful question. The app reads seasons; it
+ * does not carry a person through them. It says so, gently, and points to people who can.
+ */
+@Composable
+internal fun CareCard() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.foundation.layout.Column(
+        Modifier.padding(vertical = 6.dp).then(Modifier).let { it }
+            .clip(RoundedCornerShape(16.dp))
+            .background(KshanaColors.Sky.copy(alpha = 0.08f))
+            .border(1.dp, KshanaColors.Sky.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+            .padding(16.dp),
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+    ) {
+        Text("YOU ARE NOT ALONE IN THIS", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Sky)
+        Text(
+            "You have come back to this question a few times. A hard season passes, and the dates above show when it eases. If it feels too heavy to carry today, talk to someone who listens: a friend, family, or a counsellor.",
+            fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 23.sp, color = KshanaColors.Text,
+        )
+        Text("Tele-MANAS, the Government of India's free helpline, answers day and night, in your language: 14416.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+        QuietButton("CALL 14416", onClick = {
+            runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:14416"))) }
+        })
+    }
+}

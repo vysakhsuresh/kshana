@@ -9,6 +9,7 @@ use crate::explain::explain;
 use crate::forecast::{date_words, moment, series, Band, ForecastError, Life, Moment, Natal, SIGN_NAMES};
 use crate::gochara::SaturnPhase;
 use crate::parihara::parihara;
+use crate::plain::Lang;
 use crate::transit::{next_sign_change, sign_changes};
 use kshana_ephem::Spk;
 use kshana_houses::HouseSystem;
@@ -73,27 +74,44 @@ pub struct Briefing {
 
 /// Saturn's phase named with its exit date, or its clearance.
 pub fn saturn_sentence(spk: &Spk, ayanamsa: Ayanamsa, natal: &Natal, phase: SaturnPhase, at: Instant, lon: f64) -> (String, Option<Instant>) {
+    saturn_sentence_in(Lang::En, spk, ayanamsa, natal, phase, at, lon)
+}
+
+/// The long test in the reader's language: what it is, until when, what it brings, and
+/// any pause on the way.
+pub fn saturn_sentence_in(lang: Lang, spk: &Spk, ayanamsa: Ayanamsa, natal: &Natal, phase: SaturnPhase, at: Instant, lon: f64) -> (String, Option<Instant>) {
+    let d = |t: Instant| crate::lang::date(lang, t, lon);
     let next = next_sign_change(spk, ayanamsa, DashaLord::Saturn, at);
     match phase {
         SaturnPhase::Clear => {
+            let none_now = lang.pick([
+                "No long testing time is on you now",
+                "ഇപ്പോൾ നീണ്ട പരീക്ഷണകാലമൊന്നുമില്ല",
+                "अभी कोई लंबा कठिन दौर नहीं है",
+            ]);
             let words = match next {
                 Some(c) => {
                     let h = ((c.to as i64 - natal.moon_sign()).rem_euclid(12) + 1) as u8;
                     let coming = SaturnPhase::from_house(h);
                     if coming != SaturnPhase::Clear {
-                        format!(
-                            "No long testing time is on you now. From {} {} begins. {}",
-                            date_words(c.at, lon),
-                            crate::plain::long_test(coming),
-                            crate::plain::long_test_prediction(coming)
-                        )
+                        let t = crate::lang::long_test(lang, coming);
+                        let pr = crate::lang::long_test_prediction(lang, coming);
+                        match lang {
+                            Lang::En => format!("{none_now}. From {} {t} begins. {pr}", d(c.at)),
+                            Lang::Ml => format!("{none_now}. {} മുതൽ {t} തുടങ്ങും. {pr}", d(c.at)),
+                            Lang::Hi => format!("{none_now}। {} से: {t}। {pr}", d(c.at)),
+                        }
                     } else {
-                        format!("No long testing time is on you now, and none begins before {}", date_words(c.at, lon))
+                        match lang {
+                            Lang::En => format!("{none_now}, and none begins before {}", d(c.at)),
+                            Lang::Ml => format!("{none_now}, {} വരെ ഒന്നും തുടങ്ങുകയുമില്ല", d(c.at)),
+                            Lang::Hi => format!("{none_now}, और {} से पहले कोई शुरू नहीं होगा", d(c.at)),
+                        }
                     }
                 }
-                None => "No long testing time is on you now".to_string(),
+                None => none_now.to_string(),
             };
-            (words, next.map(|c| c.at))
+            (words.trim_end_matches(['.', '।']).to_string(), next.map(|c| c.at))
         }
         p => {
             // The trial is the same kind of phase (sade sati: 12, 1, 2; a dhaiya: its one
@@ -141,19 +159,63 @@ pub fn saturn_sentence(spk: &Spk, ayanamsa: Ayanamsa, natal: &Natal, phase: Satu
                         date_words(t, lon),
                         crate::plain::long_test_prediction(p)
                     );
-                    if let Some((a, b)) = pauses.first() {
-                        s.push_str(&format!(
-                            " Between {} and {} it lifts for a while, then returns for its last stretch.",
-                            date_words(*a, lon),
-                            date_words(*b, lon)
-                        ));
+                    if lang != Lang::En {
+                        let lt = crate::lang::long_test(lang, p);
+                        let pr = crate::lang::long_test_prediction(lang, p);
+                        s = match lang {
+                            Lang::Ml => format!("{} വരെ: {lt}. {pr}", d(t)),
+                            _ => format!("{} तक: {lt}। {pr}", d(t)),
+                        };
                     }
-                    s.trim_end_matches('.').to_string()
+                    if let Some((a, b)) = pauses.first() {
+                        s.push_str(&match lang {
+                            Lang::En => format!(" Between {} and {} it lifts for a while, then returns for its last stretch.", d(*a), d(*b)),
+                            Lang::Ml => format!(" {} മുതൽ {} വരെ ഇത് കുറച്ചുകാലം അയയും, പിന്നെ അവസാന ഭാഗത്തിനായി തിരിച്ചുവരും.", d(*a), d(*b)),
+                            Lang::Hi => format!(" {} से {} तक यह कुछ समय के लिए हल्का होगा, फिर आख़िरी हिस्से के लिए लौटेगा।", d(*a), d(*b)),
+                        });
+                    }
+                    s.trim_end_matches(['.', '।']).to_string()
                 }
-                None => format!("{}. {}", capitalise(crate::plain::long_test(p)), crate::plain::long_test_prediction(p)).trim_end_matches('.').to_string(),
+                None => match lang {
+                    Lang::En => format!("{}. {}", capitalise(crate::plain::long_test(p)), crate::plain::long_test_prediction(p)),
+                    Lang::Ml => format!("{}. {}", crate::lang::long_test(lang, p), crate::lang::long_test_prediction(lang, p)),
+                    Lang::Hi => format!("{}। {}", crate::lang::long_test(lang, p), crate::lang::long_test_prediction(lang, p)),
+                }
+                .trim_end_matches(['.', '।'])
+                .to_string(),
             };
             (words, end.map(|e| e.0))
         }
+    }
+}
+
+/// The season paragraph in the reader's language: the long chapter and what it brings,
+/// the stretch inside it, and the long test (`saturn_words`, already in that language).
+pub fn season_paragraph_in(lang: Lang, natal: &Natal, at: Instant, lon: f64, saturn_words: &str) -> String {
+    let levels = vimshottari_levels(natal.moon_sidereal, natal.birth, YEAR_365_25_NS, at, 3);
+    let d = |t: Instant| crate::lang::date(lang, t, lon);
+    let stop = if lang == Lang::Hi { "।" } else { "." };
+    match (levels.first(), levels.get(1)) {
+        (Some(maha), Some(antar)) => {
+            let theme = crate::lang::chapter_theme(lang, maha.lord);
+            let pred = crate::lang::chapter_prediction(lang, maha.lord);
+            let mut s = match lang {
+                Lang::En => format!("Until {} your life centres on {theme}. {pred}", d(maha.end)),
+                Lang::Ml => format!("{} വരെ നിങ്ങളുടെ ജീവിതം {theme} എന്നിവയെ ചുറ്റിയാണ്. {pred}", d(maha.end)),
+                Lang::Hi => format!("{} तक आपकी ज़िंदगी {theme} के इर्द-गिर्द है। {pred}", d(maha.end)),
+            };
+            if antar.lord != maha.lord {
+                let t2 = crate::lang::chapter_theme(lang, antar.lord);
+                s.push_str(&match lang {
+                    Lang::En => format!(" Until {} the most movement is in {t2}.", d(antar.end)),
+                    Lang::Ml => format!(" {} വരെ ഏറ്റവും കൂടുതൽ ചലനം {t2} എന്നിവയിലാണ്.", d(antar.end)),
+                    Lang::Hi => format!(" {} तक सबसे ज़्यादा हलचल {t2} में है।", d(antar.end)),
+                });
+            }
+            s.push_str(&format!(" {saturn_words}{stop}"));
+            s
+        }
+        _ => format!("{saturn_words}{stop}"),
     }
 }
 

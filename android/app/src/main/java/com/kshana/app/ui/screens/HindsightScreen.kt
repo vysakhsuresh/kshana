@@ -67,7 +67,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun HindsightScreen(profile: BirthProfile, place: Place, settings: EngineSettings, onBack: () -> Unit, onLife: (String) -> Unit) {
     val context = LocalContext.current
-    var date by remember { mutableStateOf(LocalDate.now().minusYears(1)) }
+    var date by remember { mutableStateOf(HindsightRequest.date?.also { HindsightRequest.date = null } ?: LocalDate.now().minusYears(1)) }
     var pick by remember { mutableStateOf(false) }
     var brief by remember { mutableStateOf<BriefingRecord?>(null) }
     var slow by remember { mutableStateOf<List<SampleRecord>>(emptyList()) }
@@ -83,7 +83,7 @@ fun HindsightScreen(profile: BirthProfile, place: Place, settings: EngineSetting
             val from = Instants.fromInstant(date.minusMonths(6).atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant())
             val (b, s) = withContext(Dispatchers.Default) {
                 Pair(
-                    engine.briefing(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, listOf("Love", "Career", "Money", "Health", "Family"), at),
+                    engine.briefing(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, listOf("Love", "Career", "Money", "Health", "Family"), at, com.kshana.app.data.Lang.code),
                     engine.slowHorizon(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, from, 13u),
                 )
             }
@@ -202,4 +202,9 @@ internal fun SlowAround(values: List<Double>, markIndex: Int) {
         drawPath(path, KshanaColors.Sky, style = Stroke(2.5f, cap = StrokeCap.Round))
         drawCircle(KshanaColors.Gold, 5f, Offset(mi * stepX, y(values[mi])))
     }
+}
+
+/** A day another screen asked Look back to open on (the journal's "see that day"). */
+internal object HindsightRequest {
+    var date: LocalDate? = null
 }

@@ -67,7 +67,7 @@ private val LONG_DATE_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("d M
 @Composable
 fun RectifyScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> Unit, onSaved: (BirthProfile) -> Unit) {
     val context = LocalContext.current
-    var events by remember { mutableStateOf(listOf<EventDraft>()) }
+    var events by remember { mutableStateOf(com.kshana.app.data.Journal.all(context).take(8).map { EventDraft(it.date, it.life, it.good) }) }
     var draftLife by remember { mutableStateOf("Love") }
     var draftGood by remember { mutableStateOf(true) }
     var pickDate by remember { mutableStateOf(false) }

@@ -199,6 +199,18 @@ pub fn long_test_prediction(phase: SaturnPhase) -> &'static str {
     }
 }
 
+/// A life's name as the subject of an English sentence that takes a singular verb:
+/// "Children" reads as "life with your children" ("life with your children is steady",
+/// never "children is steady"). Other names pass through. Keeps the case of the first letter.
+pub fn subject(name: &str) -> String {
+    if name.eq_ignore_ascii_case("children") {
+        let s = "life with your children";
+        if name.starts_with('C') { cap(s) } else { s.to_string() }
+    } else {
+        name.to_string()
+    }
+}
+
 /// Capitalise the first letter.
 pub fn cap(s: &str) -> String {
     let mut c = s.chars();
@@ -244,9 +256,112 @@ pub fn influence_span(l: DashaLord) -> &'static str {
     }
 }
 
+/// The language a person reads. English is the source; Malayalam and Hindi are written
+/// for a common reader, not translated word by word (see `crate::lang`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum Lang {
+    /// English.
+    #[default]
+    En,
+    /// Malayalam.
+    Ml,
+    /// Hindi.
+    Hi,
+}
+
+impl Lang {
+    /// Parse "en", "ml" or "hi"; anything else is English.
+    pub fn parse(s: &str) -> Lang {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "ml" => Lang::Ml,
+            "hi" => Lang::Hi,
+            _ => Lang::En,
+        }
+    }
+
+    /// Stable code.
+    pub fn code(self) -> &'static str {
+        match self {
+            Lang::En => "en",
+            Lang::Ml => "ml",
+            Lang::Hi => "hi",
+        }
+    }
+
+    /// Pick the string for this language from an `[en, ml, hi]` triple.
+    pub fn pick<'a>(self, t: [&'a str; 3]) -> &'a str {
+        match self {
+            Lang::En => t[0],
+            Lang::Ml => t[1],
+            Lang::Hi => t[2],
+        }
+    }
+}
+
+/// Malayalam astrology words a common reader would not take as plain speech. Malayalam
+/// joins suffixes to words, so these are matched as substrings after the weekday names
+/// (which contain planet names) are removed.
+pub const JARGON_ML: &[&str] = &[
+    "ശനി", "ഗുരു", "വ്യാഴം", "രാഹു", "കേതു", "ചൊവ്വ", "ബുധൻ", "ശുക്രൻ", "സൂര്യൻ", "ചന്ദ്രൻ",
+    "ദശ", "അപഹാരം", "ഗ്രഹ", "ഭാവം", "ലഗ്നം", "നക്ഷത്ര", "കണ്ടകശനി", "ഏഴരശനി", "അഷ്ടമശനി", "ജാതകം",
+    "രാശി", "ഗോചര", "ഹോര", "തിഥി", "താരാ", "ചൊവ്വാദോഷ",
+];
+
+/// Hindi astrology words, matched as whole words after the weekday names are removed.
+pub const JARGON_HI: &[&str] = &[
+    "शनि", "गुरु", "बृहस्पति", "राहु", "केतु", "मंगल", "बुध", "शुक्र", "सूर्य", "चंद्र", "चन्द्र", "चंद्रमा",
+    "दशा", "महादशा", "अंतर्दशा", "ग्रह", "ग्रहों", "भाव", "लग्न", "नक्षत्र", "साढ़ेसाती", "साढ़े", "ढैय्या",
+    "कुंडली", "राशि", "गोचर", "होरा", "तिथि", "मांगलिक",
+];
+
+const WEEKDAYS_ML: &[&str] = &["ഞായറാഴ്ച", "തിങ്കളാഴ്ച", "ചൊവ്വാഴ്ച", "ബുധനാഴ്ച", "വ്യാഴാഴ്ച", "വെള്ളിയാഴ്ച", "ശനിയാഴ്ച"];
+const WEEKDAYS_HI: &[&str] = &["रविवार", "सोमवार", "मंगलवार", "बुधवार", "गुरुवार", "बृहस्पतिवार", "शुक्रवार", "शनिवार"];
+
+/// The first astrology word in `s` for `lang`: the English list always applies (names
+/// can slip through in any language), the Malayalam or Hindi list on top.
+pub fn jargon_in(lang: Lang, s: &str) -> Option<&'static str> {
+    if let Some(w) = jargon(s) {
+        return Some(w);
+    }
+    match lang {
+        Lang::En => None,
+        Lang::Ml => {
+            let mut t = s.to_string();
+            for d in WEEKDAYS_ML {
+                t = t.replace(d, " ");
+            }
+            JARGON_ML.iter().copied().find(|w| {
+                // At the start of a word only: Malayalam joins suffixes, rarely prefixes,
+                // and words like ആഗ്രഹം (desire) contain a term in the middle.
+                t.match_indices(w).any(|(i, _)| i == 0 || t[..i].chars().last().map_or(true, |c| !c.is_alphanumeric() && !('\u{0D00}'..='\u{0D7F}').contains(&c)))
+            })
+        }
+        Lang::Hi => {
+            let mut t = s.to_string();
+            for d in WEEKDAYS_HI {
+                t = t.replace(d, " ");
+            }
+            let words: Vec<&str> = t
+                .split(|c: char| c.is_whitespace() || ",.;:!?()—-–·।\"'".contains(c))
+                .filter(|w| !w.is_empty())
+                .collect();
+            JARGON_HI.iter().copied().find(|j| words.iter().any(|w| w == j))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_indic_checkers_skip_weekdays_and_catch_names() {
+        assert_eq!(jargon_in(Lang::Ml, "ശനിയാഴ്ച ഒരു തൊഴിലാളിക്ക് കൊടുക്കുക"), None);
+        assert_eq!(jargon_in(Lang::Ml, "ശനിയുടെ കാലം"), Some("ശനി"));
+        assert_eq!(jargon_in(Lang::Hi, "शनिवार को दान करें"), None);
+        assert_eq!(jargon_in(Lang::Hi, "शनि की दशा"), Some("शनि"));
+        assert_eq!(jargon_in(Lang::Hi, "सूर्योदय से पहले उठें"), None);
+    }
 
     #[test]
     fn the_vocabulary_is_itself_plain() {

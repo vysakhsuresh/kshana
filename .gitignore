@@ -15,3 +15,8 @@
 
 # IDE state
 /.idea/
+
+# Release signing: never commit the upload key or its passwords
+/android/keystore.properties
+/android/*.jks
+*.keystore

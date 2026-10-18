@@ -37,6 +37,7 @@ object Sunset {
             val m = engine.forecastMoment(
                 profile.birthInstant(), profile.latitude, profile.longitude,
                 place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(),
+                com.kshana.app.data.ProfileStore.prefs(context).getString("settings.lang", "en") ?: "en",
             )
             val lives = listOf("Love", "Career", "Money", "Health")
             for ((i, l) in m.lives.withIndex()) {

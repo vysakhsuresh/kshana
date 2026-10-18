@@ -8,6 +8,7 @@ use crate::feed::next_good;
 use crate::forecast::{date_words, moment, series, slow_series, story, Band, ForecastError, Life, Natal, Story};
 use crate::gochara::SaturnPhase;
 use crate::varsha::year_chapter;
+use crate::plain::Lang;
 use kshana_ephem::Spk;
 use kshana_houses::HouseSystem;
 use kshana_sky::Observer;
@@ -210,7 +211,7 @@ pub fn saturn_plain(phase: SaturnPhase) -> &'static str {
     crate::plain::long_test(phase)
 }
 
-/// The outlook for `span` from `at`.
+/// The outlook for `span` from `at`, in English.
 #[allow(clippy::too_many_arguments)]
 pub fn outlook(
     spk: &Spk,
@@ -222,20 +223,42 @@ pub fn outlook(
     span: Span,
     at: Instant,
 ) -> Result<Outlook, ForecastError> {
+    outlook_in(spk, eop, natal, obs, system, ayanamsa, span, at, Lang::En)
+}
+
+/// The outlook for `span` from `at`, in the reader's language.
+#[allow(clippy::too_many_arguments)]
+pub fn outlook_in(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    natal: &Natal,
+    obs: &Observer,
+    system: HouseSystem,
+    ayanamsa: Ayanamsa,
+    span: Span,
+    at: Instant,
+    lang: Lang,
+) -> Result<Outlook, ForecastError> {
+    let ld = |t: Instant| crate::lang::date(lang, t, obs.longitude_deg);
+    let bw = |life: Life, band: Band| -> String { crate::lang::band_sentence(lang, life, band).map(|s| s.to_string()).unwrap_or_else(|| band_words(life, band, span).to_string()) };
+    let aw = |life: Life, band: Band| -> String { crate::lang::advice_sentence(lang, life, band).map(|s| s.to_string()).unwrap_or_else(|| advice_words(life, band).to_string()) };
     let lon = obs.longitude_deg;
     let m = moment(spk, eop, natal, obs, system, ayanamsa, at)?;
     let season_why = m.saturn.expert().to_string();
     let levels = &m.dasha;
     let season = {
-        let (test, _) = crate::briefing::saturn_sentence(spk, ayanamsa, natal, m.saturn, at, lon);
+        let (test, _) = crate::briefing::saturn_sentence_in(lang, spk, ayanamsa, natal, m.saturn, at, lon);
+        let stop = if lang == Lang::Hi { "।" } else { "." };
         match levels.get(1) {
-            Some(p) => format!(
-                "Until {} the most movement in your life is in {}. {}.",
-                date_words(p.end, lon),
-                crate::plain::chapter_theme(p.lord),
-                test
-            ),
-            None => format!("{test}."),
+            Some(p) => {
+                let th = crate::lang::chapter_theme(lang, p.lord);
+                match lang {
+                    Lang::En => format!("Until {} the most movement in your life is in {th}. {test}.", ld(p.end)),
+                    Lang::Ml => format!("{} വരെ ജീവിതത്തിൽ ഏറ്റവും കൂടുതൽ ചലനം {th} എന്നിവയിലാണ്. {test}.", ld(p.end)),
+                    Lang::Hi => format!("{} तक ज़िंदगी में सबसे ज़्यादा हलचल {th} में है। {test}।", ld(p.end)),
+                }
+            }
+            None => format!("{test}{stop}"),
         }
     };
 
@@ -249,11 +272,23 @@ pub fn outlook(
                     let ls = &m.lives[i];
                     let g = good[i].as_ref();
                     let caution = m.windows.iter().find(|w| w.caution && w.start > at).map(|w| w.start);
-                    let mut words = format!("{} {}", band_words(life, ls.band, span), "");
+                    let mut words = format!("{} ", bw(life, ls.band));
                     match g {
-                        Some(g) if g.now => words.push_str(&format!("This hour serves it, until {}.", crate::forecast::date_words(g.end, lon).pipe(|_| hm(g.end, lon)))),
-                        Some(g) => words.push_str(&format!("Your best hour for it comes at {}.", hm(g.start, lon))),
-                        None => words.push_str("No strong hour for it is left today; tomorrow's sunrise starts a new set."),
+                        Some(g) if g.now => words.push_str(&match lang {
+                            Lang::En => format!("This hour serves it, until {}.", hm(g.end, lon)),
+                            Lang::Ml => format!("ഈ മണിക്കൂർ ഇതിന് അനുകൂലമാണ്, {} വരെ.", hm(g.end, lon)),
+                            Lang::Hi => format!("यह घंटा इसके लिए अच्छा है, {} तक।", hm(g.end, lon)),
+                        }),
+                        Some(g) => words.push_str(&match lang {
+                            Lang::En => format!("Your best hour for it comes at {}.", hm(g.start, lon)),
+                            Lang::Ml => format!("ഇതിനുള്ള നിങ്ങളുടെ ഏറ്റവും നല്ല മണിക്കൂർ {}-ന് വരും.", hm(g.start, lon)),
+                            Lang::Hi => format!("इसके लिए आपका सबसे अच्छा घंटा {} बजे आएगा।", hm(g.start, lon)),
+                        }),
+                        None => words.push_str(lang.pick([
+                            "No strong hour for it is left today; tomorrow's sunrise starts a new set.",
+                            "ഇന്ന് ഇതിന് നല്ല മണിക്കൂർ ബാക്കിയില്ല; നാളെ സൂര്യോദയത്തോടെ പുതിയവ തുടങ്ങും.",
+                            "आज इसके लिए कोई अच्छा घंटा नहीं बचा; कल सूर्योदय से नए शुरू होंगे।",
+                        ])),
                     }
                     LifeOutlook {
                         life,
@@ -261,7 +296,7 @@ pub fn outlook(
                         band: ls.band,
                         trend: "steady",
                         words: words.trim().to_string(),
-                        advice: advice_words(life, ls.band).to_string(),
+                        advice: aw(life, ls.band),
                         best_at: g.map(|x| x.start),
                         best_score: g.map(|x| x.fit).unwrap_or(0.0),
                         care_at: caution,
@@ -280,20 +315,38 @@ pub fn outlook(
                 .map(|&life| {
                     let st: Story = story(life, &samples);
                     let band = Band::of(st.mean);
-                    let mut words = band_words(life, band, span).to_string();
+                    let mut words = bw(life, band);
+                    let nn = crate::lang::span_noun(lang, span.key());
                     match st.trend {
-                        "rising" => words.push_str(&format!(" It improves as the {} goes on.", span.noun())),
-                        "falling" => words.push_str(" It starts stronger than it ends; act early."),
+                        "rising" => words.push_str(&match lang {
+                            Lang::En => format!(" It improves as the {} goes on.", span.noun()),
+                            Lang::Ml => format!(" {nn} മുന്നോട്ട് പോകുന്തോറും ഇത് മെച്ചപ്പെടും."),
+                            Lang::Hi => format!(" जैसे-जैसे {nn} आगे बढ़ेगा, यह बेहतर होगा।"),
+                        }),
+                        "falling" => words.push_str(lang.pick([
+                            " It starts stronger than it ends; act early.",
+                            " തുടക്കം അവസാനത്തേക്കാൾ ശക്തമാണ്; നേരത്തെ പ്രവർത്തിക്കുക.",
+                            " शुरुआत अंत से मज़बूत है; जल्दी कदम उठाएँ।",
+                        ])),
                         _ => {}
                     }
                     if let Some((a, b, v)) = st.best {
                         if v >= 0.56 {
-                            words.push_str(&format!(" Best: {}{}.", day_name_words(a, lon, span), if b.ns_since(a) > NS_PER_DAY { format!(" to {}", date_words(b, lon)) } else { String::new() }));
+                            let range = b.ns_since(a) > NS_PER_DAY;
+                            words.push_str(&match lang {
+                                Lang::En => format!(" Best: {}{}.", day_name_words(a, lon, span), if range { format!(" to {}", date_words(b, lon)) } else { String::new() }),
+                                Lang::Ml => if range { format!(" ഏറ്റവും നല്ലത്: {} മുതൽ {} വരെ.", ld(a), ld(b)) } else { format!(" ഏറ്റവും നല്ലത്: {}.", ld(a)) },
+                                Lang::Hi => if range { format!(" सबसे अच्छा: {} से {} तक।", ld(a), ld(b)) } else { format!(" सबसे अच्छा: {}।", ld(a)) },
+                            });
                         }
                     }
                     if let Some((a, _, v)) = st.low {
                         if v < 0.44 {
-                            words.push_str(&format!(" Go easy around {}.", date_words(a, lon)));
+                            words.push_str(&match lang {
+                                Lang::En => format!(" Go easy around {}.", date_words(a, lon)),
+                                Lang::Ml => format!(" {}-ഓടെ സൂക്ഷിക്കുക.", ld(a)),
+                                Lang::Hi => format!(" {} के आसपास सँभलकर चलें।", ld(a)),
+                            });
                         }
                     }
                     let why: Vec<String> = st.shifts.iter().map(|s| format!("{}: {}", date_words(s.at, lon), s.what)).collect();
@@ -303,7 +356,7 @@ pub fn outlook(
                         band,
                         trend: st.trend,
                         words,
-                        advice: advice_words(life, band).to_string(),
+                        advice: aw(life, band),
                         best_at: st.best.map(|b| b.0),
                         best_score: st.best.map(|b| b.2).unwrap_or(0.0),
                         care_at: st.low.map(|b| b.0),
@@ -334,20 +387,36 @@ pub fn outlook(
                     let trend = if tail - head > 0.05 { "rising" } else if head - tail > 0.05 { "falling" } else { "steady" };
                     let best = vals.iter().cloned().fold(None, |a: Option<(Instant, f64)>, x| if a.map_or(true, |a| x.1 > a.1) { Some(x) } else { a });
                     let low = vals.iter().cloned().fold(None, |a: Option<(Instant, f64)>, x| if a.map_or(true, |a| x.1 < a.1) { Some(x) } else { a });
-                    let mut words = band_words(life, band, span).to_string();
+                    let mut words = bw(life, band);
                     match trend {
-                        "rising" => words.push_str(" The year improves as it goes."),
-                        "falling" => words.push_str(" The first half is the stronger; move early."),
+                        "rising" => words.push_str(lang.pick([
+                            " The year improves as it goes.",
+                            " വർഷം മുന്നോട്ട് പോകുന്തോറും മെച്ചപ്പെടും.",
+                            " साल आगे बढ़ने के साथ बेहतर होगा।",
+                        ])),
+                        "falling" => words.push_str(lang.pick([
+                            " The first half is the stronger; move early.",
+                            " ആദ്യപകുതിയാണ് ശക്തം; നേരത്തെ നീങ്ങുക.",
+                            " पहला आधा ज़्यादा मज़बूत है; जल्दी कदम उठाएँ।",
+                        ])),
                         _ => {}
                     }
                     if let (Some(b), Some(l)) = (best, low) {
-                        words.push_str(&format!(" Best month around {}; go easy around {}.", date_words(b.0, lon), date_words(l.0, lon)));
+                        words.push_str(&match lang {
+                            Lang::En => format!(" Best month around {}; go easy around {}.", date_words(b.0, lon), date_words(l.0, lon)),
+                            Lang::Ml => format!(" ഏറ്റവും നല്ല മാസം {}-ഓടെ; {}-ഓടെ സൂക്ഷിക്കുക.", ld(b.0), ld(l.0)),
+                            Lang::Hi => format!(" सबसे अच्छा महीना {} के आसपास; {} के आसपास सँभलें।", ld(b.0), ld(l.0)),
+                        });
                     }
                     let mut why = Vec::new();
                     if weak_two.contains(&i) && band <= Band::Steady {
                         if let Ok(e) = explain(spk, eop, natal, obs, system, ayanamsa, life, at) {
                             if let Some(t) = &e.eases {
-                                words.push_str(&format!(" It eases from {}.", date_words(t.at, lon)));
+                                words.push_str(&match lang {
+                                    Lang::En => format!(" It eases from {}.", date_words(t.at, lon)),
+                                    Lang::Ml => format!(" {} മുതൽ ഇത് അയയും.", ld(t.at)),
+                                    Lang::Hi => format!(" {} से इसमें राहत मिलेगी।", ld(t.at)),
+                                });
                             }
                             for c in e.causes.iter().take(2) {
                                 why.push(format!("{}{}", c.what, if c.until_words.is_empty() { String::new() } else { format!(", {}", c.until_words) }));
@@ -363,7 +432,7 @@ pub fn outlook(
                         band,
                         trend,
                         words,
-                        advice: advice_words(life, band).to_string(),
+                        advice: aw(life, band),
                         best_at: best.map(|b| b.0),
                         best_score: best.map(|b| b.1).unwrap_or(0.0),
                         care_at: low.map(|b| b.0),
@@ -385,33 +454,64 @@ pub fn outlook(
     let top = &lives[0];
     let low = &lives[lives.len() - 1];
     let noun = span.noun();
-    let lead = match band {
-        Band::Bright => format!("A bright {noun}."),
-        Band::Good => format!("A good {noun}."),
-        Band::Steady => format!("An even {noun}."),
-        Band::Slow => format!("A slow {noun}."),
-        Band::Hold => format!("A {noun} to hold still."),
+    let nn = crate::lang::span_noun(lang, span.key());
+    let lead = match (lang, band) {
+        (Lang::En, Band::Bright) => format!("A bright {noun}."),
+        (Lang::En, Band::Good) => format!("A good {noun}."),
+        (Lang::En, Band::Steady) => format!("An even {noun}."),
+        (Lang::En, Band::Slow) => format!("A slow {noun}."),
+        (Lang::En, Band::Hold) => format!("A {noun} to hold still."),
+        (Lang::Ml, Band::Bright) => format!("തിളക്കമുള്ള {nn}."),
+        (Lang::Ml, Band::Good) => format!("നല്ല {nn}."),
+        (Lang::Ml, Band::Steady) => format!("സമനിലയുള്ള {nn}."),
+        (Lang::Ml, Band::Slow) => format!("മന്ദമായ {nn}."),
+        (Lang::Ml, Band::Hold) => format!("നിശ്ചലമായി നിൽക്കേണ്ട {nn}."),
+        (Lang::Hi, Band::Bright) => format!("उज्ज्वल {nn}।"),
+        (Lang::Hi, Band::Good) => format!("अच्छा {nn}।"),
+        (Lang::Hi, Band::Steady) => format!("बराबर {nn}।"),
+        (Lang::Hi, Band::Slow) => format!("धीमा {nn}।"),
+        (Lang::Hi, Band::Hold) => format!("रुककर चलने वाला {nn}।"),
     };
-    let mut headline = format!(
-        "{lead} {} carries it{}; the most patience is needed for {}{}.",
-        top.life.name(),
-        top.best_at
-            .filter(|_| span != Span::Day)
-            .map(|t| format!(", best around {}", date_words(t, lon)))
-            .unwrap_or_default(),
-        low.life.name().to_ascii_lowercase(),
-        low.care_at
-            .filter(|_| span != Span::Day)
-            .map(|t| format!(", go easy around {}", date_words(t, lon)))
-            .unwrap_or_default()
-    );
-    let rising: Vec<&str> = lives.iter().filter(|l| l.trend == "rising").map(|l| l.life.name()).collect();
+    let best = top.best_at.filter(|_| span != Span::Day);
+    let care = low.care_at.filter(|_| span != Span::Day);
+    let mut headline = match lang {
+        Lang::En => format!(
+            "{lead} {} carries it{}; the most patience is needed for {}{}.",
+            top.life.name(),
+            best.map(|t| format!(", best around {}", date_words(t, lon))).unwrap_or_default(),
+            low.life.name().to_ascii_lowercase(),
+            care.map(|t| format!(", go easy around {}", date_words(t, lon))).unwrap_or_default()
+        ),
+        Lang::Ml => format!(
+            "{lead} {} ആണ് ഏറ്റവും ശക്തം{}; ഏറ്റവും ക്ഷമ വേണ്ടത് {} എന്നതിനാണ്{}.",
+            crate::lang::life_name(lang, top.life),
+            best.map(|t| format!(", ഏറ്റവും നല്ലത് {}-ഓടെ", ld(t))).unwrap_or_default(),
+            crate::lang::life_name(lang, low.life),
+            care.map(|t| format!(", {}-ഓടെ സൂക്ഷിക്കുക", ld(t))).unwrap_or_default()
+        ),
+        Lang::Hi => format!(
+            "{lead} {} सबसे मज़बूत है{}; सबसे ज़्यादा धैर्य {} में चाहिए{}।",
+            crate::lang::life_name(lang, top.life),
+            best.map(|t| format!(", सबसे अच्छा {} के आसपास", ld(t))).unwrap_or_default(),
+            crate::lang::life_name(lang, low.life),
+            care.map(|t| format!(", {} के आसपास सँभलें", ld(t))).unwrap_or_default()
+        ),
+    };
+    let rising: Vec<String> = lives.iter().filter(|l| l.trend == "rising").map(|l| crate::lang::life_lower(lang, l.life)).collect();
     if !rising.is_empty() && span != Span::Day {
-        headline.push_str(&format!(" Improving as the {noun} goes: {}.", rising.join(", ").to_ascii_lowercase()));
+        headline.push_str(&match lang {
+            Lang::En => format!(" Improving as the {noun} goes: {}.", rising.join(", ")),
+            Lang::Ml => format!(" {nn} മുന്നോട്ട് പോകുന്തോറും മെച്ചപ്പെടുന്നവ: {}.", rising.join(", ")),
+            Lang::Hi => format!(" {nn} के साथ बेहतर होते जाएँगे: {}।", rising.join(", ")),
+        });
     }
     if span == Span::Day {
         if let Some(g) = next_good(&m, at, 0.56).into_iter().flatten().filter(|g| !g.now).min_by_key(|g| g.start.tai_ns()) {
-            headline.push_str(&format!(" The next good hour comes at {} for {}.", hm(g.start, lon), g.life.name().to_ascii_lowercase()));
+            headline.push_str(&match lang {
+                Lang::En => format!(" The next good hour comes at {} for {}.", hm(g.start, lon), g.life.name().to_ascii_lowercase()),
+                Lang::Ml => format!(" അടുത്ത നല്ല മണിക്കൂർ {}-ന്, {} എന്നതിന്.", hm(g.start, lon), crate::lang::life_name(lang, g.life)),
+                Lang::Hi => format!(" अगला अच्छा घंटा {} बजे, {} के लिए।", hm(g.start, lon), crate::lang::life_name(lang, g.life)),
+            });
         }
     }
 
@@ -464,6 +564,36 @@ mod tests {
             }
             assert!(o.lives.windows(2).all(|w| w[0].score >= w[1].score));
             assert!(o.lives.iter().all(|l| !l.why.is_empty() || span == Span::Year));
+        }
+    }
+}
+
+#[cfg(test)]
+mod lang_tests {
+    use super::*;
+    use crate::plain::jargon_in;
+    use kshana_time::Utc;
+
+    #[test]
+    fn every_span_speaks_plainly_in_malayalam_and_hindi() {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/de421.bsp");
+        let Ok(spk) = Spk::open(&p) else { return };
+        let obs = Observer { latitude_deg: 9.9312, longitude_deg: 76.2673, height_m: 0.0 };
+        let birth = Utc::new(1990, 2, 20, 5, 4, 0, 0).unwrap().to_instant().unwrap();
+        let natal = Natal::compute(&spk, None, birth, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri).unwrap();
+        let at = Utc::new(2026, 10, 17, 5, 0, 0, 0).unwrap().to_instant().unwrap();
+        for lang in [Lang::Ml, Lang::Hi] {
+            for span in [Span::Day, Span::Week, Span::Month, Span::Year] {
+                let o = outlook_in(&spk, None, &natal, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, span, at, lang).unwrap();
+                for s in [&o.headline, &o.season] {
+                    assert_eq!(jargon_in(lang, s), None, "{lang:?} {span:?}: {s}");
+                    assert!(!s.contains("Love") && !s.contains("Career"), "{lang:?} {span:?} English left: {s}");
+                }
+                for l in &o.lives {
+                    assert_eq!(jargon_in(lang, &l.words), None, "{lang:?} {span:?}: {}", l.words);
+                    assert_eq!(jargon_in(lang, &l.advice), None, "{lang:?} {span:?}: {}", l.advice);
+                }
+            }
         }
     }
 }

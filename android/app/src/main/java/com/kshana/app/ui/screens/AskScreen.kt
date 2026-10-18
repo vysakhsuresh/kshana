@@ -1,6 +1,7 @@
 package com.kshana.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -117,6 +118,53 @@ fun AskScreen(
         Text(tr("Ask the sky"), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         Text("Pick what it is about and what you want to know. You get a straight answer, when it happens, and what to do.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
 
+        // In your own words: typed, or spoken in English, Malayalam or Hindi.
+        var free by remember { mutableStateOf("") }
+        var understood by remember { mutableStateOf<Understood?>(null) }
+        val speech = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) { r ->
+            val said = r.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            if (!said.isNullOrBlank()) {
+                free = said
+                val u = FreeAsk.understand(said, allTopics)
+                understood = u
+                life = u.life; topic = u.topic; question = u.question; answer = null
+                askedKey = "${u.life}|${u.topic?.key}|${u.question}|${System.currentTimeMillis()}"
+            }
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.material3.OutlinedTextField(
+                value = free, onValueChange = { free = it },
+                placeholder = { Text("Ask in your own words…", color = KshanaColors.Muted) },
+                singleLine = false, maxLines = 3,
+                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(focusedBorderColor = KshanaColors.Gold, unfocusedBorderColor = KshanaColors.Line),
+                modifier = Modifier.weight(1f),
+            )
+            Box(
+                Modifier.size(52.dp).clip(CircleShape).border(1.dp, KshanaColors.Gold, CircleShape).clickable {
+                    val i = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                        .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                        .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, when (com.kshana.app.data.Lang.code) { "ml" -> "ml-IN"; "hi" -> "hi-IN"; else -> "en-IN" })
+                        .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Ask your question")
+                    runCatching { speech.launch(i) }
+                },
+                contentAlignment = Alignment.Center,
+            ) { Text("🎙", fontSize = 20.sp) }
+        }
+        if (free.isNotBlank()) {
+            QuietButton("ASK THIS", onClick = {
+                val u = FreeAsk.understand(free, allTopics)
+                understood = u
+                life = u.life; topic = u.topic; question = u.question; answer = null
+                askedKey = "${u.life}|${u.topic?.key}|${u.question}|${System.currentTimeMillis()}"
+            }, modifier = Modifier.fillMaxWidth())
+        }
+        understood?.let { u ->
+            Text(
+                "Understood as: ${lifeName(u.life)}${u.topic?.let { " · ${it.words}" } ?: ""} · ${tr(qs.firstOrNull { it.key == u.question }?.words ?: u.question)}. Not right? Change it below.",
+                style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky,
+            )
+        }
+
         SectionLabel(tr("About"))
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (l in LIFE_ORDER) Chip("${lifeGlyph(l)} ${lifeName(l).uppercase()}", selected = life == l, onClick = { life = l; topic = null; answer = null })
@@ -170,6 +218,7 @@ fun AskScreen(
                     Column(Modifier.weight(1f)) {
                         Text("${lifeGlyph(a.life)} ${topic?.words ?: a.life} · ${qs.firstOrNull { it.key == a.question }?.words ?: a.question}", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
                         Text(a.verdict, style = MaterialTheme.typography.displayMedium, color = scoreColor(a.score))
+                        Text(uniffi.kshana_ffi.sureWords(com.kshana.app.data.Lang.code, a.confidence), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
                     }
                 }
                 Text(a.headline, fontFamily = FontFamily.Serif, fontSize = 20.sp, lineHeight = 28.sp, color = KshanaColors.Text)
@@ -225,6 +274,14 @@ fun AskScreen(
             if (a.score < 56) {
                 QuietButton("WHAT TO DO FOR ${lifeName(a.life).uppercase()}", onClick = { onRemedy(a.life) }, modifier = Modifier.fillMaxWidth())
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                QuietButton("READ IT ALOUD", onClick = { com.kshana.app.system.Speak.say(context, "${a.verdict}. ${a.headline}", com.kshana.app.data.Lang.code) }, modifier = Modifier.weight(1f))
+                QuietButton("SHARE", onClick = {
+                    com.kshana.app.system.ShareCard.share(context, "${lifeName(a.life)} · ${qs.firstOrNull { it.key == a.question }?.words ?: ""}", a.headline, "Asked ${localText(Instants.now(), DATE_ONLY)}")
+                }, modifier = Modifier.weight(1f))
+            }
+            LaunchedEffect(a) { com.kshana.app.data.Care.note(context, a.life, a.question) }
+            if (com.kshana.app.data.Care.heavy(context, a.life, a.question, a.score)) CareCard()
             Text("Asked ${localText(Instants.now(), DATE_TIME_S)} at ${place.name}. Worked out on this phone; nothing leaves it.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         }
     }

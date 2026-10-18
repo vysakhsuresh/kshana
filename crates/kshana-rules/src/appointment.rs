@@ -456,10 +456,102 @@ pub fn best_slots(
     Ok(out)
 }
 
+/// An hour that suits several people at once.
+#[derive(Clone, Debug, PartialEq)]
+pub struct GroupSlot {
+    /// Start.
+    pub start: Instant,
+    /// End.
+    pub end: Instant,
+    /// Combined score, `[0, 1]`: weighted towards the weakest person so no one is left out.
+    pub score: f64,
+    /// Each person's own score for the hour, `[0, 1]`, in the order given.
+    pub each: Vec<f64>,
+    /// Index of the person the hour suits best.
+    pub best_for: usize,
+    /// Index of the person the hour suits least.
+    pub weakest_for: usize,
+    /// In plain words.
+    pub words: String,
+}
+
+/// The best hours for `purpose` for everyone in `people` at once, in the next `days`:
+/// each person's own hour reading, combined as 0.6 × the weakest + 0.4 × the mean, so a
+/// date that is great for one and poor for another ranks below one that is good for all.
+#[allow(clippy::too_many_arguments)]
+pub fn best_slots_together(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    people: &[crate::forecast::Natal],
+    obs: &Observer,
+    system: HouseSystem,
+    ayanamsa: Ayanamsa,
+    purpose: Purpose,
+    from: Instant,
+    days: usize,
+    limit: usize,
+    lang: crate::plain::Lang,
+) -> Result<Vec<GroupSlot>, ForecastError> {
+    if people.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut each: Vec<Vec<DaySlot>> = Vec::with_capacity(people.len());
+    for n in people {
+        each.push(best_slots(spk, eop, n, obs, system, ayanamsa, purpose, from, days, usize::MAX)?);
+    }
+    let mut out: Vec<GroupSlot> = Vec::new();
+    for s in &each[0] {
+        let mut scores = vec![s.score];
+        for other in &each[1..] {
+            match other.iter().find(|o| o.start == s.start) {
+                Some(o) => scores.push(o.score),
+                None => break,
+            }
+        }
+        if scores.len() != people.len() {
+            continue;
+        }
+        let min = scores.iter().cloned().fold(f64::INFINITY, f64::min);
+        let mean = scores.iter().sum::<f64>() / scores.len() as f64;
+        let best_for = scores.iter().enumerate().max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal)).map(|x| x.0).unwrap_or(0);
+        let weakest_for = scores.iter().enumerate().min_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal)).map(|x| x.0).unwrap_or(0);
+        let words = lang
+            .pick(if min >= 0.56 {
+                ["Good for everyone.", "എല്ലാവർക്കും നല്ലത്.", "सबके लिए अच्छा।"]
+            } else if min >= 0.44 {
+                ["Fair for everyone; no one is set back.", "എല്ലാവർക്കും തരക്കേടില്ല; ആർക്കും തിരിച്ചടിയില്ല.", "सबके लिए ठीक; किसी को नुकसान नहीं।"]
+            } else {
+                ["Good for most; weaker for one of you.", "മിക്കവർക്കും നല്ലത്; ഒരാൾക്ക് അൽപം ദുർബലം.", "ज़्यादातर के लिए अच्छा; एक के लिए कमज़ोर।"]
+            })
+            .to_string();
+        out.push(GroupSlot { start: s.start, end: s.end, score: 0.6 * min + 0.4 * mean, each: scores, best_for, weakest_for, words });
+    }
+    out.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    out.truncate(limit);
+    out.sort_by(|a, b| a.start.cmp(&b.start));
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::forecast::Natal;
+
+    #[test]
+    fn hours_together_suit_everyone() {
+        let Some(spk) = kernel() else { return };
+        let obs = Observer { latitude_deg: 9.9312, longitude_deg: 76.2673, height_m: 0.0 };
+        let a = Natal::compute(&spk, None, kshana_time::Utc::new(1990, 2, 20, 5, 4, 0, 0).unwrap().to_instant().unwrap(), &obs, HouseSystem::Placidus, Ayanamsa::Lahiri).unwrap();
+        let b = Natal::compute(&spk, None, kshana_time::Utc::new(1997, 9, 22, 13, 12, 0, 0).unwrap().to_instant().unwrap(), &obs, HouseSystem::Placidus, Ayanamsa::Lahiri).unwrap();
+        let at = kshana_time::Utc::new(2026, 10, 17, 5, 0, 0, 0).unwrap().to_instant().unwrap();
+        let s = best_slots_together(&spk, None, &[a, b], &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, Purpose::ALL[0], at, 7, 5, crate::plain::Lang::En).unwrap();
+        assert!(!s.is_empty() && s.len() <= 5);
+        for x in &s {
+            assert_eq!(x.each.len(), 2);
+            assert!(x.score <= x.each.iter().cloned().fold(0.0, f64::max) + 1e-9);
+            assert!(x.start >= at || x.end > at);
+        }
+    }
     use kshana_time::Utc;
 
     fn kernel() -> Option<Spk> {

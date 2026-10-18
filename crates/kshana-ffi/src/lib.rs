@@ -1706,7 +1706,7 @@ mod tests {
             .iter()
             .all(|r| r.funnel.len() == 5 && !r.promise.factors.is_empty()));
         let m = engine
-            .forecast_moment(birth, 9.9312, 76.2673, 9.9312, 76.2673, HouseSystem::Placidus, AyanamsaChoice::Lahiri, at)
+            .forecast_moment(birth, 9.9312, 76.2673, 9.9312, 76.2673, HouseSystem::Placidus, AyanamsaChoice::Lahiri, at, "en".into())
             .unwrap();
         assert_eq!(m.lives.len(), 9);
         assert!(m.lives.iter().all(|l| (0.0..=100.0).contains(&l.score) && !l.headline.is_empty()));
@@ -1978,6 +1978,7 @@ impl Engine {
         system: HouseSystem,
         ayanamsa: AyanamsaChoice,
         at: ExactInstant,
+        lang: String,
     ) -> Result<MomentRecord, KshanaError> {
         let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
         let obs = Observer {
@@ -1995,80 +1996,12 @@ impl Engine {
             at.into(),
         )
         .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
-        Ok(MomentRecord {
-            hours: m
-                .hours
-                .iter()
-                .map(|h| HourRecord {
-                    lord: lord_name(h.lord),
-                    start: h.start.into(),
-                    end: h.end.into(),
-                    fit: h.fit.iter().map(|v| v * 100.0).collect(),
-                    caution: h.caution,
-                })
-                .collect(),
-            at: m.at.into(),
-            overall: m.overall * 100.0,
-            band: m.band.word().to_string(),
-            headline: m.headline.clone(),
-            title: m.title.clone(),
-            day_title: m.day_title.clone(),
-            next_good: good_minutes(&m),
-            lives: m
-                .lives
-                .iter()
-                .map(|l| LifeScoreRecord {
-                    life: l.life.name().to_string(),
-                    score: l.score * 100.0,
-                    band: l.band.word().to_string(),
-                    headline: l.headline.clone(),
-                    because: l.because.clone(),
-                    components: l
-                        .components
-                        .iter()
-                        .map(|c| ComponentRecord {
-                            key: c.key.to_string(),
-                            score: c.score,
-                            weight: c.weight,
-                            note: c.note.clone(),
-                            rule_id: c.rule_id.to_string(),
-                        })
-                        .collect(),
-                })
-                .collect(),
-            hora: m.hora.as_ref().map(hora_record),
-            moon_star: m.moon_star.clone(),
-            tara: m.tara as u8,
-            tara_name: kshana_rules::TARA_NAMES[m.tara].to_string(),
-            tara_words: m.tara_words.to_string(),
-            moon_from_moon: m.moon_from_moon,
-            saturn_words: m.saturn.words().to_string(),
-            saturn_active: m.saturn != kshana_rules::SaturnPhase::Clear,
-            dasha: m
-                .dasha
-                .iter()
-                .enumerate()
-                .map(|(i, p)| DashaRecord {
-                    level: (i + 1) as u8,
-                    lord: lord_name(p.lord),
-                    start: p.start.into(),
-                    end: p.end.into(),
-                })
-                .collect(),
-            windows: m
-                .windows
-                .iter()
-                .map(|w| WindowRecord {
-                    label: w.label.clone(),
-                    start: w.start.into(),
-                    end: w.end.into(),
-                    caution: w.caution,
-                })
-                .collect(),
-            shifts: m.shifts.iter().map(shift_record).collect(),
-            sunrise: m.sunrise.map(Into::into),
-            sunset: m.sunset.map(Into::into),
-        })
+        let mut rec = moment_record(&m);
+        let lang = kshana_rules::Lang::parse(&lang);
+        if lang != kshana_rules::Lang::En {
+            localise_moment(&mut rec, &m, lang, lon);
+        }
+        Ok(rec)
     }
 
     /// `count` samples from `from`, `step_days` apart, and the story of every life.
@@ -2172,6 +2105,8 @@ pub struct AnswerRecord {
     pub score: f64,
     /// 0–100.
     pub confidence: f64,
+    /// How sure, in words ("Fairly sure").
+    pub sure_words: String,
     pub headline: String,
     pub when_start: Option<ExactInstant>,
     pub when_end: Option<ExactInstant>,
@@ -2235,6 +2170,7 @@ impl Engine {
             verdict: a.verdict.clone(),
             score: a.score * 100.0,
             confidence: a.confidence * 100.0,
+            sure_words: kshana_rules::lang::sure_words(kshana_rules::Lang::En, a.confidence * 100.0).to_string(),
             headline: a.headline.clone(),
             when_start: a.when_start.map(Into::into),
             when_end: a.when_end.map(Into::into),
@@ -2519,7 +2455,7 @@ impl Engine {
             at.into(),
         )
         .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
-        let moment = self.forecast_moment(birth, birth_lat, birth_lon, lat, lon, system, ayanamsa, at)?;
+        let moment = self.forecast_moment(birth, birth_lat, birth_lon, lat, lon, system, ayanamsa, at, "en".into())?;
         Ok(AppointmentRecord {
             purpose: a.purpose.key().to_string(),
             purpose_words: a.purpose.words().to_string(),
@@ -2710,6 +2646,8 @@ pub struct CoupleAnswerRecord {
     pub score: f64,
     /// 0–100.
     pub confidence: f64,
+    /// How sure, in words.
+    pub sure_words: String,
     pub headline: String,
     pub when_start: Option<ExactInstant>,
     pub when_end: Option<ExactInstant>,
@@ -2722,6 +2660,7 @@ fn answer_record(a: &kshana_rules::Answer) -> AnswerRecord {
         verdict: a.verdict.clone(),
         score: a.score * 100.0,
         confidence: a.confidence * 100.0,
+        sure_words: kshana_rules::lang::sure_words(kshana_rules::Lang::En, a.confidence * 100.0).to_string(),
         headline: a.headline.clone(),
         when_start: a.when_start.map(Into::into),
         when_end: a.when_end.map(Into::into),
@@ -2915,6 +2854,7 @@ impl Engine {
             verdict: c.verdict.clone(),
             score: c.score * 100.0,
             confidence: c.confidence * 100.0,
+            sure_words: kshana_rules::lang::sure_words(kshana_rules::Lang::En, c.confidence * 100.0).to_string(),
             headline: c.headline.clone(),
             when_start: c.when_start.map(Into::into),
             when_end: c.when_end.map(Into::into),
@@ -3308,6 +3248,7 @@ impl Engine {
         ayanamsa: AyanamsaChoice,
         lives: Vec<String>,
         at: ExactInstant,
+        lang: String,
     ) -> Result<BriefingRecord, KshanaError> {
         let lives: Vec<kshana_rules::Life> = lives.iter().filter_map(|l| kshana_rules::Life::parse(l)).collect();
         let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
@@ -3327,7 +3268,17 @@ impl Engine {
             at.into(),
         )
         .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
-        Ok(briefing_record(&b))
+        let lang = kshana_rules::Lang::parse(&lang);
+        let mut r = briefing_record(&b);
+        if lang != kshana_rules::Lang::En {
+            let (sw, _) = kshana_rules::saturn_sentence_in(lang, &self.spk, ayanamsa.into(), &natal, b.saturn, at.into(), lon);
+            if let Some(p) = r.paragraphs.first_mut() {
+                *p = kshana_rules::season_paragraph_in(lang, &natal, at.into(), lon, &sw);
+            }
+            r.saturn_words = sw;
+            localise_moment(&mut r.moment, &b.moment, lang, lon);
+        }
+        Ok(r)
     }
 }
 
@@ -3980,7 +3931,7 @@ pub struct LifeOutlookRecord {
     pub care_at: Option<ExactInstant>,
     /// 0–100.
     pub care_score: f64,
-    pub why: Vec<String>,
+    pub why_expert: Vec<String>,
 }
 
 /// The outlook.
@@ -4014,11 +3965,12 @@ impl Engine {
         ayanamsa: AyanamsaChoice,
         span: String,
         at: ExactInstant,
+        lang: String,
     ) -> Result<OutlookRecord, KshanaError> {
         let span = kshana_rules::Span::parse(&span).ok_or_else(|| KshanaError::Engine(format!("unknown span {span}")))?;
         let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
         let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
-        let o = kshana_rules::outlook(&self.spk, self.eop.as_ref(), &natal, &obs, to_house_system(system), ayanamsa.into(), span, at.into())
+        let o = kshana_rules::outlook_in(&self.spk, self.eop.as_ref(), &natal, &obs, to_house_system(system), ayanamsa.into(), span, at.into(), kshana_rules::Lang::parse(&lang))
             .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         Ok(OutlookRecord {
             span: o.span.key().to_string(),
@@ -4041,7 +3993,7 @@ impl Engine {
                     best_score: l.best_score * 100.0,
                     care_at: l.care_at.map(Into::into),
                     care_score: l.care_score * 100.0,
-                    why: l.why.clone(),
+                    why_expert: l.why.clone(),
                 })
                 .collect(),
             season: o.season.clone(),
@@ -4065,7 +4017,7 @@ mod plain_audit {
         "star", "dasha_at_birth", "moon_a", "moon_b", "why_expert", "season_why", "kp_star", "kp_sub", "kp_sub_sub",
         "provenance_engine", "provenance_kernel", "provenance_models", "body", "body_a", "body_b", "aspect", "unit",
         "signature", "tithi", "nakshatra", "yoga", "hora", "factors", "cautions", "sub_lord", "agents", "ruling_planets",
-        "moon_sub_lord", "question", "effort", "day",
+        "moon_sub_lord", "question", "effort", "day", "mantra",
     ];
 
     /// `(field, value)` for every string in a Debug rendering.
@@ -4077,11 +4029,29 @@ mod plain_audit {
         while i < b.len() {
             let c = b[i];
             if c == b'"' {
+                // Debug escapes some characters (Malayalam vowel signs among them) as
+                // \u{..}; decode them so the text is read as the person reads it.
                 let mut j = i + 1;
-                let mut s = Vec::new();
+                let mut s: Vec<u8> = Vec::new();
                 while j < b.len() && b[j] != b'"' {
                     if b[j] == b'\\' && j + 1 < b.len() {
                         j += 1;
+                        match b[j] {
+                            b'u' if j + 1 < b.len() && b[j + 1] == b'{' => {
+                                let end = debug[j..].find('}').map(|k| j + k).unwrap_or(j);
+                                if let Some(ch) = u32::from_str_radix(&debug[j + 2..end], 16).ok().and_then(char::from_u32) {
+                                    let mut buf = [0u8; 4];
+                                    s.extend_from_slice(ch.encode_utf8(&mut buf).as_bytes());
+                                }
+                                j = end + 1;
+                                continue;
+                            }
+                            b'n' => s.push(b'\n'),
+                            b't' => s.push(b'\t'),
+                            other => s.push(other),
+                        }
+                        j += 1;
+                        continue;
                     }
                     s.push(b[j]);
                     j += 1;
@@ -4106,14 +4076,81 @@ mod plain_audit {
     }
 
     fn audit(what: &str, debug: String, hits: &mut Vec<String>) {
+        audit_in(kshana_rules::Lang::En, what, debug, hits)
+    }
+
+    /// Fields that hold a sentence and must never be empty.
+    const SENTENCE: &[&str] = &["headline", "what_it_does", "intro", "why", "how"];
+
+    /// Words after which "a" is right even before a vowel letter.
+    fn takes_a(next: &str) -> bool {
+        let n = next.to_ascii_lowercase();
+        n.starts_with("one") || n.starts_with("once") || n.starts_with("use") || n.starts_with("usu") || n.starts_with("uni") || n.starts_with("eu") || n.starts_with("ur")
+    }
+
+    /// A style slip in an English sentence: grammar a reader would notice.
+    fn style(v: &str) -> Option<&'static str> {
+        for (bad, why) in [("Children asks", "children asks"), ("Children is ", "children is"), ("Children has ", "children has"), (" ,", "space before comma"), (" .", "space before full stop"), (" ;", "space before semicolon"), ("..", "double full stop"), ("  ", "double space")] {
+            if v.contains(bad) {
+                return Some(why);
+            }
+        }
+        let words: Vec<&str> = v.split(|c: char| c.is_whitespace()).filter(|w| !w.is_empty()).collect();
+        for w in words.windows(2) {
+            let (a, b) = (w[0], w[1].trim_start_matches(|c: char| !c.is_alphanumeric()));
+            if (a == "a" || a == "A") && !b.is_empty() {
+                let first = b.chars().next().unwrap_or('x').to_ascii_lowercase();
+                let vowel = "aeiou".contains(first) && !takes_a(b);
+                let silent_h = ["hour", "honest", "heir", "honour"].iter().any(|h| b.to_ascii_lowercase().starts_with(h));
+                if vowel || silent_h {
+                    return Some("a before a vowel sound");
+                }
+            }
+            let clean = |s: &str| s.trim_matches(|c: char| !c.is_alphanumeric()).to_ascii_lowercase();
+            if !clean(w[0]).is_empty() && clean(w[0]) == clean(w[1]) && clean(w[0]).chars().all(|c| c.is_alphabetic()) && w[0].chars().last().map_or(true, |c| c.is_alphanumeric()) {
+                return Some("doubled word");
+            }
+        }
+        let b = v.as_bytes();
+        for i in 0..b.len().saturating_sub(2) {
+            if b[i] == b'.' && b[i + 1] == b' ' && b[i + 2].is_ascii_lowercase() {
+                return Some("lower case after a full stop");
+            }
+        }
+        None
+    }
+
+    fn audit_in(lang: kshana_rules::Lang, what: &str, debug: String, hits: &mut Vec<String>) {
         for (f, v) in strings(&debug) {
             if NOT_SHOWN.contains(&f.as_str()) {
                 continue;
             }
-            if let Some(w) = kshana_rules::plain::jargon(&v) {
+            if let Some(w) = kshana_rules::plain::jargon_in(lang, &v) {
                 hits.push(format!("{what}.{f} [{w}]: {v}"));
             }
+            if SENTENCE.contains(&f.as_str()) && v.trim().is_empty() {
+                hits.push(format!("{what}.{f} [empty sentence]"));
+            }
+            let s = if lang == kshana_rules::Lang::En {
+                style(&v)
+            } else {
+                [(" ,", "space before comma"), ("  ", "double space"), ("..", "double full stop")].iter().find(|(b, _)| v.contains(b)).map(|x| x.1)
+            };
+            if let Some(why) = s {
+                hits.push(format!("{what}.{f} [style: {why}]: {v}"));
+            }
         }
+    }
+
+    #[test]
+    fn the_style_check_catches_slips() {
+        assert_eq!(style("Children asks for care."), Some("children asks"));
+        assert_eq!(style("It is a unlucky stretch."), Some("a before a vowel sound"));
+        assert_eq!(style("Wait for a hour."), Some("a before a vowel sound"));
+        assert_eq!(style("A one-time gift, a useful habit."), None);
+        assert_eq!(style("the the day"), Some("doubled word"));
+        assert_eq!(style("Done. then more"), Some("lower case after a full stop"));
+        assert_eq!(style("Fine sentence, with care."), None);
     }
 
     fn at(y: i64, mo: u32, d: u32, h: u32) -> ExactInstant {
@@ -4137,11 +4174,11 @@ mod plain_audit {
             let (ob, ola, olo) = people[(pi + 1) % people.len()];
             for (ti, &t) in instants.iter().enumerate() {
                 let tag = |s: &str| format!("p{pi}t{ti}.{s}");
-                audit(&tag("moment"), format!("{:?}", engine.forecast_moment(b, la, lo, la, lo, hs, ay, t).unwrap()), &mut hits);
-                audit(&tag("briefing"), format!("{:?}", engine.briefing(b, la, lo, la, lo, hs, ay, vec!["Love".into(), "Career".into(), "Money".into(), "Health".into()], t).unwrap()), &mut hits);
+                audit(&tag("moment"), format!("{:?}", engine.forecast_moment(b, la, lo, la, lo, hs, ay, t, "en".into()).unwrap()), &mut hits);
+                audit(&tag("briefing"), format!("{:?}", engine.briefing(b, la, lo, la, lo, hs, ay, vec!["Love".into(), "Career".into(), "Money".into(), "Health".into()], t, "en".into()).unwrap()), &mut hits);
                 audit(&tag("letter"), format!("{:?}", engine.letter(b, la, lo, la, lo, hs, ay, t).unwrap()), &mut hits);
                 for s in ["day", "week", "month", "year"] {
-                    audit(&tag(&format!("outlook_{s}")), format!("{:?}", engine.outlook(b, la, lo, la, lo, hs, ay, s.into(), t).unwrap()), &mut hits);
+                    audit(&tag(&format!("outlook_{s}")), format!("{:?}", engine.outlook(b, la, lo, la, lo, hs, ay, s.into(), t, "en".into()).unwrap()), &mut hits);
                 }
                 audit(&tag("countdowns"), format!("{:?}", engine.countdowns(b, la, lo, la, lo, hs, ay, t).unwrap()), &mut hits);
                 audit(&tag("festivals"), format!("{:?}", engine.festivals(b, la, lo, hs, ay, t, 35).unwrap()), &mut hits);
@@ -4173,6 +4210,26 @@ mod plain_audit {
                     audit(&tag("timeline"), format!("{:?}", engine.timeline(b, la, lo, hs, ay, t).unwrap()), &mut hits);
                     audit(&tag("kundali"), format!("{:?}", engine.kundali(b, la, lo, ob, ola, olo, hs, ay, true).unwrap()), &mut hits);
                     audit(&tag("talk"), format!("{:?}", engine.talk_window(b, la, lo, ob, ola, olo, la, lo, hs, ay, t, 14).unwrap()), &mut hits);
+                    for life in std::iter::once(None).chain(life_names().into_iter().map(Some)) {
+                        audit(&tag(&format!("tree_{life:?}")), format!("{:?}", engine.remedy_tree(b, la, lo, la, lo, hs, ay, life.clone(), t, "en".into()).unwrap()), &mut hits);
+                    }
+                    audit(&tag("past"), format!("{:?}", engine.past_checks(b, la, lo, hs, ay, t, "en".into()).unwrap()), &mut hits);
+                    let group = vec![PersonInput { birth: b, lat: la, lon: lo }, PersonInput { birth: ob, lat: ola, lon: olo }];
+                    audit(&tag("together"), format!("{:?}", engine.best_slots_together(group.clone(), la, lo, hs, ay, "family".into(), t, 7, 5, "en".into()).unwrap()), &mut hits);
+                    for code in ["ml", "hi"] {
+                        let lang = kshana_rules::Lang::parse(code);
+                        let tg = |s: &str| format!("p{pi}t{ti}.{code}.{s}");
+                        audit_in(lang, &tg("moment"), format!("{:?}", engine.forecast_moment(b, la, lo, la, lo, hs, ay, t, code.into()).unwrap()), &mut hits);
+                        let br = engine.briefing(b, la, lo, la, lo, hs, ay, vec!["Love".into(), "Career".into()], t, code.into()).unwrap();
+                        audit_in(lang, &tg("briefing.season"), format!("{:?}", (&br.paragraphs[0], &br.saturn_words, &br.moment.title, &br.moment.day_title)), &mut hits);
+                        for s in ["day", "week", "month", "year"] {
+                            audit_in(lang, &tg(&format!("outlook_{s}")), format!("{:?}", engine.outlook(b, la, lo, la, lo, hs, ay, s.into(), t, code.into()).unwrap()), &mut hits);
+                        }
+                        audit_in(lang, &tg("tree"), format!("{:?}", engine.remedy_tree(b, la, lo, la, lo, hs, ay, None, t, code.into()).unwrap()), &mut hits);
+                        audit_in(lang, &tg("tree_love"), format!("{:?}", engine.remedy_tree(b, la, lo, la, lo, hs, ay, Some("Love".into()), t, code.into()).unwrap()), &mut hits);
+                        audit_in(lang, &tg("past"), format!("{:?}", engine.past_checks(b, la, lo, hs, ay, t, code.into()).unwrap()), &mut hits);
+                        audit_in(lang, &tg("together"), format!("{:?}", engine.best_slots_together(group.clone(), la, lo, hs, ay, "family".into(), t, 7, 3, code.into()).unwrap()), &mut hits);
+                    }
                 }
                 audit(&tag("couple"), format!("{:?}", engine.couple(b, la, lo, ob, ola, olo, la, lo, hs, ay, true, t).unwrap()), &mut hits);
                 for q in questions() {
@@ -4195,5 +4252,280 @@ mod plain_audit {
             let _ = std::fs::write(&path, hits.join("\n"));
             panic!("{} sentences name the astrology (all in {}); first 40:\n{}", hits.len(), path.display(), hits.iter().take(40).cloned().collect::<Vec<_>>().join("\n"));
         }
+    }
+}
+
+// ---------------------------------------------------------------------------------
+// Languages, the remedy tree, past checks and hours for a group.
+// ---------------------------------------------------------------------------------
+
+/// Put a moment's own words into the reader's language: the moment and day titles, the
+/// day's quality, the long test's name, the windows and the hour.
+fn localise_moment(rec: &mut MomentRecord, m: &kshana_rules::Moment, lang: kshana_rules::Lang, lon: f64) {
+    use kshana_rules::lang as l;
+    rec.title = l::moment_title(lang, m.tara, m.hora.as_ref().map(|h| h.lord));
+    rec.day_title = l::day_title(lang, m.tara, kshana_rules::prashna::day_lord(m.at, lon));
+    rec.tara_words = l::day_quality(lang, m.tara).to_string();
+    rec.saturn_words = l::long_test(lang, m.saturn).to_string();
+    for w in rec.windows.iter_mut() {
+        w.label = l::window_label(lang, &w.label);
+    }
+    if let (Some(h), Some(hr)) = (m.hora.as_ref(), rec.hora.as_mut()) {
+        hr.words = l::hour_nature(lang, h.lord).to_string();
+    }
+}
+
+/// How sure an answer is, in words, in the reader's language; `confidence` is 0–100.
+#[uniffi::export]
+pub fn sure_words(lang: String, confidence: f64) -> String {
+    kshana_rules::lang::sure_words(kshana_rules::Lang::parse(&lang), confidence).to_string()
+}
+
+/// One remedy in a branch of the tree.
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct TreeRemedyRecord {
+    /// What to do.
+    pub title: String,
+    /// What it eases, in life terms.
+    pub why: String,
+    /// Concrete steps.
+    pub how: String,
+    /// The day ("Saturday", "any day"), in the reader's language.
+    pub day: String,
+    /// How much it asks ("once a week").
+    pub effort: String,
+    /// The branch key.
+    pub kind: String,
+    /// A chant's text in the reader's script, for chant remedies.
+    pub mantra: Option<String>,
+}
+
+/// One branch of remedies.
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct BranchRecord {
+    /// `deeds`, `giving`, `habits`, `nature`, `mind`, `prayer`, `tradition`.
+    pub key: String,
+    /// Title.
+    pub title: String,
+    /// What the branch is.
+    pub intro: String,
+    /// The remedies.
+    pub items: Vec<TreeRemedyRecord>,
+}
+
+/// One cause in the tree: a pressure, what it does, when it eases, and its remedies.
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct CauseNodeRecord {
+    /// The engine's key for the influence (expert only; never shown).
+    pub key: String,
+    /// `dasha`, `gochara` or `natal` (expert only).
+    pub source: String,
+    /// The pressure in plain words.
+    pub title: String,
+    /// What it does in the person's life.
+    pub what_it_does: String,
+    /// When it began, when known.
+    pub since: Option<ExactInstant>,
+    /// When it eases, when known.
+    pub until: Option<ExactInstant>,
+    /// The end in words.
+    pub until_words: String,
+    /// Weight on the life, in points (0–50).
+    pub strength: f64,
+    /// "Pressing hard" and so on.
+    pub strength_words: String,
+    /// The seven branches.
+    pub branches: Vec<BranchRecord>,
+}
+
+/// The remedy tree for a life.
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct RemedyTreeRecord {
+    /// The life's key ("Love").
+    pub life: String,
+    /// What is wrong and roughly until when.
+    pub headline: String,
+    /// The causes, strongest first.
+    pub causes: Vec<CauseNodeRecord>,
+}
+
+/// One question about the person's past.
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct PastCheckRecord {
+    /// First day of the stretch.
+    pub from: ExactInstant,
+    /// Last day of the stretch.
+    pub to: ExactInstant,
+    /// The life's key ("Love").
+    pub life: String,
+    /// The yes-or-no question, in the reader's language.
+    pub question: String,
+    /// True for a good stretch.
+    pub good: bool,
+    /// How far it stood from the life's average, in points.
+    pub strength: f64,
+}
+
+/// A person for a group reading.
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct PersonInput {
+    /// Birth instant.
+    pub birth: ExactInstant,
+    /// Birth latitude.
+    pub lat: f64,
+    /// Birth longitude.
+    pub lon: f64,
+}
+
+/// An hour that suits several people at once.
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct GroupSlotRecord {
+    /// Start.
+    pub start: ExactInstant,
+    /// End.
+    pub end: ExactInstant,
+    /// Combined, 0–100, weighted to the weakest person.
+    pub score: f64,
+    /// Each person's score, 0–100, in the order given.
+    pub each: Vec<f64>,
+    /// Index of the person it suits best.
+    pub best_for: u32,
+    /// Index of the person it suits least.
+    pub weakest_for: u32,
+    /// In plain words, in the reader's language.
+    pub words: String,
+}
+
+#[uniffi::export]
+impl Engine {
+    /// The remedy tree for `life` (a key from `life_names()`, or none for the weakest
+    /// life now): the causes in plain words and seven branches of remedies each, deeds
+    /// anyone can do first and the Hindu tradition last and optional.
+    #[allow(clippy::too_many_arguments)]
+    pub fn remedy_tree(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        life: Option<String>,
+        at: ExactInstant,
+        lang: String,
+    ) -> Result<RemedyTreeRecord, KshanaError> {
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
+        let life = life.as_deref().and_then(kshana_rules::Life::parse);
+        let t = kshana_rules::remedy_tree(&self.spk, self.eop.as_ref(), &natal, &obs, to_house_system(system), ayanamsa.into(), life, kshana_rules::Lang::parse(&lang), at.into())
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(RemedyTreeRecord {
+            life: t.life.name().to_string(),
+            headline: t.headline,
+            causes: t
+                .causes
+                .into_iter()
+                .map(|c| CauseNodeRecord {
+                    key: lord_name(c.key),
+                    source: c.source.to_string(),
+                    title: c.title,
+                    what_it_does: c.what_it_does,
+                    since: c.since.map(Into::into),
+                    until: c.until.map(Into::into),
+                    until_words: c.until_words,
+                    strength: c.strength,
+                    strength_words: c.strength_words,
+                    branches: c
+                        .branches
+                        .into_iter()
+                        .map(|b| BranchRecord {
+                            key: b.key.to_string(),
+                            title: b.title,
+                            intro: b.intro,
+                            items: b
+                                .items
+                                .into_iter()
+                                .map(|r| TreeRemedyRecord { title: r.title, why: r.why, how: r.how, day: r.day, effort: r.effort, kind: r.kind.to_string(), mantra: r.mantra })
+                                .collect(),
+                        })
+                        .collect(),
+                })
+                .collect(),
+        })
+    }
+
+    /// Three to five yes-or-no questions about real stretches of the person's last six
+    /// years, the strongest dips and peaks the reading marks, for the first minute of the
+    /// app: the past checked before the future is told.
+    #[allow(clippy::too_many_arguments)]
+    pub fn past_checks(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        at: ExactInstant,
+        lang: String,
+    ) -> Result<Vec<PastCheckRecord>, KshanaError> {
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let obs = Observer { latitude_deg: birth_lat, longitude_deg: birth_lon, height_m: 0.0 };
+        let c = kshana_rules::past_checks(&self.spk, self.eop.as_ref(), &natal, &obs, ayanamsa.into(), kshana_rules::Lang::parse(&lang), at.into())
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(c
+            .into_iter()
+            .map(|x| PastCheckRecord { from: x.from.into(), to: x.to.into(), life: x.life.name().to_string(), question: x.question, good: x.good, strength: x.strength })
+            .collect())
+    }
+
+    /// The best `limit` hours in the next `days` for `purpose` (a key from `purposes()`)
+    /// for everyone in `people` at once, read where they will be (`lat`/`lon`).
+    #[allow(clippy::too_many_arguments)]
+    pub fn best_slots_together(
+        &self,
+        people: Vec<PersonInput>,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        purpose: String,
+        from: ExactInstant,
+        days: u32,
+        limit: u32,
+        lang: String,
+    ) -> Result<Vec<GroupSlotRecord>, KshanaError> {
+        let purpose = kshana_rules::Purpose::parse(&purpose).ok_or_else(|| KshanaError::Engine(format!("unknown purpose {purpose}")))?;
+        let mut natals = Vec::with_capacity(people.len());
+        for p in &people {
+            natals.push(self.natal(p.birth, p.lat, p.lon, system, ayanamsa)?);
+        }
+        let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
+        let s = kshana_rules::best_slots_together(
+            &self.spk,
+            self.eop.as_ref(),
+            &natals,
+            &obs,
+            to_house_system(system),
+            ayanamsa.into(),
+            purpose,
+            from.into(),
+            days as usize,
+            limit as usize,
+            kshana_rules::Lang::parse(&lang),
+        )
+        .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(s
+            .into_iter()
+            .map(|g| GroupSlotRecord {
+                start: g.start.into(),
+                end: g.end.into(),
+                score: g.score * 100.0,
+                each: g.each.iter().map(|v| v * 100.0).collect(),
+                best_for: g.best_for as u32,
+                weakest_for: g.weakest_for as u32,
+                words: g.words,
+            })
+            .collect())
     }
 }

@@ -1,0 +1,62 @@
+# Kshana privacy policy
+
+Last updated: 18 October 2026
+
+Kshana works out every reading on your own phone. It has no account, no server and no
+advertising, and it does not collect, sell or share your data with anyone.
+
+## What the app keeps, and where
+
+Everything below stays on your phone, in the app's own private storage:
+
+- **Your birth details:** the date, time and place you enter, and how sure you are of the time.
+- **The people you add:** their birth details and how they are related to you.
+- **Your journal and records:** events you note, whether past readings came true, and your remedy ticks and streaks.
+- **Your settings:** language, place, reminders and similar choices.
+
+## The backup file
+
+So that an uninstall or a cleared phone does not lose your data, Kshana saves a copy of
+your own data (birth details, people, journal and records) as a file on your phone at
+`Downloads/Kshana/kshana-backup.json`. You can turn this off in Settings. You can also
+export or import a backup file yourself. Nothing is uploaded; the file stays on your phone
+unless you choose to move or share it.
+
+Android's cloud backup and device-to-device transfer are switched off for this app.
+
+## Internet
+
+Readings never need the internet. The app makes no network requests for readings.
+Links you choose to open, such as a charity's donation page or a UPI payment app, open in
+those apps under their own policies.
+
+## Permissions, and why
+
+- **Notifications:** to show the reminders and the sunrise reading you turn on.
+- **Alarms and reminders (optional):** to ring at the exact minute you chose. If you do
+  not allow exact alarms, reminders still come, a few minutes late at most.
+- **Calendar, read only (optional):** only if you turn on the calendar check. The app
+  reads the next days' events on the phone to point out ones that fall in a difficult
+  stretch. It never stores, changes or sends your calendar.
+- **Microphone (optional):** only when you tap voice ask. Your speech is turned into text
+  by your phone's own speech service, and the text is matched to a question on the phone.
+  The app keeps no recording.
+- **Start at boot:** to set your chosen reminders again after the phone restarts.
+
+## Crash reports
+
+If the app crashes, the error is written to a file inside the app on your phone. It is
+never sent automatically. You can read it in Settings and share it only if you choose to.
+
+## Children
+
+Kshana is meant for adults (18 and over).
+
+## Deleting your data
+
+Clear the app's data in Android Settings, or uninstall the app. Also delete
+`Downloads/Kshana/kshana-backup.json` if you no longer want the backup copy.
+
+## Contact
+
+Questions about privacy: vysakhsuresh200290@gmail.com

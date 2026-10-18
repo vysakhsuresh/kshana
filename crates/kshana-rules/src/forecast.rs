@@ -562,7 +562,7 @@ pub fn natal_component_for(natal: &Natal, area: Area, name: &str) -> Component {
     let b = crate::parashari::assess(&natal.facts, area);
     let kp = (0.5 + 0.5 * p.net.clamp(-1.0, 1.0)).clamp(0.0, 1.0);
     let score = (0.5 * kp + 0.5 * b.score).clamp(0.0, 1.0);
-    let n = crate::plain::cap(name);
+    let n = crate::plain::cap(&crate::plain::subject(name));
     let note = match (p.promised, b.score >= 0.5) {
         (true, true) => format!("{n} is clearly promised in your life; it comes to you more easily than to most"),
         (true, false) => format!("{n} is promised in your life, though it arrives with some effort"),

@@ -120,6 +120,7 @@ internal suspend fun loadMoment(
             profile.birthInstant(), profile.latitude, profile.longitude,
             place.latitude, place.longitude,
             settings.houseSystem, settings.ayanamsa, at,
+            com.kshana.app.data.Lang.code,
         )
     }
 }

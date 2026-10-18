@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
@@ -71,10 +72,12 @@ fun TogetherScreen(
     place: Place,
     settings: EngineSettings,
     onAddPartner: () -> Unit,
+    onFamilyDates: () -> Unit = {},
     onRemedy: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     var partners by remember { mutableStateOf(ProfileStore.partners(context)) }
+    var pasteNote by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableIntStateOf(ProfileStore.selectedPartner(context).coerceIn(0, (partners.size - 1).coerceAtLeast(0))) }
     var selfIsGroom by remember { mutableStateOf(ProfileStore.selfIsGroom(context)) }
     var kundali by remember { mutableStateOf<KundaliRecord?>(null) }
@@ -157,7 +160,17 @@ fun TogetherScreen(
                 Chip(p.name.uppercase(), selected = i == selected, onClick = { selected = i; ProfileStore.selectPartner(context, i) })
             }
             Chip("+ ADD", selected = false, onClick = onAddPartner)
+            Chip("PASTE A SHARED PERSON", selected = false, onClick = {
+                val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                val text = cm.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()
+                val p = com.kshana.app.data.PersonLink.parse(text)
+                pasteNote = if (p == null) "Copy the message with the kshana://person link first, then tap this again." else {
+                    if (com.kshana.app.data.PersonLink.add(context, p)) { partners = ProfileStore.partners(context); "Added ${p.name}." } else "${p.name} is already here."
+                }
+            })
         }
+        pasteNote?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky) }
+        if (partners.isNotEmpty()) Text("A DATE FOR ALL OF US ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onFamilyDates).padding(vertical = 4.dp))
         if (partner == null) {
             Spacer(Modifier.height(8.dp))
             Text("No one here yet.", fontFamily = FontFamily.Serif, fontSize = 20.sp, color = KshanaColors.Text)
@@ -350,6 +363,7 @@ fun TogetherScreen(
                         Column(Modifier.weight(1f)) {
                             Text(coupleWords(question, qs.firstOrNull { it.key == question }?.words ?: question), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
                             Text(ca.verdict, style = MaterialTheme.typography.titleLarge, color = scoreColor(ca.score))
+                            Text(uniffi.kshana_ffi.sureWords(com.kshana.app.data.Lang.code, ca.confidence), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
                         }
                     }
                     Text(personalise(ca.headline, profile.name.substringBefore(' ').ifBlank { "You" }, partner.name.substringBefore(' ')), fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)
@@ -381,6 +395,17 @@ fun TogetherScreen(
             }
         }
 
+        SectionLabel("Share ${partner.name.substringBefore(' ').lowercase().replaceFirstChar { it.uppercase() }}")
+        Text("Send these birth details to someone else who uses Kshana, by message or by showing the code. Only these details go, and only to whom you send them.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        var showQr by remember(partner) { mutableStateOf(false) }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            QuietButton("SEND AS A MESSAGE", onClick = { runCatching { context.startActivity(com.kshana.app.data.PersonLink.shareIntent(partner, profile.name)) } }, modifier = Modifier.weight(1f))
+            QuietButton(if (showQr) "HIDE CODE" else "SHOW CODE", onClick = { showQr = !showQr }, modifier = Modifier.weight(1f))
+        }
+        if (showQr) {
+            val bmp = remember(partner) { com.kshana.app.data.PersonLink.qr(com.kshana.app.data.PersonLink.of(partner)) }
+            if (bmp != null) androidx.compose.foundation.Image(bmp.asImageBitmap(), contentDescription = "code", modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)))
+        }
         Spacer(Modifier.height(8.dp))
         QuietButton("REMOVE ${partner.name.uppercase()}", onClick = {
             ProfileStore.removePartner(context, selected)
@@ -406,7 +431,7 @@ private fun PeopleGrid(people: List<BirthProfile>, place: Place, settings: Engin
             for (p in people) {
                 val k = "${p.name}|$hourKey|${place.name}"
                 out[p.name] = PeopleCache.moments[k] ?: withContext(Dispatchers.Default) {
-                    engine.forecastMoment(p.birthInstant(), p.latitude, p.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now())
+                    engine.forecastMoment(p.birthInstant(), p.latitude, p.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), com.kshana.app.data.Lang.code)
                 }.also { PeopleCache.moments[k] = it }
             }
             moments = out

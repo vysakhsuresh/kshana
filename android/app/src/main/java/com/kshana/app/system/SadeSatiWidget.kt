@@ -29,6 +29,7 @@ class SadeSatiWidget : AppWidgetProvider() {
         private const val K_LINE1 = "widget.line1"
         private const val K_LINE2 = "widget.line2"
         private const val K_LINE3 = "widget.line3"
+        private const val K_LINE4 = "widget.line4"
         private const val K_SCORE = "widget.score"
 
         /** Stores the lines from a briefing and refreshes every widget instance. */
@@ -44,8 +45,14 @@ class SadeSatiWidget : AppWidgetProvider() {
             val top = m.lives.maxByOrNull { it.score }
             val line2 = "${m.title} · ${m.overall.toInt()}"
             val line3 = top?.let { "${it.life}: ${it.headline}" } ?: ""
+            val good = m.nextGood.withIndex().filter { it.value != null }.minByOrNull { it.value!!.start.taiSeconds }
+            val hm = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+            val line4 = listOfNotNull(
+                good?.let { g -> val l = listOf("Love", "Career", "Money", "Health", "Family", "Study", "Home", "Travel", "Children").getOrNull(g.index) ?: ""; "Next good hour: ${Instants.toLocal(g.value!!.start).format(hm)} for ${l.lowercase()}" },
+                com.kshana.app.data.RemedyPlans.todayLine(context),
+            ).joinToString(" · ")
             ProfileStore.prefs(context).edit()
-                .putString(K_LINE1, line1).putString(K_LINE2, line2).putString(K_LINE3, line3).putInt(K_SCORE, m.overall.toInt())
+                .putString(K_LINE1, line1).putString(K_LINE2, line2).putString(K_LINE3, line3).putString(K_LINE4, line4).putInt(K_SCORE, m.overall.toInt())
                 .apply()
             val mgr = AppWidgetManager.getInstance(context)
             val ids = mgr.getAppWidgetIds(ComponentName(context, SadeSatiWidget::class.java))
@@ -58,6 +65,7 @@ class SadeSatiWidget : AppWidgetProvider() {
             v.setTextViewText(R.id.widget_line1, p.getString(K_LINE1, "Open Kshana once to fill this"))
             v.setTextViewText(R.id.widget_line2, p.getString(K_LINE2, ""))
             v.setTextViewText(R.id.widget_line3, p.getString(K_LINE3, ""))
+            v.setTextViewText(R.id.widget_line4, p.getString(K_LINE4, ""))
             val open = PendingIntent.getActivity(context, 1, Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             v.setOnClickPendingIntent(R.id.widget_root, open)
             return v

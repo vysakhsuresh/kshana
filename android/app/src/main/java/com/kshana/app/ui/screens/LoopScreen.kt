@@ -101,6 +101,8 @@ fun LoopScreen(
     onHindsight: () -> Unit = {},
     onRecord: () -> Unit = {},
     onAhead: () -> Unit = {},
+    onJournal: () -> Unit = {},
+    onCalendar: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var moment by remember { mutableStateOf<MomentRecord?>(null) }
@@ -147,6 +149,7 @@ fun LoopScreen(
                     profile.birthInstant(), profile.latitude, profile.longitude,
                     place.latitude, place.longitude,
                     settings.houseSystem, settings.ayanamsa, listOf("Love", "Career", "Money", "Health"), at,
+                    com.kshana.app.data.Lang.code,
                 )
             }
             BriefingCache.key = key
@@ -279,6 +282,9 @@ fun LoopScreen(
                     SectionLabel(tr("Your nine lives · right now"))
                     LivesGrid(m.lives, onLife)
                 }
+            }
+            item {
+                Column(Modifier.padding(horizontal = 24.dp)) { ProofStrip(onRecord, onJournal, onCalendar) }
             }
             item {
                 WallStrip(profile, place, settings, shownTick, onWall)
@@ -418,7 +424,7 @@ private fun PeopleToday(profile: BirthProfile, place: Place, settings: EngineSet
             for (p in people.take(4)) {
                 val k = "${p.name}|$hourKey|${place.name}"
                 out[p.name] = PeopleCache.moments[k] ?: withContext(Dispatchers.Default) {
-                    engine.forecastMoment(p.birthInstant(), p.latitude, p.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now())
+                    engine.forecastMoment(p.birthInstant(), p.latitude, p.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), com.kshana.app.data.Lang.code)
                 }.also { PeopleCache.moments[k] = it }
             }
             moments = out
@@ -512,6 +518,7 @@ private fun BriefingCard(
                     profile.birthInstant(), profile.latitude, profile.longitude,
                     place.latitude, place.longitude,
                     settings.houseSystem, settings.ayanamsa, listOf("Love", "Career", "Money", "Health"), at,
+                    com.kshana.app.data.Lang.code,
                 )
             }
             BriefingCache.key = key
@@ -660,6 +667,15 @@ private fun HeroCard(m: MomentRecord, tick: Instant, travelling: Boolean, sky: u
         if (top != null && low != null) {
             Text(top.headline, fontFamily = FontFamily.Serif, fontSize = 19.sp, lineHeight = 26.sp, color = KshanaColors.Text)
             Text("${lifeGlyph(top.life)} ${top.life} is your strongest now · go gently with ${low.life.lowercase()}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            val ctx = LocalContext.current
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("SHARE ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable {
+                    com.kshana.app.system.ShareCard.share(ctx, m.dayTitle, top.headline, localText(m.at, DATE_TIME))
+                }.padding(vertical = 2.dp))
+                Text("READ IT ALOUD ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable {
+                    com.kshana.app.system.Speak.say(ctx, "${m.dayTitle}. ${top.headline}", com.kshana.app.data.Lang.code)
+                }.padding(vertical = 2.dp))
+            }
         }
         // The next good minute: for the weakest of the four main lives, the next hour that serves it.
         val mains = listOf("Love", "Career", "Money", "Health")
@@ -889,5 +905,37 @@ private fun ShiftRow(s: ShiftRecord, tick: Instant) {
             modifier = Modifier.clickable { set = com.kshana.app.system.Alerts.toggle(context, at, s.what, "${hm(s.at)} · ${s.what}") }.padding(start = 10.dp, top = 4.dp, bottom = 4.dp),
             color = if (set) KshanaColors.Gold else KshanaColors.Muted.copy(alpha = 0.5f),
         )
+    }
+}
+
+/**
+ * The app's record with this person, in the open: how often it was right on the days
+ * they graded, what is waiting for their answer, and the two ways to add evidence.
+ */
+@Composable
+private fun ProofStrip(onRecord: () -> Unit, onJournal: () -> Unit, onCalendar: () -> Unit) {
+    val context = LocalContext.current
+    val all = remember { com.kshana.app.data.PredictionStore.all(context) }
+    val graded = all.filter { it.happened != null }
+    val right = graded.count { it.happened == true }
+    val waiting = remember { com.kshana.app.data.PredictionStore.pending(context).size }
+    val journal = remember { com.kshana.app.data.Journal.all(context).size }
+    Column(
+        Modifier.fillMaxWidth().glass(16.dp).padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text("HOW RIGHT HAS IT BEEN FOR YOU?", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(
+            when {
+                graded.isEmpty() -> "Nothing graded yet. When a reading's day has passed, say whether it went that way; the score is shown here, right or wrong."
+                else -> "Right $right of ${graded.size} times you checked (${right * 100 / graded.size}%)."
+            },
+            fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 22.sp, color = KshanaColors.Text,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text(if (waiting > 0) "$waiting TO CHECK ›" else "YOUR RECORD ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRecord).padding(vertical = 4.dp))
+            Text(if (journal > 0) "JOURNAL · $journal ›" else "+ SOMETHING HAPPENED", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onJournal).padding(vertical = 4.dp))
+            Text("MY CALENDAR ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onCalendar).padding(vertical = 4.dp))
+        }
     }
 }

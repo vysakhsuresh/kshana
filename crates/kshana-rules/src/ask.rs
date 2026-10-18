@@ -268,6 +268,7 @@ fn answer_with(
     let idx = life_index(life);
     let name = label.to_string();
     let title = {
+        let name = if name.eq_ignore_ascii_case("children") { "having children".to_string() } else { name.clone() };
         let mut c = name.chars();
         match c.next() {
             Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),

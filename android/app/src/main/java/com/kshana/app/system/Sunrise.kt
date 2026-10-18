@@ -69,6 +69,7 @@ object Sunrise {
                         profile.birthInstant(), profile.latitude, profile.longitude,
                         place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa,
                         Instants.fromInstant(now.plusSeconds(h * 3600)),
+                        com.kshana.app.data.ProfileStore.prefs(context).getString("settings.lang", "en") ?: "en",
                     )
                     val s = m.sunrise?.let { Instants.toLocal(it).toInstant() }
                     if (s != null && s.isAfter(now.plusSeconds(60))) { next = s; break }
@@ -102,13 +103,15 @@ object Sunrise {
                 profile.birthInstant(), profile.latitude, profile.longitude,
                 place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa,
                 listOf("Love", "Career", "Money", "Health"), Instants.now(),
+                com.kshana.app.data.ProfileStore.prefs(context).getString("settings.lang", "en") ?: "en",
             )
             channel(context)
             val open = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             val m = b.moment
             val top = m.lives.maxByOrNull { it.score }
             val text = "${m.title}. ${top?.headline ?: ""}".trim()
-            val big = (b.paragraphs.firstOrNull() ?: text) + (if (b.saturnActive) "\n\n" + b.saturnWords.trimEnd('.') + "." else "")
+            val big = (b.paragraphs.firstOrNull() ?: text) + (if (b.saturnActive) "\n\n" + b.saturnWords.trimEnd('.') + "." else "") +
+                (com.kshana.app.data.RemedyPlans.todayLine(context)?.let { "\n\n$it" } ?: "")
             val n = NotificationCompat.Builder(context, CHANNEL)
                 .setSmallIcon(R.drawable.ic_stat_kshana)
                 .setContentTitle("Your day · ${m.overall.toInt()}, ${m.band}")
@@ -155,7 +158,11 @@ class SunriseReceiver : BroadcastReceiver() {
 /** After a reboot the alarm is gone; set it again. */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+        // After a restart, and when the person grants exact alarms later (Android 12+),
+        // every chosen bell is armed again, exactly when allowed and inexactly otherwise.
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED ||
+            intent.action == "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"
+        ) {
             Alerts.rearm(context)
             if (Sunrise.enabled(context)) Sunrise.scheduleNext(context)
         }

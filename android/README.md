@@ -147,3 +147,43 @@ or an hour's planet are turned into words by `ui/screens/Plain.kt` and never pri
 The chart pages (wheels, Vedic chart, KP areas, muhurta, horary, the technical settings
 and the trust report) are hidden until Settings › "Show the chart pages" is switched on
 (`data/Expert.kt`, off by default).
+
+## The new territory (1.0.0)
+
+- **Welcome and past check.** A fresh install opens on a three-line welcome with
+  "restore from my backup file". After a first birth, the app reads 3–5 real stretches
+  of the last years back as yes/no questions before predicting anything
+  (`PastCheckScreen`, engine `past_checks`). Every yes goes into the journal.
+- **Your data is never lost.** `data/Backup.kt` writes everything the person entered to
+  one JSON file: on demand (Settings › Your data) and automatically to
+  Downloads/Kshana/kshana-backup.json on every stop (Android 10+). Restore from the
+  welcome screen or Settings.
+- **Proof in the open.** The Now screen carries "How right has it been for you?" from
+  the graded record; the journal (`JournalScreen`) sets each logged day beside what the
+  app read for it, marks matches and misses, and feeds "Find your exact birth time".
+- **Remedies as a tree.** `RemedyTreeScreen` (engine `remedy_tree`): each pressure on a
+  life, what it does, until when, how strongly; under it the help in branches: deeds
+  anyone can do, giving, habits, nature, quieting the mind, prayer in one's own faith,
+  and the Hindu tradition (optional). Settings › Remedies for you chooses which faith
+  branches show (`data/Faith.kt`). Any remedy can be taken on for 21 days with a daily
+  tick (`data/RemedyPlan.kt`); giving remedies open the person's UPI app to the cause
+  they chose, or a food charity. The sunrise reading and widget name today's practice.
+- **Ask in your own words.** Typed or spoken (English, Malayalam, Hindi) and mapped on
+  the phone to a life, a matter and a kind of question, shown back as "Understood as…".
+  Answers can be read aloud (`system/Speak.kt`) and say how sure they are in words.
+- **Care.** Returning three times in a week to a painful question about love, health or
+  family, or a very low health reading, shows a gentle card with Tele-MANAS (14416).
+- **Calendar check.** `CalendarScreen` reads the next seven days of appointments (only
+  when allowed, never stored) and marks the ones in weak hours with a better hour.
+- **People.** Share a person as a kshana://person link or QR code; paste or open one to
+  add them. "A date for all of us" (engine `best_slots_together`) finds hours that suit
+  several people for a wedding, a house-warming or a trip.
+- **Share cards.** Any day, outlook or answer becomes a picture for WhatsApp
+  (`system/ShareCard.kt`).
+- **Languages.** The outlook, the moment, the season, the remedy tree and the past check
+  are written in Malayalam and Hindi by the engine itself; the rest falls back to English.
+- **How Kshana works** (More): what it reads, how a reading is made, how sure it is, what
+  it cannot do, remedies, data, and the privacy policy.
+- **Play Store ready.** Signed release bundle, 16 KB-aligned native libraries, R8 rules,
+  crash log kept on the phone (Settings › Problem report), docs/PLAY_STORE.md and
+  docs/PRIVACY.md.

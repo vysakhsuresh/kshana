@@ -71,7 +71,7 @@ pub fn letter(
     let weak = stories.iter().min_by(|a, b| a.mean.partial_cmp(&b.mean).unwrap_or(std::cmp::Ordering::Equal));
     let mut s = String::new();
     if let Some(bst) = best {
-        s.push_str(&format!("{} is the month's gift", bst.life.name()));
+        s.push_str(&format!("{} is the month's gift", crate::plain::subject(bst.life.name())));
         if let Some((a, _, v)) = bst.best {
             let _ = v;
             s.push_str(&format!(", at its best around {}", date_words(a, lon)));
