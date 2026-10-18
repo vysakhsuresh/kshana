@@ -222,6 +222,7 @@ private fun scoreBandWord(score: Double): String = when {
 
 private fun componentName(key: String): String = when (key) {
     "natal" -> "What you were born with"
+    "bhava" -> "Your own timing for this"
     "dasha" -> "This stretch of your life"
     "gochara" -> "This season"
     "tara" -> "Today's luck"

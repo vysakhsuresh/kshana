@@ -334,6 +334,19 @@ pub fn explain(
         });
     }
 
+    // 4b. The life's own timing: what passes through its own houses in the birth chart.
+    if let Some(bc) = ls.components.iter().find(|c| c.key == "bhava") {
+        causes.push(Cause {
+            planet: None,
+            kind: "bhava",
+            what: bc.note.clone(),
+            pull: norm(bc.weight) * (bc.score - 0.5),
+            until: None,
+            until_words: String::new(),
+            rule_id: bc.rule_id,
+        });
+    }
+
     // 5. The planetary hour and the limbs of the day.
     let day = solar_day(spk, eop, obs, at).ok().flatten();
     if let (Some(h), Some(d)) = (&m.hora, &day) {

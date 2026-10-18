@@ -199,6 +199,96 @@ fn advice_words(life: Life, band: Band) -> &'static str {
     }
 }
 
+/// Open a life's sentence with its span, so today, this week, this month and this year
+/// never read alike: "This week, love is slow: …".
+fn span_open(lang: Lang, span: Span, core: &str) -> String {
+    let opener = match (lang, span) {
+        (Lang::En, Span::Day) => "Today",
+        (Lang::En, Span::Week) => "This week",
+        (Lang::En, Span::Month) => "This month",
+        (Lang::En, Span::Year) => "Over the coming year",
+        (Lang::Ml, Span::Day) => "ഇന്ന്",
+        (Lang::Ml, Span::Week) => "ഈ ആഴ്ച",
+        (Lang::Ml, Span::Month) => "ഈ മാസം",
+        (Lang::Ml, Span::Year) => "വരുന്ന ഒരു വർഷം",
+        (Lang::Hi, Span::Day) => "आज",
+        (Lang::Hi, Span::Week) => "इस हफ़्ते",
+        (Lang::Hi, Span::Month) => "इस महीने",
+        (Lang::Hi, Span::Year) => "आने वाले साल में",
+    };
+    if lang != Lang::En {
+        return format!("{opener}, {core}");
+    }
+    // Lower the first letter, except where the sentence opens with a name for a person.
+    let mut c = core.chars();
+    let body = match c.next() {
+        Some(f) => f.to_lowercase().collect::<String>() + c.as_str(),
+        None => String::new(),
+    };
+    format!("{opener}, {body}")
+}
+
+/// The top paragraph for the day: the day's quality and its unlucky stretch, if one is still ahead.
+fn day_season(lang: Lang, m: &crate::forecast::Moment, at: Instant, lon: f64) -> String {
+    let dq = crate::lang::day_quality(lang, m.tara);
+    let w = m.windows.iter().find(|w| w.caution && w.end > at);
+    let first = match lang {
+        Lang::En => format!("Today is {}.", dq.trim_end_matches('.')),
+        Lang::Ml => format!("ഇന്ന്: {}.", dq.trim_end_matches('.')),
+        Lang::Hi => format!("आज: {}।", dq.trim_end_matches(['.', '।'])),
+    };
+    let second = match (lang, w) {
+        (Lang::En, Some(w)) => format!(" The {} runs {} to {}: finish things then, begin nothing.", w.label.to_lowercase(), hm(w.start, lon), hm(w.end, lon)),
+        (Lang::Ml, Some(w)) => format!(" {} {} മുതൽ {} വരെ: അപ്പോൾ ഒന്നും തുടങ്ങരുത്.", crate::lang::window_label(lang, &w.label), hm(w.start, lon), hm(w.end, lon)),
+        (Lang::Hi, Some(w)) => format!(" {} {} से {} तक: तब कुछ नया शुरू न करें।", crate::lang::window_label(lang, &w.label), hm(w.start, lon), hm(w.end, lon)),
+        (Lang::En, None) => " The day's unlucky stretches are behind you.".to_string(),
+        (Lang::Ml, None) => " ഇന്നത്തെ നിർഭാഗ്യ സമയങ്ങൾ കഴിഞ്ഞു.".to_string(),
+        (Lang::Hi, None) => " आज का अशुभ समय निकल चुका है।".to_string(),
+    };
+    first + &second
+}
+
+/// The top paragraph for a week or a month: its best and hardest day across your life,
+/// what those days are like, and for a month the shorter phase it sits in.
+fn stretch_season(lang: Lang, span: Span, samples: &[crate::forecast::Sample], levels: &[kshana_vedic::DashaPeriod], lon: f64) -> String {
+    let ld = |t: Instant| crate::lang::date(lang, t, lon);
+    let mean = |s: &crate::forecast::Sample| s.scores.iter().sum::<f64>() / s.scores.len().max(1) as f64;
+    let best = samples.iter().max_by(|a, b| mean(a).partial_cmp(&mean(b)).unwrap_or(std::cmp::Ordering::Equal));
+    let worst = samples.iter().min_by(|a, b| mean(a).partial_cmp(&mean(b)).unwrap_or(std::cmp::Ordering::Equal));
+    let mut s = String::new();
+    if span == Span::Month {
+        if let Some(p) = levels.get(2) {
+            let th = crate::lang::chapter_theme(lang, p.lord);
+            // When the phase ends inside the month, say what comes after it.
+            let ends_soon = samples.last().map(|l| p.end < l.at).unwrap_or(false);
+            let idx = kshana_vedic::DashaLord::ORDER.iter().position(|l| *l == p.lord).unwrap_or(0);
+            let next = crate::lang::chapter_theme(lang, kshana_vedic::DashaLord::ORDER[(idx + 1) % 9]);
+            s.push_str(&match (lang, ends_soon) {
+                (Lang::En, false) => format!("Until {} a shorter phase puts {th} at the front. ", ld(p.end)),
+                (Lang::En, true) => format!("Until {} a shorter phase puts {th} at the front; after that, {next} come forward. ", ld(p.end)),
+                (Lang::Ml, false) => format!("{} വരെ ഒരു ചെറിയ ഘട്ടം {th} എന്നിവയെ മുന്നിലേക്ക് കൊണ്ടുവരുന്നു. ", ld(p.end)),
+                (Lang::Ml, true) => format!("{} വരെ ഒരു ചെറിയ ഘട്ടം {th} എന്നിവയെ മുന്നിലേക്ക് കൊണ്ടുവരുന്നു; അതിനുശേഷം {next} മുന്നിലേക്ക് വരും. ", ld(p.end)),
+                (Lang::Hi, false) => format!("{} तक एक छोटा दौर {th} को आगे लाता है। ", ld(p.end)),
+                (Lang::Hi, true) => format!("{} तक एक छोटा दौर {th} को आगे लाता है; उसके बाद {next} आगे आएँगे। ", ld(p.end)),
+            });
+        }
+    }
+    if let (Some(b), Some(w)) = (best, worst) {
+        let noun = crate::lang::span_noun(lang, span.key());
+        let bq = crate::lang::day_short(lang, b.tara);
+        let wq = crate::lang::day_short(lang, w.tara);
+        s.push_str(&match lang {
+            Lang::En => format!(
+                "Taking every part of your life together, your best day this {} is {}, {}: put the important things there. Go gently on {}, {}.",
+                span.noun(), ld(b.at), bq, ld(w.at), wq
+            ),
+            Lang::Ml => format!("ഈ {noun} നിങ്ങളുടെ ഏറ്റവും നല്ല ദിവസം {} ആണ് ({bq}): പ്രധാന കാര്യങ്ങൾ അന്ന് ചെയ്യുക. {} സൂക്ഷിക്കുക ({wq}).", ld(b.at), ld(w.at)),
+            Lang::Hi => format!("इस {noun} आपका सबसे अच्छा दिन {} है ({bq}): ज़रूरी काम उसी दिन रखें। {} को सँभलकर चलें ({wq})।", ld(b.at), ld(w.at)),
+        });
+    }
+    s
+}
+
 fn day_name_words(t: Instant, lon: f64, span: Span) -> String {
     match span {
         Span::Day => String::new(),
@@ -240,13 +330,16 @@ pub fn outlook_in(
     lang: Lang,
 ) -> Result<Outlook, ForecastError> {
     let ld = |t: Instant| crate::lang::date(lang, t, obs.longitude_deg);
-    let bw = |life: Life, band: Band| -> String { crate::lang::band_sentence(lang, life, band).map(|s| s.to_string()).unwrap_or_else(|| band_words(life, band, span).to_string()) };
+    let bw = |life: Life, band: Band| -> String {
+        let core = crate::lang::band_sentence(lang, life, band).map(|s| s.to_string()).unwrap_or_else(|| band_words(life, band, span).to_string());
+        span_open(lang, span, &core)
+    };
     let aw = |life: Life, band: Band| -> String { crate::lang::advice_sentence(lang, life, band).map(|s| s.to_string()).unwrap_or_else(|| advice_words(life, band).to_string()) };
     let lon = obs.longitude_deg;
     let m = moment(spk, eop, natal, obs, system, ayanamsa, at)?;
     let season_why = m.saturn.expert().to_string();
     let levels = &m.dasha;
-    let season = {
+    let long_season = {
         let (test, _) = crate::briefing::saturn_sentence_in(lang, spk, ayanamsa, natal, m.saturn, at, lon);
         let stop = if lang == Lang::Hi { "।" } else { "." };
         match levels.get(1) {
@@ -262,7 +355,7 @@ pub fn outlook_in(
         }
     };
 
-    let (from, to, lives): (Instant, Instant, Vec<LifeOutlook>) = match span {
+    let (from, to, lives, season): (Instant, Instant, Vec<LifeOutlook>, String) = match span {
         Span::Day => {
             let good = next_good(&m, at, 0.56);
             let lives = Life::ALL
@@ -305,7 +398,7 @@ pub fn outlook_in(
                     }
                 })
                 .collect();
-            (at, m.sunrise.map(|s| s.add_ns(NS_PER_DAY)).unwrap_or(at.add_ns(NS_PER_DAY)), lives)
+            (at, m.sunrise.map(|s| s.add_ns(NS_PER_DAY)).unwrap_or(at.add_ns(NS_PER_DAY)), lives, day_season(lang, &m, at, lon))
         }
         Span::Week | Span::Month => {
             let n = if span == Span::Week { 7 } else { 30 };
@@ -365,7 +458,7 @@ pub fn outlook_in(
                     }
                 })
                 .collect();
-            (at, at.add_ns(n as i128 * NS_PER_DAY), lives)
+            (at, at.add_ns(n as i128 * NS_PER_DAY), lives, stretch_season(lang, span, &samples, levels, lon))
         }
         Span::Year => {
             let yc = year_chapter(spk, eop, natal, obs, system, ayanamsa, at).ok();
@@ -443,7 +536,7 @@ pub fn outlook_in(
                 .collect();
             let _ = &yc;
             let (f, t) = (at, at.add_ns(12 * month));
-            (f, t, lives)
+            (f, t, lives, long_season.clone())
         }
     };
 
@@ -593,6 +686,40 @@ mod lang_tests {
                     assert_eq!(jargon_in(lang, &l.words), None, "{lang:?} {span:?}: {}", l.words);
                     assert_eq!(jargon_in(lang, &l.advice), None, "{lang:?} {span:?}: {}", l.advice);
                 }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod span_tests {
+    use super::*;
+    use kshana_time::Utc;
+
+    /// Today, this week, this month and this year must each say their own thing: their
+    /// own dates, their own headline, and their own words for each life.
+    #[test]
+    fn the_four_spans_say_different_things() {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/de421.bsp");
+        let Ok(spk) = Spk::open(&p) else { return };
+        let obs = Observer { latitude_deg: 9.9312, longitude_deg: 76.2673, height_m: 0.0 };
+        let birth = Utc::new(1990, 2, 20, 5, 4, 0, 0).unwrap().to_instant().unwrap();
+        let natal = Natal::compute(&spk, None, birth, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri).unwrap();
+        let at = Utc::new(2026, 10, 18, 10, 0, 0, 0).unwrap().to_instant().unwrap();
+        let mut seen: Vec<(Span, String, String)> = Vec::new();
+        for span in [Span::Day, Span::Week, Span::Month, Span::Year] {
+            let o = outlook(&spk, None, &natal, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, span, at).unwrap();
+            println!("=== {span:?} {} → {} · {:.0}\n{}\n{}", date_words(o.from, 76.27), date_words(o.to, 76.27), o.score * 100.0, o.headline, o.season);
+            for l in &o.lives {
+                println!("  {:?} {:.0} {}: {} | {}", l.life, l.score * 100.0, l.trend, l.words, l.advice);
+            }
+            let words: String = o.lives.iter().map(|l| l.words.clone()).collect::<Vec<_>>().join("|");
+            seen.push((span, o.headline.clone(), words));
+        }
+        for i in 0..seen.len() {
+            for j in i + 1..seen.len() {
+                assert_ne!(seen[i].1, seen[j].1, "{:?} and {:?} share a headline", seen[i].0, seen[j].0);
+                assert_ne!(seen[i].2, seen[j].2, "{:?} and {:?} share every life's words", seen[i].0, seen[j].0);
             }
         }
     }

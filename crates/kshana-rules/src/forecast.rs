@@ -824,6 +824,56 @@ fn gochara_component(natal: &Natal, sky: &Sky, life: Life) -> Component {
     }
 }
 
+/// How much each graha's passage through a house is felt, Sun..Ketu: the Moon for the
+/// rhythm of days, Jupiter and Saturn for the shape of a year.
+const BHAVA_WEIGHT: [f64; 9] = [0.5, 1.0, 0.7, 0.5, 1.0, 0.7, 1.0, 0.6, 0.5];
+
+/// The life's own timing: the grahas passing through the houses that carry this part of
+/// life, counted from the rising sign at birth (Parashari bhava gochara). A natural
+/// benefic (Moon, Mercury, Jupiter, Venus) crossing them nourishes it; a natural malefic
+/// (Sun, Mars, Saturn, Rahu, Ketu) presses on it, most of all on the main house. Unlike
+/// the transits counted from the Moon, this differs from one life to the next, so each
+/// life has its own good and hard days. `with_moon` is false for the slow, monthly view.
+pub(crate) fn bhava_component(natal: &Natal, signs: &[u8; 9], life: Life, with_moon: bool) -> Component {
+    let area = life.area();
+    let lagna = natal.facts.lagna_sign as i64;
+    let mut num = 0.0;
+    let mut den = 0.0;
+    for (i, &g) in GRAHAS.iter().enumerate() {
+        if g == DashaLord::Moon && !with_moon {
+            continue;
+        }
+        let h = ((signs[i] as i64 - lagna).rem_euclid(12) + 1) as u8;
+        let main = h == area.primary;
+        let in_group = main || area.group.contains(&h);
+        let in_neg = area.negating.contains(&h);
+        if !in_group && !in_neg {
+            continue;
+        }
+        let benefic = matches!(g, DashaLord::Moon | DashaLord::Mercury | DashaLord::Jupiter | DashaLord::Venus);
+        let w = BHAVA_WEIGHT[i];
+        let v = match (in_group, benefic) {
+            (true, true) => if main { 1.0 } else { 0.6 },
+            (true, false) => if main { -1.0 } else { -0.4 },
+            (false, true) => -0.3,
+            (false, false) => 0.2,
+        };
+        num += w * v;
+        den += w;
+    }
+    let den = den.max(2.0);
+    let score = (0.5 + 0.5 * num / den).clamp(0.0, 1.0);
+    let who = crate::plain::subject(life.name()).to_ascii_lowercase();
+    let note = if score >= 0.58 {
+        format!("the timing in your own birth chart favours {who} just now")
+    } else if score <= 0.42 {
+        format!("{who} is going through a slow patch of its own in your birth chart")
+    } else {
+        format!("nothing in your own birth chart pushes {who} either way just now")
+    };
+    Component { key: "bhava", score, weight: 0.22, note, rule_id: "KS-B-0001" }
+}
+
 pub(crate) fn tara_component(natal: &Natal, sky: &Sky) -> (usize, Component) {
     let t = tara_index(natal.janma(), nakshatra(sky.moon_sidereal).index);
     (
@@ -1241,6 +1291,7 @@ pub fn moment(
                 natal_component(natal, life),
                 dasha_component(natal, life, &levels),
                 gochara_component(natal, &sky, life),
+                bhava_component(natal, &sky.signs(), life, true),
                 tara_c.clone(),
             ];
             if let Some(h) = &hora {
@@ -1521,6 +1572,7 @@ pub fn series(
                     natal_component(natal, life),
                     dasha_component(natal, life, &levels),
                     gochara_component(natal, &sky, life),
+                    bhava_component(natal, &sky.signs(), life, true),
                     tara_c.clone(),
                 ])
             })
@@ -1553,7 +1605,8 @@ pub(crate) fn slow_scores(natal: &Natal, sky: &Sky, levels: &[DashaPeriod]) -> V
             let num: f64 = items.iter().map(|i| i.contrib).sum::<f64>() - moon.contrib;
             let raw = if den > 0.0 { num / den } else { 0.0 };
             let g = (0.5 + 0.5 * raw).clamp(0.0, 1.0);
-            ((0.15 * n.score + 0.30 * d.score + 0.20 * g) / 0.65).clamp(0.0, 1.0)
+            let b = bhava_component(natal, &signs, life, false).score;
+            ((0.15 * n.score + 0.30 * d.score + 0.20 * g + 0.15 * b) / 0.80).clamp(0.0, 1.0)
         })
         .collect()
 }
@@ -1770,9 +1823,9 @@ mod tests {
             assert!((0.0..=1.0).contains(&l.score), "{:?}", l);
             assert!(!l.headline.is_empty());
             assert!(!l.because.is_empty());
-            assert_eq!(l.components.len(), 6, "hora present at Kochi");
+            assert_eq!(l.components.len(), 7, "hora present at Kochi");
             let w: f64 = l.components.iter().map(|c| c.weight).sum();
-            assert!((w - 1.0).abs() < 1e-9);
+            assert!((w - 1.22).abs() < 1e-9, "weights {w}");
         }
         assert!(!m.shifts.is_empty());
         assert!(m.shifts.windows(2).all(|w| w[0].at <= w[1].at));

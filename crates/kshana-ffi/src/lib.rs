@@ -4529,3 +4529,133 @@ impl Engine {
             .collect())
     }
 }
+
+/// Every choice the app offers must change what the person reads: each span of Ahead,
+/// each question under a life, each matter, each purpose, each life's remedy tree and
+/// explanation, each couple question. Two different choices that give the same words
+/// are a data-placement bug.
+#[cfg(test)]
+mod distinct {
+    use super::*;
+    use std::collections::HashMap;
+
+    fn at(y: i64, mo: u32, d: u32, h: u32) -> ExactInstant {
+        instant_from_utc(UtcFields { year: y, month: mo, day: d, hour: h, minute: 0, second: 0, nanos: 0 }).unwrap()
+    }
+
+    /// Fails with every group of keys that share the same text.
+    fn all_differ(what: &str, items: Vec<(String, String)>, problems: &mut Vec<String>) {
+        let mut by: HashMap<String, Vec<String>> = HashMap::new();
+        for (k, v) in items {
+            by.entry(v).or_default().push(k);
+        }
+        for (v, ks) in by {
+            if ks.len() > 1 {
+                problems.push(format!("{what}: {ks:?} all read: {v}"));
+            }
+        }
+    }
+
+    #[test]
+    fn every_choice_changes_what_the_person_reads() {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/de421.bsp");
+        let engine = Engine::open(p.to_string_lossy().into_owned(), None).expect("kernel");
+        let (b, la, lo) = (at(1990, 2, 20, 5), 9.9312, 76.2673);
+        let (ob, ola, olo) = (at(1997, 9, 22, 13), 9.9312, 76.2673);
+        let t = at(2026, 10, 18, 10);
+        let (hs, ay) = (HouseSystem::Placidus, AyanamsaChoice::Lahiri);
+        let mut problems = Vec::new();
+
+        // Ahead: the four spans, each as a whole and each life within it.
+        let spans: Vec<(String, OutlookRecord)> = ["day", "week", "month", "year"]
+            .iter()
+            .map(|s| (s.to_string(), engine.outlook(b, la, lo, la, lo, hs, ay, s.to_string(), t, "en".into()).unwrap()))
+            .collect();
+        all_differ("outlook headline", spans.iter().map(|(k, o)| (k.clone(), o.headline.clone())).collect(), &mut problems);
+        all_differ("outlook season", spans.iter().map(|(k, o)| (k.clone(), o.season.clone())).collect(), &mut problems);
+        for life in life_names() {
+            all_differ(
+                &format!("outlook {life}"),
+                spans.iter().map(|(k, o)| (k.clone(), o.lives.iter().find(|l| l.life == life).map(|l| l.words.clone()).unwrap_or_default())).collect(),
+                &mut problems,
+            );
+        }
+        // The same life on every span must not land on one best date everywhere.
+        let mut best_dates: HashMap<String, usize> = HashMap::new();
+        for (_, o) in &spans {
+            for l in &o.lives {
+                if let Some(a) = &l.best_at {
+                    let unit = if o.span == "day" { 3_600 } else { 86_400 };
+                    *best_dates.entry(format!("{}|{}", o.span, a.tai_seconds / unit)).or_default() += 1;
+                }
+            }
+        }
+        for (k, n) in &best_dates {
+            if *n == 9 {
+                problems.push(format!("outlook {k}: all nine lives share one best date"));
+            }
+        }
+
+        // Ask: each question under a life.
+        for life in life_names() {
+            let answers: Vec<(String, String)> = questions()
+                .iter()
+                .filter_map(|q| engine.ask(b, la, lo, la, lo, hs, ay, life.clone(), q.key.clone(), t).ok().map(|a| (q.key.clone(), a.headline)))
+                .collect();
+            all_differ(&format!("ask {life}"), answers, &mut problems);
+        }
+        // Ask: each matter under a life, same question.
+        for life in life_names() {
+            let answers: Vec<(String, String)> = topics()
+                .iter()
+                .filter(|tp| tp.life == life)
+                .filter_map(|tp| engine.ask_topic(b, la, lo, la, lo, hs, ay, tp.key.clone(), "will_it_happen".into(), t).ok().map(|a| (tp.key.clone(), format!("{} {}", a.headline, a.when_words))))
+                .collect();
+            all_differ(&format!("matters under {life}"), answers, &mut problems);
+        }
+        // Plan: each purpose at the same hour.
+        let plans: Vec<(String, String)> = purposes()
+            .iter()
+            .map(|pu| {
+                let a = engine.appointment(b, la, lo, la, lo, hs, ay, pu.key.clone(), t).unwrap();
+                (pu.key.clone(), format!("{} {}", a.headline, a.advice.join(" ")))
+            })
+            .collect();
+        all_differ("plan purposes", plans, &mut problems);
+        // Life pages: the explanation of each life.
+        let explains: Vec<(String, String)> = life_names()
+            .into_iter()
+            .map(|l| {
+                let e = engine.explain(b, la, lo, la, lo, hs, ay, l.clone(), t).unwrap();
+                (l, e.headline)
+            })
+            .collect();
+        all_differ("explain per life", explains, &mut problems);
+        // Remedies: each life's tree.
+        let trees: Vec<(String, String)> = life_names()
+            .into_iter()
+            .map(|l| {
+                let r = engine.remedy_tree(b, la, lo, la, lo, hs, ay, Some(l.clone()), t, "en".into()).unwrap();
+                (l, format!("{} | {}", r.headline, r.causes.iter().map(|c| c.title.clone()).collect::<Vec<_>>().join(" / ")))
+            })
+            .collect();
+        all_differ("remedy tree per life", trees, &mut problems);
+        // Us: each question about the two of you.
+        let couple: Vec<(String, String)> = questions()
+            .iter()
+            .filter_map(|q| engine.couple_ask(b, la, lo, ob, ola, olo, la, lo, hs, ay, q.key.clone(), t).ok().map(|a| (q.key.clone(), a.headline)))
+            .collect();
+        all_differ("couple questions", couple, &mut problems);
+        // First check: different lives, different stretches.
+        let pc = engine.past_checks(b, la, lo, hs, ay, t, "en".into()).unwrap();
+        all_differ("past checks", pc.iter().map(|c| (c.life.clone(), c.question.clone())).collect(), &mut problems);
+        let lives: std::collections::HashSet<_> = pc.iter().map(|c| c.life.clone()).collect();
+        if lives.len() != pc.len() {
+            problems.push("past checks repeat a life".into());
+        }
+
+        if !problems.is_empty() {
+            panic!("{} places show the same words for different choices:\n{}", problems.len(), problems.join("\n"));
+        }
+    }
+}

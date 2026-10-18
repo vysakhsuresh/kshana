@@ -171,6 +171,7 @@ internal fun signedPoints(v: Double): String {
 
 private fun kindName(k: String): String = when (k) {
     "natal" -> "from birth"
+    "bhava" -> "your own timing for this"
     "dasha" -> "this stretch of your life"
     "gochara" -> "this season"
     "tara" -> "today's luck"
