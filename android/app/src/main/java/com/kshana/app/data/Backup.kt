@@ -116,3 +116,24 @@ object Backup {
     fun setAuto(context: Context, on: Boolean) = ProfileStore.prefs(context).edit().putBoolean(K_AUTO, on).apply()
     fun lastSaved(context: Context): Long = ProfileStore.prefs(context).getLong(K_LAST, 0L)
 }
+
+/**
+ * The file picker for a restore, opening straight in Downloads › Kshana where the
+ * automatic copy lives, so the person does not have to hunt for it.
+ */
+class OpenBackup : androidx.activity.result.contract.ActivityResultContract<Unit, android.net.Uri?>() {
+    override fun createIntent(context: android.content.Context, input: Unit): android.content.Intent {
+        val i = android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT)
+            .addCategory(android.content.Intent.CATEGORY_OPENABLE)
+            .setType("*/*")
+            .putExtra(android.content.Intent.EXTRA_MIME_TYPES, arrayOf("application/json", "text/plain", "application/octet-stream"))
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val start = android.provider.DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", "primary:Download/Kshana")
+            i.putExtra(android.provider.DocumentsContract.EXTRA_INITIAL_URI, start)
+        }
+        return i
+    }
+
+    override fun parseResult(resultCode: Int, intent: android.content.Intent?): android.net.Uri? =
+        if (resultCode == android.app.Activity.RESULT_OK) intent?.data else null
+}

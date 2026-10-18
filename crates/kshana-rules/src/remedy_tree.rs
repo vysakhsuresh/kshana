@@ -968,7 +968,7 @@ pub fn remedy_tree(
         let ease = first.until.map(|u| date(lang, u, lon));
         match lang {
             Lang::En => format!(
-                "Your {} is pressed by {}{}. Here is the cause, and what eases it: deeds anyone can do come first.",
+                "What weighs on your {} now: {}{}. Here is the cause, and what eases it: deeds anyone can do come first.",
                 life_lower(lang, life),
                 p,
                 ease.map(|d| format!(", easing around {d}")).unwrap_or_default()

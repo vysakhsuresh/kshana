@@ -35,7 +35,7 @@ import com.kshana.app.ui.theme.StarWheel
 fun WelcomeScreen(onStart: () -> Unit, onRestored: () -> Unit) {
     val context = LocalContext.current
     var note by remember { mutableStateOf<String?>(null) }
-    val open = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val open = rememberLauncherForActivityResult(com.kshana.app.data.OpenBackup()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         val name = Backup.read(context, uri)
         if (name == null) note = "That file is not a Kshana backup. It is called ${Backup.FILE_NAME} and is usually in Downloads › Kshana."
@@ -58,7 +58,7 @@ fun WelcomeScreen(onStart: () -> Unit, onRestored: () -> Unit) {
         )
         Spacer(Modifier.height(10.dp))
         GoldButton("BEGIN WITH MY BIRTH DETAILS", onClick = onStart, modifier = Modifier.fillMaxWidth())
-        QuietButton("RESTORE FROM MY BACKUP FILE", onClick = { open.launch(arrayOf("application/json", "text/plain", "*/*")) }, modifier = Modifier.fillMaxWidth())
+        QuietButton("RESTORE FROM MY BACKUP FILE", onClick = { open.launch(Unit) }, modifier = Modifier.fillMaxWidth())
         Text("Used Kshana before? Your backup is kept in Downloads › Kshana › ${Backup.FILE_NAME}.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Ember) }
     }

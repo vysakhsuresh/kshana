@@ -162,7 +162,7 @@ private fun RemedyItem(r: TreeRemedyRecord, forWhat: String, onPlan: () -> Unit)
     ) {
         Text(r.title, style = MaterialTheme.typography.bodyLarge, color = KshanaColors.Text)
         Text(r.why, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
-        Text(listOf(r.day, r.effort).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
+        Text(listOf(r.day, r.effort).filter { it.isNotBlank() && it !in setOf("any day", "ഏതു ദിവസവും", "कोई भी दिन") }.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
         if (open) {
             if (r.how.isNotBlank()) Text(r.how, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
             r.mantra?.takeIf { it.isNotBlank() }?.let { Text(it, fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Gold) }

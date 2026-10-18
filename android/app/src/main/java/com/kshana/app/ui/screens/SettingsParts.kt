@@ -51,7 +51,7 @@ internal fun DataSettings() {
     val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) note = if (Backup.write(context, uri)) "Saved. Keep the file somewhere safe: Drive, email to yourself, or a pen drive." else "Could not save the file."
     }
-    val open = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val open = rememberLauncherForActivityResult(com.kshana.app.data.OpenBackup()) { uri ->
         if (uri != null) note = Backup.read(context, uri)?.let { "Restored${if (it.isNotBlank()) " for $it" else ""}. Close and open the app to see everything." } ?: "That file is not a Kshana backup."
     }
     SectionLabel("Your data")
@@ -61,7 +61,7 @@ internal fun DataSettings() {
     )
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         QuietButton("SAVE A BACKUP FILE", onClick = { save.launch(Backup.FILE_NAME) }, modifier = Modifier.weight(1f))
-        QuietButton("RESTORE", onClick = { open.launch(arrayOf("application/json", "text/plain", "*/*")) }, modifier = Modifier.weight(1f))
+        QuietButton("RESTORE", onClick = { open.launch(Unit) }, modifier = Modifier.weight(1f))
     }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
