@@ -42,7 +42,7 @@ class SadeSatiWidget : AppWidgetProvider() {
                 else -> "No long test running"
             }
             val m = b.moment
-            val top = m.lives.maxByOrNull { it.score }
+            val top = m.lives.filter { com.kshana.app.data.Focus.also { f -> f.load(context) }.has(it.life) }.maxByOrNull { it.score }
             val line2 = "${m.title} · ${m.overall.toInt()}"
             val line3 = top?.let { "${it.life}: ${it.headline}" } ?: ""
             val good = m.nextGood.withIndex().filter { it.value != null }.minByOrNull { it.value!!.start.taiSeconds }

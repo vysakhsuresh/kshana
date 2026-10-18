@@ -52,7 +52,7 @@ internal object LetterCache {
 @Composable
 fun LetterScreen(profile: BirthProfile, place: Place, settings: EngineSettings, onBack: () -> Unit, onLife: (String) -> Unit, onWall: () -> Unit) {
     val context = LocalContext.current
-    val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${java.time.LocalDate.now()}"
+    val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${java.time.LocalDate.now()}|${com.kshana.app.data.Focus.lives}|${com.kshana.app.data.Lang.code}"
     var letter by remember { mutableStateOf(if (LetterCache.key == key) LetterCache.record else null) }
     var error by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(key) {
@@ -60,7 +60,7 @@ fun LetterScreen(profile: BirthProfile, place: Place, settings: EngineSettings, 
         try {
             val engine = EngineProvider.get(context)
             val l = withContext(Dispatchers.Default) {
-                engine.letter(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now())
+                engine.letter(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), com.kshana.app.data.Focus.lives)
             }
             LetterCache.key = key
             LetterCache.record = l

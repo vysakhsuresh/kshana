@@ -51,7 +51,7 @@ fun PastCheckScreen(profile: BirthProfile, settings: EngineSettings, onDone: () 
         try {
             val engine = EngineProvider.get(context)
             checks = withContext(Dispatchers.Default) {
-                engine.pastChecks(profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), Lang.code)
+                engine.pastChecks(profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), Lang.code, com.kshana.app.data.Focus.lives)
             }
         } catch (e: Exception) {
             error = e.message ?: e.toString()

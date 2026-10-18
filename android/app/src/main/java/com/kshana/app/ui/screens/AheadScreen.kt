@@ -70,7 +70,7 @@ fun AheadScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var whyOpen by remember { mutableStateOf<String?>(null) }
     val hourKey = System.currentTimeMillis() / 3_600_000L
-    val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|$span|${if (span == "day") hourKey else hourKey / 24}"
+    val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|$span|${if (span == "day") hourKey else hourKey / 24}|${com.kshana.app.data.Focus.lives}|${com.kshana.app.data.Lang.code}"
 
     LaunchedEffect(key) {
         out = OutlookCache.records[key]
@@ -78,7 +78,7 @@ fun AheadScreen(
         try {
             val engine = EngineProvider.get(context)
             val o = withContext(Dispatchers.Default) {
-                engine.outlook(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, span, Instants.now(), com.kshana.app.data.Lang.code)
+                engine.outlook(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, span, Instants.now(), com.kshana.app.data.Lang.code, com.kshana.app.data.Focus.lives)
             }
             OutlookCache.records[key] = o
             out = o
@@ -152,7 +152,15 @@ fun AheadScreen(
         }
 
         // Each life: the sentence, the dates, what to do.
-        for (l in o.lives) {
+        // Your chosen parts of life first; the rest below, apart, never in the summary.
+        val ordered = o.lives.sortedBy { if (com.kshana.app.data.Focus.has(it.life)) 0 else 1 }
+        var alsoShown = false
+        for (l in ordered) {
+            if (!com.kshana.app.data.Focus.has(l.life) && !alsoShown) {
+                alsoShown = true
+                SectionLabel("The rest of your life")
+                Text("Parts you did not choose as yours. They are read too, but kept out of the summary above. Change your choice in Settings › What matters to me.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            }
             HorizontalDivider(color = KshanaColors.LineSoft)
             Column(Modifier.fillMaxWidth().clickable { onLife(l.life) }.padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

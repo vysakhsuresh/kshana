@@ -67,14 +67,14 @@ fun RemedyTreeScreen(profile: BirthProfile, place: Place, settings: EngineSettin
     var plansVersion by remember { mutableStateOf(0) }
     val faith = remember { Faith.get(context) }
     val lang = Lang.code
-    val key = "${profile.birthInstant().taiSeconds}|${place.name}|$chosen|$lang|${java.time.LocalDate.now()}"
+    val key = "${profile.birthInstant().taiSeconds}|${place.name}|$chosen|$lang|${java.time.LocalDate.now()}|${com.kshana.app.data.Focus.lives}"
     LaunchedEffect(key) {
         tree = TreeCache.trees[key]
         if (tree != null) return@LaunchedEffect
         try {
             val engine = EngineProvider.get(context)
             val t = withContext(Dispatchers.Default) {
-                engine.remedyTree(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, chosen, Instants.now(), lang)
+                engine.remedyTree(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, chosen, Instants.now(), lang, com.kshana.app.data.Focus.lives)
             }
             TreeCache.trees[key] = t
             tree = t

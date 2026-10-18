@@ -73,7 +73,7 @@ pub fn question(lang: Lang, life: Life, good: bool, from: Instant, to: Instant, 
 
 /// Three to five questions about the six years before `at`.
 #[allow(clippy::too_many_arguments)]
-pub fn past_checks(spk: &Spk, eop: Option<&EopTable>, natal: &Natal, obs: &Observer, ayanamsa: Ayanamsa, lang: Lang, at: Instant) -> Result<Vec<PastCheck>, ForecastError> {
+pub fn past_checks(spk: &Spk, eop: Option<&EopTable>, natal: &Natal, obs: &Observer, ayanamsa: Ayanamsa, lang: Lang, at: Instant, focus: &[Life]) -> Result<Vec<PastCheck>, ForecastError> {
     let month = (30.4375 * NS_PER_DAY as f64) as i128;
     let n = 72usize;
     let start = at.add_ns(-(n as i128) * month);
@@ -86,7 +86,10 @@ pub fn past_checks(spk: &Spk, eop: Option<&EopTable>, natal: &Natal, obs: &Obser
     let s = slow_series(spk, eop, natal, obs, ayanamsa, start, month, count)?;
     let w = 3usize;
     let mut cands: Vec<(f64, usize, usize, bool)> = Vec::new(); // (strength, life, first index, good)
-    for (li, _) in Life::ALL.iter().enumerate() {
+    for (li, l) in Life::ALL.iter().enumerate() {
+        if !focus.is_empty() && !focus.contains(l) {
+            continue;
+        }
         let vals: Vec<f64> = s.iter().map(|(_, v)| v[li]).collect();
         if vals.len() < w + 1 {
             continue;
@@ -152,7 +155,7 @@ mod tests {
         let natal = Natal::compute(&spk, None, birth, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri).unwrap();
         let at = Utc::new(2026, 10, 17, 5, 0, 0, 0).unwrap().to_instant().unwrap();
         for lang in [Lang::En, Lang::Ml, Lang::Hi] {
-            let c = past_checks(&spk, None, &natal, &obs, Ayanamsa::Lahiri, lang, at).unwrap();
+            let c = past_checks(&spk, None, &natal, &obs, Ayanamsa::Lahiri, lang, at, &[]).unwrap();
             assert!((3..=5).contains(&c.len()), "{lang:?}: {c:?}");
             for x in &c {
                 assert!(x.from < x.to && x.to <= at.add_ns(31 * NS_PER_DAY));

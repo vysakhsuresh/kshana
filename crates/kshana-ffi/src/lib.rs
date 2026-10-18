@@ -3800,10 +3800,11 @@ impl Engine {
         system: HouseSystem,
         ayanamsa: AyanamsaChoice,
         at: ExactInstant,
+        focus: Vec<String>,
     ) -> Result<LetterRecord, KshanaError> {
         let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
         let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
-        let l = kshana_rules::letter(&self.spk, self.eop.as_ref(), &natal, &obs, to_house_system(system), ayanamsa.into(), at.into())
+        let l = kshana_rules::letter(&self.spk, self.eop.as_ref(), &natal, &obs, to_house_system(system), ayanamsa.into(), at.into(), &focus_of(&focus))
             .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         Ok(LetterRecord {
             from: l.from.into(),
@@ -3966,11 +3967,12 @@ impl Engine {
         span: String,
         at: ExactInstant,
         lang: String,
+        focus: Vec<String>,
     ) -> Result<OutlookRecord, KshanaError> {
         let span = kshana_rules::Span::parse(&span).ok_or_else(|| KshanaError::Engine(format!("unknown span {span}")))?;
         let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
         let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
-        let o = kshana_rules::outlook_in(&self.spk, self.eop.as_ref(), &natal, &obs, to_house_system(system), ayanamsa.into(), span, at.into(), kshana_rules::Lang::parse(&lang))
+        let o = kshana_rules::outlook_in(&self.spk, self.eop.as_ref(), &natal, &obs, to_house_system(system), ayanamsa.into(), span, at.into(), kshana_rules::Lang::parse(&lang), &focus_of(&focus))
             .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         Ok(OutlookRecord {
             span: o.span.key().to_string(),
@@ -4176,9 +4178,9 @@ mod plain_audit {
                 let tag = |s: &str| format!("p{pi}t{ti}.{s}");
                 audit(&tag("moment"), format!("{:?}", engine.forecast_moment(b, la, lo, la, lo, hs, ay, t, "en".into()).unwrap()), &mut hits);
                 audit(&tag("briefing"), format!("{:?}", engine.briefing(b, la, lo, la, lo, hs, ay, vec!["Love".into(), "Career".into(), "Money".into(), "Health".into()], t, "en".into()).unwrap()), &mut hits);
-                audit(&tag("letter"), format!("{:?}", engine.letter(b, la, lo, la, lo, hs, ay, t).unwrap()), &mut hits);
+                audit(&tag("letter"), format!("{:?}", engine.letter(b, la, lo, la, lo, hs, ay, t, vec![]).unwrap()), &mut hits);
                 for s in ["day", "week", "month", "year"] {
-                    audit(&tag(&format!("outlook_{s}")), format!("{:?}", engine.outlook(b, la, lo, la, lo, hs, ay, s.into(), t, "en".into()).unwrap()), &mut hits);
+                    audit(&tag(&format!("outlook_{s}")), format!("{:?}", engine.outlook(b, la, lo, la, lo, hs, ay, s.into(), t, "en".into(), vec![]).unwrap()), &mut hits);
                 }
                 audit(&tag("countdowns"), format!("{:?}", engine.countdowns(b, la, lo, la, lo, hs, ay, t).unwrap()), &mut hits);
                 audit(&tag("festivals"), format!("{:?}", engine.festivals(b, la, lo, hs, ay, t, 35).unwrap()), &mut hits);
@@ -4211,9 +4213,9 @@ mod plain_audit {
                     audit(&tag("kundali"), format!("{:?}", engine.kundali(b, la, lo, ob, ola, olo, hs, ay, true).unwrap()), &mut hits);
                     audit(&tag("talk"), format!("{:?}", engine.talk_window(b, la, lo, ob, ola, olo, la, lo, hs, ay, t, 14).unwrap()), &mut hits);
                     for life in std::iter::once(None).chain(life_names().into_iter().map(Some)) {
-                        audit(&tag(&format!("tree_{life:?}")), format!("{:?}", engine.remedy_tree(b, la, lo, la, lo, hs, ay, life.clone(), t, "en".into()).unwrap()), &mut hits);
+                        audit(&tag(&format!("tree_{life:?}")), format!("{:?}", engine.remedy_tree(b, la, lo, la, lo, hs, ay, life.clone(), t, "en".into(), vec![]).unwrap()), &mut hits);
                     }
-                    audit(&tag("past"), format!("{:?}", engine.past_checks(b, la, lo, hs, ay, t, "en".into()).unwrap()), &mut hits);
+                    audit(&tag("past"), format!("{:?}", engine.past_checks(b, la, lo, hs, ay, t, "en".into(), vec![]).unwrap()), &mut hits);
                     let group = vec![PersonInput { birth: b, lat: la, lon: lo }, PersonInput { birth: ob, lat: ola, lon: olo }];
                     audit(&tag("together"), format!("{:?}", engine.best_slots_together(group.clone(), la, lo, hs, ay, "family".into(), t, 7, 5, "en".into()).unwrap()), &mut hits);
                     for code in ["ml", "hi"] {
@@ -4223,11 +4225,11 @@ mod plain_audit {
                         let br = engine.briefing(b, la, lo, la, lo, hs, ay, vec!["Love".into(), "Career".into()], t, code.into()).unwrap();
                         audit_in(lang, &tg("briefing.season"), format!("{:?}", (&br.paragraphs[0], &br.saturn_words, &br.moment.title, &br.moment.day_title)), &mut hits);
                         for s in ["day", "week", "month", "year"] {
-                            audit_in(lang, &tg(&format!("outlook_{s}")), format!("{:?}", engine.outlook(b, la, lo, la, lo, hs, ay, s.into(), t, code.into()).unwrap()), &mut hits);
+                            audit_in(lang, &tg(&format!("outlook_{s}")), format!("{:?}", engine.outlook(b, la, lo, la, lo, hs, ay, s.into(), t, code.into(), vec![]).unwrap()), &mut hits);
                         }
-                        audit_in(lang, &tg("tree"), format!("{:?}", engine.remedy_tree(b, la, lo, la, lo, hs, ay, None, t, code.into()).unwrap()), &mut hits);
-                        audit_in(lang, &tg("tree_love"), format!("{:?}", engine.remedy_tree(b, la, lo, la, lo, hs, ay, Some("Love".into()), t, code.into()).unwrap()), &mut hits);
-                        audit_in(lang, &tg("past"), format!("{:?}", engine.past_checks(b, la, lo, hs, ay, t, code.into()).unwrap()), &mut hits);
+                        audit_in(lang, &tg("tree"), format!("{:?}", engine.remedy_tree(b, la, lo, la, lo, hs, ay, None, t, code.into(), vec![]).unwrap()), &mut hits);
+                        audit_in(lang, &tg("tree_love"), format!("{:?}", engine.remedy_tree(b, la, lo, la, lo, hs, ay, Some("Love".into()), t, code.into(), vec![]).unwrap()), &mut hits);
+                        audit_in(lang, &tg("past"), format!("{:?}", engine.past_checks(b, la, lo, hs, ay, t, code.into(), vec![]).unwrap()), &mut hits);
                         audit_in(lang, &tg("together"), format!("{:?}", engine.best_slots_together(group.clone(), la, lo, hs, ay, "family".into(), t, 7, 3, code.into()).unwrap()), &mut hits);
                     }
                 }
@@ -4414,11 +4416,12 @@ impl Engine {
         life: Option<String>,
         at: ExactInstant,
         lang: String,
+        focus: Vec<String>,
     ) -> Result<RemedyTreeRecord, KshanaError> {
         let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
         let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
         let life = life.as_deref().and_then(kshana_rules::Life::parse);
-        let t = kshana_rules::remedy_tree(&self.spk, self.eop.as_ref(), &natal, &obs, to_house_system(system), ayanamsa.into(), life, kshana_rules::Lang::parse(&lang), at.into())
+        let t = kshana_rules::remedy_tree(&self.spk, self.eop.as_ref(), &natal, &obs, to_house_system(system), ayanamsa.into(), life, kshana_rules::Lang::parse(&lang), at.into(), &focus_of(&focus))
             .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         Ok(RemedyTreeRecord {
             life: t.life.name().to_string(),
@@ -4468,10 +4471,11 @@ impl Engine {
         ayanamsa: AyanamsaChoice,
         at: ExactInstant,
         lang: String,
+        focus: Vec<String>,
     ) -> Result<Vec<PastCheckRecord>, KshanaError> {
         let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
         let obs = Observer { latitude_deg: birth_lat, longitude_deg: birth_lon, height_m: 0.0 };
-        let c = kshana_rules::past_checks(&self.spk, self.eop.as_ref(), &natal, &obs, ayanamsa.into(), kshana_rules::Lang::parse(&lang), at.into())
+        let c = kshana_rules::past_checks(&self.spk, self.eop.as_ref(), &natal, &obs, ayanamsa.into(), kshana_rules::Lang::parse(&lang), at.into(), &focus_of(&focus))
             .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         Ok(c
             .into_iter()
@@ -4569,7 +4573,7 @@ mod distinct {
         // Ahead: the four spans, each as a whole and each life within it.
         let spans: Vec<(String, OutlookRecord)> = ["day", "week", "month", "year"]
             .iter()
-            .map(|s| (s.to_string(), engine.outlook(b, la, lo, la, lo, hs, ay, s.to_string(), t, "en".into()).unwrap()))
+            .map(|s| (s.to_string(), engine.outlook(b, la, lo, la, lo, hs, ay, s.to_string(), t, "en".into(), vec![]).unwrap()))
             .collect();
         all_differ("outlook headline", spans.iter().map(|(k, o)| (k.clone(), o.headline.clone())).collect(), &mut problems);
         all_differ("outlook season", spans.iter().map(|(k, o)| (k.clone(), o.season.clone())).collect(), &mut problems);
@@ -4635,7 +4639,7 @@ mod distinct {
         let trees: Vec<(String, String)> = life_names()
             .into_iter()
             .map(|l| {
-                let r = engine.remedy_tree(b, la, lo, la, lo, hs, ay, Some(l.clone()), t, "en".into()).unwrap();
+                let r = engine.remedy_tree(b, la, lo, la, lo, hs, ay, Some(l.clone()), t, "en".into(), vec![]).unwrap();
                 (l, format!("{} | {}", r.headline, r.causes.iter().map(|c| c.title.clone()).collect::<Vec<_>>().join(" / ")))
             })
             .collect();
@@ -4647,7 +4651,7 @@ mod distinct {
             .collect();
         all_differ("couple questions", couple, &mut problems);
         // First check: different lives, different stretches.
-        let pc = engine.past_checks(b, la, lo, hs, ay, t, "en".into()).unwrap();
+        let pc = engine.past_checks(b, la, lo, hs, ay, t, "en".into(), vec![]).unwrap();
         all_differ("past checks", pc.iter().map(|c| (c.life.clone(), c.question.clone())).collect(), &mut problems);
         let lives: std::collections::HashSet<_> = pc.iter().map(|c| c.life.clone()).collect();
         if lives.len() != pc.len() {
@@ -4657,5 +4661,71 @@ mod distinct {
         if !problems.is_empty() {
             panic!("{} places show the same words for different choices:\n{}", problems.len(), problems.join("\n"));
         }
+    }
+}
+
+/// The parts of life the person chose, by name; empty means all of them.
+fn focus_of(v: &[String]) -> Vec<kshana_rules::Life> {
+    v.iter().filter_map(|s| kshana_rules::Life::parse(s)).collect()
+}
+
+/// One thing that is coming.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct FutureEventRecord {
+    pub from: ExactInstant,
+    pub to: ExactInstant,
+    /// The life it is about, or none for a turn that touches the whole of life.
+    pub life: Option<String>,
+    /// `opening`, `pressure`, `chapter`, `test_begins`, `test_pause`, `test_returns`, `test_ends`.
+    pub kind: String,
+    pub headline: String,
+    pub detail: String,
+    /// 0–100.
+    pub strength: f64,
+    pub peak: Option<ExactInstant>,
+}
+
+#[uniffi::export]
+impl Engine {
+    /// What is coming in the `months` from `at`, for the chosen lives, in order: the
+    /// windows that open and the stretches that press, the turns of the long chapters of
+    /// life, and the long testing periods.
+    #[allow(clippy::too_many_arguments)]
+    pub fn future(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        lat: f64,
+        lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        at: ExactInstant,
+        months: u32,
+        lang: String,
+        focus: Vec<String>,
+    ) -> Result<Vec<FutureEventRecord>, KshanaError> {
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
+        let mut f = focus_of(&focus);
+        if f.is_empty() {
+            f = kshana_rules::Life::ALL.to_vec();
+        }
+        let ev = kshana_rules::future::future(&self.spk, self.eop.as_ref(), &natal, &obs, ayanamsa.into(), at.into(), months as usize, &f, kshana_rules::Lang::parse(&lang))
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(ev
+            .into_iter()
+            .map(|e| FutureEventRecord {
+                from: e.from.into(),
+                to: e.to.into(),
+                life: e.life.map(|l| l.name().to_string()),
+                kind: e.kind.to_string(),
+                headline: e.headline,
+                detail: e.detail,
+                strength: e.strength * 100.0,
+                peak: e.peak.map(Into::into),
+            })
+            .collect())
     }
 }

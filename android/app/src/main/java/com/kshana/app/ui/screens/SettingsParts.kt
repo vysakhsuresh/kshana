@@ -121,3 +121,19 @@ internal fun CrashSettings() {
         QuietButton("DELETE", onClick = { com.kshana.app.system.CrashLog.clear(context); last = null }, modifier = Modifier.weight(1f))
     }
 }
+
+/** The parts of life that matter to this person: the summaries speak only of these. */
+@Composable
+internal fun FocusSettings() {
+    val context = LocalContext.current
+    SectionLabel("What matters to me")
+    Text(
+        "The day, week, month and year summaries, the letter and the future speak only of the parts you choose. The others are still read, and shown below them.",
+        style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
+    )
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        for (l in com.kshana.app.data.Focus.ALL) {
+            Chip("${lifeGlyph(l)} ${lifeName(l).uppercase()}", selected = com.kshana.app.data.Focus.has(l), onClick = { com.kshana.app.data.Focus.toggle(context, l) })
+        }
+    }
+}

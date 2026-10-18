@@ -882,6 +882,7 @@ pub fn remedy_tree(
     life: Option<Life>,
     lang: Lang,
     at: Instant,
+    focus: &[Life],
 ) -> Result<RemedyTree, ForecastError> {
     let lon = obs.longitude_deg;
     let life = match life {
@@ -890,6 +891,7 @@ pub fn remedy_tree(
             let m = moment(spk, eop, natal, obs, system, ayanamsa, at)?;
             m.lives
                 .iter()
+                .filter(|l| focus.is_empty() || focus.contains(&l.life))
                 .min_by(|a, b| a.score.partial_cmp(&b.score).unwrap_or(std::cmp::Ordering::Equal))
                 .map(|l| l.life)
                 .unwrap_or(Life::Love)

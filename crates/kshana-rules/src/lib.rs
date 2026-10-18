@@ -21,6 +21,7 @@ pub mod explain;
 pub mod facts;
 pub mod feed;
 pub mod forecast;
+pub mod future;
 pub mod gochara;
 pub mod hora;
 pub mod kp;

@@ -27,12 +27,12 @@ object Lang {
     val choices = listOf("en" to "English", "ml" to "മലയാളം", "hi" to "हिन्दी")
 
     private val ml: Map<String, String> = mapOf(
-        "LOOP" to "ലൂപ്പ്", "ASK" to "ചോദിക്കൂ", "PLAN" to "പ്ലാൻ", "US" to "നമ്മൾ", "MORE" to "കൂടുതൽ",
+        "LOOP" to "ലൂപ്പ്", "NOW" to "ഇപ്പോൾ", "AHEAD" to "മുന്നോട്ട്", "FUTURE" to "ഭാവി", "ASK" to "ചോദിക്കൂ", "PLAN" to "പ്ലാൻ", "US" to "നമ്മൾ", "MORE" to "കൂടുതൽ",
         "Love" to "പ്രണയം", "Career" to "ജോലി", "Money" to "പണം", "Health" to "ആരോഗ്യം", "Family" to "കുടുംബം",
         "Study" to "പഠനം", "Home" to "വീട്", "Travel" to "യാത്ര", "Children" to "മക്കൾ",
         "Bright" to "തിളക്കം", "Good" to "നല്ലത്", "Steady" to "സ്ഥിരം", "Slow" to "മന്ദം", "Hold" to "കാത്തിരിക്കൂ",
         "Good morning" to "സുപ്രഭാതം", "Good afternoon" to "ശുഭ മധ്യാഹ്നം", "Good evening" to "ശുഭ സായാഹ്നം", "Good night" to "ശുഭ രാത്രി",
-        "Your nine lives · right now" to "നിങ്ങളുടെ ഒമ്പത് ജീവിതങ്ങൾ · ഇപ്പോൾ",
+        "Your life · right now" to "നിങ്ങളുടെ ജീവിതം · ഇപ്പോൾ",
         "The hours of today" to "ഇന്നത്തെ മണിക്കൂറുകൾ", "Watch the clock" to "സമയം ശ്രദ്ധിക്കൂ", "Coming up" to "വരാനിരിക്കുന്നത്",
         "Under the hood" to "അകത്ത്", "changes in" to "മാറുന്നത്", "TRAVEL" to "യാത്ര", "TRAVELLING" to "യാത്രയിൽ",
         "REMEDIES" to "പരിഹാരങ്ങൾ", "PLAN A TIME" to "ഒരു സമയം നോക്കൂ", "THE TWO OF US" to "നമ്മൾ രണ്ടുപേർ",
@@ -49,12 +49,12 @@ object Lang {
     )
 
     private val hi: Map<String, String> = mapOf(
-        "LOOP" to "लूप", "ASK" to "पूछें", "PLAN" to "योजना", "US" to "हम", "MORE" to "और",
+        "LOOP" to "लूप", "NOW" to "अभी", "AHEAD" to "आगे", "FUTURE" to "भविष्य", "ASK" to "पूछें", "PLAN" to "योजना", "US" to "हम", "MORE" to "और",
         "Love" to "प्रेम", "Career" to "करियर", "Money" to "धन", "Health" to "स्वास्थ्य", "Family" to "परिवार",
         "Study" to "पढ़ाई", "Home" to "घर", "Travel" to "यात्रा", "Children" to "संतान",
         "Bright" to "उज्ज्वल", "Good" to "अच्छा", "Steady" to "स्थिर", "Slow" to "धीमा", "Hold" to "रुकें",
         "Good morning" to "सुप्रभात", "Good afternoon" to "शुभ दोपहर", "Good evening" to "शुभ संध्या", "Good night" to "शुभ रात्रि",
-        "Your nine lives · right now" to "आपके नौ जीवन · अभी",
+        "Your life · right now" to "आपका जीवन · अभी",
         "The hours of today" to "आज के घंटे", "Watch the clock" to "घड़ी देखें", "Coming up" to "आगे",
         "Under the hood" to "भीतर", "changes in" to "बदलेगा", "TRAVEL" to "यात्रा", "TRAVELLING" to "यात्रा में",
         "REMEDIES" to "उपाय", "PLAN A TIME" to "समय देखें", "THE TWO OF US" to "हम दोनों",

@@ -44,10 +44,13 @@ pub fn letter(
     system: HouseSystem,
     ayanamsa: Ayanamsa,
     at: Instant,
+    focus: &[Life],
 ) -> Result<Letter, ForecastError> {
     let lon = obs.longitude_deg;
+    let in_focus = |l: Life| focus.is_empty() || focus.contains(&l);
     let to = at.add_ns(30 * NS_PER_DAY);
-    let b = briefing(spk, eop, natal, obs, system, ayanamsa, &Life::ALL, at)?;
+    let chosen: Vec<Life> = if focus.is_empty() { Life::ALL.to_vec() } else { focus.to_vec() };
+    let b = briefing(spk, eop, natal, obs, system, ayanamsa, &chosen, at)?;
     let samples = series(spk, eop, natal, obs, ayanamsa, at, NS_PER_DAY, 30)?;
     let stories: Vec<Story> = Life::ALL.iter().map(|&l| story(l, &samples)).collect();
     let fest = festivals(spk, natal, ayanamsa, at, 30);
@@ -63,12 +66,12 @@ pub fn letter(
         None => p.push(format!("{}.", b.saturn_words)),
     }
     // 2. The shape of the month.
-    let mut rising: Vec<&Story> = stories.iter().filter(|s| s.trend == "rising").collect();
-    let mut falling: Vec<&Story> = stories.iter().filter(|s| s.trend == "falling").collect();
+    let mut rising: Vec<&Story> = stories.iter().filter(|s| in_focus(s.life) && s.trend == "rising").collect();
+    let mut falling: Vec<&Story> = stories.iter().filter(|s| in_focus(s.life) && s.trend == "falling").collect();
     rising.sort_by(|a, b| b.mean.partial_cmp(&a.mean).unwrap_or(std::cmp::Ordering::Equal));
     falling.sort_by(|a, b| a.mean.partial_cmp(&b.mean).unwrap_or(std::cmp::Ordering::Equal));
-    let best = stories.iter().max_by(|a, b| a.mean.partial_cmp(&b.mean).unwrap_or(std::cmp::Ordering::Equal));
-    let weak = stories.iter().min_by(|a, b| a.mean.partial_cmp(&b.mean).unwrap_or(std::cmp::Ordering::Equal));
+    let best = stories.iter().filter(|s| in_focus(s.life)).max_by(|a, b| a.mean.partial_cmp(&b.mean).unwrap_or(std::cmp::Ordering::Equal));
+    let weak = stories.iter().filter(|s| in_focus(s.life)).min_by(|a, b| a.mean.partial_cmp(&b.mean).unwrap_or(std::cmp::Ordering::Equal));
     let mut s = String::new();
     if let Some(bst) = best {
         s.push_str(&format!("{} is the month's gift", crate::plain::subject(bst.life.name())));
@@ -177,7 +180,7 @@ mod tests {
         let birth = Utc::new(1990, 2, 20, 5, 4, 0, 0).unwrap().to_instant().unwrap();
         let natal = Natal::compute(&spk, None, birth, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri).unwrap();
         let at = Utc::new(2026, 10, 17, 5, 0, 0, 0).unwrap().to_instant().unwrap();
-        let l = letter(&spk, None, &natal, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, at).unwrap();
+        let l = letter(&spk, None, &natal, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, at, &[]).unwrap();
         assert!(l.paragraphs.len() >= 4, "{:?}", l.paragraphs);
         assert_eq!(l.stories.len(), 9);
         assert!(!l.festivals.is_empty());

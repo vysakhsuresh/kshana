@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
@@ -71,6 +72,7 @@ private data class Tab(val route: String, val label: String, val icon: ImageVect
 private val tabs = listOf(
     Tab("loop", "NOW", Icons.Filled.Star),
     Tab("ahead", "AHEAD", Icons.Filled.DateRange),
+    Tab("future", "FUTURE", Icons.AutoMirrored.Filled.ArrowForward),
     Tab("prashna", "ASK", Icons.Filled.Info),
     Tab("together", "US", Icons.Filled.Favorite),
     Tab("more", "MORE", Icons.AutoMirrored.Filled.List),
@@ -110,6 +112,7 @@ private fun App() {
     // The chosen language, and the sunrise alarm re-armed on every launch when it is on.
     remember {
         com.kshana.app.data.Lang.load(context)
+        com.kshana.app.data.Focus.load(context)
         com.kshana.app.system.Alerts.rearm(context)
         if (com.kshana.app.system.Sunrise.enabled(context)) com.kshana.app.system.Sunrise.scheduleNext(context)
         true
@@ -236,6 +239,7 @@ private fun App() {
             }
             composable("how") { com.kshana.app.ui.screens.HowScreen(onBack = { nav.popBackStack() }) }
             composable("familydates") { withProfile { com.kshana.app.ui.screens.FamilyDatesScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }) } }
+            composable("future") { withProfile { com.kshana.app.ui.screens.FutureScreen(profile = it, place = here, settings = settings, onRemedy = { l -> open("parihara/$l") }, onSettings = { open("settings") }) } }
             composable("calendar") { withProfile { com.kshana.app.ui.screens.CalendarScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }) } }
             composable("wall") { withProfile { WallScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }) } }
             composable("letter") {

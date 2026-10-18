@@ -139,7 +139,7 @@ fun LoopScreen(
         // The reading is loaded as soon as the Loop opens, so the season line is there
         // before the person scrolls to the card.
         val hourKey = (System.currentTimeMillis() + travelSeconds * 1000L) / 3_600_000L
-        val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${settings.houseSystem}|$hourKey"
+        val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${settings.houseSystem}|$hourKey|${com.kshana.app.data.Focus.lives}"
         if (BriefingCache.key == key && BriefingCache.record != null) { brief = BriefingCache.record; return@LaunchedEffect }
         runCatching {
             val engine = EngineProvider.get(context)
@@ -148,7 +148,7 @@ fun LoopScreen(
                 engine.briefing(
                     profile.birthInstant(), profile.latitude, profile.longitude,
                     place.latitude, place.longitude,
-                    settings.houseSystem, settings.ayanamsa, listOf("Love", "Career", "Money", "Health"), at,
+                    settings.houseSystem, settings.ayanamsa, com.kshana.app.data.Focus.lives, at,
                     com.kshana.app.data.Lang.code,
                 )
             }
@@ -279,7 +279,7 @@ fun LoopScreen(
         if (m != null) {
             item {
                 Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SectionLabel(tr("Your nine lives · right now"))
+                    SectionLabel(tr("Your life · right now"))
                     LivesGrid(m.lives, onLife)
                 }
             }
@@ -504,7 +504,7 @@ private fun BriefingCard(
 ) {
     val context = LocalContext.current
     val hourKey = (System.currentTimeMillis() + travelSeconds * 1000L) / 3_600_000L
-    val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${settings.houseSystem}|$hourKey"
+    val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${settings.houseSystem}|$hourKey|${com.kshana.app.data.Focus.lives}"
     var b by remember { mutableStateOf(if (BriefingCache.key == key) BriefingCache.record else null) }
     var error by remember { mutableStateOf<String?>(null) }
     var open by remember { mutableStateOf(false) }
@@ -517,7 +517,7 @@ private fun BriefingCard(
                 engine.briefing(
                     profile.birthInstant(), profile.latitude, profile.longitude,
                     place.latitude, place.longitude,
-                    settings.houseSystem, settings.ayanamsa, listOf("Love", "Career", "Money", "Health"), at,
+                    settings.houseSystem, settings.ayanamsa, com.kshana.app.data.Focus.lives, at,
                     com.kshana.app.data.Lang.code,
                 )
             }
@@ -662,8 +662,8 @@ private fun HeroCard(m: MomentRecord, tick: Instant, travelling: Boolean, sky: u
                 }
             }
         }
-        val top = m.lives.maxByOrNull { it.score }
-        val low = m.lives.minByOrNull { it.score }
+        val top = m.lives.filter { com.kshana.app.data.Focus.has(it.life) }.maxByOrNull { it.score }
+        val low = m.lives.filter { com.kshana.app.data.Focus.has(it.life) }.minByOrNull { it.score }
         if (top != null && low != null) {
             Text(top.headline, fontFamily = FontFamily.Serif, fontSize = 19.sp, lineHeight = 26.sp, color = KshanaColors.Text)
             Text("${lifeGlyph(top.life)} ${top.life} is your strongest now · go gently with ${low.life.lowercase()}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
@@ -678,7 +678,7 @@ private fun HeroCard(m: MomentRecord, tick: Instant, travelling: Boolean, sky: u
             }
         }
         // The next good minute: for the weakest of the four main lives, the next hour that serves it.
-        val mains = listOf("Love", "Career", "Money", "Health")
+        val mains = com.kshana.app.data.Focus.lives
         val focus = m.lives.filter { it.life in mains }.minByOrNull { it.score }?.life ?: "Love"
         val fi = LIFE_ORDER.indexOf(focus).coerceAtLeast(0)
         val g = m.nextGood.getOrNull(fi)
@@ -800,11 +800,26 @@ internal fun ScoreRing(score: Double, size: androidx.compose.ui.unit.Dp, stroke:
 
 @Composable
 private fun LivesGrid(lives: List<LifeScoreRecord>, onLife: (String) -> Unit) {
+    // Your chosen parts of life as tiles; the rest in one quiet line below them.
+    val mine = lives.filter { com.kshana.app.data.Focus.has(it.life) }
+    val rest = lives.filter { !com.kshana.app.data.Focus.has(it.life) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        for (row in lives.chunked(3)) {
+        for (row in mine.chunked(3)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (l in row) LifeTile(l, Modifier.weight(1f)) { onLife(l.life) }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+        if (rest.isNotEmpty()) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("ALSO", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
+                for (l in rest) {
+                    Text(
+                        "${lifeGlyph(l.life)} ${lifeName(l.life)} ${l.score.toInt()}",
+                        style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+                        modifier = Modifier.clickable { onLife(l.life) }.padding(vertical = 4.dp),
+                    )
+                }
             }
         }
     }

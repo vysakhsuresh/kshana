@@ -250,9 +250,10 @@ fn day_season(lang: Lang, m: &crate::forecast::Moment, at: Instant, lon: f64) ->
 
 /// The top paragraph for a week or a month: its best and hardest day across your life,
 /// what those days are like, and for a month the shorter phase it sits in.
-fn stretch_season(lang: Lang, span: Span, samples: &[crate::forecast::Sample], levels: &[kshana_vedic::DashaPeriod], lon: f64) -> String {
+fn stretch_season(lang: Lang, span: Span, samples: &[crate::forecast::Sample], levels: &[kshana_vedic::DashaPeriod], lon: f64, focus: &[Life]) -> String {
     let ld = |t: Instant| crate::lang::date(lang, t, lon);
-    let mean = |s: &crate::forecast::Sample| s.scores.iter().sum::<f64>() / s.scores.len().max(1) as f64;
+    let idx: Vec<usize> = Life::ALL.iter().enumerate().filter(|(_, l)| focus.is_empty() || focus.contains(l)).map(|(i, _)| i).collect();
+    let mean = |s: &crate::forecast::Sample| idx.iter().map(|&i| s.scores[i]).sum::<f64>() / idx.len().max(1) as f64;
     let best = samples.iter().max_by(|a, b| mean(a).partial_cmp(&mean(b)).unwrap_or(std::cmp::Ordering::Equal));
     let worst = samples.iter().min_by(|a, b| mean(a).partial_cmp(&mean(b)).unwrap_or(std::cmp::Ordering::Equal));
     let mut s = String::new();
@@ -313,7 +314,7 @@ pub fn outlook(
     span: Span,
     at: Instant,
 ) -> Result<Outlook, ForecastError> {
-    outlook_in(spk, eop, natal, obs, system, ayanamsa, span, at, Lang::En)
+    outlook_in(spk, eop, natal, obs, system, ayanamsa, span, at, Lang::En, &[])
 }
 
 /// The outlook for `span` from `at`, in the reader's language.
@@ -328,7 +329,9 @@ pub fn outlook_in(
     span: Span,
     at: Instant,
     lang: Lang,
+    focus: &[Life],
 ) -> Result<Outlook, ForecastError> {
+    let in_focus = |l: Life| focus.is_empty() || focus.contains(&l);
     let ld = |t: Instant| crate::lang::date(lang, t, obs.longitude_deg);
     let bw = |life: Life, band: Band| -> String {
         let core = crate::lang::band_sentence(lang, life, band).map(|s| s.to_string()).unwrap_or_else(|| band_words(life, band, span).to_string());
@@ -458,7 +461,7 @@ pub fn outlook_in(
                     }
                 })
                 .collect();
-            (at, at.add_ns(n as i128 * NS_PER_DAY), lives, stretch_season(lang, span, &samples, levels, lon))
+            (at, at.add_ns(n as i128 * NS_PER_DAY), lives, stretch_season(lang, span, &samples, levels, lon, focus))
         }
         Span::Year => {
             let yc = year_chapter(spk, eop, natal, obs, system, ayanamsa, at).ok();
@@ -542,10 +545,13 @@ pub fn outlook_in(
 
     let mut lives = lives;
     lives.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
-    let score = lives.iter().map(|l| l.score).sum::<f64>() / lives.len() as f64;
+    // The summary speaks only of the parts of life the person chose; the rest are listed below it.
+    let chosen: Vec<&LifeOutlook> = lives.iter().filter(|l| in_focus(l.life)).collect();
+    let chosen = if chosen.is_empty() { lives.iter().collect::<Vec<_>>() } else { chosen };
+    let score = chosen.iter().map(|l| l.score).sum::<f64>() / chosen.len() as f64;
     let band = Band::of(score);
-    let top = &lives[0];
-    let low = &lives[lives.len() - 1];
+    let top = chosen[0];
+    let low = chosen[chosen.len() - 1];
     let noun = span.noun();
     let nn = crate::lang::span_noun(lang, span.key());
     let lead = match (lang, band) {
@@ -590,7 +596,7 @@ pub fn outlook_in(
             care.map(|t| format!(", {} के आसपास सँभलें", ld(t))).unwrap_or_default()
         ),
     };
-    let rising: Vec<String> = lives.iter().filter(|l| l.trend == "rising").map(|l| crate::lang::life_lower(lang, l.life)).collect();
+    let rising: Vec<String> = chosen.iter().filter(|l| l.trend == "rising").map(|l| crate::lang::life_lower(lang, l.life)).collect();
     if !rising.is_empty() && span != Span::Day {
         headline.push_str(&match lang {
             Lang::En => format!(" Improving as the {noun} goes: {}.", rising.join(", ")),
@@ -599,7 +605,7 @@ pub fn outlook_in(
         });
     }
     if span == Span::Day {
-        if let Some(g) = next_good(&m, at, 0.56).into_iter().flatten().filter(|g| !g.now).min_by_key(|g| g.start.tai_ns()) {
+        if let Some(g) = next_good(&m, at, 0.56).into_iter().flatten().filter(|g| !g.now && in_focus(g.life)).min_by_key(|g| g.start.tai_ns()) {
             headline.push_str(&match lang {
                 Lang::En => format!(" The next good hour comes at {} for {}.", hm(g.start, lon), g.life.name().to_ascii_lowercase()),
                 Lang::Ml => format!(" അടുത്ത നല്ല മണിക്കൂർ {}-ന്, {} എന്നതിന്.", hm(g.start, lon), crate::lang::life_name(lang, g.life)),
@@ -677,7 +683,7 @@ mod lang_tests {
         let at = Utc::new(2026, 10, 17, 5, 0, 0, 0).unwrap().to_instant().unwrap();
         for lang in [Lang::Ml, Lang::Hi] {
             for span in [Span::Day, Span::Week, Span::Month, Span::Year] {
-                let o = outlook_in(&spk, None, &natal, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, span, at, lang).unwrap();
+                let o = outlook_in(&spk, None, &natal, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, span, at, lang, &[]).unwrap();
                 for s in [&o.headline, &o.season] {
                     assert_eq!(jargon_in(lang, s), None, "{lang:?} {span:?}: {s}");
                     assert!(!s.contains("Love") && !s.contains("Career"), "{lang:?} {span:?} English left: {s}");

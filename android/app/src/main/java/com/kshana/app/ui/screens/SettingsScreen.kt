@@ -144,6 +144,7 @@ fun SettingsScreen(
             }
         }
 
+        FocusSettings()
         DataSettings()
         FaithSettings()
         GivingSettings()

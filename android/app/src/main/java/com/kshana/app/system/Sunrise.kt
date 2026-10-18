@@ -102,7 +102,7 @@ object Sunrise {
             val b = engine.briefing(
                 profile.birthInstant(), profile.latitude, profile.longitude,
                 place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa,
-                listOf("Love", "Career", "Money", "Health"), Instants.now(),
+                com.kshana.app.data.Focus.also { it.load(context) }.lives, Instants.now(),
                 com.kshana.app.data.ProfileStore.prefs(context).getString("settings.lang", "en") ?: "en",
             )
             channel(context)
