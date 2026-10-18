@@ -617,7 +617,7 @@ pub(crate) fn dasha_items(natal: &Natal, life: Life, levels: &[DashaPeriod]) -> 
         .take(5)
         .map(|(i, p)| {
             let (s, houses) = lord_score(natal, life, p.lord);
-            let level = ["chapter of your life", "stretch of your life", "few-month phase", "few-week phase", "few-day phase"][i.min(4)];
+            let level = ["chapter of your life", "stretch of your life", "shorter phase of a few months", "phase of a few weeks", "phase of a few days"][i.min(4)];
             let name = life.name().to_ascii_lowercase();
             let words = if houses.is_empty() {
                 format!("this {level} leaves {name} to run on its own")
@@ -1408,7 +1408,7 @@ pub fn moment(
             let next = DashaLord::ORDER[(idx + 1) % 9];
             shifts.push(Shift {
                 at: p.end,
-                what: format!("A new few-day phase begins, about {}", crate::plain::chapter_theme(next)),
+                what: format!("A new phase of a few days begins, about {}", crate::plain::chapter_theme(next)),
                 kind: "dasha",
             });
         }
@@ -1671,7 +1671,7 @@ pub fn story(life: Life, samples: &[Sample]) -> Story {
                     at: q.at,
                     what: format!(
                         "A new {} begins, about {}",
-                        ["chapter of your life", "stretch of your life", "few-week phase", "few-day phase", "short phase"][lvl.min(4)],
+                        ["chapter of your life", "stretch of your life", "shorter phase of a few months", "phase of a few weeks", "phase of a few days"][lvl.min(4)],
                         crate::plain::chapter_theme(*b)
                     ),
                     kind: "dasha",

@@ -372,7 +372,8 @@ pub fn outlook(
                     }
                 })
                 .collect();
-            let (f, t) = yc.as_ref().map(|y| (y.start, y.end)).unwrap_or((at, at.add_ns(365 * NS_PER_DAY)));
+            let _ = &yc;
+            let (f, t) = (at, at.add_ns(12 * month));
             (f, t, lives)
         }
     };
@@ -392,7 +393,7 @@ pub fn outlook(
         Band::Hold => format!("A {noun} to hold still."),
     };
     let mut headline = format!(
-        "{lead} {} carries it{}; {} asks the most patience{}.",
+        "{lead} {} carries it{}; the most patience is needed for {}{}.",
         top.life.name(),
         top.best_at
             .filter(|_| span != Span::Day)

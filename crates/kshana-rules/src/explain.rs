@@ -341,7 +341,11 @@ pub fn explain(
         causes.push(Cause {
             planet: Some(h.lord),
             kind: "hora",
-            what: format!("this hour is {}", hour_nature(h.lord)),
+            what: if hc.score < 0.5 {
+                format!("this hour does not favour your {}: it is {}", life.name().to_ascii_lowercase(), hour_nature(h.lord))
+            } else {
+                format!("this hour helps your {}: it is {}", life.name().to_ascii_lowercase(), hour_nature(h.lord))
+            },
             pull: norm(hc.weight) * (hc.score - 0.5),
             until: Some(h.end),
             until_words: "until the hour turns".into(),

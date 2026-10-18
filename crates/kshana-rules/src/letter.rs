@@ -79,7 +79,7 @@ pub fn letter(
         s.push_str(". ");
     }
     if let Some(w) = weak {
-        s.push_str(&format!("{} asks the most patience", w.life.name()));
+        s.push_str(&format!("The most patience is needed for {}", w.life.name().to_ascii_lowercase()));
         if let Some((a, _, v)) = w.low {
             let _ = v;
             s.push_str(&format!(", hardest around {}", date_words(a, lon)));
@@ -103,14 +103,23 @@ pub fn letter(
     if !b.circled.is_empty() {
         let mut c: Vec<&crate::briefing::Circled> = b.circled.iter().collect();
         c.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
-        p.push(format!(
-            "Days to circle: {}.",
-            c.iter()
-                .take(5)
-                .map(|x| format!("{} for {}", date_words(x.at, lon), x.life.name().to_ascii_lowercase()))
-                .collect::<Vec<_>>()
-                .join("; ")
-        ));
+        // Group the lives by their best day, so one date is named once.
+        let mut days: Vec<(String, Vec<String>)> = Vec::new();
+        for x in c.iter().take(5) {
+            let d = date_words(x.at, lon);
+            let l = x.life.name().to_ascii_lowercase();
+            match days.iter_mut().find(|e| e.0 == d) {
+                Some(e) => e.1.push(l),
+                None => days.push((d, vec![l])),
+            }
+        }
+        let and_list = |v: &[String]| match v.len() {
+            0 => String::new(),
+            1 => v[0].clone(),
+            n => format!("{} and {}", v[..n - 1].join(", "), v[n - 1]),
+        };
+        let parts: Vec<String> = days.iter().map(|(d, ls)| format!("{d} for {}", and_list(ls))).collect();
+        p.push(format!("Days to circle: {}.", parts.join("; ")));
     }
     // 4. The observances.
     if !fest.is_empty() {

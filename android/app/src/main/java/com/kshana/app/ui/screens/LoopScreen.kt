@@ -316,7 +316,7 @@ fun LoopScreen(
                     var readOpen by remember { mutableStateOf(false) }
                     Text(if (readOpen) "YOUR READING −" else "YOUR READING IN FULL +", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable { readOpen = !readOpen }.padding(vertical = 6.dp))
                     if (readOpen) {
-                        Text(m.taraWords.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+                        Text(m.taraWords.replaceFirstChar { it.uppercase() }.trimEnd('.') + ".", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
                         BriefingCard(profile, place, settings, travelSeconds, onLife, onRemedy, onLoaded = { brief = it })
                     }
                     Spacer(Modifier.height(6.dp))
@@ -453,7 +453,7 @@ private fun PeopleToday(profile: BirthProfile, place: Place, settings: EngineSet
                     } else {
                         val top = pm.lives.maxByOrNull { it.score }
                         val low = pm.lives.minByOrNull { it.score }
-                        Text("${top?.life?.let { lifeName(it) }} is going well for them; ${low?.life?.let { lifeName(it).lowercase() }} needs gentleness today.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
+                        Text("Going well for them: ${top?.life?.let { lifeName(it).lowercase() }}. Go gently today with: ${low?.life?.let { lifeName(it).lowercase() }}.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
                         if (pm.saturnActive) Text(firstSentence(pm.saturnWords.replaceFirstChar { it.uppercase() }), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Ember)
                     }
                 }
@@ -535,7 +535,6 @@ private fun BriefingCard(
             if (error == null) Working("writing your reading…")
             return@Column
         }
-        Text(r.saturnWords.trimEnd('.') + ".", style = MaterialTheme.typography.bodyMedium, color = if (r.saturnActive) KshanaColors.Ember else KshanaColors.TextSoft)
         val shown = if (open) r.paragraphs else r.paragraphs.take(1)
         for (p in shown) Text(p, fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 25.sp, color = KshanaColors.Text)
         Text(
@@ -643,7 +642,6 @@ private fun HeroCard(m: MomentRecord, tick: Instant, travelling: Boolean, sky: u
             Column(Modifier.weight(1f)) {
                 Text(m.title.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
                 Text(m.headline.substringBefore(" ·"), style = MaterialTheme.typography.titleLarge, color = bandColor(m.band))
-                Text(m.headline.substringAfter(" · ", ""), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
                 if (travelling) {
                     Spacer(Modifier.height(6.dp))
                     Text("you are looking at", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Ember)
@@ -661,7 +659,7 @@ private fun HeroCard(m: MomentRecord, tick: Instant, travelling: Boolean, sky: u
         val low = m.lives.minByOrNull { it.score }
         if (top != null && low != null) {
             Text(top.headline, fontFamily = FontFamily.Serif, fontSize = 19.sp, lineHeight = 26.sp, color = KshanaColors.Text)
-            Text("${lifeGlyph(top.life)} ${top.life} is your strongest now · ${lifeGlyph(low.life)} ${low.life} asks for care", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            Text("${lifeGlyph(top.life)} ${top.life} is your strongest now · go gently with ${low.life.lowercase()}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         }
         // The next good minute: for the weakest of the four main lives, the next hour that serves it.
         val mains = listOf("Love", "Career", "Money", "Health")

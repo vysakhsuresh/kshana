@@ -108,7 +108,7 @@ pub fn year_chapter(
         Band::Hold => "a year to hold still",
     };
     let headline = format!(
-        "Your {} year runs from {} to {}. Overall it is {kind}: {} is its gift, and {} asks the most patience.",
+        "Your {} year runs from {} to {}. Overall it is {kind}: {} is its gift, and the most patience is needed for {}.",
         ordinal_age(age + 1),
         date_words(start, lon),
         date_words(end, lon),

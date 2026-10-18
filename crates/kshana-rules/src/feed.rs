@@ -135,7 +135,7 @@ pub fn countdowns(
     // The periods.
     let levels = vimshottari_levels(natal.moon_sidereal, natal.birth, YEAR_365_25_NS, at, 3);
     for (i, p) in levels.iter().enumerate().take(3) {
-        let name = ["chapter of your life", "stretch of your life", "few-month phase"][i];
+        let name = ["chapter of your life", "stretch of your life", "shorter phase of a few months"][i];
         let idx = DashaLord::ORDER.iter().position(|l| *l == p.lord).unwrap_or(0);
         let next = DashaLord::ORDER[(idx + 1) % 9];
         v.push(Countdown {

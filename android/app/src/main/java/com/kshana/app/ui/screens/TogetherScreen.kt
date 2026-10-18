@@ -202,7 +202,7 @@ fun TogetherScreen(
                     }
                 }
                 Text(k.headline, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)
-                Text(k.kujaWords, style = MaterialTheme.typography.bodyMedium, color = if (k.kujaA != k.kujaB) KshanaColors.Ember else KshanaColors.TextSoft)
+                Text(personalise(k.kujaWords, profile.name.substringBefore(' ').ifBlank { "You" }, partner.name.substringBefore(' ')), style = MaterialTheme.typography.bodyMedium, color = if (k.kujaA != k.kujaB) KshanaColors.Ember else KshanaColors.TextSoft)
             }
             Text(
                 if (showKootas) "LESS −" else "THE EIGHT POINTS OF THE MATCH +",
@@ -424,7 +424,7 @@ private fun PeopleGrid(people: List<BirthProfile>, place: Place, settings: Engin
                 if (pm != null) {
                     val top = pm.lives.maxByOrNull { it.score }
                     val low = pm.lives.minByOrNull { it.score }
-                    Text("${top?.life?.let { lifeName(it) }} is going well for them; ${low?.life?.let { lifeName(it).lowercase() }} needs gentleness today.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
+                    Text("Going well for them: ${top?.life?.let { lifeName(it).lowercase() }}. Go gently today with: ${low?.life?.let { lifeName(it).lowercase() }}.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
                 } else {
                     Text("reading…", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
                 }
@@ -479,8 +479,16 @@ private fun MatchTwo(people: List<BirthProfile>, settings: EngineSettings) {
 }
 
 /** The engine speaks of "the first chart" and "the second"; the screen uses names. */
-private fun personalise(s: String, me: String, them: String): String =
-    s.replace("for the first person and", "for you and")
+private fun personalise(s: String, meRaw: String, themRaw: String): String {
+    val me = properName(meRaw)
+    val them = properName(themRaw)
+    return s.replace("The first person's", "$me's")
+        .replace("The second person's", "$them's")
+        .replace("The first person", me)
+        .replace("The second person", them)
+        .replace("the second's", "$them's")
+        .replace("the second is", "$them is")
+        .replace("for the first person and", "for you and")
         .replace("for the second.", "for $them.")
         .replace("the first person's", "your")
         .replace("the second person's", "$them's")
@@ -488,6 +496,10 @@ private fun personalise(s: String, me: String, them: String): String =
         .replace("Second person:", "$them:")
         .replace("the first person", "you")
         .replace("the second person", them)
+}
+
+/** "VYSAKH" → "Vysakh". */
+private fun properName(s: String): String = s.lowercase().replaceFirstChar { it.uppercase() }
 
 private fun trimPoints(x: Double): String = if (x == x.toLong().toDouble()) x.toLong().toString() else "%.1f".format(x)
 
@@ -522,7 +534,6 @@ private fun PersonBriefing(name: String, b: uniffi.kshana_ffi.BriefingRecord, c:
             Spacer(Modifier.width(8.dp))
             Text(name, fontFamily = FontFamily.Serif, fontSize = 18.sp, color = c)
         }
-        Text(b.saturnWords + ".", style = MaterialTheme.typography.bodyMedium, color = if (b.saturnActive) KshanaColors.Ember else KshanaColors.TextSoft)
         val shown = if (open) b.paragraphs else b.paragraphs.take(1)
         for (p in shown) Text(p.replace("Their birth Moon", "$name's birth Moon").replace("They are in", "$name is in"), fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 24.sp, color = KshanaColors.Text)
         Text(
