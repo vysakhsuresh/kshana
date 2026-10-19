@@ -12,14 +12,18 @@ uniffi::setup_scaffolding!();
 
 pub mod bala;
 pub mod dashas;
+pub mod day;
 pub mod directions;
+pub mod eclipse;
 pub mod ledger;
 pub mod life;
 pub mod tajika;
 pub mod trace;
 pub use bala::*;
 pub use dashas::*;
+pub use day::*;
 pub use directions::*;
+pub use eclipse::*;
 pub use ledger::*;
 pub use life::*;
 pub use tajika::*;
