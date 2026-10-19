@@ -731,7 +731,7 @@ private fun bellKind(t: TransitionRecord): String = when (t.kind) {
     "hora" -> "hora"
     "enter" -> when {
         t.body == "Lagna" -> "sub"
-        t.division == "Sub" || t.division == "SubSub" -> "sub"
+        t.division == "sub" || t.division == "sub-sub" -> "sub"
         else -> "moon"
     }
     else -> "moon"

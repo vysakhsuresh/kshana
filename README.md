@@ -28,7 +28,7 @@ a person can carry, and to be honest about how well it knows.
 
 | Crate | What it holds | Status |
 |---|---|---|
-| `kshana-time` | `Instant` (i128 ns TAI), UTC with leap seconds, TT, TDB, UT1/ΔT, two-part JD | tested |
+| `kshana-time` | `Instant` (i128 ns TAI), UTC with leap seconds and the leap-second floor on civil labels, TT, TDB, UT1/ΔT with its sigma, two-part JD, civil time before 1972 | tested |
 | `kshana-solver` | Brent root finder on instants, angle wrapping | tested |
 | `kshana-ephem` | DAF/SPK reader, Chebyshev evaluation, body chaining | tested on synthetic kernel; real-kernel test behind `--ignored` |
 | `kshana-frames` | ERA, GMST, GAST via the CIO locator and equation of the origins, mean obliquity, full IAU 2000A/B nutation (tables generated from ERFA), IAU 2006 bias-precession matrix | matches ERFA to ≤ 1e-12 rad |
@@ -36,13 +36,13 @@ a person can carry, and to be honest about how well it knows.
 | `kshana-vedic` | Ayanamsa as a fixed sky direction (Lahiri, Raman, KP, Fagan–Bradley, True Chitra), nakshatra, tithi, yoga, karana, Vimshottari to five levels, Yogini, Ashtottari, Kalachakra and Chara dashas, KP 249 sub-lords and horary numbers, divisional charts D1–D60, Ashtakavarga, Jaimini karakas, naming syllables | ayanamsa within 0.002″ of Swiss Ephemeris over 1900–2050 |
 | `kshana-western` | Aspects with applying/separating, signs, traditional dignities, sect | tested |
 | `kshana-sky` | Apparent geocentric and topocentric ecliptic positions: light-time, aberration, IAU 2006 bias-precession, IAU 2000A nutation, ecliptic of date, daily motion, true lunar node | agrees with Skyfield to < 0.5″ on 200 geocentric and 20 topocentric checks |
-| `kshana-events` | Exact instants on the real sky: ingresses, aspects, lunations, tithi and nakshatra boundaries, stations, sunrise and sunset, planetary hours, Rahu kala, solved to 1 µs | tested against almanac dates and a hand calculation |
+| `kshana-events` | Exact instants on the real sky: ingresses, aspects, lunations, tithi and nakshatra boundaries, stations, sunrise and sunset under the Hindu or Western convention, planetary hours, Rahu kala, solved to 1 µs | tested against almanac dates and a hand calculation |
 | `kshana-verify` | Golden-vector tests against ERFA, jplephem, Skyfield and Swiss Ephemeris (`tests/golden/`) | frames match ERFA to ≤ 1e-12 rad; positions, houses, ayanamsa and sunrise match the others as recorded in `docs/PRECISION.md` |
 | `kshana-cli` | `kshana` binary: chart, next, areas, prashna, muhurta, rectify, life, match, calendar, trace, dashas, varsha, directions | working |
 | `kshana-rules` | The prediction layer: facts from a chart; KP significators with node agency, net support, cusp sub-lord promise, timing funnel; Prashna; Parashari dignities, aspects, yogas, per-area assessment, period quality; remedies tied to a located cause with its karma class, the curse yogas and badhaka of BPHS 85 and Prasna Marga 15, and exact remedy windows; Muhurta; rectification; Ashtakoota, Mangal dosha, synastry | tested on real and synthetic charts; catalogue in `docs/RULES.md` |
 | `kshana-forecast` | What the sky does to one chart: sign transits with exact sidereal ingress instants, Sade Sati phases, gochara scoring (Phaladeepika vedha, Moorthi Nirnaya, Ashtakavarga bindus, kakshya windows), the day's good and avoid hours, the 100-year life map, the observance calendar | tested against the kernel |
-| `kshana-trace` | The life trace: every dasha level to nine deep and every zodiac crossing (sign, nakshatra, pada, KP sub, sub-sub), tithi, karana, yoga, hora, sunrise and sunset as exact instants; snapshots at any instant | tested against snapshots; `docs/TRACE.md` |
-| `kshana-ledger` | The life ledger: dated events scored against the running periods and transits (favour or adversity by kind), matched baselines at instants nobody logged, Brier and reliability bins, and a retrodiction of every past antardasha | tested on the kernel |
+| `kshana-trace` | The life trace: every dasha level to nine deep and every zodiac crossing (sign, nakshatra, pada, KP sub, sub-sub) of every graha and of the rising degree, tithi, karana, yoga, hora, sunrise and sunset as exact instants with physical error bars (ephemeris, ΔT, refraction) and the birth-window sensitivity; snapshots at any instant | tested against snapshots; `docs/TRACE.md` |
+| `kshana-ledger` | The life ledger: dated events scored against the running periods and transits, matched baselines, Brier and reliability bins, retrodiction of every past antardasha; and the honest-measurement layer: exact chance baselines on the dasha cells, the specificity discount, time-shift surrogates, sealed forecasts hashed before their window opens, asked-first decoy quizzes, a birth-time posterior | 30 tests on the kernel |
 | `kshana-directions` | Western and Hellenistic timing: secondary progressions (day-for-a-year on 365.2422 d), solar arc, annual and monthly profections on exact solar returns, firdaria, zodiacal releasing from Fortune and Spirit with loosing of the bond, lunar and demi returns, exact transit hits to every natal point | 24 tests; every instant a solved root |
 | `kshana-tajika` | Tajika varshaphala: the exact sidereal solar return, Muntha, the year lord by Panchavargeeya bala, 35 Sahams, Ithasala, Ishrafa, Nakta, Yamaya, Manau and Kamboola, Mudda dasha | 19 tests; Charak and Neelakanthi cited |
 | `kshana-day` | The day's clocks: ghati and vighati under three conventions, the thirty named muhurtas, choghadiya, Abhijit and Brahma muhurta, the upagrahas (Gulika, Mandi, Yamaghantaka, Kala, Mrityu, Ardhaprahara) as exact longitudes, the BPHS special lagnas (Bhava, Hora, Ghati, Vighati, Pranapada, Sree) with exact sign changes, Gandanta, Panchaka, Bhadra and the inauspicious yogas as exact windows, Tara and Chandra bala windows, Pancha Pakshi | 25 tests; tables cited, the Pakshi matrix marked unverified |
@@ -85,11 +85,11 @@ Five doors, in the words a person already has:
 
 | Tab | What it answers | Behind it |
 |---|---|---|
-| **Today** | What is today like for me, which hours are mine, what is the sky doing to my chart | `daily`, `transits`, `next_events` |
+| **Today** | What is today like for me, which hours are mine, what is the sky doing to my chart, what changes next and when to the second | `daily`, `transits`, the trace, the bell |
 | **My life** | Who am I, what is promised, what is running now, the next ten years, the whole life as a map | `plain_reading`, `life_map`, the timing funnel, remedies |
 | **Ask** | A yes/no question with a chosen number, judged now | KP Prashna with ruling planets and Moon windows |
-| **Right time** | When to start something, the fasting and festival calendar, every exact moment | Muhurta, `calendar`, events, reminders |
-| **Me** | My birth, my family, matching two charts, a baby's naming syllable, the glossary, and the instrument (Western chart, Vedic kundli, trust, settings) | `compatibility`, `naming`, `glossary`, charts, self-test, export |
+| **Right time** | When to start something, the fasting and festival calendar, every exact moment, the day's clocks from the solved sunrise | Muhurta, `calendar`, eclipses, `day_clock`, events, reminders |
+| **Me** | My birth, my family, matching two charts, a baby's naming syllable, the glossary; my life logged and tested against chance, the diary, sealed forecasts, the quiz; the river, transits, the year ahead, time lords, strength; the instrument (Western chart, Vedic kundli, trust, settings) | `compatibility`, `naming`, `glossary`, the ledger and its science, the trace, charts, self-test, export |
 
 A **Plain words / Astrologer** switch decides how much of the instrument shows. Every
 sentence can be opened to show the factors, the confidence and the rule id behind it;
@@ -103,4 +103,14 @@ strictly in the engine's sentences and forbidden from adding claims.
 
 The screens and the logo are on the Kshana design canvas; the look is a night ground
 with one gold accent, Cormorant Garamond for display, Manrope for UI and IBM Plex Mono
-for every number. The Android shell in `android/` implements them.
+for every number, all bundled. The Android shell in `android/` implements them. Behind
+every screen is the real sky: the catalogue stars precessed to the date and placed
+from the chart's sidereal time, the daylight from the Sun's altitude, a bell that rings
+on the first frame at or after each exact instant and never before it, and haptic
+phrases for each kind of instant; all of it obeys a Still sky switch and battery saver.
+
+**What is measured and what is claimed.** The sky is measured, with error bars: the
+ephemeris, ΔT, refraction and the leap-second floor are all in `docs/TRACE.md`. The
+readings are what two traditions claim about that sky, each sentence with its rule and
+its source. The ledger lets the person test those claims against their own life, with
+the chance baseline computed exactly rather than assumed.
