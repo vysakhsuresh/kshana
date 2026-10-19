@@ -25,7 +25,10 @@ fn main() {
         longitude_deg: 76.2673,
         height_m: 0.0,
     };
-    let birth = Utc::new(1990, 10, 29, 12, 6, 0, 0).unwrap().to_instant().unwrap();
+    let birth = Utc::new(1990, 10, 29, 12, 6, 0, 0)
+        .unwrap()
+        .to_instant()
+        .unwrap();
     let ch = compute(
         &spk,
         None,
@@ -38,24 +41,50 @@ fn main() {
         },
     )
     .unwrap();
-    let at = Utc::new(2026, 10, 16, 3, 30, 0, 0).unwrap().to_instant().unwrap();
+    let at = Utc::new(2026, 10, 16, 3, 30, 0, 0)
+        .unwrap()
+        .to_instant()
+        .unwrap();
     let d = daily(&spk, None, &obs, &ch, at, Ayanamsa::Lahiri).unwrap();
     println!("headline: {}", d.headline);
     if let Some(day) = &d.day {
-        println!("sunrise {} sunset {} next {}", local(day.sunrise), local(day.sunset), local(day.next_sunrise));
+        println!(
+            "sunrise {} sunset {} next {}",
+            local(day.sunrise),
+            local(day.sunset),
+            local(day.next_sunrise)
+        );
     }
-    println!("tara {:?} chandra {:?} moon nakshatra {}", d.tara, d.chandra_bala, d.moon_nakshatra);
+    println!(
+        "tara {:?} chandra {:?} moon nakshatra {}",
+        d.tara, d.chandra_bala, d.moon_nakshatra
+    );
     for w in &d.windows {
-        println!("  {} {}–{}  {}", if w.avoid { "AVOID" } else { "good " }, local(w.start), local(w.end), w.reason);
+        println!(
+            "  {} {}–{}  {}",
+            if w.avoid { "AVOID" } else { "good " },
+            local(w.start),
+            local(w.end),
+            w.reason
+        );
     }
     let ss = sade_sati(&spk, &ch, at, Ayanamsa::Lahiri).unwrap();
-    println!("sade sati phase {} end {:?} next {:?}", ss.phase, ss.phase_end.map(date), ss.next_start.map(date));
+    println!(
+        "sade sati phase {} end {:?} next {:?}",
+        ss.phase,
+        ss.phase_end.map(date),
+        ss.next_start.map(date)
+    );
     for t in transits_at(&spk, &ch, at, Ayanamsa::Lahiri).unwrap() {
         if t.kind == TransitKind::FromMoon && matches!(t.body, "Jupiter" | "Saturn") {
             println!("{} in house {} from Moon", t.body, t.house);
         }
     }
-    for o in observances(&spk, None, &obs, Ayanamsa::Lahiri, at, 20).unwrap().iter().take(8) {
+    for o in observances(&spk, None, &obs, Ayanamsa::Lahiri, at, 20)
+        .unwrap()
+        .iter()
+        .take(8)
+    {
         println!("cal {} {}", date(o.exact), o.name);
     }
 }

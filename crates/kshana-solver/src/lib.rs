@@ -108,7 +108,12 @@ where
         let m = 0.5 * (xc - xb);
         if m.abs() <= tol || fb == 0.0 {
             // Final answer: the better of the bracket ends, with the bracket half-width.
-            let half = (xc - xb).abs() * 0.5;
+            // An exact zero is an exact answer, whatever the bracket still spans.
+            let half = if fb == 0.0 {
+                0.0
+            } else {
+                (xc - xb).abs() * 0.5
+            };
             return Ok(Root {
                 t: at(xb),
                 half_width_ns: half.ceil() as i128,

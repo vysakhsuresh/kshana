@@ -393,6 +393,18 @@ name = "kshana-time"
 version = "0.1.0"
 
 [[package]]
+name = "kshana-trace"
+version = "0.1.0"
+dependencies = [
+ "kshana-ephem",
+ "kshana-events",
+ "kshana-sky",
+ "kshana-solver",
+ "kshana-time",
+ "kshana-vedic",
+]
+
+[[package]]
 name = "kshana-vedic"
 version = "0.1.0"
 dependencies = [
