@@ -7,6 +7,7 @@
 //! reading, `weight` defaults to 1 and `note` to empty.
 
 use crate::json::{self, Value};
+use kshana_chart::ChartError;
 use kshana_ephem::SpkError;
 use kshana_rules::{area, AREAS};
 use kshana_time::{days_from_civil, Instant, Utc, NS_PER_SEC};
@@ -23,6 +24,11 @@ pub enum LedgerError {
     BadLine(String),
     /// The ephemeris could not supply a position (usually: the instant lies outside the kernel).
     Ephemeris(SpkError),
+    /// A chart could not be cast (a birth-time scan: polar latitude or kernel range).
+    Chart(ChartError),
+    /// The ledger refused on principle; the text says why (a forecast sealed after
+    /// its window opened, a test with nothing to test).
+    Refused(String),
 }
 
 impl fmt::Display for LedgerError {
@@ -46,6 +52,8 @@ impl fmt::Display for LedgerError {
             }
             LedgerError::BadLine(why) => write!(f, "bad ledger line: {why}"),
             LedgerError::Ephemeris(e) => write!(f, "ephemeris: {e:?}"),
+            LedgerError::Chart(e) => write!(f, "chart: {e:?}"),
+            LedgerError::Refused(why) => write!(f, "refused: {why}"),
         }
     }
 }
@@ -55,6 +63,12 @@ impl std::error::Error for LedgerError {}
 impl From<SpkError> for LedgerError {
     fn from(e: SpkError) -> Self {
         LedgerError::Ephemeris(e)
+    }
+}
+
+impl From<ChartError> for LedgerError {
+    fn from(e: ChartError) -> Self {
+        LedgerError::Chart(e)
     }
 }
 

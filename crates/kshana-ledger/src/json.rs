@@ -1,8 +1,9 @@
-//! A flat JSON object, written and read by hand: enough for one event per line.
-//! Strings, numbers, booleans and null are understood; nested objects and arrays are
-//! rejected, since no ledger line needs them.
+//! A flat JSON object, written and read by hand: enough for one event or one sealed
+//! forecast per line. Strings, numbers, booleans, null and arrays of those are
+//! understood; nested objects and nested arrays are rejected, since no ledger line
+//! needs them.
 
-/// A JSON scalar.
+/// A JSON value: a scalar, or an array of scalars.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Value {
     /// A string.
@@ -13,6 +14,34 @@ pub(crate) enum Value {
     Bool(bool),
     /// `null`.
     Null,
+    /// An array of scalars.
+    List(Vec<Value>),
+}
+
+impl Value {
+    /// The strings of a list (non-strings skipped), or an empty list for anything else.
+    pub(crate) fn strings(&self) -> Vec<String> {
+        match self {
+            Value::List(items) => items
+                .iter()
+                .filter_map(|v| match v {
+                    Value::Str(s) => Some(s.clone()),
+                    _ => None,
+                })
+                .collect(),
+            _ => Vec::new(),
+        }
+    }
+}
+
+fn write_scalar(out: &mut String, v: &Value) {
+    match v {
+        Value::Str(s) => push_string(out, s),
+        Value::Num(n) if n.is_finite() => out.push_str(&format!("{n}")),
+        Value::Num(_) | Value::Null => out.push_str("null"),
+        Value::Bool(b) => out.push_str(if *b { "true" } else { "false" }),
+        Value::List(_) => out.push_str("null"),
+    }
 }
 
 /// Append `s` to `out` as a quoted, escaped JSON string.
@@ -42,10 +71,17 @@ pub(crate) fn write_object(fields: &[(&str, Value)]) -> String {
         push_string(&mut out, k);
         out.push(':');
         match v {
-            Value::Str(s) => push_string(&mut out, s),
-            Value::Num(n) if n.is_finite() => out.push_str(&format!("{n}")),
-            Value::Num(_) | Value::Null => out.push_str("null"),
-            Value::Bool(b) => out.push_str(if *b { "true" } else { "false" }),
+            Value::List(items) => {
+                out.push('[');
+                for (j, item) in items.iter().enumerate() {
+                    if j > 0 {
+                        out.push(',');
+                    }
+                    write_scalar(&mut out, item);
+                }
+                out.push(']');
+            }
+            scalar => write_scalar(&mut out, scalar),
         }
     }
     out.push('}');
@@ -173,7 +209,7 @@ impl Cursor<'_> {
             .map_err(|_| format!("bad number {t:?} at byte {start}"))
     }
 
-    fn value(&mut self) -> Result<Value, String> {
+    fn scalar(&mut self) -> Result<Value, String> {
         match self.peek() {
             Some(b'"') => Ok(Value::Str(self.string()?)),
             Some(b't') => self.literal("true", Value::Bool(true)),
@@ -182,6 +218,32 @@ impl Cursor<'_> {
             Some(b'{') | Some(b'[') => Err("nested values are not supported".into()),
             Some(_) => self.number(),
             None => Err("unexpected end of line".into()),
+        }
+    }
+
+    fn value(&mut self) -> Result<Value, String> {
+        if self.peek() != Some(b'[') {
+            return self.scalar();
+        }
+        self.i += 1;
+        self.skip_ws();
+        let mut items = Vec::new();
+        if self.peek() == Some(b']') {
+            self.i += 1;
+            return Ok(Value::List(items));
+        }
+        loop {
+            self.skip_ws();
+            items.push(self.scalar()?);
+            self.skip_ws();
+            match self.peek() {
+                Some(b',') => self.i += 1,
+                Some(b']') => {
+                    self.i += 1;
+                    return Ok(Value::List(items));
+                }
+                _ => return Err(format!("expected ',' or ']' at byte {}", self.i)),
+            }
         }
     }
 }
@@ -260,7 +322,32 @@ mod tests {
         assert_eq!(v[0].1, Value::Str("é😀/".into()));
         assert_eq!(v[1].1, Value::Num(-150.0));
         assert!(parse_object("{}").unwrap().is_empty());
-        assert!(parse_object("{\"a\":[1]}").is_err());
+        let list = parse_object("{\"a\":[1, \"x\" ,true,null],\"e\":[]}").unwrap();
+        assert_eq!(
+            list[0].1,
+            Value::List(vec![
+                Value::Num(1.0),
+                Value::Str("x".into()),
+                Value::Bool(true),
+                Value::Null
+            ])
+        );
+        assert_eq!(list[0].1.strings(), vec!["x".to_string()]);
+        assert_eq!(list[1].1, Value::List(Vec::new()));
+        assert!(Value::Null.strings().is_empty());
+        let written = write_object(&[(
+            "b",
+            Value::List(vec![Value::Str("p \"q\"".into()), Value::Num(2.0)]),
+        )]);
+        assert_eq!(written, "{\"b\":[\"p \\\"q\\\"\",2]}");
+        assert_eq!(
+            parse_object(&written).unwrap()[0].1.strings(),
+            vec!["p \"q\"".to_string()]
+        );
+        assert!(parse_object("{\"a\":[[1]]}").is_err());
+        assert!(parse_object("{\"a\":[{}]}").is_err());
+        assert!(parse_object("{\"a\":[1,]}").is_err());
+        assert!(parse_object("{\"a\":[1").is_err());
         assert!(parse_object("{\"a\":1} x").is_err());
         assert!(parse_object("{\"a\":\"open}").is_err());
         assert!(parse_object("{\"a\":tru}").is_err());

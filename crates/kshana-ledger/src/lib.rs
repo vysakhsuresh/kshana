@@ -12,27 +12,76 @@
 //! anything is logged, so the app can show what the chart said about each stretch of
 //! the past first, and [`fit_words`] turns one score into one plain sentence.
 //!
+//! The measurement layer makes the chance line exact and the ledgers honest:
+//!
+//! * [`fit_profile`] and [`coverage`]: the fit as a piecewise function of time cut at
+//!   every exact pratyantar boundary, with the deeper levels handled analytically, so
+//!   the fraction of a life the engine would have called "supported" is computed, not
+//!   sampled; [`tally`] and [`expected_hits`] turn it into "31 of 40 supported; chance
+//!   would give 27 ± 3" with the exact Poisson-binomial tail.
+//! * [`specificity_factor`] and [`score_event_discounted`]: the fit per equivalent
+//!   label when the taxonomy's house groups overlap.
+//! * [`time_shift_pvalue`]: the circular time-shift surrogate test, a p-value that
+//!   keeps the shape of a life.
+//! * [`metrics`]: Brier with Murphy's decomposition, the base-rate skill score, ECE,
+//!   the calibration curve and Wilson intervals.
+//! * [`seal`], [`resolve`] and [`sealed_brier`]: pre-registered forecasts with a
+//!   SHA-256 id that makes any later edit visible, scored only once resolved.
+//! * [`retrodiction_quiz`] and [`grade`]: asked-first questions with decoy windows,
+//!   committed before the person answers.
+//! * [`birth_posterior`]: a real posterior over birth time from likelihood ratios of
+//!   fit to coverage, with HPD intervals as exact instants.
+//!
 //! Nothing here uses randomness or serde: the JSON lines are written and read by hand
-//! so the Android side can store them as plain text.
+//! so the Android side can store them as plain text, and every shuffle is seeded by
+//! a hash of the chart.
 
 #![forbid(unsafe_code)]
 
 mod calibrate;
+mod coverage;
+mod decoy;
 mod event;
+mod hash;
 mod json;
+mod metrics;
+mod posterior;
 mod retrodict;
 mod score;
+mod sealed;
+mod specificity;
+mod surrogate;
 
 pub use calibrate::{
     baseline_fits, baseline_fits_for, baseline_for_ledger, baseline_instants, calibrate,
     Calibration, ReliabilityBin, RELIABILITY_BINS,
 };
+pub use coverage::{
+    chance_words, coverage, coverage_of, expected_hits, fit_profile, tally, Coverage,
+    EventCoverage, FitProfile, FitSegment, PoissonBinomial, Tally, TransitTable,
+    CANNOT_FAIL_COVERAGE, PROFILE_DEPTH, SUPPORT_THRESHOLD,
+};
+pub use decoy::{
+    binomial_p_at_least, grade, retrodiction_quiz, verify_question, Question, QuizResult,
+};
 pub use event::{iso_utc, month_year, parse_iso_utc, EventKind, LedgerError, LifeEvent};
+pub use hash::{seed_of, sha256, sha256_hex, SplitMix};
+pub use metrics::{
+    count_words, cube_root_bins, metrics, wilson_interval, CalibrationBin, Metrics, MIN_FOR_CURVE,
+    MIN_FOR_PERCENT, MIN_PER_BIN, Z95,
+};
+pub use posterior::{birth_posterior, hpd_interval, Posterior, LIKELIHOOD_FLOOR, MAX_CANDIDATES};
 pub use retrodict::{retrodict, PeriodReading};
 pub use score::{
-    fit_words, score_at, score_event, EventScore, FUNNEL_DEPTH, JUPITER_GOOD_FROM_MOON,
+    combine_fit, fit_words, parashari_factor, score_at, score_event, transit_factor,
+    transit_sample, EventScore, TransitSample, FUNNEL_DEPTH, JUPITER_GOOD_FROM_MOON,
     SADE_SATI_SHIFT, SATURN_GOOD_FROM_MOON, WEIGHT_DASHA, WEIGHT_PARASHARI, WEIGHT_TRANSIT,
 };
+pub use sealed::{resolve, seal, sealed_brier, SealedForecast};
+pub use specificity::{
+    equivalent_areas, score_event_discounted, specificity_factor, tested_houses, DiscountedScore,
+};
+pub use surrogate::{circular_shift, time_shift_pvalue, SurrogateResult};
 
 #[cfg(test)]
 pub(crate) mod fixture {

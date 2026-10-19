@@ -16,7 +16,8 @@ use kshana_chart::Chart;
 use kshana_ephem::Spk;
 use kshana_forecast::transits_at;
 use kshana_rules::{
-    agreeing_levels, area, period_quality, significators, timing, Area, Facts, TimingLevel,
+    agreeing_levels, area, period_quality, period_supports, significators, timing, Area, Facts,
+    TimingLevel,
 };
 use kshana_time::Instant;
 use kshana_vedic::{Ayanamsa, DashaLord};
@@ -109,6 +110,151 @@ fn agreeing_negating(facts: &Facts, a: Area, funnel: &[TimingLevel]) -> usize {
         .iter()
         .take_while(|l| signifies_negating(facts, a, l.period.lord))
         .count()
+}
+
+/// Position of a lord in [`DashaLord::ORDER`].
+pub(crate) fn lord_index(l: DashaLord) -> usize {
+    DashaLord::ORDER.iter().position(|x| *x == l).unwrap_or(0)
+}
+
+/// Whether each of the nine lords supports an area in one orientation: for a
+/// favourable kind, it signifies a group house; for an adverse kind, a negating house.
+/// This is the per-lord predicate behind the dasha factor, tabulated once so a sweep
+/// over thousands of instants or cells costs nine lookups, not nine significator scans.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct LordTable {
+    flags: [bool; 9],
+}
+
+impl LordTable {
+    /// Tabulate the predicate for an area and orientation.
+    pub(crate) fn new(facts: &Facts, a: Area, adverse: bool) -> Self {
+        let flags = DashaLord::ORDER.map(|l| {
+            if adverse {
+                signifies_negating(facts, a, l)
+            } else {
+                !period_supports(facts, a, l).is_empty()
+            }
+        });
+        Self { flags }
+    }
+
+    /// Whether `l` supports.
+    pub(crate) fn supports(&self, l: DashaLord) -> bool {
+        self.flags[lord_index(l)]
+    }
+
+    /// Consecutive supporting lords from the top of a chain.
+    pub(crate) fn agreeing(&self, chain: &[DashaLord]) -> usize {
+        chain.iter().take_while(|l| self.supports(**l)).count()
+    }
+
+    /// The share of any Vimshottari period's sub-periods, by duration, whose lords
+    /// support: `Σ years of supporting lords / 120`. Sub-periods at every level are
+    /// proportioned by their lords' years, so this is also the fraction of time within
+    /// any period during which the next level down supports.
+    pub(crate) fn year_fraction(&self) -> f64 {
+        DashaLord::ORDER
+            .iter()
+            .filter(|l| self.supports(**l))
+            .map(|l| l.years() as f64)
+            .sum::<f64>()
+            / 120.0
+    }
+}
+
+/// Jupiter's and Saturn's houses from the natal Moon at an instant and the Sade Sati
+/// phase: the sky's part of a score before it is oriented to an area and a kind.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TransitSample {
+    /// Jupiter's sidereal house from the natal Moon, 1–12.
+    pub jupiter_from_moon: u8,
+    /// Saturn's sidereal house from the natal Moon, 1–12.
+    pub saturn_from_moon: u8,
+    /// Sade Sati phase: 0 none, 1 rising, 2 peak, 3 setting.
+    pub sade_sati_phase: u8,
+}
+
+/// Sample the sky at an instant for a natal chart.
+pub fn transit_sample(
+    spk: &Spk,
+    natal: &Chart,
+    ayanamsa: Ayanamsa,
+    at: Instant,
+) -> Result<TransitSample, LedgerError> {
+    let transits = transits_at(spk, natal, at, ayanamsa)?;
+    let house_from_moon = |body: &str| {
+        transits
+            .iter()
+            .find(|t| t.body == body && t.natal == "Moon")
+            .map_or(0, |t| t.house)
+    };
+    let jupiter_from_moon = house_from_moon("Jupiter");
+    let saturn_from_moon = house_from_moon("Saturn");
+    let sade_sati_phase = match saturn_from_moon {
+        12 => 1,
+        1 => 2,
+        2 => 3,
+        _ => 0,
+    };
+    Ok(TransitSample {
+        jupiter_from_moon,
+        saturn_from_moon,
+        sade_sati_phase,
+    })
+}
+
+/// The transit factor of a sample for an area and kind: half a point each for
+/// Jupiter in [`JUPITER_GOOD_FROM_MOON`] and Saturn in [`SATURN_GOOD_FROM_MOON`]
+/// (their complements for an adverse kind), then the [`SADE_SATI_SHIFT`] up for any
+/// adverse kind and down for a favourable one in Health or Career. This is exactly
+/// the transit part of [`score_at`].
+pub fn transit_factor(sample: &TransitSample, a: Area, kind: EventKind) -> f64 {
+    let adverse = kind.is_adverse();
+    let j_good = JUPITER_GOOD_FROM_MOON.contains(&sample.jupiter_from_moon);
+    let s_good = SATURN_GOOD_FROM_MOON.contains(&sample.saturn_from_moon);
+    let mut transit = if adverse {
+        0.5 * (unit(!j_good) + unit(!s_good))
+    } else {
+        0.5 * (unit(j_good) + unit(s_good))
+    };
+    if sample.sade_sati_phase != 0 {
+        if adverse {
+            transit = (transit + SADE_SATI_SHIFT).min(1.0);
+        } else if matches!(a.name, "Health" | "Career") {
+            transit = (transit - SADE_SATI_SHIFT).max(0.0);
+        }
+    }
+    transit
+}
+
+/// The Parashari factor for the lords running at an instant (mahadasha first): the
+/// mean period quality of the first two, or one minus that for an adverse kind, with
+/// the raw mean second. Both are 0 when no lord is running.
+pub fn parashari_factor(
+    facts: &Facts,
+    a: Area,
+    kind: EventKind,
+    running: &[DashaLord],
+) -> (f64, f64) {
+    let qualities: Vec<f64> = running
+        .iter()
+        .take(2)
+        .map(|l| period_quality(facts, a, *l).0)
+        .collect();
+    if qualities.is_empty() {
+        return (0.0, 0.0);
+    }
+    let mean = qualities.iter().sum::<f64>() / qualities.len() as f64;
+    let oriented = if kind.is_adverse() { 1.0 - mean } else { mean };
+    (oriented, mean)
+}
+
+/// `WEIGHT_DASHA · dasha + WEIGHT_PARASHARI · parashari + WEIGHT_TRANSIT · transit`,
+/// clamped to `[0, 1]`: the fit of [`score_at`] from its three factors.
+pub fn combine_fit(dasha_support: f64, parashari: f64, transit: f64) -> f64 {
+    (WEIGHT_DASHA * dasha_support + WEIGHT_PARASHARI * parashari + WEIGHT_TRANSIT * transit)
+        .clamp(0.0, 1.0)
 }
 
 /// Score a logged event. Fails for an area name outside [`kshana_rules::AREAS`] or
@@ -231,23 +377,14 @@ pub fn score_at(
     }
 
     // 3. Jupiter and Saturn from the natal Moon, and Sade Sati.
-    let transits = transits_at(spk, natal, at, ayanamsa)?;
-    let house_from_moon = |body: &str| {
-        transits
-            .iter()
-            .find(|t| t.body == body && t.natal == "Moon")
-            .map_or(0, |t| t.house)
-    };
-    let jupiter_from_moon = house_from_moon("Jupiter");
-    let saturn_from_moon = house_from_moon("Saturn");
+    let sample = transit_sample(spk, natal, ayanamsa, at)?;
+    let TransitSample {
+        jupiter_from_moon,
+        saturn_from_moon,
+        sade_sati_phase,
+    } = sample;
     let j_good = JUPITER_GOOD_FROM_MOON.contains(&jupiter_from_moon);
     let s_good = SATURN_GOOD_FROM_MOON.contains(&saturn_from_moon);
-    let sade_sati_phase = match saturn_from_moon {
-        12 => 1,
-        1 => 2,
-        2 => 3,
-        _ => 0,
-    };
     let mut transit = if adverse {
         0.5 * (unit(!j_good) + unit(!s_good))
     } else {
@@ -299,9 +436,12 @@ pub fn score_at(
     }
 
     // 4. The fit.
-    let fit =
-        (WEIGHT_DASHA * dasha_support + WEIGHT_PARASHARI * parashari + WEIGHT_TRANSIT * transit)
-            .clamp(0.0, 1.0);
+    debug_assert_eq!(transit, transit_factor(&sample, a, kind));
+    debug_assert_eq!(
+        (parashari, period_quality_mean),
+        parashari_factor(facts, a, kind, &running)
+    );
+    let fit = combine_fit(dasha_support, parashari, transit);
     let sum = format!(
         "fit {fit:.2} = {WEIGHT_DASHA} × {dasha_support:.2} (dasha) + {WEIGHT_PARASHARI} × {parashari:.2} (Parashari) + {WEIGHT_TRANSIT} × {transit:.2} (transit)."
     );

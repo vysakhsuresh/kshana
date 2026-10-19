@@ -17,6 +17,7 @@ pub mod directions;
 pub mod eclipse;
 pub mod ledger;
 pub mod life;
+pub mod science;
 pub mod tajika;
 pub mod trace;
 pub use bala::*;
@@ -26,6 +27,7 @@ pub use directions::*;
 pub use eclipse::*;
 pub use ledger::*;
 pub use life::*;
+pub use science::*;
 pub use tajika::*;
 pub use trace::*;
 
