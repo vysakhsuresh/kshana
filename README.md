@@ -38,13 +38,13 @@ a person can carry, and to be honest about how well it knows.
 | `kshana-sky` | Apparent geocentric and topocentric ecliptic positions: light-time, aberration, IAU 2006 bias-precession, IAU 2000A nutation, ecliptic of date, daily motion, true lunar node | agrees with Skyfield to < 0.5″ on 200 geocentric and 20 topocentric checks |
 | `kshana-events` | Exact instants on the real sky: ingresses, aspects, lunations, tithi and nakshatra boundaries, stations, sunrise and sunset, planetary hours, Rahu kala, solved to 1 µs | tested against almanac dates and a hand calculation |
 | `kshana-verify` | Golden-vector tests against ERFA, jplephem, Skyfield and Swiss Ephemeris (`tests/golden/`) | frames match ERFA to ≤ 1e-12 rad; positions, houses, ayanamsa and sunrise match the others as recorded in `docs/PRECISION.md` |
-| `kshana-cli` | `kshana` binary: chart, next, areas, prashna, muhurta, rectify, life, match, calendar | working |
+| `kshana-cli` | `kshana` binary: chart, next, areas, prashna, muhurta, rectify, life, match, calendar, trace, dashas, varsha, directions | working |
 | `kshana-rules` | The prediction layer: facts from a chart; KP significators with node agency, cusp sub-lord promise, timing funnel; Prashna judgment with ruling planets and Moon windows; Parashari dignities, aspects, yogas, per-area assessment, period quality; Parihara remedies; Muhurta window search; birth-time rectification from life events; Ashtakoota matching, Mangal dosha, Western synastry | tested on real and synthetic charts; catalogue in `docs/RULES.md` |
 | `kshana-forecast` | What the sky does to one chart: sign transits with exact sidereal ingress instants, Sade Sati phases, gochara scoring (Phaladeepika vedha, Moorthi Nirnaya, Ashtakavarga bindus, kakshya windows), the day's good and avoid hours, the 100-year life map, the observance calendar | tested against the kernel |
 | `kshana-trace` | The life trace: every dasha level to nine deep and every zodiac crossing (sign, nakshatra, pada, KP sub, sub-sub), tithi, karana, yoga, hora, sunrise and sunset as exact instants; snapshots at any instant | tested against snapshots; `docs/TRACE.md` |
 | `kshana-ledger` | The life ledger: dated events scored against the running periods and transits (favour or adversity by kind), matched baselines at instants nobody logged, Brier and reliability bins, and a retrodiction of every past antardasha | tested on the kernel |
 | `kshana-directions` | Western and Hellenistic timing: secondary progressions (day-for-a-year on 365.2422 d), solar arc, annual and monthly profections on exact solar returns, firdaria, zodiacal releasing from Fortune and Spirit with loosing of the bond, lunar and demi returns, exact transit hits to every natal point | 24 tests; every instant a solved root |
-| `kshana-tajika` | Tajika varshaphala: the sidereal solar return, Muntha, year lord by Panchavargeeya bala, Sahams, Ithasala and Ishrafa, Mudda dasha | in progress |
+| `kshana-tajika` | Tajika varshaphala: the exact sidereal solar return, Muntha, the year lord by Panchavargeeya bala, 35 Sahams, Ithasala, Ishrafa, Nakta, Yamaya, Manau and Kamboola, Mudda dasha | 19 tests; Charak and Neelakanthi cited |
 | `kshana-speak` | Plain words: a reading in sentences, each carrying its factors, confidence and rule ids; compatibility in words; a 56-term glossary | tested |
 | `kshana-chart` | One instant, one place, the whole chart: placements with KP lords and houses, cusps, nodes, panchanga, provenance stamp | tested; shared by the CLI and the FFI |
 | `kshana-ffi` | UniFFI surface: `Engine` object (kernel loaded once); chart, events, areas, prashna, parihara, muhurta, rectify, plain reading, life map, daily, transits, compatibility, calendar, karakas, naming, glossary, self-test, export | tested through the boundary; Kotlin bindings generate cleanly |
@@ -67,6 +67,10 @@ cargo run -p kshana-cli -- muhurta --spk data/de421.bsp --utc 2026-10-15T00:00:0
 cargo run -p kshana-cli -- life --spk data/de421.bsp --utc 1990-10-29T17:36:00 --lat 9.9312 --lon 76.2673
 cargo run -p kshana-cli -- match --spk data/de421.bsp --utc 1990-10-29T17:36:00 --lat 9.9312 --lon 76.2673 --utc2 1992-04-03T06:15:00 --lat2 12.97 --lon2 77.59
 cargo run -p kshana-cli -- calendar --spk data/de421.bsp --utc 2026-10-15T00:00:00 --lat 9.9312 --lon 76.2673 --days 60 --tz +05:30
+cargo run -p kshana-cli -- trace --spk data/de421.bsp --utc 2026-10-16T00:00:00 --birth 1990-10-29T12:06:00 --natal-moon 316.344 --lat 9.9312 --lon 76.2673 --days 1 --depth 6 --tz +05:30
+cargo run -p kshana-cli -- dashas --spk data/de421.bsp --utc 1990-10-29T12:06:00 --lat 9.9312 --lon 76.2673 --at 2026-10-16T00:00:00 --tz +05:30
+cargo run -p kshana-cli -- varsha --spk data/de421.bsp --utc 1990-10-29T12:06:00 --lat 9.9312 --lon 76.2673 --year 2026 --tz +05:30
+cargo run -p kshana-cli -- directions --spk data/de421.bsp --utc 1990-10-29T12:06:00 --lat 9.9312 --lon 76.2673 --tz +05:30
 ./scripts/check.sh                # the gate: fmt, clippy -D warnings, all tests
 ./scripts/kotlin-check.sh         # type-check the Android sources without the SDK (Maven artifacts only)
 ./android/build-engine.sh         # Android .so files + Kotlin bindings
