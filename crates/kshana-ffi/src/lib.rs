@@ -10,8 +10,10 @@ use kshana_time::{Instant, Utc, NS_PER_SEC};
 
 uniffi::setup_scaffolding!();
 
+pub mod ledger;
 pub mod life;
 pub mod trace;
+pub use ledger::*;
 pub use life::*;
 pub use trace::*;
 

@@ -8,7 +8,8 @@ use kshana_vedic::DashaLord;
 
 use crate::{AyanamsaChoice, Engine, ExactInstant, KshanaError};
 
-fn natal(
+/// The natal chart for a birth at a place (Placidus, no topocentric Moon).
+pub(crate) fn natal_chart(
     engine: &Engine,
     birth: ExactInstant,
     latitude_deg: f64,
@@ -266,7 +267,7 @@ impl Engine {
         ayanamsa: AyanamsaChoice,
         at: ExactInstant,
     ) -> Result<Vec<SectionRecord>, KshanaError> {
-        let ch = natal(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
+        let ch = natal_chart(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         Ok(
             kshana_speak::reading(&self.spk, &ch, at.into(), ayanamsa.into())
                 .into_iter()
@@ -284,7 +285,7 @@ impl Engine {
         ayanamsa: AyanamsaChoice,
         years: u32,
     ) -> Result<Vec<YearRowRecord>, KshanaError> {
-        let ch = natal(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
+        let ch = natal_chart(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         Ok(kshana_forecast::life_map(&ch, years.min(120))
             .into_iter()
             .map(|r| YearRowRecord {
@@ -309,7 +310,7 @@ impl Engine {
         here_latitude_deg: f64,
         here_longitude_deg: f64,
     ) -> Result<DailyRecord, KshanaError> {
-        let ch = natal(
+        let ch = natal_chart(
             self,
             birth,
             birth_latitude_deg,
@@ -363,7 +364,7 @@ impl Engine {
         at: ExactInstant,
         days: u32,
     ) -> Result<TransitReport, KshanaError> {
-        let ch = natal(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
+        let ch = natal_chart(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let ay: kshana_vedic::Ayanamsa = ayanamsa.into();
         let at_i: Instant = at.into();
         let err = |e: kshana_ephem::SpkError| KshanaError::Engine(format!("{e:?}"));
@@ -419,8 +420,8 @@ impl Engine {
         longitude_b: f64,
         ayanamsa: AyanamsaChoice,
     ) -> Result<CompatibilityRecord, KshanaError> {
-        let a = natal(self, birth_a, latitude_a, longitude_a, ayanamsa)?;
-        let b = natal(self, birth_b, latitude_b, longitude_b, ayanamsa)?;
+        let a = natal_chart(self, birth_a, latitude_a, longitude_a, ayanamsa)?;
+        let b = natal_chart(self, birth_b, latitude_b, longitude_b, ayanamsa)?;
         let ash = kshana_rules::ashtakoota(a.bodies[1].sidereal, b.bodies[1].sidereal);
         let fa = kshana_rules::Facts::from_chart(&a);
         let fb = kshana_rules::Facts::from_chart(&b);
@@ -502,7 +503,7 @@ impl Engine {
         longitude_deg: f64,
         ayanamsa: AyanamsaChoice,
     ) -> Result<Vec<KarakaRecord>, KshanaError> {
-        let ch = natal(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
+        let ch = natal_chart(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let sid: [f64; 7] = std::array::from_fn(|i| ch.bodies[i].sidereal);
         Ok(kshana_vedic::chara_karakas(sid)
             .iter()
