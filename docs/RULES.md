@@ -154,3 +154,52 @@ Yogini (36-year cycle, starting yogini = (nakshatra number + 3) mod 8, antardash
 ## Western timing
 
 Secondary progressions (day-for-a-year on the mean tropical year of 365.2422 d, progressed MC by solar arc, progressed Asc from it at the natal latitude), solar arc (progressed Sun − natal Sun), annual profections turning at the exact solar return with twelve equal months, firdaria (75-year cycle, day sequence Sun 10 … South Node 2, night from the Moon, sevenfold sub-periods in Chaldean order), zodiacal releasing (360-day year, Aries 15 … Pisces 12, levels to 5-hour units, loosing of the bond once per parent, peaks at the 1st, 4th, 7th and 10th from the lot), lunar and demi returns, transit hits to every natal point with the Ptolemaic aspects. Sources are cited in the crate's doc comments.
+
+## Remedies, cause and karma
+
+| Id | Rule | Source |
+|---|---|---|
+| KS-R-KARMA-01 | The karma class of an affliction: the Moon-versus-Sun test (sign first, else the hora of the sign) and the concurrence of natal affliction, running period and transit decide dridha (endured with discipline), dridha-adridha (softened by remedy) or adridha (changed by action); the kind in play is prarabdha when the planet runs a period, sanchita when natally afflicted but not running, kriyamana otherwise. Every remedy carries the sentence its class may claim | Prasna Marga ch. 1 st. 101 and ch. 15; BPHS ch. 7 |
+| KS-R-SHAPA-01 … 08 | Curse yogas: pitru, sarpa, matru, bhratru, matula, brahma, patni, preta, by the karaka's affliction in the 5th and its companions | BPHS ch. 85 (Santhanam vol. 2; verify marks kept in the source strings) |
+| KS-R-BADH-01 | Badhaka: the 11th for movable, 9th for fixed, 7th for dual lagnas; the offended being by the badhakesh's companions; the remedy kind by the tattva of its dispositor | Prasna Marga ch. 15 |
+| KS-R-DASHA-* | The dasha-lord formulae: japa, daana and conduct per period lord when it runs with severity ≥ 0.5 | BPHS chs. 51–60 |
+| KS-R-DUTY-nn | House duties: the domain, karaka, conduct, seva and daana of each house, giving the Karma and Seva rows for an area | Classical house significations |
+| KS-R-GEM-01 | Gems are listed, never recommended: allowed text only when the lord owns 1, 5 or 9 free of 6, 8 and 12 and is weak | Phaladeepika |
+| (timing) | A remedy's windows are exact: the planet's weekday from the true sunrise, its horas on that day, its tithis and nakshatras, with Rahu kala excluded and Brahma muhurta offered | Muhurta Chintamani; the solved sunrise |
+| (ledger) | Each commitment plans exact cue instants and records done instants on the device clock; kept/planned over 7 and 40 days, no streaks | Habit research as cited in the engine docs |
+
+Tables: `GRAHA_SHANTI` (Yajnavalkya 1.295–309, Matsya Purana 93), `MANTRA_DOSES` with the
+Kali multiplier marked as practice, `VRATAS` (Rahu and Ketu by the Lal Kitab 43-day
+convention), `GEMS`, `HOUSE_DUTIES`.
+
+## The day's clocks
+
+Ghati readouts under three named conventions (fixed 24 minutes; 30 per day and 30 per
+night; 60 per sunrise-to-sunrise). The thirty muhurtas and their qualities follow
+Muhurta Chintamani as tabulated; choghadiya day and night sequences follow Drik
+Panchang and the JHora tables (the night sequence is its own cycle, not the day's
+restarted). Upagraha kalas per BPHS 3.66–67 with the start/middle/end conventions
+named and JHora's defaults. Special lagnas per BPHS ch. 3 and 5; Sree lagna = lagna +
+360° × the Moon's nakshatra fraction. Gandanta ±3°20′ of the water–fire junctions;
+Panchaka from 0° Aquarius to the end of Revati; Bhadra = Vishti karana; nine
+inauspicious yogas. The Pancha Pakshi activity matrix is decoded from the JHora
+database and could not be verified against a primary text: the engine marks those
+functions and the app says so.
+
+## Eclipses
+
+Lunar: apparent Moon against the apparent anti-Sun, Danjon's shadow enlargement by
+default (Chauvenet and none selectable), contacts P1 U1 U2 U3 U4 P4 as roots to 1 µs,
+magnitudes and gamma in NASA's convention. Solar: the fundamental-plane geometry with
+exact cones and the projected ellipsoid, kinds per Meeus ch. 54, local contacts from
+topocentric directions. Saros by Kluepfel's reduction, anchored and tested on seven
+eclipses. Measured against NASA: every tested contact within 5 s.
+
+## Strength
+
+Shadbala in virupas per BPHS ch. 27 with Raman's and JHora's conventions where the
+text is silent (Saptavargaja points 45/30/22.5/15/7.5/3.75/1.875; Drekkana by
+Sun-Mars-Jupiter first, Mercury-Saturn second, Moon-Venus third; Chesta by the
+eight motional states from the speed ratio; Drik by sputa drishti); required
+virupas Sun 390, Moon 360, Mars 300, Mercury 420, Jupiter 390, Venus 330, Saturn
+300; Bhava bala; Ishta and Kashta; avasthas per BPHS ch. 45.
