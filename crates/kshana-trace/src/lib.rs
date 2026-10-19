@@ -15,9 +15,9 @@ pub mod dasha;
 pub mod zodiac;
 
 use kshana_ephem::{Body, Spk};
-use kshana_events::{hora_at, solar_day, EventError};
+use kshana_events::{hora_at, solar_day, sun_rise_set, EventError, SolarDay};
 use kshana_sky::{apparent, mean_node_longitude, Observer};
-use kshana_time::{EopTable, Instant, NS_PER_SEC};
+use kshana_time::{EopTable, Instant, NS_PER_DAY, NS_PER_SEC};
 use kshana_vedic::panchanga::{NAKSHATRA_NAMES, TITHI_NAMES, YOGA_NAMES};
 use kshana_vedic::{ayanamsa_degrees, karana, sidereal, sub_table, Ayanamsa, DashaLord};
 
@@ -381,34 +381,52 @@ pub fn trace(
         }
     }
     if opts.horas {
-        let mut t = from;
-        let mut guard = 0;
-        while t < to && guard < 4_000 {
-            guard += 1;
-            let Some(day) = solar_day(spk, eop, &who.observer, t)? else {
+        // One rise/set scan for the whole window (plus a day each side), then the horas
+        // of every solar day that touches it.
+        let (rises, sets) = sun_rise_set(
+            spk,
+            eop,
+            &who.observer,
+            from.add_ns(-NS_PER_DAY),
+            to.add_ns(NS_PER_DAY),
+            1_000_000,
+        )?;
+        for (i, &sunrise) in rises.iter().enumerate() {
+            let Some(&next_sunrise) = rises.get(i + 1) else {
                 break;
             };
-            if day.sunrise >= from && day.sunrise < to {
+            let Some(&sunset) = sets.iter().find(|s| **s > sunrise && **s < next_sunrise) else {
+                continue;
+            };
+            if next_sunrise <= from || sunrise >= to {
+                continue;
+            }
+            let day = SolarDay {
+                sunrise,
+                sunset,
+                next_sunrise,
+            };
+            if sunrise >= from && sunrise < to {
                 out.push(Transition {
-                    at: day.sunrise,
+                    at: sunrise,
                     half_width_ns: 1_000_000,
                     change: Change::Sunrise,
                 });
             }
-            if day.sunset >= from && day.sunset < to {
+            if sunset >= from && sunset < to {
                 out.push(Transition {
-                    at: day.sunset,
+                    at: sunset,
                     half_width_ns: 1_000_000,
                     change: Change::Sunset,
                 });
             }
-            let day_len = day.sunset.ns_since(day.sunrise) / 12;
-            let night_len = day.next_sunrise.ns_since(day.sunset) / 12;
-            for i in 0..24 {
-                let start = if i < 12 {
-                    day.sunrise.add_ns(i * day_len)
+            let day_len = sunset.ns_since(sunrise) / 12;
+            let night_len = next_sunrise.ns_since(sunset) / 12;
+            for k in 0..24 {
+                let start = if k < 12 {
+                    sunrise.add_ns(k * day_len)
                 } else {
-                    day.sunset.add_ns((i - 12) * night_len)
+                    sunset.add_ns((k - 12) * night_len)
                 };
                 if start >= from && start < to {
                     let (lord, _, _) = hora_at(&day, &who.observer, start.add_ns(NS_PER_SEC));
@@ -419,7 +437,6 @@ pub fn trace(
                     });
                 }
             }
-            t = day.next_sunrise.add_ns(NS_PER_SEC);
         }
     }
     out.sort_by_key(|x| x.at);

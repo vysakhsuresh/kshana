@@ -47,8 +47,8 @@ impl Division {
             Division::Pada => uniform(108),
             Division::Tithi => uniform(30),
             Division::Karana => uniform(60),
-            Division::Sub => sub_table().iter().map(|s| (s.start, s.end)).collect(),
-            Division::SubSub => subsub_table().iter().map(|s| (s.start, s.end)).collect(),
+            Division::Sub => sub_bounds().to_vec(),
+            Division::SubSub => subsub_bounds().to_vec(),
         }
     }
 
@@ -62,7 +62,11 @@ impl Division {
             Division::Tithi => ((l / 12.0).floor() as usize).min(29),
             Division::Karana => ((l / 6.0).floor() as usize).min(59),
             Division::Sub | Division::SubSub => {
-                let b = self.bounds();
+                let b: &[(f64, f64)] = if self == Division::Sub {
+                    sub_bounds()
+                } else {
+                    subsub_bounds()
+                };
                 // binary search on starts
                 let mut lo = 0usize;
                 let mut hi = b.len();
@@ -96,6 +100,18 @@ impl Division {
     pub fn is_empty(self) -> bool {
         false
     }
+}
+
+/// The 249 sub bounds, built once per process.
+fn sub_bounds() -> &'static [(f64, f64)] {
+    static T: std::sync::OnceLock<Vec<(f64, f64)>> = std::sync::OnceLock::new();
+    T.get_or_init(|| sub_table().iter().map(|s| (s.start, s.end)).collect())
+}
+
+/// The 2241 sub-sub bounds, built once per process.
+fn subsub_bounds() -> &'static [(f64, f64)] {
+    static T: std::sync::OnceLock<Vec<(f64, f64)>> = std::sync::OnceLock::new();
+    T.get_or_init(|| subsub_table().iter().map(|s| (s.start, s.end)).collect())
 }
 
 fn uniform(n: usize) -> Vec<(f64, f64)> {

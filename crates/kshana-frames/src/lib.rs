@@ -30,6 +30,43 @@ pub fn earth_rotation_angle(ut1: TwoPartJd) -> f64 {
     theta.rem_euclid(TAU)
 }
 
+/// IAU 2000A nutation at `t` (TT centuries) from a thread-local set of sample pairs ten
+/// minutes apart, linearly interpolated. The full series costs about 2 000
+/// trigonometric terms; the fastest nutation term has a 9-day period, so interpolation
+/// over ten minutes errs by under 1e-7 arcseconds, while a root search that samples a
+/// body thousands of times within an hour pays for the series once. Same signature and
+/// units as [`nutation_iau2006a`].
+pub fn nutation_cached(t: f64) -> (f64, f64) {
+    use std::cell::RefCell;
+    /// Bucket start, then (dpsi, deps) at the start and at the end.
+    type Sample = (f64, f64, f64, f64, f64);
+    thread_local! {
+        static SAMPLES: RefCell<Vec<Sample>> = const { RefCell::new(Vec::new()) };
+    }
+    const BUCKET: f64 = 600.0 / 3_155_760_000.0;
+    const SLOTS: usize = 16;
+    let t0 = (t / BUCKET).floor() * BUCKET;
+    let t1 = t0 + BUCKET;
+    let hit = SAMPLES.with(|c| c.borrow().iter().find(|s| s.0 == t0).copied());
+    let (p0, e0, p1, e1) = match hit {
+        Some((_, p0, e0, p1, e1)) => (p0, e0, p1, e1),
+        None => {
+            let (p0, e0) = nutation_iau2006a(t0);
+            let (p1, e1) = nutation_iau2006a(t1);
+            SAMPLES.with(|c| {
+                let mut v = c.borrow_mut();
+                if v.len() >= SLOTS {
+                    v.remove(0);
+                }
+                v.push((t0, p0, e0, p1, e1));
+            });
+            (p0, e0, p1, e1)
+        }
+    };
+    let f = (t - t0) / BUCKET;
+    (p0 + (p1 - p0) * f, e0 + (e1 - e0) * f)
+}
+
 /// Mean obliquity of the ecliptic (IAU 2006) in radians, `t` in TT centuries since J2000.
 pub fn mean_obliquity_iau2006(t: f64) -> f64 {
     (84_381.406
