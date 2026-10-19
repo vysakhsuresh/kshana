@@ -38,6 +38,7 @@ import com.kshana.app.ui.screens.BirthScreen
 import com.kshana.app.ui.screens.CalendarScreen
 import com.kshana.app.ui.screens.ChartScreen
 import com.kshana.app.ui.screens.CompatibilityScreen
+import com.kshana.app.ui.screens.DiaryScreen
 import com.kshana.app.ui.screens.FamilyScreen
 import com.kshana.app.ui.screens.GlossaryScreen
 import com.kshana.app.ui.screens.LifeMapScreen
@@ -62,6 +63,7 @@ import com.kshana.app.ui.screens.TransitsScreen
 import com.kshana.app.ui.screens.TrustScreen
 import com.kshana.app.ui.screens.VedicScreen
 import com.kshana.app.ui.screens.YearScreen
+import com.kshana.app.ui.onboarding.ArrivalScreen
 import com.kshana.app.ui.sky.LivingSky
 import com.kshana.app.ui.theme.KshanaColors
 import com.kshana.app.ui.theme.KshanaTheme
@@ -92,8 +94,8 @@ private fun App() {
     var profile by remember { mutableStateOf(ProfileStore.load(context)) }
     var settings by remember { mutableStateOf(ProfileStore.settings(context)) }
     var simple by remember { mutableStateOf(FamilyStore.simpleMode(context)) }
-    // First launch with no profile lands on the birth form; afterwards on Today.
-    val start = remember { if (profile == null) "birth" else "today" }
+    // First launch with no profile lands on the arrival ritual; afterwards on Today.
+    val start = remember { if (profile == null) "arrival" else "today" }
     val backStack by nav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route ?: start
     val showBar = tabs.any { it.route == current }
@@ -227,6 +229,7 @@ private fun App() {
                     onLedger = { open("ledger") },
                     onYear = { open("year") },
                     onTimeLords = { open("timelords") },
+                    onDiary = { open("diary") },
                 )
             }
 
@@ -295,6 +298,18 @@ private fun App() {
                         onBack = back,
                     )
                 }
+            }
+            composable("arrival") {
+                ArrivalScreen(onDone = { p ->
+                    profile = p
+                    nav.navigate("today") {
+                        launchSingleTop = true
+                        popUpTo("arrival") { inclusive = true }
+                    }
+                })
+            }
+            composable("diary") {
+                withProfile { DiaryScreen(it, ProfileStore.currentLocation(context), settings, onBack = back) }
             }
             composable("birth") {
                 BirthScreen(

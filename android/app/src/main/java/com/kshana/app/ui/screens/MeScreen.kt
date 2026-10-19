@@ -65,6 +65,7 @@ fun MeScreen(
     onLedger: () -> Unit = {},
     onYear: () -> Unit = {},
     onTimeLords: () -> Unit = {},
+    onDiary: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var atmakaraka by remember { mutableStateOf<KarakaRecord?>(null) }
@@ -149,6 +150,7 @@ fun MeScreen(
 
         if (profile != null) {
             Door("Your life, logged", "Dated events scored against the chart; does it know?", onLedger)
+            Door("The diary", "Every note you keep is stamped with the exact sky it was written under.", onDiary)
         }
 
         SectionLabel("Chart details")

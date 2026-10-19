@@ -48,6 +48,7 @@ import com.kshana.app.data.EngineSettings
 import com.kshana.app.data.Place
 import com.kshana.app.engine.EngineProvider
 import com.kshana.app.engine.Instants
+import com.kshana.app.ui.lamp.TodayLamp
 import com.kshana.app.ui.theme.KshanaColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -171,6 +172,7 @@ fun TodayScreen(
         } else {
             Text(d.headline, fontFamily = FontFamily.Serif, fontSize = 22.sp, lineHeight = 30.sp, color = KshanaColors.Text, modifier = Modifier.padding(top = 6.dp))
 
+            TodayLamp(profile, here, settings)
             SectionLabel("Your day")
             val sunrise = d.sunrise
             val nextSunrise = d.nextSunrise
