@@ -193,6 +193,48 @@ pub fn period_supports(facts: &Facts, area: Area, lord: DashaLord) -> Vec<Signif
         .collect()
 }
 
+/// Net support of a dasha lord for an area, in `[0, 1]`, with the reasons.
+///
+/// A bare "signifies at least one group house" saturates: for most charts nearly
+/// every lord signifies something in a four-house group. This score weighs each
+/// signification by its level, counts the negating houses against it, and rewards the
+/// primary cusp's house, the KP practice that a dasha lord must be a significator of
+/// the matter's houses and not a stronger significator of the houses that deny it.
+pub fn support_score(facts: &Facts, area: Area, lord: DashaLord) -> (f64, Vec<String>) {
+    let sigs = significators(facts, lord);
+    let mut fulfil = 0.0;
+    let mut deny = 0.0;
+    let mut primary = 0.0;
+    let mut why = Vec::new();
+    for s in &sigs {
+        if area.group.contains(&s.house) {
+            fulfil += s.level.weight();
+            if s.house == area.primary {
+                primary = 0.2;
+            }
+            why.push(format!(
+                "{lord:?} signifies house {} ({})",
+                s.house,
+                level_words(s.level)
+            ));
+        } else if area.negating.contains(&s.house) {
+            deny += s.level.weight();
+            why.push(format!(
+                "{lord:?} also signifies negating house {} ({})",
+                s.house,
+                level_words(s.level)
+            ));
+        }
+    }
+    let f = (fulfil / area.group.len() as f64).min(1.0);
+    let d = (deny / area.negating.len().max(1) as f64).min(1.0);
+    let score = (f - 0.8 * d + primary).clamp(0.0, 1.0);
+    why.push(format!(
+        "net support {score:.2} = fulfilling {f:.2} − 0.8 × denying {d:.2} + primary {primary:.1}"
+    ));
+    (score, why)
+}
+
 /// One level of the timing funnel: a dasha period and the group houses its lord signifies.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TimingLevel {
@@ -202,6 +244,26 @@ pub struct TimingLevel {
     pub period: kshana_vedic::DashaPeriod,
     /// Group houses signified by the period lord (empty = this level does not support).
     pub supports: Vec<Significance>,
+    /// Net support of the lord for the area, `[0, 1]`, from [`support_score`].
+    pub strength: f64,
+}
+
+/// Weighted strength of a funnel: the levels' net supports blended with the weights
+/// 0.35, 0.30, 0.20, 0.10, 0.05 (maha … prana), renormalised to the levels present.
+pub fn funnel_strength(funnel: &[TimingLevel]) -> f64 {
+    const W: [f64; 5] = [0.35, 0.30, 0.20, 0.10, 0.05];
+    let mut num = 0.0;
+    let mut den = 0.0;
+    for l in funnel {
+        let w = W[(l.level as usize).clamp(1, 5) - 1];
+        num += w * l.strength;
+        den += w;
+    }
+    if den > 0.0 {
+        num / den
+    } else {
+        0.0
+    }
 }
 
 /// The Vimshottari funnel for an area at instant `at`, for a birth with the Moon at
@@ -229,6 +291,7 @@ pub fn timing(
         level: (i + 1) as u8,
         period,
         supports: period_supports(facts, area, period.lord),
+        strength: support_score(facts, area, period.lord).0,
     })
     .collect()
 }
@@ -253,6 +316,29 @@ fn level_words(l: Level) -> &'static str {
         Level::Occupant => "as occupant",
         Level::StarOfOwner => "in the star of its lord",
         Level::Owner => "as its lord",
+    }
+}
+
+#[cfg(test)]
+mod support_tests {
+    use super::*;
+
+    #[test]
+    fn funnel_strength_weights_and_normalises() {
+        let p = kshana_vedic::DashaPeriod {
+            lord: DashaLord::Sun,
+            start: kshana_time::Instant::j2000(),
+            end: kshana_time::Instant::j2000(),
+        };
+        let mk = |level: u8, strength: f64| TimingLevel {
+            level,
+            period: p,
+            supports: Vec::new(),
+            strength,
+        };
+        assert!((funnel_strength(&[mk(1, 1.0), mk(2, 0.0)]) - 0.35 / 0.65).abs() < 1e-12);
+        assert_eq!(funnel_strength(&[]), 0.0);
+        assert!((funnel_strength(&[mk(1, 0.5)]) - 0.5).abs() < 1e-12);
     }
 }
 

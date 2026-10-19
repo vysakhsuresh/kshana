@@ -24,8 +24,8 @@ pub mod rectify;
 pub use areas::{area, Area, AREAS};
 pub use facts::{Facts, PlanetFact};
 pub use kp::{
-    agreeing_levels, node_agents, period_supports, promise, significators, timing, Level, Promise,
-    Significance, TimingLevel,
+    agreeing_levels, funnel_strength, node_agents, period_supports, promise, significators,
+    support_score, timing, Level, Promise, Significance, TimingLevel,
 };
 pub use kuta::{
     ashtakoota, mangal_dosha, synastry, Ashtakoota, KutaScore, MangalDosha, SynastryAspect,
