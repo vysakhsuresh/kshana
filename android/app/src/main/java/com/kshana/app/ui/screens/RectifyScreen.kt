@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
@@ -55,7 +56,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.CandidateRecord
 import uniffi.kshana_ffi.ExactInstant
+import uniffi.kshana_ffi.LedgerEventRecord
 import uniffi.kshana_ffi.LifeEventRecord
+import uniffi.kshana_ffi.PosteriorRecord
+import kotlin.math.ceil
 import java.time.DateTimeException
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -116,6 +120,20 @@ private fun stepFor(halfSeconds: Long): Long = when {
 private fun windowText(halfSeconds: Long): String =
     if (halfSeconds < 3600L) "±${halfSeconds / 60} min" else "±${halfSeconds / 3600} h"
 
+/** The most candidate instants the posterior scans; the engine widens the step past it anyway. */
+private const val MAX_POSTERIOR_CANDIDATES = 400L
+
+/** The finest step that keeps `2·half/step + 1` candidates at or under the cap, at least a second. */
+private fun posteriorStep(halfSeconds: Long): Long =
+    ceil(2.0 * halfSeconds / (MAX_POSTERIOR_CANDIDATES - 1).toDouble()).toLong().coerceAtLeast(1L)
+
+/** "one piece" / "2 pieces" for a highest-density set's run count. */
+private fun pieces(runs: UInt): String = if (runs <= 1u) "one piece" else "$runs pieces"
+
+/** The events of this screen as the ledger's record: each a milestone in its area, full weight, the label as the note. */
+private fun LifeEvent.ledgerRecord(zone: ZoneId): LedgerEventRecord =
+    LedgerEventRecord(instant(zone), area, "Milestone", 1.0, label)
+
 /**
  * Birth-time rectification: dated life events in, every candidate minute in the
  * uncertainty window cast and scored, the best five offered back as a new birth time.
@@ -144,9 +162,16 @@ fun RectifyScreen(profile: BirthProfile, settings: EngineSettings, onSaved: (Bir
     var error by remember { mutableStateOf<String?>(null) }
     var saved by remember { mutableStateOf<String?>(null) }
 
+    var posterior by remember { mutableStateOf<PosteriorRecord?>(null) }
+    var posteriorRunning by remember { mutableStateOf(false) }
+    var posteriorStatus by remember { mutableStateOf<String?>(null) }
+    var posteriorError by remember { mutableStateOf<String?>(null) }
+
     fun persist(list: List<LifeEvent>) {
         events = list
         ProfileStore.prefs(context).edit().putString(EVENTS_KEY, storeEvents(list)).apply()
+        posterior = null
+        posteriorStatus = null
     }
 
     fun add() {
@@ -188,8 +213,33 @@ fun RectifyScreen(profile: BirthProfile, settings: EngineSettings, onSaved: (Bir
         }
     }
 
-    fun use(c: CandidateRecord) {
-        val local = Instants.toLocal(c.birth, zone)
+    fun drawPosterior() {
+        if (events.isEmpty() || posteriorRunning) return
+        posteriorRunning = true
+        posteriorError = null
+        saved = null
+        val step = posteriorStep(halfSeconds)
+        val n = 2L * halfSeconds / step + 1L
+        posteriorStatus = "casting $n candidate charts in steps of $step s…"
+        scope.launch {
+            try {
+                val engine = EngineProvider.get(context)
+                val records = events.map { it.ledgerRecord(zone) }
+                val found = withContext(Dispatchers.Default) {
+                    engine.birthPosterior(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, halfSeconds, step, records)
+                }
+                posterior = found
+                posteriorStatus = "${found.instants.size} candidates · step %.0f s · ${found.events} events".format(found.stepSeconds)
+            } catch (e: Exception) {
+                posteriorError = e.message ?: e.toString()
+                posteriorStatus = null
+            }
+            posteriorRunning = false
+        }
+    }
+
+    fun useInstant(birth: ExactInstant) {
+        val local = Instants.toLocal(birth, zone)
         val p = profile.copy(
             year = local.year, month = local.monthValue, day = local.dayOfMonth,
             hour = local.hour, minute = local.minute, second = local.second,
@@ -199,6 +249,8 @@ fun RectifyScreen(profile: BirthProfile, settings: EngineSettings, onSaved: (Bir
         saved = "Saved ${local.format(TIME_ONLY)} as the birth time, ±1 min."
         onSaved(p)
     }
+
+    fun use(c: CandidateRecord) = useInstant(c.birth)
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(top = 48.dp, bottom = 32.dp),
@@ -274,6 +326,40 @@ fun RectifyScreen(profile: BirthProfile, settings: EngineSettings, onSaved: (Bir
             for (c in candidates.take(TOP)) CandidateCard(c, zone, onUse = { use(c) })
         }
 
+        if (events.isNotEmpty()) {
+            SectionLabel("The posterior")
+            Text(
+                "A ranking says which minute scored best. A posterior says how much of the belief each minute deserves: every candidate across the window is cast, and each event counts only in proportion to how rarely that chart would explain a random instant.",
+                style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
+            )
+            ErrorLine(posteriorError)
+            QuietButton(if (posteriorRunning) "CASTING…" else "DRAW THE POSTERIOR", onClick = { drawPosterior() }, modifier = Modifier.fillMaxWidth())
+            posteriorStatus?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted) }
+            posterior?.let { p ->
+                PosteriorStrip(p, profile.birthInstant(), zone)
+                Text(
+                    "on ${localText(p.map, DATE_ONLY, zone)} · ${zone.id}",
+                    fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted,
+                )
+                MonoRow("most likely (MAP)", localText(p.map, TIME_ONLY, zone), valueColor = KshanaColors.Gold)
+                MonoRow("posterior mean", localText(p.mean, TIME_ONLY, zone))
+                MonoRow("50% band", "${localText(p.hpd50Start, TIME_ONLY, zone)} – ${localText(p.hpd50End, TIME_ONLY, zone)}")
+                MonoRow("90% band", "${localText(p.hpd90Start, TIME_ONLY, zone)} – ${localText(p.hpd90End, TIME_ONLY, zone)}")
+                MonoRow("grid", "${p.instants.size} candidates · step %.0f s".format(p.stepSeconds))
+                Text(
+                    "The 50% band is in ${pieces(p.hpd50Runs)}; the 90% band is in ${pieces(p.hpd90Runs)}." +
+                        if (p.hpd50Runs > 1u || p.hpd90Runs > 1u) " A band in pieces is a comb, not one time: the events agree with several minutes, and the bands above are the hulls." else "",
+                    style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft,
+                )
+                Text(p.words, fontFamily = KshanaFonts.serif, fontSize = 16.sp, lineHeight = 22.sp, color = KshanaColors.Text)
+                QuietButton("SET THIS AS BIRTH TIME", onClick = { useInstant(p.map) }, modifier = Modifier.fillMaxWidth())
+                Text(
+                    "Each event is read as a milestone in its area. Dasha boundaries are recomputed exactly for every candidate; the transit part is read from the recorded time's chart, sampled once per pratyantar cell. The prior is flat across the window.",
+                    style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+                )
+            }
+        }
+
         Spacer(Modifier.height(12.dp))
         Text(
             "Rectification ranks hypotheses. It cannot recover a time that no event constrains.",
@@ -327,6 +413,67 @@ private fun ScoreCurve(candidates: List<CandidateRecord>, center: ExactInstant, 
             Text(localText(byTime.first().birth, CLOCK, zone), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
             Text("best ${localText(best.birth, TIME_ONLY, zone)} · %.2f".format(best.score), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Gold)
             Text(localText(byTime.last().birth, CLOCK, zone), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
+        }
+    }
+}
+
+/**
+ * The posterior as a density strip: the mass of every candidate as a gold fill over
+ * time, the 90% and 50% highest-density hulls as sky bands beneath it, the recorded
+ * time as a thin sky vertical and the most likely instant as a gold one.
+ */
+@Composable
+private fun PosteriorStrip(p: PosteriorRecord, recorded: ExactInstant, zone: ZoneId) {
+    val n = minOf(p.instants.size, p.masses.size)
+    if (n == 0) return
+    val first = p.instants.first().seconds()
+    val last = p.instants[n - 1].seconds()
+    val span = if (last - first > 1e-9) last - first else 1.0
+    val peak = p.masses.take(n).maxOrNull()?.takeIf { it > 0.0 } ?: 1.0
+    val shape = RoundedCornerShape(8.dp)
+
+    Column(
+        Modifier.fillMaxWidth().clip(shape).background(KshanaColors.Surface).border(1.dp, KshanaColors.Line, shape).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Canvas(Modifier.fillMaxWidth().height(120.dp)) {
+            val w = size.width
+            val h = size.height
+            val inset = 6f
+            val base = h - inset
+            fun x(e: ExactInstant): Float = (((e.seconds() - first) / span).coerceIn(0.0, 1.0) * w).toFloat()
+            fun y(mass: Double): Float = (base - (mass / peak).coerceIn(0.0, 1.0) * (h - 2 * inset)).toFloat()
+
+            val x90a = x(p.hpd90Start); val x90b = x(p.hpd90End)
+            drawRect(KshanaColors.Sky.copy(alpha = 0.10f), topLeft = Offset(x90a, 0f), size = Size((x90b - x90a).coerceAtLeast(1f), h))
+            val x50a = x(p.hpd50Start); val x50b = x(p.hpd50End)
+            drawRect(KshanaColors.Sky.copy(alpha = 0.18f), topLeft = Offset(x50a, 0f), size = Size((x50b - x50a).coerceAtLeast(1f), h))
+
+            drawLine(KshanaColors.LineSoft, Offset(0f, base), Offset(w, base), 1f)
+            val rx = x(recorded)
+            drawLine(KshanaColors.Sky, Offset(rx, 0f), Offset(rx, h), 1f)
+
+            val fill = Path()
+            fill.moveTo(x(p.instants[0]), base)
+            for (i in 0 until n) fill.lineTo(x(p.instants[i]), y(p.masses[i]))
+            fill.lineTo(x(p.instants[n - 1]), base)
+            fill.close()
+            drawPath(fill, KshanaColors.Gold.copy(alpha = 0.45f))
+            if (n >= 2) {
+                val line = Path()
+                for (i in 0 until n) {
+                    val px = x(p.instants[i]); val py = y(p.masses[i])
+                    if (i == 0) line.moveTo(px, py) else line.lineTo(px, py)
+                }
+                drawPath(line, KshanaColors.Gold, style = Stroke(width = 1.5f))
+            }
+            val mx = x(p.map)
+            drawLine(KshanaColors.Gold, Offset(mx, 0f), Offset(mx, h), 2f)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(localText(p.instants.first(), CLOCK, zone), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
+            Text("MAP ${localText(p.map, TIME_ONLY, zone)} · bands 50% · 90%", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Gold)
+            Text(localText(p.instants[n - 1], CLOCK, zone), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
         }
     }
 }

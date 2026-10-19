@@ -69,10 +69,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.CalibrationRecord
+import uniffi.kshana_ffi.ExactInstant
 import uniffi.kshana_ffi.LedgerEventRecord
 import uniffi.kshana_ffi.LedgerScoreRecord
+import uniffi.kshana_ffi.MetricsBinRecord
+import uniffi.kshana_ffi.MetricsRecord
 import uniffi.kshana_ffi.PeriodReadingRecord
 import uniffi.kshana_ffi.ReliabilityBinRecord
+import uniffi.kshana_ffi.SurrogateRecord
+import uniffi.kshana_ffi.TallyEventRecord
+import uniffi.kshana_ffi.TallyRecord
 import uniffi.kshana_ffi.ledgerEventKinds
 import java.time.DateTimeException
 import java.time.LocalDateTime
@@ -95,6 +101,29 @@ private val IMPORTANCE = listOf(0.5 to "0.5 MINOR", 0.8 to "0.8 NOTABLE", 1.0 to
 
 /** Baseline instants scored per logged event when measuring. */
 private val PER_EVENT: UInt = 12u
+
+/** Matched baseline instants per event for the calibration metrics. */
+private val METRICS_PER_EVENT: UInt = 20u
+
+/** Offsets for the circular time-shift test. */
+private val SHIFTS: UInt = 200u
+
+/** The span a tally is taken over: the year before the earliest event, up to now. */
+private fun tallySpan(events: List<LedgerEventRecord>, zone: ZoneId): Pair<ExactInstant, ExactInstant> {
+    val earliest = events.minWith(compareBy({ it.at.taiSeconds }, { it.at.nanos })).at
+    val from = Instants.fromInstant(Instants.toLocal(earliest, zone).minusYears(1).toInstant())
+    return from to Instants.now()
+}
+
+/** "about 1 in 40" for a p-value, in the engine's own terms. */
+private fun oneIn(p: Double): String = when {
+    p.isNaN() || p <= 0.0 -> "almost never"
+    p >= 0.5 -> "more often than not"
+    else -> "about 1 in ${"%.0f".format(1.0 / p)}"
+}
+
+/** What a tally and a calibration cost, and what they found, for one list of events. */
+private data class ChanceResult(val tally: TallyRecord, val metrics: MetricsRecord?, val metricsError: String?)
 
 /** Weight factor when the time of day is unknown and the event sits at noon. */
 private const val UNKNOWN_TIME_FACTOR = 0.8
@@ -217,6 +246,77 @@ fun LedgerScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> 
         }
     }
 
+    // Against chance: the exact tally and the calibration metrics, read whenever the ledger changes.
+    val chanceCache = remember(profile, settings) { HashMap<Int, ChanceResult>() }
+    var chance by remember { mutableStateOf<ChanceResult?>(null) }
+    var chanceHash by remember { mutableIntStateOf(0) }
+    var chanceStage by remember { mutableStateOf<String?>(null) }
+    var chanceError by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(events, profile, settings) {
+        val list = events
+        val hash = list.hashCode()
+        chanceCache[hash]?.let { chance = it; chanceHash = hash; chanceStage = null; return@LaunchedEffect }
+        chance = null
+        chanceError = null
+        if (list.isEmpty()) { chanceStage = null; return@LaunchedEffect }
+        try {
+            val engine = EngineProvider.get(context)
+            val birth = profile.birthInstant()
+            val (from, to) = tallySpan(list, zone)
+            chanceStage = "Reading the exact coverage of every area over the span…"
+            val tally = withContext(Dispatchers.Default) {
+                engine.coverageTally(birth, profile.latitude, profile.longitude, settings.ayanamsa, list, from, to)
+            }
+            chance = ChanceResult(tally, null, null); chanceHash = hash
+            chanceStage = "Scoring ${plural(list.size, "event")} and ${list.size * METRICS_PER_EVENT.toInt()} matched quiet moments…"
+            val found = try {
+                val m = withContext(Dispatchers.Default) {
+                    engine.ledgerMetrics(birth, profile.latitude, profile.longitude, settings.ayanamsa, list, from, to, METRICS_PER_EVENT, 0u)
+                }
+                ChanceResult(tally, m, null)
+            } catch (e: Exception) {
+                ChanceResult(tally, null, e.message ?: e.toString())
+            }
+            chanceCache[hash] = found
+            chance = found; chanceHash = hash
+        } catch (e: Exception) {
+            chanceError = e.message ?: e.toString()
+        }
+        chanceStage = null
+    }
+    val currentChance = if (chanceHash == events.hashCode()) chance else null
+
+    // Shift the sky: the circular time-shift test, run on demand.
+    val shiftCache = remember(profile, settings) { HashMap<Int, SurrogateRecord>() }
+    var surrogate by remember { mutableStateOf<SurrogateRecord?>(null) }
+    var surrogateHash by remember { mutableIntStateOf(0) }
+    var shifting by remember { mutableStateOf(false) }
+    var shiftError by remember { mutableStateOf<String?>(null) }
+
+    fun shiftSky() {
+        if (shifting || events.isEmpty()) return
+        val list = events
+        val hash = list.hashCode()
+        shiftCache[hash]?.let { surrogate = it; surrogateHash = hash; return }
+        shifting = true
+        shiftError = null
+        scope.launch {
+            try {
+                val engine = EngineProvider.get(context)
+                val (from, to) = tallySpan(list, zone)
+                val found = withContext(Dispatchers.Default) {
+                    engine.timeShiftTest(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, list, from, to, SHIFTS)
+                }
+                shiftCache[hash] = found
+                surrogate = found; surrogateHash = hash
+            } catch (e: Exception) {
+                shiftError = e.message ?: e.toString()
+            }
+            shifting = false
+        }
+    }
+    val currentSurrogate = if (surrogateHash == events.hashCode()) surrogate else null
+
     Column(Modifier.fillMaxSize().padding(top = 48.dp)) {
         Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -245,12 +345,20 @@ fun LedgerScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> 
                 )
                 else -> KnowTab(
                     events = events,
+                    zone = zone,
                     result = calibration,
                     stale = calibration != null && calibratedHash != events.hashCode(),
                     measuring = measuring,
                     error = calError,
                     onMeasure = { measure() },
                     onLog = { tab = TAB_EVENTS },
+                    chance = currentChance,
+                    chanceStage = chanceStage,
+                    chanceError = chanceError,
+                    surrogate = currentSurrogate,
+                    shifting = shifting,
+                    shiftError = shiftError,
+                    onShift = { shiftSky() },
                 )
             }
         }
@@ -623,12 +731,20 @@ private fun EventForm(
 @Composable
 private fun KnowTab(
     events: List<LedgerEventRecord>,
+    zone: ZoneId,
     result: CalibrationRecord?,
     stale: Boolean,
     measuring: Boolean,
     error: String?,
     onMeasure: () -> Unit,
     onLog: () -> Unit,
+    chance: ChanceResult?,
+    chanceStage: String?,
+    chanceError: String?,
+    surrogate: SurrogateRecord?,
+    shifting: Boolean,
+    shiftError: String?,
+    onShift: () -> Unit,
 ) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(top = 10.dp, bottom = 32.dp),
@@ -691,6 +807,253 @@ private fun KnowTab(
                 "With a handful of events this says little either way. Log more, and the measure sharpens.",
                 fontFamily = KshanaFonts.serif, fontStyle = FontStyle.Italic, fontSize = 14.sp, lineHeight = 20.sp, color = KshanaColors.Muted,
             )
+        }
+
+        AgainstChance(
+            events = events,
+            zone = zone,
+            chance = chance,
+            stage = chanceStage,
+            error = chanceError,
+            surrogate = surrogate,
+            shifting = shifting,
+            shiftError = shiftError,
+            onShift = onShift,
+        )
+    }
+}
+
+/* ------------------------------------------------------------- Against chance */
+
+/**
+ * The exact chance line: how many logged events the running periods supported, against
+ * what the coverage of each area would give by chance; the time-shift test on demand;
+ * the calibration metrics of the fits against matched quiet moments.
+ */
+@Composable
+private fun AgainstChance(
+    events: List<LedgerEventRecord>,
+    zone: ZoneId,
+    chance: ChanceResult?,
+    stage: String?,
+    error: String?,
+    surrogate: SurrogateRecord?,
+    shifting: Boolean,
+    shiftError: String?,
+    onShift: () -> Unit,
+) {
+    SectionLabel("Against chance")
+    Text(
+        "Each area's reading is read as an exact function of time over the span, from the year before your earliest event to today, so the chance that a random instant is supported is known, not guessed.",
+        style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft,
+    )
+    ErrorLine(error)
+    if (chance == null) {
+        if (error == null) Text(stage ?: "Reading the coverage…", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        return
+    }
+    val tally = chance.tally
+
+    Text(tally.words, fontFamily = KshanaFonts.serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text)
+    if (tally.total > 0u) {
+        Text(
+            "${tally.supported} of ${tally.total} supported · chance would give %.1f ± %.1f · %s".format(tally.expected, tally.sd, oneIn(tally.pValue)),
+            fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky,
+        )
+        Text("p = %.3f at threshold %.2f".format(tally.pValue, tally.threshold), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
+    }
+
+    for ((i, e) in tally.perEvent.withIndex()) {
+        HorizontalDivider(color = KshanaColors.LineSoft)
+        TallyRow(e, events.getOrNull(i)?.note.orEmpty(), zone)
+    }
+    if (tally.perEvent.isNotEmpty()) HorizontalDivider(color = KshanaColors.LineSoft)
+    if (tally.excluded > 0u) {
+        Text(
+            "${plural(tally.excluded.toInt(), "event")} shown but not counted: the area is supported so much of the time that the test cannot fail for it.",
+            style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+        )
+    }
+    for (w in tally.coverageWords) {
+        Text("· $w", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+    }
+
+    Spacer(Modifier.height(4.dp))
+    QuietButton(if (shifting) "SHIFTING…" else "SHIFT THE SKY", onClick = { if (!shifting) onShift() }, modifier = Modifier.fillMaxWidth())
+    if (shifting) {
+        Text(
+            "Moving the ${plural(events.size, "event")} together by ${SHIFTS.toInt()} offsets around the span, keeping every gap between them…",
+            style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+        )
+    } else if (surrogate == null) {
+        Text(
+            "Keeps the shape of your life, every gap between events, and slides the whole set around the span ${SHIFTS.toInt()} times. If the periods fit wherever it lands, they fit nothing in particular.",
+            style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+        )
+    }
+    ErrorLine(shiftError)
+    if (surrogate != null) {
+        Text(surrogate.words, fontFamily = KshanaFonts.serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text)
+        Text(
+            "p = %.3f · real mean %.2f · %d shifts".format(surrogate.p, surrogate.realMean, surrogate.shifts.toInt()),
+            fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky,
+        )
+        ShiftStrip(surrogate)
+    }
+
+    SectionLabel("Calibration")
+    val metrics = chance.metrics
+    when {
+        metrics != null -> MetricsBlock(metrics)
+        chance.metricsError != null -> ErrorLine(chance.metricsError)
+        else -> Text(stage ?: "Scoring the quiet moments…", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+    }
+    Spacer(Modifier.height(4.dp))
+    Text(
+        "The dasha part of every fit is exact; the transit part is sampled once per pratyantar cell. The quiet moments are ${METRICS_PER_EVENT.toInt()} per event, matched to the span.",
+        fontFamily = KshanaFonts.serif, fontStyle = FontStyle.Italic, fontSize = 14.sp, lineHeight = 20.sp, color = KshanaColors.Muted,
+    )
+}
+
+/** One event in the tally: what and when, its fit against the chance of its area, whether it counts. */
+@Composable
+private fun TallyRow(e: TallyEventRecord, note: String, zone: ZoneId) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(note.trim().ifEmpty { "${e.kind} · ${e.area}" }, fontFamily = KshanaFonts.serif, fontSize = 16.sp, color = KshanaColors.Text)
+            Text(
+                "${localText(e.at, DATE_ONLY, zone)} · ${e.area} · ${e.kind.lowercase()}",
+                style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+            )
+            Text(
+                "fit %.2f · random instant %.0f%%".format(e.fit, e.coverage * 100.0),
+                fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted,
+            )
+        }
+        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(start = 12.dp)) {
+            Text(
+                if (e.supported) "SUPPORTED" else "NOT",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (e.supported) KshanaColors.Gold else KshanaColors.Muted,
+            )
+            if (e.cannotFail) Tag("CANNOT FAIL", color = KshanaColors.Muted)
+        }
+    }
+}
+
+/**
+ * The shifted means as a strip: one thin sky tick per offset at its mean fit, the real
+ * placement as a gold line. Ticks at or right of the gold line are the shifts that
+ * scored at least as well.
+ */
+@Composable
+private fun ShiftStrip(s: SurrogateRecord) {
+    val shape = RoundedCornerShape(8.dp)
+    Column(
+        Modifier.fillMaxWidth().clip(shape).background(KshanaColors.Surface).border(1.dp, KshanaColors.Line, shape).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Canvas(Modifier.fillMaxWidth().height(48.dp)) {
+            val w = size.width
+            val h = size.height
+            fun x(v: Double): Float = (v.coerceIn(0.0, 1.0) * w).toFloat()
+            drawLine(KshanaColors.LineSoft, Offset(0f, h / 2f), Offset(w, h / 2f), 1f)
+            for (m in s.shiftedMeans) {
+                val px = x(m)
+                drawLine(KshanaColors.Sky.copy(alpha = 0.35f), Offset(px, h * 0.25f), Offset(px, h * 0.75f), 1f)
+            }
+            val rx = x(s.realMean)
+            drawLine(KshanaColors.Gold, Offset(rx, 0f), Offset(rx, h), 2f)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("mean fit 0", fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Muted)
+            Text("sky ticks shifted · gold where the events are", fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Muted)
+            Text("1", fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Muted)
+        }
+    }
+}
+
+/**
+ * Brier, skill and the reliability bins when the engine says enough has been scored
+ * for a curve; otherwise only its words, which already obey the display rules.
+ */
+@Composable
+private fun MetricsBlock(m: MetricsRecord) {
+    if (m.curveShown) {
+        MonoRow("scored", "${m.n} · ${m.positives} logged")
+        MonoRow("base rate", "%.2f".format(m.baseRate))
+        MonoRow("Brier", "%.3f".format(m.brier))
+        MonoRow("always the base rate", "%.3f".format(m.brierReference))
+        MonoRow("skill", "%+.2f".format(m.skill), valueColor = if (m.skill > 0.0) KshanaColors.Gold else KshanaColors.Sky)
+        MonoRow("reliability · resolution", "%.3f · %.3f".format(m.reliability, m.resolution))
+        MonoRow("ECE", "%.3f".format(m.ece))
+        val shown = m.bins.filter { it.shown }
+        if (shown.isNotEmpty()) {
+            MetricsBinsChart(m.bins)
+            Text(
+                "Bars are the share of each bin that is a logged event, with its 95% interval; the dot is the bin's mean fit. Bins with fewer than five members are left blank.",
+                style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
+            )
+        } else {
+            Text("No bin holds five members yet, so the curve has nothing to show.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+        }
+    }
+    Text(m.words, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+}
+
+/**
+ * The calibration curve from the metrics: a sky bar per shown bin at its observed rate
+ * with its Wilson interval as a thin line, a gold dot at the mean prediction, and the
+ * diagonal where a perfectly calibrated score would sit.
+ */
+@Composable
+internal fun MetricsBinsChart(bins: List<MetricsBinRecord>) {
+    val measurer = rememberTextMeasurer()
+    val label = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Muted)
+    val labelGold = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Gold)
+    val shape = RoundedCornerShape(8.dp)
+    Column(
+        Modifier.fillMaxWidth().clip(shape).background(KshanaColors.Surface).border(1.dp, KshanaColors.Line, shape).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Canvas(Modifier.fillMaxWidth().height(180.dp)) {
+            val left = 28.dp.toPx()
+            val right = size.width - 6.dp.toPx()
+            val top = 14.dp.toPx()
+            val bottom = size.height - 16.dp.toPx()
+            val w = right - left
+            val h = bottom - top
+            fun x(v: Double): Float = left + (v.coerceIn(0.0, 1.0) * w).toFloat()
+            fun y(v: Double): Float = bottom - (v.coerceIn(0.0, 1.0) * h).toFloat()
+
+            drawLine(KshanaColors.Line, Offset(left, top), Offset(left, bottom), strokeWidth = 1f)
+            drawLine(KshanaColors.Line, Offset(left, bottom), Offset(right, bottom), strokeWidth = 1f)
+            drawLine(
+                KshanaColors.Line, Offset(x(0.0), y(0.0)), Offset(x(1.0), y(1.0)),
+                strokeWidth = 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f)),
+            )
+            for (v in listOf(0.0, 0.5, 1.0)) {
+                val lay = measurer.measure("%.1f".format(v), label)
+                drawText(lay, topLeft = Offset(left - lay.size.width - 4f, y(v) - lay.size.height / 2f))
+            }
+
+            for (b in bins) {
+                val cx = x(0.5 * (b.lo + b.hi))
+                val barWidth = (x(b.hi) - x(b.lo)) * 0.5f
+                val xl = measurer.measure("%.1f".format(0.5 * (b.lo + b.hi)), label)
+                drawText(xl, topLeft = Offset(cx - xl.size.width / 2f, bottom + 3f))
+                if (!b.shown) continue
+                val yTop = y(b.observedRate)
+                drawRect(KshanaColors.Sky.copy(alpha = 0.55f), topLeft = Offset(cx - barWidth / 2f, yTop), size = Size(barWidth, bottom - yTop))
+                drawLine(KshanaColors.Sky, Offset(cx, y(b.observedLo)), Offset(cx, y(b.observedHi)), strokeWidth = 1.5f)
+                drawCircle(KshanaColors.Gold, radius = 2.5.dp.toPx(), center = Offset(x(b.predictedMean), yTop))
+                val cl = measurer.measure("n=${b.count}", labelGold)
+                drawText(cl, topLeft = Offset(cx - cl.size.width / 2f, (y(b.observedHi) - cl.size.height - 2f).coerceAtLeast(0f)))
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("bins by fit →", fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Muted)
+            Text("bar share logged · line 95% · dot mean fit", fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Muted)
         }
     }
 }
@@ -769,7 +1132,7 @@ private fun LedgerTextField(value: String, onChange: (String) -> Unit, label: St
 }
 
 @Composable
-private fun LedgerNumberField(value: String, onChange: (String) -> Unit, label: String, modifier: Modifier = Modifier, enabled: Boolean = true) {
+internal fun LedgerNumberField(value: String, onChange: (String) -> Unit, label: String, modifier: Modifier = Modifier, enabled: Boolean = true) {
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
@@ -784,7 +1147,7 @@ private fun LedgerNumberField(value: String, onChange: (String) -> Unit, label: 
 }
 
 @Composable
-private fun ledgerFieldColors() = OutlinedTextFieldDefaults.colors(
+internal fun ledgerFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedTextColor = KshanaColors.Text,
     unfocusedTextColor = KshanaColors.Text,
     disabledTextColor = KshanaColors.Muted,

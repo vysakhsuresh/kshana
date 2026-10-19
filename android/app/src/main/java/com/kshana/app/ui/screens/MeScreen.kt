@@ -68,6 +68,8 @@ fun MeScreen(
     onTimeLords: () -> Unit = {},
     onDiary: () -> Unit = {},
     onStrength: () -> Unit = {},
+    onSealed: () -> Unit = {},
+    onQuiz: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var atmakaraka by remember { mutableStateOf<KarakaRecord?>(null) }
@@ -153,6 +155,8 @@ fun MeScreen(
         if (profile != null) {
             Door("Your life, logged", "Dated events scored against the chart; does it know?", onLedger)
             Door("The diary", "Every note you keep is stamped with the exact sky it was written under.", onDiary)
+            Door("Sealed forecasts", "Say it before the window opens; only what was sealed is scored.", onSealed)
+            Door("Asked first", "The chart names its stretches among decoys before you say a word; you say where it happened.", onQuiz)
         }
 
         SectionLabel("Chart details")
