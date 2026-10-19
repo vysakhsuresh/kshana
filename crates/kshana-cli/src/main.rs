@@ -547,6 +547,129 @@ fn main() {
         }
         return;
     }
+    if sub == "varsha" {
+        let year: i64 = arg("--year").and_then(|s| s.parse().ok()).unwrap_or(2026);
+        let tz = arg("--tz").and_then(|s| parse_tz(&s)).unwrap_or(0);
+        let natal = compute(&spk, eop.as_ref(), &input).unwrap_or_else(|e| {
+            eprintln!("varsha: {e:?}");
+            std::process::exit(1);
+        });
+        let v = kshana_tajika::varshaphala(
+            &spk,
+            eop.as_ref(),
+            &natal,
+            &input.observer,
+            Ayanamsa::Lahiri,
+            year,
+        )
+        .unwrap_or_else(|e| {
+            eprintln!("varsha: {e:?}");
+            std::process::exit(1);
+        });
+        let local = |i: kshana_time::Instant| {
+            let u = Utc::from_instant(i.add_ns(tz as i128 * 60_000_000_000));
+            format!(
+                "{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:06}",
+                u.year,
+                u.month,
+                u.day,
+                u.hour,
+                u.minute,
+                u.second,
+                u.nanos / 1_000
+            )
+        };
+        println!(
+            "KSHANA · varshaphala {} · age {} · return {} ({})",
+            v.year,
+            v.age,
+            local(v.instant),
+            if v.day { "day" } else { "night" }
+        );
+        println!(
+            "Muntha {} in house {} · lord {:?} · Varshesha {:?}",
+            kshana_speak::SIGN_NAMES[v.muntha.0 % 12],
+            v.muntha.1,
+            v.muntha_lord,
+            v.varshesha
+        );
+        for r in &v.reasoning {
+            println!("  · {r}");
+        }
+        println!("Sahams:");
+        for sh in v.sahams.iter().take(12) {
+            println!(
+                "  {:<14} {:>8.3}°  house {:<2} {}",
+                sh.name, sh.longitude, sh.house, sh.meaning
+            );
+        }
+        println!("Yogas:");
+        for y in &v.yogas {
+            println!("  {}", y.words);
+        }
+        println!("Mudda:");
+        for m in &v.mudda {
+            println!(
+                "  {:<8} {} → {}",
+                format!("{:?}", m.lord),
+                local(m.start),
+                local(m.end)
+            );
+        }
+        return;
+    }
+    if sub == "directions" {
+        let at = arg("--at")
+            .and_then(|s| parse_utc(&s))
+            .and_then(|u| u.to_instant().ok())
+            .unwrap_or_else(now_instant);
+        let tz = arg("--tz").and_then(|s| parse_tz(&s)).unwrap_or(0);
+        let natal = compute(&spk, eop.as_ref(), &input).unwrap_or_else(|e| {
+            eprintln!("directions: {e:?}");
+            std::process::exit(1);
+        });
+        let local = |i: kshana_time::Instant| {
+            let u = Utc::from_instant(i.add_ns(tz as i128 * 60_000_000_000));
+            format!(
+                "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
+                u.year, u.month, u.day, u.hour, u.minute, u.second
+            )
+        };
+        match kshana_directions::progressions(&spk, &natal, lat, at) {
+            Ok(p) => {
+                println!("Secondary progressions at {} (progressed instant {}): arc {:.4}°, MC {:.3}°, Asc {:.3}°, Moon phase {:.1}° ({})", local(at), local(p.instant), p.solar_arc, p.mc, p.asc, p.moon_phase_deg, p.lunation_phase);
+                for b in &p.bodies {
+                    println!("  {:<8} {:>9.4}°  {:+.4}°/d", b.name, b.longitude, b.speed);
+                }
+            }
+            Err(e) => eprintln!("progressions: {e:?}"),
+        }
+        if let Ok(pf) = kshana_directions::profections(&spk, &natal, at) {
+            println!(
+                "Profection: age {} · year {:?} ({:?}) {} → {} · month {} {:?} ({:?})",
+                pf.age,
+                pf.year_sign,
+                pf.year_lord,
+                local(pf.year_start),
+                local(pf.year_end),
+                pf.month,
+                pf.month_sign,
+                pf.month_lord
+            );
+        }
+        let day = kshana_directions::is_day_at(&spk, eop.as_ref(), &input.observer, natal.instant)
+            .unwrap_or(true);
+        if let Some(f) = kshana_directions::firdaria_at(natal.instant, day, at) {
+            println!(
+                "Firdaria: {} / {} · {} → {}",
+                f.lord.name(),
+                f.sub.map(|s| s.name()).unwrap_or("—"),
+                local(f.start),
+                local(f.end)
+            );
+        }
+        return;
+    }
     if sub == "life" {
         let ch = compute(&spk, eop.as_ref(), &input).unwrap_or_else(|e| {
             eprintln!("life: {e:?}");

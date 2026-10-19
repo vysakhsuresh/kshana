@@ -41,6 +41,7 @@ import com.kshana.app.ui.screens.CompatibilityScreen
 import com.kshana.app.ui.screens.FamilyScreen
 import com.kshana.app.ui.screens.GlossaryScreen
 import com.kshana.app.ui.screens.LifeMapScreen
+import com.kshana.app.ui.screens.LedgerScreen
 import com.kshana.app.ui.screens.LifeScreen
 import com.kshana.app.ui.screens.MeScreen
 import com.kshana.app.ui.screens.MomentsScreen
@@ -221,12 +222,14 @@ private fun App() {
                     onNarrate = { open("narrate") },
                     onTransits = { open("transits") },
                     onRiver = { open("trace") },
+                    onLedger = { open("ledger") },
                 )
             }
 
             // ---- behind the doors ----
             composable("lifemap") { withProfile { LifeMapScreen(it, settings, onBack = back) } }
             composable("transits") { withProfile { TransitsScreen(it, settings, onBack = back) } }
+            composable("ledger") { withProfile { LedgerScreen(it, settings, onBack = back) } }
             composable("trace") {
                 withProfile { TraceScreen(it, ProfileStore.currentLocation(context), settings, onBack = back) }
             }

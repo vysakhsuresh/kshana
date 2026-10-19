@@ -283,14 +283,17 @@ name = "kshana-cli"
 version = "0.1.0"
 dependencies = [
  "kshana-chart",
+ "kshana-directions",
  "kshana-ephem",
  "kshana-events",
  "kshana-forecast",
  "kshana-frames",
  "kshana-houses",
+ "kshana-ledger",
  "kshana-rules",
  "kshana-sky",
  "kshana-speak",
+ "kshana-tajika",
  "kshana-time",
  "kshana-trace",
  "kshana-vedic",
@@ -515,8 +518,11 @@ version = "0.1.0"
 name = "kshana-trace"
 version = "0.1.0"
 dependencies = [
+ "kshana-chart",
  "kshana-ephem",
  "kshana-events",
+ "kshana-frames",
+ "kshana-houses",
  "kshana-sky",
  "kshana-solver",
  "kshana-time",

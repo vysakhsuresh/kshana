@@ -14,11 +14,13 @@ pub mod dashas;
 pub mod directions;
 pub mod ledger;
 pub mod life;
+pub mod tajika;
 pub mod trace;
 pub use dashas::*;
 pub use directions::*;
 pub use ledger::*;
 pub use life::*;
+pub use tajika::*;
 pub use trace::*;
 
 /// Engine version string, from the workspace version.
