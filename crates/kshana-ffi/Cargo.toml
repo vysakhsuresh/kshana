@@ -34,6 +34,8 @@ kshana-forecast = { workspace = true }
 kshana-speak = { workspace = true }
 kshana-trace = { workspace = true }
 kshana-ledger = { workspace = true }
+kshana-directions = { workspace = true }
+kshana-tajika = { workspace = true }
 
 [lints]
 workspace = true
