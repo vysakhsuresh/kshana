@@ -35,7 +35,7 @@ mod instant;
 mod leap;
 mod tdb;
 
-pub use civil::{civil_from_days, days_from_civil, Utc, UtcError};
+pub use civil::{civil_from_days, civil_label_uncertainty_s, days_from_civil, Utc, UtcError};
 pub use delta_t::{delta_t_for_year, ut1_jd_from_delta_t, DeltaT, Ut1};
 pub use eop::{EopRow, EopTable};
 pub use instant::{Instant, TwoPartJd, NS_PER_DAY, NS_PER_SEC, TT_MINUS_TAI_NS};

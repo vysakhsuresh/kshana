@@ -379,8 +379,11 @@ dependencies = [
 name = "kshana-ffi"
 version = "0.1.0"
 dependencies = [
+ "kshana-bala",
  "kshana-chart",
+ "kshana-day",
  "kshana-directions",
+ "kshana-eclipse",
  "kshana-ephem",
  "kshana-events",
  "kshana-forecast",
@@ -444,6 +447,24 @@ dependencies = [
  "kshana-trace",
  "kshana-vedic",
  "kshana-western",
+]
+
+[[package]]
+name = "kshana-marga"
+version = "0.1.0"
+dependencies = [
+ "kshana-bala",
+ "kshana-chart",
+ "kshana-day",
+ "kshana-ephem",
+ "kshana-events",
+ "kshana-frames",
+ "kshana-houses",
+ "kshana-rules",
+ "kshana-sky",
+ "kshana-solver",
+ "kshana-time",
+ "kshana-vedic",
 ]
 
 [[package]]

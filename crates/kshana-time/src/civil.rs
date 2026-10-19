@@ -215,6 +215,39 @@ fn days_in_month(y: i64, m: u32) -> u32 {
     }
 }
 
+/// How well a civil (UTC or zone) label of this instant can be known today, in
+/// seconds. Within the leap-second table and the six months the IERS announces ahead
+/// it is exact; beyond that a leap second may be inserted at any half-year boundary
+/// until 2035, when the CGPM stops them, so the label is uncertain by one second per
+/// possible insertion; before 1972 it is the ΔT reading, about a second.
+pub fn civil_label_uncertainty_s(i: Instant) -> f64 {
+    let u = Utc::from_instant(i);
+    if u.utc_day() < LEAP_SECONDS[0].0 {
+        return 1.0;
+    }
+    let (last_day, _) = LEAP_SECONDS[LEAP_SECONDS.len() - 1];
+    let known_until = last_day + 183;
+    let day = u.utc_day();
+    if day <= known_until {
+        return 0.0;
+    }
+    // Possible insertions: June 30 and December 31 of each year until 2035.
+    let (y_known, _, _) = civil_from_days(known_until);
+    let mut count = 0.0;
+    let end_year = u.year.min(2035);
+    let mut y = y_known;
+    while y <= end_year {
+        for (m, d) in [(6, 30), (12, 31)] {
+            let boundary = days_from_civil(y, m, d);
+            if boundary > known_until && boundary < day {
+                count += 1.0;
+            }
+        }
+        y += 1;
+    }
+    count
+}
+
 /// TAI − UT in nanoseconds for a calendar year before 1972: ΔT − 32.184 s, rounded to
 /// the millisecond so the two directions of the conversion agree exactly.
 fn pre_1972_tai_minus_ut_ns(year: i64) -> i128 {
@@ -224,6 +257,39 @@ fn pre_1972_tai_minus_ut_ns(year: i64) -> i128 {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn civil_labels_far_ahead_carry_the_leap_second_floor() {
+        use super::*;
+        let now = Utc::new(2026, 10, 19, 0, 0, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        let far = Utc::new(2033, 1, 1, 0, 0, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        let beyond = Utc::new(2060, 1, 1, 0, 0, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        let old = Utc::new(1950, 1, 1, 0, 0, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        assert!(civil_label_uncertainty_s(now) <= civil_label_uncertainty_s(far));
+        assert!(civil_label_uncertainty_s(far) >= 6.0);
+        assert_eq!(
+            civil_label_uncertainty_s(beyond),
+            civil_label_uncertainty_s(
+                Utc::new(2036, 1, 1, 0, 0, 0, 0)
+                    .unwrap()
+                    .to_instant()
+                    .unwrap()
+            )
+        );
+        assert_eq!(civil_label_uncertainty_s(old), 1.0);
+    }
+
     #[test]
     fn births_before_1972_round_trip_through_universal_time() {
         use super::*;

@@ -8,7 +8,7 @@ members = [
     "crates/kshana-houses",
     "crates/kshana-western",
     "crates/kshana-vedic",
-    "crates/kshana-ffi", "crates/kshana-sky", "crates/kshana-cli", "crates/kshana-events", "crates/kshana-verify", "crates/kshana-chart", "crates/kshana-rules", "crates/kshana-forecast", "crates/kshana-speak", "crates/kshana-trace", "crates/kshana-ledger", "crates/kshana-directions", "crates/kshana-tajika", "crates/kshana-day", "crates/kshana-eclipse", "crates/kshana-bala",
+    "crates/kshana-ffi", "crates/kshana-sky", "crates/kshana-cli", "crates/kshana-events", "crates/kshana-verify", "crates/kshana-chart", "crates/kshana-rules", "crates/kshana-forecast", "crates/kshana-speak", "crates/kshana-trace", "crates/kshana-ledger", "crates/kshana-directions", "crates/kshana-tajika", "crates/kshana-day", "crates/kshana-eclipse", "crates/kshana-bala", "crates/kshana-marga",
 ]
 
 [workspace.package]
@@ -34,6 +34,7 @@ kshana-rules = { path = "crates/kshana-rules" }
 kshana-forecast = { path = "crates/kshana-forecast" }
 kshana-speak = { path = "crates/kshana-speak" }
 kshana-trace = { path = "crates/kshana-trace" }
+kshana-marga = { path = "crates/kshana-marga" }
 kshana-bala = { path = "crates/kshana-bala" }
 kshana-eclipse = { path = "crates/kshana-eclipse" }
 kshana-day = { path = "crates/kshana-day" }

@@ -104,8 +104,32 @@ impl Transition {
     /// sensitivity to the recorded birth time is a separate number
     /// ([`dasha_shift_per_second_ns`]).
     pub fn physical_uncertainty_ns(&self) -> i128 {
-        physical_uncertainty_ns(&self.change)
+        physical_uncertainty_ns_at(&self.change, self.at)
     }
+
+    /// How well the civil label (UTC or a zone) of this instant can be printed today,
+    /// in seconds: the leap-second floor of `kshana_time::civil_label_uncertainty_s`.
+    pub fn civil_label_uncertainty_s(&self) -> f64 {
+        kshana_time::civil_label_uncertainty_s(self.at)
+    }
+}
+
+/// [`physical_uncertainty_ns`] widened by the Earth-rotation (ΔT) uncertainty at the
+/// instant for everything that depends on the rotating Earth: sunrise, horas and the
+/// rising degree. Within the IERS table that term is a few milliseconds; decades ahead
+/// it grows to seconds, and the ascendant's sub-sub then means less than it prints.
+pub fn physical_uncertainty_ns_at(c: &Change, at: Instant) -> i128 {
+    let base = physical_uncertainty_ns(c);
+    let rotation_bound = matches!(
+        c,
+        Change::Hora(_) | Change::Sunrise | Change::Sunset | Change::Enter { body: "Lagna", .. }
+    );
+    if !rotation_bound {
+        return base;
+    }
+    let year = 2000.0 + at.tt_centuries_since_j2000() * 100.0;
+    let sigma_s = kshana_time::delta_t_for_year(year).sigma;
+    base + (sigma_s * 1e9) as i128
 }
 
 /// See [`Transition::physical_uncertainty_ns`].

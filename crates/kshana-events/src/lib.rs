@@ -524,8 +524,51 @@ pub fn sun_altitude(
 /// Standard rising/setting altitude of the Sun's centre: refraction 34′ plus semi-diameter 16′.
 pub const SUN_RISE_SET_ALT: f64 = -0.8333;
 
-/// Sunrise and sunset instants (Sun's centre at −0°50′) in `[from, to]`, as
-/// `(rises, sets)` lists. Polar day or night yields empty lists.
+/// Which sunrise the day's clocks are built on. The two conventions differ by about
+/// two minutes at the tropics and more at high latitudes, which moves every hora,
+/// Rahu kala, ghati and Gulika by the same amount.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RiseConvention {
+    /// The Sun's upper limb with refraction (centre at −0°50′): Western almanacs, Drik Panchang.
+    UpperLimbRefracted,
+    /// The Sun's centre on the geometric horizon, no refraction: the Hindu rising
+    /// (Swiss Ephemeris `SE_BIT_HINDU_RISING`), Kerala and Tamil almanacs.
+    CentreGeometric,
+}
+
+impl RiseConvention {
+    /// The altitude of the Sun's centre at rising and setting under this convention.
+    pub fn altitude_deg(self) -> f64 {
+        match self {
+            RiseConvention::UpperLimbRefracted => SUN_RISE_SET_ALT,
+            RiseConvention::CentreGeometric => 0.0,
+        }
+    }
+}
+
+static RISE_CONVENTION: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+
+/// Set the process-wide rising convention used by every sunrise-based clock.
+pub fn set_rise_convention(c: RiseConvention) {
+    RISE_CONVENTION.store(
+        match c {
+            RiseConvention::UpperLimbRefracted => 0,
+            RiseConvention::CentreGeometric => 1,
+        },
+        std::sync::atomic::Ordering::Relaxed,
+    );
+}
+
+/// The process-wide rising convention (upper limb with refraction unless changed).
+pub fn rise_convention() -> RiseConvention {
+    match RISE_CONVENTION.load(std::sync::atomic::Ordering::Relaxed) {
+        1 => RiseConvention::CentreGeometric,
+        _ => RiseConvention::UpperLimbRefracted,
+    }
+}
+
+/// Sunrise and sunset instants under the process-wide [`rise_convention`] in
+/// `[from, to]`, as `(rises, sets)` lists. Polar day or night yields empty lists.
 pub fn sun_rise_set(
     spk: &Spk,
     eop: Option<&EopTable>,
@@ -534,7 +577,8 @@ pub fn sun_rise_set(
     to: Instant,
     tol_ns: i128,
 ) -> Result<(Vec<Instant>, Vec<Instant>), EventError> {
-    let f = |t: Instant| sun_altitude(spk, eop, obs, t).map(|a| a - SUN_RISE_SET_ALT);
+    let alt = rise_convention().altitude_deg();
+    let f = |t: Instant| sun_altitude(spk, eop, obs, t).map(|a| a - alt);
     let mut rises = Vec::new();
     let mut sets = Vec::new();
     let step = 20 * 60 * NS_PER_SEC;

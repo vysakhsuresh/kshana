@@ -203,8 +203,7 @@ impl Engine {
         lagna_finest: Finest,
     ) -> Result<Vec<TransitionRecord>, KshanaError> {
         let who = person(birth, moon_sidereal, latitude_deg, longitude_deg, ayanamsa);
-        let from_i: Instant = from.into();
-        let to_i: Instant = to.into();
+        let (from_i, to_i) = self.clip_to_kernel(from.into(), to.into())?;
         if to_i.ns_since(from_i) > 400 * 86_400 * 1_000_000_000 {
             return Err(KshanaError::Engine(
                 "trace windows are at most 400 days; ask for the next window".to_string(),
@@ -285,6 +284,33 @@ pub struct CoverageRecord {
     pub segments: u32,
 }
 
+impl Engine {
+    /// Clip a window to the kernel's coverage (a day inside each end), erroring only
+    /// when nothing of it is covered.
+    fn clip_to_kernel(
+        &self,
+        from: Instant,
+        to: Instant,
+    ) -> Result<(Instant, Instant), KshanaError> {
+        let c = self.kernel_coverage();
+        let start: Instant = c.start.into();
+        let end: Instant = c.end.into();
+        let day = 86_400 * 1_000_000_000;
+        let lo = start.add_ns(day);
+        let hi = end.add_ns(-day);
+        let f = if from < lo { lo } else { from };
+        let t = if to > hi { hi } else { to };
+        if t <= f {
+            return Err(KshanaError::Engine(format!(
+                "the loaded kernel covers {} to {} only; this window lies outside it",
+                kshana_speak::date_words(start),
+                kshana_speak::date_words(end)
+            )));
+        }
+        Ok((f, t))
+    }
+}
+
 #[uniffi::export]
 impl Engine {
     /// The next `count` transitions after `from`, found by widening the window
@@ -342,6 +368,12 @@ impl Engine {
             }
         }
         Ok(Vec::new())
+    }
+
+    /// How well a civil label of `at` can be printed today, in seconds (the leap-second
+    /// floor): 0 within the known table, one per possible insertion until 2035.
+    pub fn civil_label_uncertainty(&self, at: ExactInstant) -> f64 {
+        kshana_time::civil_label_uncertainty_s(at.into())
     }
 
     /// The Sun's apparent altitude in degrees at a place, refraction excluded.
@@ -425,6 +457,34 @@ pub fn dasha_sensitivity(
                 kshana_trace::LEVEL_NAMES[(depth as usize).clamp(1, 9) - 1]
             )
         },
+    }
+}
+
+/// Set the process-wide sunrise convention: "hindu" (the Sun's centre on the
+/// geometric horizon, as Kerala and Tamil almanacs reckon) or "western" (upper limb
+/// with refraction, the default). Every hora, Rahu kala, ghati, Gulika and muhurta
+/// follows it.
+#[uniffi::export]
+pub fn set_rise_convention(name: String) -> bool {
+    match name.to_ascii_lowercase().as_str() {
+        "hindu" | "centre" | "center" | "geometric" => {
+            kshana_events::set_rise_convention(kshana_events::RiseConvention::CentreGeometric);
+            true
+        }
+        "western" | "limb" | "refracted" => {
+            kshana_events::set_rise_convention(kshana_events::RiseConvention::UpperLimbRefracted);
+            true
+        }
+        _ => false,
+    }
+}
+
+/// The current sunrise convention: "hindu" or "western".
+#[uniffi::export]
+pub fn rise_convention() -> String {
+    match kshana_events::rise_convention() {
+        kshana_events::RiseConvention::CentreGeometric => "hindu".into(),
+        kshana_events::RiseConvention::UpperLimbRefracted => "western".into(),
     }
 }
 
