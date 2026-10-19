@@ -215,37 +215,27 @@ fn days_in_month(y: i64, m: u32) -> u32 {
     }
 }
 
-/// How well a civil (UTC or zone) label of this instant can be known today, in
-/// seconds. Within the leap-second table and the six months the IERS announces ahead
-/// it is exact; beyond that a leap second may be inserted at any half-year boundary
-/// until 2035, when the CGPM stops them, so the label is uncertain by one second per
-/// possible insertion; before 1972 it is the ΔT reading, about a second.
+/// The last day on which a leap second has been ruled out: the IERS Bulletin C in
+/// force (July 2026) announces none at the end of December 2026, so the earliest
+/// possible insertion is 2027-06-30. Bump with each bulletin.
+const LEAP_RULED_OUT_BEFORE: (i64, u32, u32) = (2027, 6, 30);
+
+/// How well a civil (UTC) label of `i` can be printed today, in seconds: 0 within the
+/// leap-second table and up to the day the Bulletin C in force has ruled a leap second
+/// out to; one second from then on, since one insertion (or, with the Earth's recent
+/// acceleration, a deletion) remains possible until the CGPM's 2035 deadline and the
+/// rule after it is not yet written; one second before 1972, when UTC had no leap
+/// seconds and the label comes from ΔT. The instant itself is exact in TAI either way.
 pub fn civil_label_uncertainty_s(i: Instant) -> f64 {
     let u = Utc::from_instant(i);
     if u.utc_day() < LEAP_SECONDS[0].0 {
         return 1.0;
     }
-    let (last_day, _) = LEAP_SECONDS[LEAP_SECONDS.len() - 1];
-    let known_until = last_day + 183;
-    let day = u.utc_day();
-    if day <= known_until {
+    let (y, m, d) = LEAP_RULED_OUT_BEFORE;
+    if u.utc_day() < days_from_civil(y, m, d) {
         return 0.0;
     }
-    // Possible insertions: June 30 and December 31 of each year until 2035.
-    let (y_known, _, _) = civil_from_days(known_until);
-    let mut count = 0.0;
-    let end_year = u.year.min(2035);
-    let mut y = y_known;
-    while y <= end_year {
-        for (m, d) in [(6, 30), (12, 31)] {
-            let boundary = days_from_civil(y, m, d);
-            if boundary > known_until && boundary < day {
-                count += 1.0;
-            }
-        }
-        y += 1;
-    }
-    count
+    1.0
 }
 
 /// TAI − UT in nanoseconds for a calendar year before 1972: ΔT − 32.184 s, rounded to
@@ -276,8 +266,8 @@ mod tests {
             .unwrap()
             .to_instant()
             .unwrap();
-        assert!(civil_label_uncertainty_s(now) <= civil_label_uncertainty_s(far));
-        assert!(civil_label_uncertainty_s(far) >= 6.0);
+        assert_eq!(civil_label_uncertainty_s(now), 0.0);
+        assert_eq!(civil_label_uncertainty_s(far), 1.0);
         assert_eq!(
             civil_label_uncertainty_s(beyond),
             civil_label_uncertainty_s(

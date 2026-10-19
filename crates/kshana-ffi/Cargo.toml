@@ -39,6 +39,7 @@ kshana-tajika = { workspace = true }
 kshana-eclipse = { workspace = true }
 kshana-day = { workspace = true }
 kshana-bala = { workspace = true }
+kshana-marga = { workspace = true }
 
 [lints]
 workspace = true

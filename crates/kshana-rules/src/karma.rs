@@ -32,7 +32,7 @@
 //! claim"): dridha is endured with discipline, the texts promising no relief and asking
 //! for grace and patience; dridha-adridha is softened by remedy after intense and
 //! prolonged effort (the full purascharana, repeated vows); adridha is changed by action
-//! and "can be destroyed totally" by parihara.
+//! and "can be undone entirely" by parihara.
 
 use crate::areas::Area;
 use crate::facts::Facts;
@@ -46,7 +46,7 @@ pub enum KarmaClass {
     Dridha,
     /// Mixed: softened by remedy after intense and prolonged effort.
     DridhaAdridha,
-    /// Not fixed: changed by action; the texts say it can be destroyed totally.
+    /// Not fixed: changed by action; the texts say it can be undone entirely.
     Adridha,
 }
 
@@ -65,7 +65,7 @@ impl KarmaClass {
         match self {
             KarmaClass::Dridha => "endured with discipline: the texts do not promise relief for this; they ask for grace and patience, and conduct is offered as dignity, not as a bargain",
             KarmaClass::DridhaAdridha => "softened by remedy: the texts allow relief after intense and prolonged effort, the full dose repeated (whole purascharana, vows kept to their count)",
-            KarmaClass::Adridha => "changed by action: the texts say this can be destroyed totally by parihara, and new karma is entirely in your hands",
+            KarmaClass::Adridha => "changed by action: the texts say this can be undone entirely by parihara, and new karma is entirely in your hands",
         }
     }
 }
@@ -362,8 +362,8 @@ pub fn may_claim(class: KarmaClass, kind: KarmaKind, rung: u8) -> &'static str {
         (KarmaClass::Dridha, false) => "devotion: the texts do not promise relief for dridha karma; this is offered, not bargained",
         (KarmaClass::DridhaAdridha, true) => "the work itself; relief, the texts say, after intense and prolonged effort",
         (KarmaClass::DridhaAdridha, false) => "softens with the full dose repeated: the whole purascharana, vows kept to their count",
-        (KarmaClass::Adridha, true) => "changes it: the texts say an adridha affliction can be destroyed totally",
-        (KarmaClass::Adridha, false) => "the texts say it can be destroyed totally by parihara; this supports the conduct above",
+        (KarmaClass::Adridha, true) => "changes it: the texts say an adridha affliction can be undone entirely",
+        (KarmaClass::Adridha, false) => "the texts say it can be undone entirely by parihara; this supports the conduct above",
     }
 }
 
@@ -524,9 +524,7 @@ mod tests {
     fn rung_claims_follow_the_ladder() {
         assert!(may_claim(KarmaClass::Dridha, KarmaKind::Prarabdha, 1).contains("endurance"));
         assert!(may_claim(KarmaClass::Dridha, KarmaKind::Prarabdha, 5).contains("devotion"));
-        assert!(
-            may_claim(KarmaClass::Adridha, KarmaKind::Prarabdha, 2).contains("destroyed totally")
-        );
+        assert!(may_claim(KarmaClass::Adridha, KarmaKind::Prarabdha, 2).contains("undone entirely"));
         assert!(may_claim(KarmaClass::Adridha, KarmaKind::Kriyamana, 5).contains("support only"));
         assert!(may_claim(KarmaClass::DridhaAdridha, KarmaKind::Sanchita, 4).contains("full dose"));
         assert!(

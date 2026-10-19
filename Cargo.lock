@@ -390,6 +390,7 @@ dependencies = [
  "kshana-frames",
  "kshana-houses",
  "kshana-ledger",
+ "kshana-marga",
  "kshana-rules",
  "kshana-sky",
  "kshana-solver",

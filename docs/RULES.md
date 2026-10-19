@@ -161,6 +161,9 @@ can consult its own.
 
 ## Further dashas
 
+Every dasha balance is taken from the geocentric Moon with a 365.25-day year; the
+topocentric toggle changes placements only. Both are stated in the provenance.
+
 Yogini (36-year cycle, starting yogini = (nakshatra number + 3) mod 8, antardashas proportional from the running yogini; BPHS), Ashtottari (108 years; Sun 6, Moon 15, Mars 8, Mercury 17, Saturn 10, Jupiter 19, Rahu 12, Venus 21; nakshatra groups alternating 4/3 from Ardra; applies when Rahu is in a kendra or trikona from the lagna lord and not in the lagna; BPHS 47), Kalachakra (the 108-row BPHS table, paramayus 100/85/83/86, deha and jeeva signs, pada-fraction balance; BPHS 46), Chara (K. N. Rao: direction by the ninth house's oddness; years = count to the lord's sign minus one, own sign 12, exalted +1, debilitated −1; antardashas start from the sign after the dasha sign). Every boundary is integer arithmetic from the birth instant.
 
 ## Western timing

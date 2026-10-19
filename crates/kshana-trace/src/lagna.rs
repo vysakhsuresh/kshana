@@ -29,30 +29,41 @@ pub fn ascendant_sidereal(
     sidereal(a.asc, ayanamsa_degrees(ayanamsa, tc))
 }
 
-/// Shift of every Vimshottari boundary per second of birth-time error, in nanoseconds.
-///
-/// The dasha balance is the fraction of the Moon's nakshatra left at birth; one
-/// arcsecond of the Moon is 120 years × 1″ / 48 000″ of the whole cycle, about 22
-/// hours. With the Moon's speed at birth in degrees per day the shift per second
-/// follows exactly.
-pub fn dasha_shift_per_second_ns(moon_speed_deg_per_day: f64, year_ns: i128) -> i128 {
-    let arcsec_per_second = moon_speed_deg_per_day.abs() * 3_600.0 / 86_400.0;
-    let cycle_ns = 120.0 * year_ns as f64;
-    (cycle_ns * arcsec_per_second / 48_000.0) as i128
+/// Years of the Vimshottari lord of the nakshatra holding `moon_sidereal_deg`: the
+/// first mahadasha's lord, whose years set how far every boundary moves per second of
+/// birth-time error.
+pub fn first_lord_years(moon_sidereal_deg: f64) -> f64 {
+    const YEARS: [f64; 9] = [7.0, 20.0, 6.0, 10.0, 7.0, 18.0, 16.0, 19.0, 17.0];
+    let idx = (moon_sidereal_deg.rem_euclid(360.0) / (360.0 / 27.0)).floor() as usize % 9;
+    YEARS[idx]
 }
 
-/// The deepest Vimshottari level whose periods are longer than the boundary shift
-/// implied by a birth-time half-window, so the app can grey the levels below it.
-/// Level spans used: 1 year or more for levels 1–3, 32 days for level 4, 5 days for
-/// level 5, 22 hours for level 6, 3.7 hours for level 7, 37 minutes for level 8 and
-/// 6 minutes for level 9 (the longest sub-period of a Venus period at each level).
+/// Shift of every Vimshottari boundary per second of birth-time error, in nanoseconds.
+/// The balance of the first dasha is the Moon's share of its 13°20′ nakshatra, so one
+/// second of birth time moves the first dasha's end, and with it every later boundary,
+/// by (the Moon's motion in a second ÷ 13°20′) × the first lord's years: about 36
+/// minutes for a Sun-first chart and two hours for a Venus-first one at 13.2°/day.
+pub fn dasha_shift_per_second_ns(
+    moon_speed_deg_per_day: f64,
+    first_lord_years: f64,
+    year_ns: i128,
+) -> i128 {
+    let deg_per_second = moon_speed_deg_per_day.abs() / 86_400.0;
+    let fraction = deg_per_second / (360.0 / 27.0);
+    (first_lord_years * year_ns as f64 * fraction) as i128
+}
+
+/// The deepest Vimshottari level (1–9) worth showing for a birth-time half-window:
+/// a level stands while its shortest period outlasts four times the shift the window
+/// implies. With an exact birth time every level stands.
 pub fn meaningful_depth(
     moon_speed_deg_per_day: f64,
+    first_lord_years: f64,
     half_window_seconds: f64,
     year_ns: i128,
 ) -> u8 {
-    let shift =
-        dasha_shift_per_second_ns(moon_speed_deg_per_day, year_ns) as f64 * half_window_seconds;
+    let shift = dasha_shift_per_second_ns(moon_speed_deg_per_day, first_lord_years, year_ns) as f64
+        * half_window_seconds;
     const SPANS_NS: [f64; 9] = [
         20.0 * 365.25 * 86_400e9,
         3.33 * 365.25 * 86_400e9,
@@ -81,16 +92,26 @@ mod tests {
     use kshana_vedic::dasha::YEAR_365_25_NS;
 
     #[test]
-    fn a_second_of_birth_time_moves_the_dashas_by_hours() {
-        let per_s = dasha_shift_per_second_ns(13.2, YEAR_365_25_NS);
+    fn a_second_of_birth_time_moves_the_dashas_by_the_first_lords_years() {
+        // Venus-first (Bharani): 20 years × the Moon's share of the nakshatra per second.
+        let per_s = dasha_shift_per_second_ns(13.2, 20.0, YEAR_365_25_NS);
         let hours = per_s as f64 / 3_600e9;
-        assert!((hours - 12.0).abs() < 1.0, "{hours}");
-        assert_eq!(meaningful_depth(13.2, 0.0, YEAR_365_25_NS), 9);
-        // ±1 s: boundaries move ~12 h; prana (5 days) still stands, deha (22 h) does not
-        assert_eq!(meaningful_depth(13.2, 1.0, YEAR_365_25_NS), 5);
-        // ±5 min: every boundary moves ~150 days; only maha and antar remain
-        assert_eq!(meaningful_depth(13.2, 300.0, YEAR_365_25_NS), 2);
-        // ±3 h: about 15 years; only the mahadasha is worth showing
-        assert_eq!(meaningful_depth(13.2, 10_800.0, YEAR_365_25_NS), 1);
+        assert!((hours - 2.0).abs() < 0.1, "{hours}");
+        // Sun-first (Krittika): 36 minutes per second.
+        let sun = dasha_shift_per_second_ns(13.2, 6.0, YEAR_365_25_NS) as f64 / 60e9;
+        assert!((sun - 36.0).abs() < 2.0, "{sun}");
+        assert_eq!(first_lord_years(0.0), 7.0);
+        assert_eq!(first_lord_years(20.0), 20.0);
+        assert_eq!(first_lord_years(359.9), 17.0);
+        assert_eq!(meaningful_depth(13.2, 20.0, 0.0, YEAR_365_25_NS), 9);
+        // ±1 s: about two hours for Venus-first; deha (22 h) stands, the seventh (3.7 h) not
+        assert_eq!(meaningful_depth(13.2, 20.0, 1.0, YEAR_365_25_NS), 6);
+        assert_eq!(meaningful_depth(13.2, 6.0, 1.0, YEAR_365_25_NS), 7);
+        // ±5 min: about 25 days; pratyantar (203 d) stands, sookshma (32 d) not
+        assert_eq!(meaningful_depth(13.2, 20.0, 300.0, YEAR_365_25_NS), 3);
+        assert_eq!(meaningful_depth(13.2, 6.0, 300.0, YEAR_365_25_NS), 4);
+        // ±3 h: about 900 days; only the mahadasha
+        assert_eq!(meaningful_depth(13.2, 20.0, 10_800.0, YEAR_365_25_NS), 1);
+        assert_eq!(meaningful_depth(13.2, 6.0, 10_800.0, YEAR_365_25_NS), 2);
     }
 }

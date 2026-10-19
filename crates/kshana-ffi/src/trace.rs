@@ -422,19 +422,28 @@ pub struct DashaSensitivityRecord {
     pub words: String,
 }
 
-/// The dasha boundaries' sensitivity to the birth time, for a Moon speed in degrees
-/// per day (from `chart(...).bodies[1].speed`) and a birth-time half-window in seconds.
+/// The dasha boundaries' sensitivity to the birth time, for the natal Moon's sidereal
+/// longitude (its nakshatra names the first lord, whose years scale the shift), the
+/// Moon's speed in degrees per day (from `chart(...).bodies[1].speed`) and a
+/// birth-time half-window in seconds.
 #[uniffi::export]
 pub fn dasha_sensitivity(
+    moon_sidereal: f64,
     moon_speed_deg_per_day: f64,
     half_window_seconds: f64,
 ) -> DashaSensitivityRecord {
-    let per_s = kshana_trace::dasha_shift_per_second_ns(moon_speed_deg_per_day, YEAR_365_25_NS)
-        as f64
-        / 1e9;
+    let years = kshana_trace::first_lord_years(moon_sidereal);
+    let per_s =
+        kshana_trace::dasha_shift_per_second_ns(moon_speed_deg_per_day, years, YEAR_365_25_NS)
+            as f64
+            / 1e9;
     let shift = per_s * half_window_seconds;
-    let depth =
-        kshana_trace::meaningful_depth(moon_speed_deg_per_day, half_window_seconds, YEAR_365_25_NS);
+    let depth = kshana_trace::meaningful_depth(
+        moon_speed_deg_per_day,
+        years,
+        half_window_seconds,
+        YEAR_365_25_NS,
+    );
     let human = if shift >= 86_400.0 * 2.0 {
         format!("{:.0} days", shift / 86_400.0)
     } else if shift >= 7_200.0 {
@@ -570,7 +579,7 @@ mod tests {
         assert!(
             cov.start.tai_seconds < birth.tai_seconds && cov.end.tai_seconds > from.tai_seconds
         );
-        assert_eq!(dasha_sensitivity(13.2, 300.0).meaningful_depth, 2);
+        assert_eq!(dasha_sensitivity(20.0, 13.2, 300.0).meaningful_depth, 3);
         assert!(t.iter().all(|x| !x.words.is_empty() && !x.kind.is_empty()));
         let s = engine
             .snapshot(

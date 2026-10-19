@@ -43,7 +43,7 @@ to the instant shown.
 |---|---|---|---|---|---|
 | JPL DE421 geocentric position (conservative) | Moon 0.05″, Sun 0.05″, outer planets 1″ | 0.3 s | 4 s | 3.5 min | 9 min |
 | Interpolated nutation (10-minute samples) | < 1e-7″ | < 1 ms | — | — | — |
-| ΔT (TT − UT1) for dates past the IERS table | grows ~0.1 s per year ahead | affects wall-clock labels only, not the sky's own order | | | |
+| ΔT (TT − UT1) for dates past the IERS table | sigma ≈ 1.2 ms per day of extrapolation | moves every rotation-bound instant (sunrise, hora, the lagna clock), never the sky's own order | | | |
 | Ayanamsa model (anchored to Swiss Ephemeris values) | 0.002″ over 1900–2050 | 13 ms | 0.2 s | 8 s | 20 s |
 | Sunrise: refraction and the horizon | 20 s typical, more at high latitude | — | | | |
 | ΔT uncertainty for the year (IERS sigma, or the long-term fit's) | 0.01 s today, seconds a century out, minutes a millennium out | added to every rotation-bound instant: hora, sunrise, sunset, the lagna clock | | | |
@@ -63,13 +63,15 @@ prints the numerical resolution beside each instant and this table in Trust.
 ## The birth time and the dasha levels
 
 A dasha boundary is exact arithmetic from the birth instant, but the birth instant is
-what the record says it is. One second of birth-time error moves every Vimshottari
-boundary by about twelve hours (the Moon moves 0.55″ in a second; one arcsecond of
-the Moon is 22 hours of the 120-year cycle). A window of ±5 minutes moves them by
-±150 days; ±3 hours by ±15 years. The River greys the levels whose periods do not
-outlast four times that shift: ±1 s keeps five levels, ±5 min keeps two, ±3 h keeps
-only the mahadasha. The sky's own events (the Moon's subs, the rising degree, the
-tithis) do not depend on the birth time at all.
+what the record says it is. The balance of the first dasha is the Moon's share of its
+13°20′ nakshatra, so one second of birth-time error moves the first dasha's end, and
+with it every later boundary, by the Moon's motion in that second (about 0.55″) as a
+fraction of the nakshatra, times the first lord's years: about 36 minutes for a chart
+whose Moon sits in a Sun nakshatra, two hours for Venus. A window of ±5 minutes moves
+them by 7 to 25 days; ±3 hours by nine months to two and a half years. The River greys
+the levels whose periods do not outlast four times that shift: ±1 s keeps six or seven
+levels, ±5 min keeps three or four, ±3 h keeps one or two. The sky's own events (the
+Moon's subs, the rising degree, the tithis) do not depend on the birth time at all.
 
 The rising degree moves one sub-sub in about twenty seconds. Its physical error bar is
 the Earth-rotation time: about 20 s where the IERS table ends and ΔT is extrapolated,

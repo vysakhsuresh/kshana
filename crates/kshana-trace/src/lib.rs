@@ -25,7 +25,9 @@ use kshana_vedic::{ayanamsa_degrees, karana, sidereal, sub_table, Ayanamsa, Dash
 
 pub use crossings::{crossings, Crossing};
 pub use dasha::{chain_at, dasha_transitions, DashaTransition, LEVEL_NAMES, MAX_DEPTH};
-pub use lagna::{ascendant_sidereal, dasha_shift_per_second_ns, meaningful_depth};
+pub use lagna::{
+    ascendant_sidereal, dasha_shift_per_second_ns, first_lord_years, meaningful_depth,
+};
 pub use zodiac::{subsub_table, Division, SubSub};
 
 /// Sign names.
