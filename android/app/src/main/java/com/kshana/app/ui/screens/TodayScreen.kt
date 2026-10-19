@@ -82,6 +82,7 @@ fun TodayScreen(
     onAsk: () -> Unit,
     onRightTime: () -> Unit,
     onLife: () -> Unit,
+    onRiver: () -> Unit,
     onSettings: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -197,6 +198,16 @@ fun TodayScreen(
                         Text(localText(e.instant, MOMENT_TIME, zone), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
                     }
                 }
+            }
+
+            SectionLabel("The river, next")
+            NextChanges(profile, here, settings, count = 5)
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable(onClick = onRiver),
+                horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("OPEN THE RIVER · EVERY EXACT INSTANT", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+                Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null, tint = KshanaColors.Gold, modifier = Modifier.size(18.dp))
             }
 
             if (!simple) {

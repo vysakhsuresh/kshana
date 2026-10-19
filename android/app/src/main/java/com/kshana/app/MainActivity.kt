@@ -58,6 +58,7 @@ import com.kshana.app.ui.screens.TodayScreen
 import com.kshana.app.ui.screens.TraceScreen
 import com.kshana.app.ui.screens.TrustScreen
 import com.kshana.app.ui.screens.VedicScreen
+import com.kshana.app.ui.sky.LivingSky
 import com.kshana.app.ui.theme.KshanaColors
 import com.kshana.app.ui.theme.KshanaTheme
 
@@ -153,16 +154,20 @@ private fun App() {
             // ---- the five doors ----
             composable("today") {
                 withProfile {
-                    TodayScreen(
-                        profile = it,
-                        here = ProfileStore.currentLocation(context),
-                        settings = settings,
-                        simple = simple,
-                        onAsk = { goTab("prashna") },
-                        onRightTime = { goTab("righttime") },
-                        onLife = { goTab("life") },
-                        onSettings = { open("settings") },
-                    )
+                    val here = ProfileStore.currentLocation(context)
+                    LivingSky(place = here, settings = settings, intensity = 0.7f) {
+                        TodayScreen(
+                            profile = it,
+                            here = here,
+                            settings = settings,
+                            simple = simple,
+                            onAsk = { goTab("prashna") },
+                            onRightTime = { goTab("righttime") },
+                            onLife = { goTab("life") },
+                            onRiver = { open("trace") },
+                            onSettings = { open("settings") },
+                        )
+                    }
                 }
             }
             composable("life") {
