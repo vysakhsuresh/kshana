@@ -55,6 +55,7 @@ fun LifeScreen(
     settings: EngineSettings,
     simple: Boolean,
     onLifeMap: () -> Unit,
+    onRiver: () -> Unit,
     onAreas: () -> Unit,
     onParihara: () -> Unit,
     onChart: () -> Unit,
@@ -125,6 +126,7 @@ fun LifeScreen(
         if (sections.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
             GoldButton("SEE YOUR LIFE MAP", onClick = onLifeMap, modifier = Modifier.fillMaxWidth())
+            QuietButton("THE RIVER · EVERY EXACT INSTANT", onClick = onRiver, modifier = Modifier.fillMaxWidth())
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 QuietButton("TIMING", onClick = onAreas, modifier = Modifier.weight(1f))
                 QuietButton("REMEDIES", onClick = onParihara, modifier = Modifier.weight(1f))

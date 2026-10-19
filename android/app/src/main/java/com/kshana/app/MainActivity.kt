@@ -55,6 +55,7 @@ import com.kshana.app.ui.screens.RectifyScreen
 import com.kshana.app.ui.screens.RightTimeScreen
 import com.kshana.app.ui.screens.SettingsScreen
 import com.kshana.app.ui.screens.TodayScreen
+import com.kshana.app.ui.screens.TraceScreen
 import com.kshana.app.ui.screens.TrustScreen
 import com.kshana.app.ui.screens.VedicScreen
 import com.kshana.app.ui.theme.KshanaColors
@@ -171,6 +172,7 @@ private fun App() {
                         settings = settings,
                         simple = simple,
                         onLifeMap = { open("lifemap") },
+                        onRiver = { open("trace") },
                         onAreas = { open("areas") },
                         onParihara = { open("parihara") },
                         onChart = { open("reading") },
@@ -216,6 +218,9 @@ private fun App() {
 
             // ---- behind the doors ----
             composable("lifemap") { withProfile { LifeMapScreen(it, settings, onBack = back) } }
+            composable("trace") {
+                withProfile { TraceScreen(it, ProfileStore.currentLocation(context), settings, onBack = back) }
+            }
             composable("family") { FamilyScreen(onBack = back) }
             composable("compatibility") {
                 CompatibilityScreen(settings = settings, onFamily = { open("family") }, onBack = back)
