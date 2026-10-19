@@ -38,6 +38,9 @@ impl Finest {
 pub struct TransitionRecord {
     pub at: ExactInstant,
     pub half_width_ns: i64,
+    /// How far the real sky's event may lie from `at`, from the ephemeris and model
+    /// limits (0 for a dasha boundary, which is exact arithmetic).
+    pub physical_ns: i64,
     /// "dasha", "enter", "tithi", "karana", "yoga", "hora", "sunrise", "sunset".
     pub kind: String,
     /// Dasha level (1–9) for "dasha"; 0 otherwise.
@@ -133,6 +136,7 @@ impl Engine {
         planet_finest: Finest,
         panchanga: bool,
         horas: bool,
+        lagna_finest: Finest,
     ) -> Result<Vec<TransitionRecord>, KshanaError> {
         let who = person(birth, moon_sidereal, latitude_deg, longitude_deg, ayanamsa);
         let from_i: Instant = from.into();
@@ -148,15 +152,18 @@ impl Engine {
             planet_finest: planet_finest.division(),
             panchanga,
             horas,
+            lagna_finest: lagna_finest.division(),
         };
         let t = kshana_trace::trace(&self.spk, self.eop.as_ref(), &who, from_i, to_i, opts)
             .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         Ok(t.into_iter()
             .map(|x| {
                 let words = x.describe();
+                let physical_ns = x.physical_uncertainty_ns().min(i64::MAX as i128) as i64;
                 let mut r = TransitionRecord {
                     at: x.at.into(),
                     half_width_ns: x.half_width_ns.min(i64::MAX as i128) as i64,
+                    physical_ns,
                     kind: String::new(),
                     level: 0,
                     chain: Vec::new(),
@@ -268,6 +275,57 @@ impl Engine {
     }
 }
 
+/// How the recorded birth time limits the dasha levels.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct DashaSensitivityRecord {
+    /// Shift of every Vimshottari boundary per second of birth-time error, in seconds.
+    pub shift_seconds_per_second: f64,
+    /// Shift for the given half-window, in seconds.
+    pub shift_seconds: f64,
+    /// Deepest level (1–9) whose periods outlast four times that shift.
+    pub meaningful_depth: u8,
+    pub words: String,
+}
+
+/// The dasha boundaries' sensitivity to the birth time, for a Moon speed in degrees
+/// per day (from `chart(...).bodies[1].speed`) and a birth-time half-window in seconds.
+#[uniffi::export]
+pub fn dasha_sensitivity(
+    moon_speed_deg_per_day: f64,
+    half_window_seconds: f64,
+) -> DashaSensitivityRecord {
+    let per_s = kshana_trace::dasha_shift_per_second_ns(moon_speed_deg_per_day, YEAR_365_25_NS)
+        as f64
+        / 1e9;
+    let shift = per_s * half_window_seconds;
+    let depth =
+        kshana_trace::meaningful_depth(moon_speed_deg_per_day, half_window_seconds, YEAR_365_25_NS);
+    let human = if shift >= 86_400.0 * 2.0 {
+        format!("{:.0} days", shift / 86_400.0)
+    } else if shift >= 7_200.0 {
+        format!("{:.1} hours", shift / 3_600.0)
+    } else {
+        format!("{:.0} minutes", shift / 60.0)
+    };
+    DashaSensitivityRecord {
+        shift_seconds_per_second: per_s,
+        shift_seconds: shift,
+        meaningful_depth: depth,
+        words: if half_window_seconds <= 0.0 {
+            "Your birth time is exact, so every dasha level down to minutes stands.".to_string()
+        } else {
+            format!(
+                "Each second of birth-time error moves every dasha boundary by about {:.0} hours; your window of ±{} moves them by ±{}, so levels below {} are shown greyed.",
+                per_s / 3_600.0,
+                if half_window_seconds >= 3_600.0 { format!("{:.0} h", half_window_seconds / 3_600.0) } else { format!("{:.0} min", half_window_seconds / 60.0) },
+                human,
+                kshana_trace::LEVEL_NAMES[(depth as usize).clamp(1, 9) - 1]
+            )
+        },
+    }
+}
+
 /// Names of the dasha levels, 1-based.
 #[uniffi::export]
 pub fn dasha_level_names() -> Vec<String> {
@@ -318,9 +376,12 @@ mod tests {
                 Finest::Sub,
                 true,
                 true,
+                Finest::Nakshatra,
             )
             .unwrap();
         assert!(t.len() > 100);
+        assert!(t.iter().any(|x| x.body == "Lagna"));
+        assert_eq!(dasha_sensitivity(13.2, 300.0).meaningful_depth, 2);
         assert!(t.iter().all(|x| !x.words.is_empty() && !x.kind.is_empty()));
         let s = engine
             .snapshot(
@@ -334,7 +395,7 @@ mod tests {
             )
             .unwrap();
         assert_eq!(s.dasha_lords.len(), 9);
-        assert_eq!(s.grahas.len(), 9);
+        assert_eq!(s.grahas.len(), 10);
         assert_eq!(dasha_level_names().len(), 9);
     }
 }

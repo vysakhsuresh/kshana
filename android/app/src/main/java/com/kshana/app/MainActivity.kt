@@ -56,6 +56,7 @@ import com.kshana.app.ui.screens.RightTimeScreen
 import com.kshana.app.ui.screens.SettingsScreen
 import com.kshana.app.ui.screens.TodayScreen
 import com.kshana.app.ui.screens.TraceScreen
+import com.kshana.app.ui.screens.TransitsScreen
 import com.kshana.app.ui.screens.TrustScreen
 import com.kshana.app.ui.screens.VedicScreen
 import com.kshana.app.ui.sky.LivingSky
@@ -218,11 +219,14 @@ private fun App() {
                     onRectify = { open("rectify") },
                     onSettings = { open("settings") },
                     onNarrate = { open("narrate") },
+                    onTransits = { open("transits") },
+                    onRiver = { open("trace") },
                 )
             }
 
             // ---- behind the doors ----
             composable("lifemap") { withProfile { LifeMapScreen(it, settings, onBack = back) } }
+            composable("transits") { withProfile { TransitsScreen(it, settings, onBack = back) } }
             composable("trace") {
                 withProfile { TraceScreen(it, ProfileStore.currentLocation(context), settings, onBack = back) }
             }

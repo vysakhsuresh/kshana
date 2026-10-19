@@ -12,6 +12,7 @@
 
 pub mod crossings;
 pub mod dasha;
+pub mod lagna;
 pub mod zodiac;
 
 use kshana_ephem::{Body, Spk};
@@ -23,6 +24,7 @@ use kshana_vedic::{ayanamsa_degrees, karana, sidereal, sub_table, Ayanamsa, Dash
 
 pub use crossings::{crossings, Crossing};
 pub use dasha::{chain_at, dasha_transitions, DashaTransition, LEVEL_NAMES, MAX_DEPTH};
+pub use lagna::{ascendant_sidereal, dasha_shift_per_second_ns, meaningful_depth};
 pub use zodiac::{subsub_table, Division, SubSub};
 
 /// Sign names.
@@ -93,6 +95,36 @@ impl Transition {
     /// The transition in words.
     pub fn describe(&self) -> String {
         describe(&self.change)
+    }
+
+    /// How far the real sky's event may lie from this instant, in nanoseconds, from
+    /// the ephemeris and model limits in `docs/TRACE.md` (not the solver, which is
+    /// `half_width_ns`). Dasha boundaries are exact arithmetic and return 0; their
+    /// sensitivity to the recorded birth time is a separate number
+    /// ([`dasha_shift_per_second_ns`]).
+    pub fn physical_uncertainty_ns(&self) -> i128 {
+        physical_uncertainty_ns(&self.change)
+    }
+}
+
+/// See [`Transition::physical_uncertainty_ns`].
+pub fn physical_uncertainty_ns(c: &Change) -> i128 {
+    const S: i128 = 1_000_000_000;
+    match c {
+        Change::Dasha { .. } => 0,
+        Change::Enter { body, .. } => match *body {
+            "Moon" => S / 3,
+            "Sun" => 4 * S,
+            "Mercury" | "Venus" => 20 * S,
+            "Mars" => 60 * S,
+            "Jupiter" => 210 * S,
+            "Saturn" => 540 * S,
+            "Rahu" | "Ketu" => 0,
+            "Lagna" => 20 * S,
+            _ => 60 * S,
+        },
+        Change::Tithi(_) | Change::Karana(_) | Change::Yoga(_) => S / 3,
+        Change::Hora(_) | Change::Sunrise | Change::Sunset => 20 * S,
     }
 }
 
@@ -182,6 +214,8 @@ pub struct TraceOptions {
     pub panchanga: bool,
     /// Horas, sunrise, sunset (needs an observer).
     pub horas: bool,
+    /// Finest zodiac division for the rising degree (the ascendant clock).
+    pub lagna_finest: Option<Division>,
 }
 
 impl Default for TraceOptions {
@@ -192,6 +226,7 @@ impl Default for TraceOptions {
             planet_finest: Some(Division::Sub),
             panchanga: true,
             horas: true,
+            lagna_finest: Some(Division::Nakshatra),
         }
     }
 }
@@ -328,6 +363,29 @@ pub fn trace(
                         },
                     });
                 }
+            }
+        }
+    }
+    if let Some(finest) = opts.lagna_finest {
+        let f = |t: Instant| Ok(ascendant_sidereal(eop, &who.observer, ay, t));
+        for div in divisions_up_to(finest) {
+            // The ascendant moves a sub-sub in seconds: step by a minute.
+            let step = match div {
+                Division::Sign | Division::Nakshatra => 600,
+                Division::Pada => 120,
+                _ => 60,
+            };
+            for c in crossings(f, div, from, to, step * NS_PER_SEC, tol)? {
+                out.push(Transition {
+                    at: c.at,
+                    half_width_ns: c.half_width_ns,
+                    change: Change::Enter {
+                        body: "Lagna",
+                        division: div,
+                        index: c.entered,
+                        direct: c.direct,
+                    },
+                });
             }
         }
     }
@@ -524,6 +582,11 @@ pub fn snapshot(
     let node = sidereal(mean_node_longitude(tc), a);
     push("Rahu", node, false);
     push("Ketu", (node + 180.0).rem_euclid(360.0), false);
+    push(
+        "Lagna",
+        ascendant_sidereal(eop, &who.observer, who.ayanamsa, at),
+        true,
+    );
     let e = (moon - sun).rem_euclid(360.0);
     let hora = solar_day(spk, eop, &who.observer, at)?.map(|d| hora_at(&d, &who.observer, at));
     Ok(Snapshot {
@@ -571,6 +634,7 @@ mod tests {
         let to = from.add_ns(NS_PER_DAY);
         let opts = TraceOptions {
             dasha_depth: 7,
+            lagna_finest: Some(Division::Sub),
             ..TraceOptions::default()
         };
         let t = trace(&spk, None, &who, from, to, opts).unwrap();

@@ -60,6 +60,9 @@ fun MeScreen(
     onRectify: () -> Unit,
     onSettings: () -> Unit,
     onNarrate: () -> Unit,
+    onTransits: () -> Unit = {},
+    onRiver: () -> Unit = {},
+    onLedger: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var atmakaraka by remember { mutableStateOf<KarakaRecord?>(null) }
@@ -142,7 +145,15 @@ fun MeScreen(
             Door("Narration", "An optional online story of your reading, only if you allow it.", onNarrate)
         }
 
+        if (profile != null) {
+            Door("Your life, logged", "Dated events scored against the chart; does it know?", onLedger)
+        }
+
         SectionLabel("Chart details")
+        if (profile != null) {
+            Door("The river", "Every exact instant of your day: dashas, the Moon's subs, the rising sign.", onRiver)
+            Door("Transits", "Every graha through your chart with vedha, bindus and kakshya windows.", onTransits)
+        }
         Door("Western chart", "The tropical wheel: planets, houses and aspects.", onChart)
         Door("Vedic kundli", "The sidereal chart: rasi, navamsa, nakshatras and dashas.", onVedic)
         Door("Trust & verification", "What the app does not know, the self-test and the error budget.", onTrust)

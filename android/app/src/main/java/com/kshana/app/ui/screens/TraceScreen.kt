@@ -55,7 +55,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.ExactInstant
 import uniffi.kshana_ffi.Finest
+import uniffi.kshana_ffi.DashaSensitivityRecord
 import uniffi.kshana_ffi.SnapshotRecord
+import uniffi.kshana_ffi.dashaSensitivity
 import uniffi.kshana_ffi.TransitionRecord
 import uniffi.kshana_ffi.dashaLevelNames
 import java.time.DateTimeException
@@ -91,6 +93,7 @@ private data class TraceFilter(
     val planets: Boolean = true,
     val panchanga: Boolean = true,
     val horas: Boolean = true,
+    val lagna: Finest = Finest.NAKSHATRA,
 )
 
 /** A solved day in the cache: the local date and the filters it was solved with. */
@@ -125,6 +128,7 @@ fun TraceScreen(profile: BirthProfile, here: Place, settings: EngineSettings, on
     var moreLevels by remember { mutableStateOf(false) }
 
     var natalMoon by remember(profile, settings) { mutableStateOf<Double?>(null) }
+    var sensitivity by remember(profile, settings) { mutableStateOf<DashaSensitivityRecord?>(null) }
     var levels by remember { mutableStateOf<List<String>>(emptyList()) }
     var snapshot by remember(profile, here, settings) { mutableStateOf<SnapshotRecord?>(null) }
     val cache = remember(profile, here, settings) { mutableStateMapOf<DayKey, List<TransitionRecord>>() }
@@ -138,6 +142,8 @@ fun TraceScreen(profile: BirthProfile, here: Place, settings: EngineSettings, on
                 engine.chart(profile.birthInstant(), profile.latitude, profile.longitude, 0.0, settings.houseSystem, settings.ayanamsa, false)
             }
             natalMoon = chart.panchanga.moonSidereal
+            val moonSpeed = chart.bodies.firstOrNull { it.name == "Moon" }?.speed ?: 13.2
+            sensitivity = dashaSensitivity(moonSpeed, profile.uncertaintySeconds().toDouble())
             if (levels.isEmpty()) levels = dashaLevelNames()
         } catch (e: CancellationException) {
             throw e
@@ -165,6 +171,7 @@ fun TraceScreen(profile: BirthProfile, here: Place, settings: EngineSettings, on
                     if (key.filter.planets) Finest.SIGN else Finest.NONE,
                     key.filter.panchanga,
                     key.filter.horas,
+                    key.filter.lagna,
                 )
             }
             cache[key] = list
@@ -234,7 +241,7 @@ fun TraceScreen(profile: BirthProfile, here: Place, settings: EngineSettings, on
 
         item(key = "running") {
             Spacer(Modifier.height(14.dp))
-            RunningNowCard(snapshot, levels, zone, today, nowState, nextRow, solving, moreLevels) { moreLevels = it }
+            RunningNowCard(snapshot, levels, sensitivity, zone, today, nowState, nextRow, solving, moreLevels) { moreLevels = it }
         }
 
         item(key = "filters") {
@@ -283,6 +290,7 @@ fun TraceScreen(profile: BirthProfile, here: Place, settings: EngineSettings, on
 private fun RunningNowCard(
     snap: SnapshotRecord?,
     levels: List<String>,
+    sensitivity: DashaSensitivityRecord?,
     zone: ZoneId,
     today: LocalDate,
     nowState: State<Long>,
@@ -307,7 +315,8 @@ private fun RunningNowCard(
                     if (i > 0) {
                         Text("›", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted, modifier = Modifier.padding(top = 6.dp))
                     }
-                    DashaChip(levelShort(levels, i), lords[i], snap.dashaEnds.getOrNull(i), zone, today)
+                    val meaningful = sensitivity?.let { i < it.meaningfulDepth.toInt() } ?: true
+                    DashaChip(levelShort(levels, i), lords[i], snap.dashaEnds.getOrNull(i), zone, today, meaningful)
                 }
                 if (lords.size > 5) {
                     Text(
@@ -316,6 +325,17 @@ private fun RunningNowCard(
                         modifier = Modifier.clickable { onMore(!more) }.padding(horizontal = 6.dp, vertical = 10.dp),
                     )
                 }
+            }
+            if (sensitivity != null) {
+                Text(sensitivity.words, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, lineHeight = 15.sp)
+            }
+            val rising = snap.grahas.firstOrNull { it.name == "Lagna" }
+            if (rising != null) {
+                LabelledMono(
+                    "RISING",
+                    "${signName(rising.sidereal)} ${degMin(rising.sidereal)} · star ${rising.starLord} · sub ${rising.subLord} · sub-sub ${rising.subsubLord}",
+                    KshanaColors.Gold,
+                )
             }
             val moon = snap.grahas.firstOrNull { it.name == "Moon" }
             if (moon != null) {
@@ -340,10 +360,10 @@ private fun RunningNowCard(
 
 /** One link of the chain: "Antar Venus" over its exact end. */
 @Composable
-private fun DashaChip(level: String, lord: String, end: ExactInstant?, zone: ZoneId, today: LocalDate) {
+private fun DashaChip(level: String, lord: String, end: ExactInstant?, zone: ZoneId, today: LocalDate, meaningful: Boolean = true) {
     val shape = RoundedCornerShape(6.dp)
     Column(
-        Modifier.clip(shape).background(KshanaColors.Night).border(1.dp, KshanaColors.Line, shape).padding(horizontal = 8.dp, vertical = 4.dp),
+        Modifier.alpha(if (meaningful) 1f else 0.45f).clip(shape).background(KshanaColors.Night).border(1.dp, KshanaColors.Line, shape).padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
         Text("$level $lord", fontFamily = FontFamily.SansSerif, fontSize = 12.sp, color = KshanaColors.Text)
         Text(
@@ -412,6 +432,15 @@ private fun FilterRow(filter: TraceFilter, lastDepth: Int, onDepth: (Int) -> Uni
         Chip("Planets", selected = filter.planets, onClick = { onChange(filter.copy(planets = !filter.planets)) })
         Chip("Panchanga", selected = filter.panchanga, onClick = { onChange(filter.copy(panchanga = !filter.panchanga)) })
         Chip("Horas", selected = filter.horas, onClick = { onChange(filter.copy(horas = !filter.horas)) })
+        Chip("Rising sign to nakshatra", selected = filter.lagna == Finest.NAKSHATRA, onClick = {
+            onChange(filter.copy(lagna = if (filter.lagna == Finest.NAKSHATRA) Finest.NONE else Finest.NAKSHATRA))
+        })
+        Chip("Rising sign to sub", selected = filter.lagna == Finest.SUB, onClick = {
+            onChange(filter.copy(lagna = if (filter.lagna == Finest.SUB) Finest.NONE else Finest.SUB))
+        })
+        Chip("Rising sign to sub-sub", selected = filter.lagna == Finest.SUB_SUB, onClick = {
+            onChange(filter.copy(lagna = if (filter.lagna == Finest.SUB_SUB) Finest.NONE else Finest.SUB_SUB))
+        })
     }
 }
 
@@ -423,9 +452,12 @@ private fun RiverRowView(row: RiverRow, past: Boolean) {
     Column(Modifier.fillMaxWidth().alpha(if (past) 0.7f else 1f)) {
         HorizontalDivider(color = KshanaColors.LineSoft)
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.Top) {
-            Row(Modifier.padding(end = 12.dp, top = 2.dp)) {
-                Text(row.local.format(HMS), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Text)
-                Text(microSuffix(row.at), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Muted)
+            Column(Modifier.padding(end = 12.dp, top = 2.dp)) {
+                Row {
+                    Text(row.local.format(HMS), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Text)
+                    Text(microSuffix(row.at), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Muted)
+                }
+                Text(physicalBar(row), fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = KshanaColors.Muted)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 row.items.forEachIndexed { i, t ->
@@ -441,6 +473,20 @@ private fun RiverRowView(row: RiverRow, past: Boolean) {
                 }
             }
         }
+    }
+}
+
+/**
+ * "sky ±0.3 s" / "exact": the largest physical error bar in the row, from the engine's
+ * ephemeris and model limits; a dasha boundary is exact arithmetic.
+ */
+private fun physicalBar(row: RiverRow): String {
+    val worst = row.items.maxOf { it.physicalNs }
+    return when {
+        worst <= 0L -> "exact"
+        worst < 1_000_000_000L -> "sky ±${worst / 1_000_000} ms"
+        worst < 120_000_000_000L -> "sky ±${worst / 1_000_000_000} s"
+        else -> "sky ±${worst / 60_000_000_000} min"
     }
 }
 
@@ -521,7 +567,7 @@ fun NextChanges(profile: BirthProfile, here: Place, settings: EngineSettings, co
                 engine.trace(
                     profile.birthInstant(), chart.panchanga.moonSidereal, here.latitude, here.longitude, settings.ayanamsa,
                     Instants.fromInstant(fromInstant), Instants.fromInstant(toInstant),
-                    5u, Finest.SUB, Finest.SIGN, true, true,
+                    5u, Finest.SUB, Finest.SIGN, true, true, Finest.NAKSHATRA,
                 )
             }
             rows = groupRows(list, zone)
@@ -656,13 +702,17 @@ private fun groupRows(records: List<TransitionRecord>, zone: ZoneId): List<River
 }
 
 private fun tagLabel(t: TransitionRecord): String = when (t.kind) {
-    "enter" -> t.body
+    "enter" -> if (t.body == "Lagna") "rising" else t.body
     else -> t.kind
 }
 
 private fun tagColour(t: TransitionRecord): Color = when (t.kind) {
     "dasha" -> KshanaColors.Gold
-    "enter" -> if (t.body == "Moon") KshanaColors.Sky else KshanaColors.Text
+    "enter" -> when (t.body) {
+        "Moon" -> KshanaColors.Sky
+        "Lagna" -> KshanaColors.Gold
+        else -> KshanaColors.Text
+    }
     "tithi", "karana", "yoga" -> KshanaColors.TextSoft
     "hora" -> KshanaColors.Muted
     "sunrise", "sunset" -> KshanaColors.Gold

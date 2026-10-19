@@ -36,6 +36,7 @@ fn main() {
                 planet_finest: None,
                 panchanga: false,
                 horas: false,
+                lagna_finest: None,
             },
         ),
         (
@@ -46,6 +47,7 @@ fn main() {
                 planet_finest: None,
                 panchanga: false,
                 horas: false,
+                lagna_finest: None,
             },
         ),
         (
@@ -56,6 +58,7 @@ fn main() {
                 planet_finest: None,
                 panchanga: false,
                 horas: false,
+                lagna_finest: None,
             },
         ),
         (
@@ -66,6 +69,7 @@ fn main() {
                 planet_finest: Some(Division::Sub),
                 panchanga: false,
                 horas: false,
+                lagna_finest: None,
             },
         ),
         (
@@ -76,6 +80,7 @@ fn main() {
                 planet_finest: None,
                 panchanga: true,
                 horas: false,
+                lagna_finest: None,
             },
         ),
         (
@@ -86,6 +91,7 @@ fn main() {
                 planet_finest: None,
                 panchanga: false,
                 horas: true,
+                lagna_finest: None,
             },
         ),
     ];

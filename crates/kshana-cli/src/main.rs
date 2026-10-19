@@ -401,6 +401,152 @@ fn main() {
         }
         return;
     }
+    if sub == "dashas" {
+        use kshana_vedic::dashas::{self as ds, Period};
+        use kshana_vedic::DashaLord as L;
+        let tz = arg("--tz").and_then(|s| parse_tz(&s)).unwrap_or(0);
+        let at = arg("--at")
+            .and_then(|s| parse_utc(&s))
+            .and_then(|u| u.to_instant().ok())
+            .unwrap_or_else(now_instant);
+        let ch = compute(&spk, eop.as_ref(), &input).unwrap_or_else(|e| {
+            eprintln!("dashas: {e:?}");
+            std::process::exit(1);
+        });
+        let birth = ch.instant;
+        let year_ns = kshana_vedic::dasha::YEAR_365_25_NS;
+        let sign_of = |lon: f64| ((lon.rem_euclid(360.0) / 30.0).floor() as usize).min(11);
+        let sidereal = |g: L| -> f64 {
+            match g {
+                L::Rahu => ch.true_node.1,
+                L::Ketu => (ch.true_node.1 + 180.0).rem_euclid(360.0),
+                other => {
+                    let name = ds::graha_name(other);
+                    ch.bodies
+                        .iter()
+                        .find(|b| b.name == name)
+                        .map_or(0.0, |b| b.sidereal)
+                }
+            }
+        };
+        let moon = sidereal(L::Moon);
+        let lagna = ch.cusps_sidereal[0];
+        let grahas: [f64; 9] = [
+            L::Sun,
+            L::Moon,
+            L::Mars,
+            L::Mercury,
+            L::Jupiter,
+            L::Venus,
+            L::Saturn,
+            L::Rahu,
+            L::Ketu,
+        ]
+        .map(sidereal);
+        let applies = ds::ashtottari_applies(
+            sign_of(lagna),
+            sign_of(sidereal(kshana_vedic::sign_lord(sign_of(lagna)))),
+            sign_of(ch.true_node.1),
+        );
+        let vim_period = |p: kshana_vedic::DashaPeriod, level: u8| Period {
+            label: ds::graha_name(p.lord).to_string(),
+            start: p.start,
+            end: p.end,
+            level,
+        };
+        let vim: Vec<Period> = kshana_vedic::vimshottari(moon, birth, year_ns)
+            .into_iter()
+            .map(|p| vim_period(p, 1))
+            .collect();
+        let kc = ds::kalachakra_detail(moon, birth, year_ns);
+        let (row, first) = (kc.row, kc.first_position);
+        type SubFn<'a> = Box<dyn Fn(usize, &Period) -> Vec<Period> + 'a>;
+        let systems: Vec<(&str, Vec<Period>, SubFn<'_>)> = vec![
+            (
+                "Vimshottari",
+                vim,
+                Box::new(|_, p: &Period| {
+                    let Some(lord) = ds::graha_from_name(&p.label) else {
+                        return Vec::new();
+                    };
+                    kshana_vedic::subdivide(kshana_vedic::DashaPeriod {
+                        lord,
+                        start: p.start,
+                        end: p.end,
+                    })
+                    .into_iter()
+                    .map(|q| vim_period(q, 2))
+                    .collect()
+                }),
+            ),
+            (
+                "Yogini",
+                ds::yogini(moon, birth, year_ns),
+                Box::new(|_, p: &Period| ds::yogini_sub(p)),
+            ),
+            (
+                "Ashtottari",
+                ds::ashtottari(moon, birth, year_ns),
+                Box::new(|_, p: &Period| ds::ashtottari_sub(p)),
+            ),
+            (
+                "Kalachakra",
+                kc.periods,
+                Box::new(move |k, p: &Period| ds::kalachakra_sub(p, &row, (first + k) % 9)),
+            ),
+            (
+                "Chara",
+                ds::chara(lagna, &grahas, birth, year_ns),
+                Box::new(|_, p: &Period| {
+                    ds::sign_index(&p.label)
+                        .map(|s| ds::chara_sub(p, ds::chara_direction(s)))
+                        .unwrap_or_default()
+                }),
+            ),
+        ];
+        let fmt = |t: kshana_time::Instant| {
+            let u = Utc::from_instant(t.add_ns(tz as i128 * 60_000_000_000));
+            format!("{:04}-{:02}-{:02}", u.year, u.month, u.day)
+        };
+        println!(
+            "KSHANA · dashas at {} · birth {} · Moon {:.3}° sidereal · local UTC{}",
+            fmt(at),
+            fmt(birth),
+            moon,
+            arg("--tz").unwrap_or_default()
+        );
+        for (name, periods, sub) in &systems {
+            let Some(k) = periods.iter().position(|p| p.start <= at && at < p.end) else {
+                println!("{name:<12} no period covers this instant");
+                continue;
+            };
+            let p1 = &periods[k];
+            let subs = sub(k, p1);
+            let flag = if *name == "Ashtottari" && !applies {
+                "  (BPHS: does not apply to this chart)"
+            } else {
+                ""
+            };
+            match ds::period_at(&subs, at) {
+                Some(p2) => println!(
+                    "{name:<12} {:<12} {} – {}  ›  {:<12} {} – {}{flag}",
+                    p1.label,
+                    fmt(p1.start),
+                    fmt(p1.end),
+                    p2.label,
+                    fmt(p2.start),
+                    fmt(p2.end)
+                ),
+                None => println!(
+                    "{name:<12} {:<12} {} – {}{flag}",
+                    p1.label,
+                    fmt(p1.start),
+                    fmt(p1.end)
+                ),
+            }
+        }
+        return;
+    }
     if sub == "life" {
         let ch = compute(&spk, eop.as_ref(), &input).unwrap_or_else(|e| {
             eprintln!("life: {e:?}");
