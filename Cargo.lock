@@ -248,6 +248,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
 
 [[package]]
+name = "kshana-bala"
+version = "0.1.0"
+dependencies = [
+ "kshana-chart",
+ "kshana-ephem",
+ "kshana-events",
+ "kshana-forecast",
+ "kshana-frames",
+ "kshana-houses",
+ "kshana-rules",
+ "kshana-sky",
+ "kshana-solver",
+ "kshana-time",
+ "kshana-trace",
+ "kshana-vedic",
+ "kshana-western",
+]
+
+[[package]]
 name = "kshana-chart"
 version = "0.1.0"
 dependencies = [
@@ -278,7 +297,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "kshana-day"
+version = "0.1.0"
+dependencies = [
+ "kshana-chart",
+ "kshana-ephem",
+ "kshana-events",
+ "kshana-forecast",
+ "kshana-frames",
+ "kshana-houses",
+ "kshana-rules",
+ "kshana-sky",
+ "kshana-solver",
+ "kshana-time",
+ "kshana-trace",
+ "kshana-vedic",
+ "kshana-western",
+]
+
+[[package]]
 name = "kshana-directions"
+version = "0.1.0"
+dependencies = [
+ "kshana-chart",
+ "kshana-ephem",
+ "kshana-events",
+ "kshana-forecast",
+ "kshana-frames",
+ "kshana-houses",
+ "kshana-rules",
+ "kshana-sky",
+ "kshana-solver",
+ "kshana-time",
+ "kshana-trace",
+ "kshana-vedic",
+ "kshana-western",
+]
+
+[[package]]
+name = "kshana-eclipse"
 version = "0.1.0"
 dependencies = [
  "kshana-chart",
@@ -320,15 +377,18 @@ name = "kshana-ffi"
 version = "0.1.0"
 dependencies = [
  "kshana-chart",
+ "kshana-directions",
  "kshana-ephem",
  "kshana-events",
  "kshana-forecast",
  "kshana-frames",
  "kshana-houses",
+ "kshana-ledger",
  "kshana-rules",
  "kshana-sky",
  "kshana-solver",
  "kshana-speak",
+ "kshana-tajika",
  "kshana-time",
  "kshana-trace",
  "kshana-vedic",
