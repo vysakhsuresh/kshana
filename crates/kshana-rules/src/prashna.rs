@@ -242,7 +242,7 @@ pub struct MoonWindow {
 }
 
 /// Windows in the next `days` days when the Moon's star lord and sub lord are both in
-/// `agents`. Boundaries are refined to one millisecond.
+/// `agents`. Boundaries are refined to one microsecond.
 pub fn prashna_windows(
     spk: &Spk,
     ayanamsa: Ayanamsa,
