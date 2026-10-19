@@ -47,6 +47,7 @@ import uniffi.kshana_ffi.HourWindowRecord
 import java.time.DateTimeException
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.kshana.app.ui.sky.KshanaFonts
 
 private val CLOCK = DateTimeFormatter.ofPattern("HH:mm")
 
@@ -59,6 +60,7 @@ fun RightTimeScreen(
     onMuhurta: () -> Unit,
     onCalendar: () -> Unit,
     onMoments: () -> Unit,
+    onDay: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val zone = remember(here) { try { ZoneId.of(here.zoneId) } catch (e: DateTimeException) { ZoneId.systemDefault() } }
@@ -118,10 +120,11 @@ fun RightTimeScreen(
         }
 
         Spacer(Modifier.height(8.dp))
-        SectionLabel("Three doors")
+        SectionLabel("Four doors")
         Door("Pick a moment for something", "marriage, business, travel, a new home…", onMuhurta)
         Door("Calendar", "Ekadashi, Pradosha, full and new Moons, Sankranti, with exact times", onCalendar)
         Door("Exact moments", "every ingress, station and lunation to the microsecond", onMoments)
+        Door("The day's clocks", "sixty ghatis from the solved sunrise, thirty muhurtas, sixteen choghadiya, your bird's windows", onDay)
     }
 }
 
@@ -132,7 +135,7 @@ private fun WindowLine(w: HourWindowRecord, zone: ZoneId) {
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(
             "${localText(w.start, CLOCK, zone)}–${localText(w.end, CLOCK, zone)}",
-            fontFamily = FontFamily.Monospace, fontSize = 12.sp,
+            fontFamily = KshanaFonts.mono, fontSize = 12.sp,
             color = if (w.avoid) KshanaColors.Muted else KshanaColors.Sky,
             modifier = Modifier.width(104.dp),
         )

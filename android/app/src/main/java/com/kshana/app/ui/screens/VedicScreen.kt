@@ -60,6 +60,7 @@ import uniffi.kshana_ffi.PanchangaDetail
 import uniffi.kshana_ffi.dashaChain
 import uniffi.kshana_ffi.dashaTable
 import uniffi.kshana_ffi.varga
+import com.kshana.app.ui.sky.KshanaFonts
 
 private val VARGAS = listOf(1u, 2u, 3u, 4u, 7u, 9u, 10u, 12u, 30u, 60u)
 private val VARGA_NAMES = mapOf(
@@ -175,14 +176,14 @@ fun VedicScreen(profile: BirthProfile, settings: EngineSettings) {
                 for ((i, d) in chain.withIndex()) DashaLine(LEVEL_NAMES.getOrElse(i) { "L${d.level}" }, d)
                 Text(
                     "${LEVEL_NAMES.getOrElse(chain.lastIndex) { "period" }} changes ${localText(chain.last().end, DATE_TIME_S)}",
-                    fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Muted,
+                    fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Muted,
                 )
-                Text(microText(chain.last().end), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Gold)
+                Text(microText(chain.last().end), fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Gold)
                 ProgressBar(progress(maha.start, maha.end, at), chain.getOrNull(1)?.let { Pair(progress(maha.start, maha.end, it.start), progress(maha.start, maha.end, it.end)) })
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(localText(maha.start, DATE_ONLY), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+                    Text(localText(maha.start, DATE_ONLY), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
                     Text("${maha.lord} mahadasha", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
-                    Text(localText(maha.end, DATE_ONLY), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+                    Text(localText(maha.end, DATE_ONLY), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
                 }
             }
             Row(
@@ -203,8 +204,8 @@ fun VedicScreen(profile: BirthProfile, settings: EngineSettings) {
                         Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable { openMaha = if (openMaha == k) -1 else k }.padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(m.lord, fontFamily = FontFamily.Serif, fontSize = 17.sp, color = if (running) KshanaColors.Gold else KshanaColors.Text, modifier = Modifier.weight(1f))
-                        Text("${localText(m.start, DATE_ONLY)} → ${localText(m.end, DATE_ONLY)}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
+                        Text(m.lord, fontFamily = KshanaFonts.serif, fontSize = 17.sp, color = if (running) KshanaColors.Gold else KshanaColors.Text, modifier = Modifier.weight(1f))
+                        Text("${localText(m.start, DATE_ONLY)} → ${localText(m.end, DATE_ONLY)}", fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky)
                     }
                     if (openMaha == k) {
                         val antars = table.drop(entry.index + 1).takeWhile { it.level.toInt() != 1 }
@@ -212,7 +213,7 @@ fun VedicScreen(profile: BirthProfile, settings: EngineSettings) {
                             val on = at != null && at.seconds() >= a.start.seconds() && at.seconds() < a.end.seconds()
                             Row(Modifier.fillMaxWidth().padding(start = 16.dp, top = 3.dp, bottom = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text("${m.lord}–${a.lord}", style = MaterialTheme.typography.bodyMedium, color = if (on) KshanaColors.Gold else KshanaColors.TextSoft, modifier = Modifier.weight(1f))
-                                Text("${localText(a.start, DATE_ONLY)} → ${localText(a.end, DATE_ONLY)}", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+                                Text("${localText(a.start, DATE_ONLY)} → ${localText(a.end, DATE_ONLY)}", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
                             }
                         }
                     }
@@ -253,8 +254,8 @@ private fun AshtakavargaRow(a: AshtakavargaRecord) {
                         .padding(vertical = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(SIGN_SHORT[i].take(2), fontFamily = FontFamily.SansSerif, fontSize = 8.sp, color = if (isLagna) KshanaColors.Gold else KshanaColors.Muted)
-                    Text(bindus.toString(), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = if (bindus >= 28) KshanaColors.Gold else KshanaColors.Sky)
+                    Text(SIGN_SHORT[i].take(2), fontFamily = KshanaFonts.sans, fontSize = 8.sp, color = if (isLagna) KshanaColors.Gold else KshanaColors.Muted)
+                    Text(bindus.toString(), fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = if (bindus >= 28) KshanaColors.Gold else KshanaColors.Sky)
                 }
             }
         }
@@ -266,8 +267,8 @@ private fun AshtakavargaRow(a: AshtakavargaRecord) {
 private fun DashaLine(level: String, d: DashaRecord) {
     Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(level.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.width(96.dp))
-        Text(d.lord, fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
-        Text("${localText(d.start, DATE_ONLY)} → ${localText(d.end, DATE_ONLY)}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
+        Text(d.lord, fontFamily = KshanaFonts.serif, fontSize = 18.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+        Text("${localText(d.start, DATE_ONLY)} → ${localText(d.end, DATE_ONLY)}", fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky)
     }
 }
 
@@ -307,7 +308,7 @@ private fun PanchangaTiles(d: PanchangaDetail, profile: BirthProfile) {
     }
     Text(
         "tithi ends ${d.tithiEnds?.let { localText(it, DATE_TIME_S, zone) } ?: "—"} · nakshatra ends ${d.nakshatraEnds?.let { localText(it, DATE_TIME_S, zone) } ?: "—"}",
-        fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted,
+        fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted,
     )
 }
 
@@ -315,7 +316,7 @@ private fun PanchangaTiles(d: PanchangaDetail, profile: BirthProfile) {
 private fun VTile(label: String, value: String, modifier: Modifier = Modifier) {
     Column(modifier.padding(top = 8.dp)) {
         Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
-        Text(value, fontFamily = FontFamily.Serif, fontSize = 16.sp, color = KshanaColors.Text)
+        Text(value, fontFamily = KshanaFonts.serif, fontSize = 16.sp, color = KshanaColors.Text)
     }
 }
 
@@ -327,9 +328,9 @@ private fun VTile(label: String, value: String, modifier: Modifier = Modifier) {
 @Composable
 private fun NorthIndianChart(lagna: Double, placements: List<VargaPlacement>) {
     val measurer = rememberTextMeasurer()
-    val numStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = KshanaColors.Muted)
-    val planetStyle = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, color = KshanaColors.Text)
-    val lagnaStyle = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, color = KshanaColors.Gold)
+    val numStyle = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Muted)
+    val planetStyle = TextStyle(fontFamily = KshanaFonts.sans, fontSize = 12.sp, color = KshanaColors.Text)
+    val lagnaStyle = TextStyle(fontFamily = KshanaFonts.sans, fontSize = 12.sp, color = KshanaColors.Gold)
     val lagnaSign = signIndex(lagna)
     val byHouse: Map<Int, List<String>> = placements.groupBy { ((signIndex(it.longitude) - lagnaSign + 12) % 12) + 1 }
         .mapValues { (_, v) -> v.map { PLANET_ABBR[it.name] ?: it.name.take(2) } }

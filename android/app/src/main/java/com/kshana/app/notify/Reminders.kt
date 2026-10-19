@@ -13,11 +13,14 @@ import android.os.Build
 import com.kshana.app.data.FamilyStore
 import org.json.JSONArray
 import org.json.JSONObject
+import com.kshana.app.ui.sky.Haptics
 
 /**
- * Exact-moment reminders: one alarm per moment, a notification when it fires. Alarms are
- * exact where the system allows it, and the scheduled set is persisted so a reboot can put
- * them back. No library beyond the framework.
+ * Exact-moment reminders: one alarm per moment, a notification when it fires. Where the
+ * user has allowed exact alarms the reminder is set as an alarm clock (exact, allowed while
+ * idle, shown by the system as a pending alarm); otherwise Android places it in an inexact
+ * slot and Settings says so. The scheduled set is persisted so a reboot can put them back.
+ * No library beyond the framework.
  */
 object Reminders {
     const val CHANNEL_ID = "kshana.moments"
@@ -37,9 +40,15 @@ object Reminders {
         ensureChannel(context)
         val pi = pending(context, id, title, text)
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val exact = Build.VERSION.SDK_INT >= 31 && am.canScheduleExactAlarms()
-        if (exact) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, pi)
-        else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, pi)
+        if (exactAllowed(context)) {
+            val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
+            val show = if (launch != null) {
+                PendingIntent.getActivity(context, id, launch, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            } else pi
+            am.setAlarmClock(AlarmManager.AlarmClockInfo(atMillis, show), pi)
+        } else {
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, pi)
+        }
         val kept = load(context).filter { it.id != id } + Entry(id, atMillis, title, text)
         save(context, kept)
     }
@@ -51,6 +60,38 @@ object Reminders {
         am.cancel(pi)
         pi.cancel()
         save(context, load(context).filter { it.id != id })
+    }
+
+    /** Whether the system lets this app set exact alarms (always, before Android 12). */
+    fun exactAllowed(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < 31) return true
+        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        return am.canScheduleExactAlarms()
+    }
+
+    /** Open the system page where the user can allow exact alarms for this app. */
+    fun requestExact(context: Context) {
+        if (Build.VERSION.SDK_INT < 31) return
+        runCatching {
+            val intent = Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                .setData(android.net.Uri.parse("package:" + context.packageName))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+        }
+    }
+
+    /** The haptic phrase for a reminder, from the words it carries. */
+    fun hapticKind(title: String, text: String): String {
+        val w = (title + " " + text).lowercase()
+        return when {
+            "dasha" in w || "antar" in w || "pratyantar" in w -> "dasha"
+            "sunrise" in w -> "sunrise"
+            "sunset" in w -> "sunset"
+            "hora" in w -> "hora"
+            "rahu" in w -> "rahu"
+            "muhurta" in w || "choghadiya" in w -> "muhurta"
+            else -> "moon"
+        }
     }
 
     /** True while a future reminder with this id is on the books. */
@@ -142,6 +183,7 @@ class ReminderReceiver : BroadcastReceiver() {
         if (content != null) builder.setContentIntent(content)
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Reminders.canPostNotifications(context)) nm.notify(id, builder.build())
+        runCatching { Haptics.exactInstant(context, Reminders.hapticKind(title, text), alarm = true) }
         Reminders.forget(context, id)
     }
 }

@@ -48,6 +48,7 @@ import uniffi.kshana_ffi.MuhurtaRecord
 import java.time.DateTimeException
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.kshana.app.ui.sky.KshanaFonts
 
 /** The seven activities the engine knows, by their engine names. */
 private val ACTIVITIES = listOf("Marriage", "Travel", "Business", "Housewarming", "Learning", "Medical", "General")
@@ -164,7 +165,7 @@ fun MuhurtaScreen(place: Place, settings: EngineSettings, profile: BirthProfile?
         Spacer(Modifier.height(12.dp))
         Text(
             "A muhurta is a recommendation from the tradition's rules, listed here in full. The sky is exact; the choice is yours.",
-            fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 14.sp, lineHeight = 20.sp, color = KshanaColors.Muted,
+            fontFamily = KshanaFonts.serif, fontStyle = FontStyle.Italic, fontSize = 14.sp, lineHeight = 20.sp, color = KshanaColors.Muted,
         )
     }
 }
@@ -178,7 +179,7 @@ private fun WindowCard(w: MuhurtaRecord, zone: ZoneId) {
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(localText(w.start, DAY, zone), fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text)
+            Text(localText(w.start, DAY, zone), fontFamily = KshanaFonts.serif, fontSize = 18.sp, color = KshanaColors.Text)
             if (w.abhijit) {
                 Text(
                     "ABHIJIT",
@@ -188,7 +189,7 @@ private fun WindowCard(w: MuhurtaRecord, zone: ZoneId) {
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("${localText(w.start, CLOCK, zone)} → ${localText(w.end, CLOCK, zone)}", fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = KshanaColors.Sky)
+            Text("${localText(w.start, CLOCK, zone)} → ${localText(w.end, CLOCK, zone)}", fontFamily = KshanaFonts.mono, fontSize = 13.sp, color = KshanaColors.Sky)
             RemindButton(
                 key = "muhurta:${w.start.taiSeconds}",
                 atMillis = Instants.toLocal(w.start, zone).toInstant().toEpochMilli() - 10L * 60L * 1000L,
@@ -198,7 +199,7 @@ private fun WindowCard(w: MuhurtaRecord, zone: ZoneId) {
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ScoreBar(w.score.toFloat(), Modifier.weight(1f))
-            Text("%.2f".format(w.score), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Gold)
+            Text("%.2f".format(w.score), fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Gold)
         }
         Text(
             "${w.tithi} · ${w.nakshatra} · ${w.yoga} · ${w.hora} hora · ${signName(w.lagnaSign.toDouble() * 30.0 + 1.0)} rising",

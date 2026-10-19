@@ -10,6 +10,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.kshana.app.ui.sky.KshanaFonts
 
 /** The design canvas palette: night ground, one gold accent, a sky blue for data. */
 object KshanaColors {
@@ -37,13 +38,13 @@ private val scheme = darkColorScheme(
 /** Display serif, UI sans, mono for every number. System families until the bundled
  *  fonts (Cormorant Garamond, Manrope, IBM Plex Mono) are added under res/font. */
 val KshanaType = Typography(
-    displayLarge = TextStyle(fontFamily = FontFamily.Serif, fontWeight = FontWeight.Medium, fontSize = 40.sp, lineHeight = 42.sp),
-    displayMedium = TextStyle(fontFamily = FontFamily.Serif, fontWeight = FontWeight.Medium, fontSize = 30.sp, lineHeight = 32.sp),
-    titleLarge = TextStyle(fontFamily = FontFamily.Serif, fontWeight = FontWeight.Medium, fontSize = 20.sp),
-    bodyMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 13.sp, lineHeight = 20.sp),
-    labelSmall = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 10.sp, letterSpacing = 1.4.sp),
-    bodySmall = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 11.sp),
-    headlineLarge = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium, fontSize = 44.sp),
+    displayLarge = TextStyle(fontFamily = KshanaFonts.serif, fontWeight = FontWeight.Medium, fontSize = 40.sp, lineHeight = 42.sp),
+    displayMedium = TextStyle(fontFamily = KshanaFonts.serif, fontWeight = FontWeight.Medium, fontSize = 30.sp, lineHeight = 32.sp),
+    titleLarge = TextStyle(fontFamily = KshanaFonts.serif, fontWeight = FontWeight.Medium, fontSize = 20.sp),
+    bodyMedium = TextStyle(fontFamily = KshanaFonts.sans, fontSize = 13.sp, lineHeight = 20.sp),
+    labelSmall = TextStyle(fontFamily = KshanaFonts.sans, fontSize = 10.sp, letterSpacing = 1.4.sp),
+    bodySmall = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 11.sp),
+    headlineLarge = TextStyle(fontFamily = KshanaFonts.mono, fontWeight = FontWeight.Medium, fontSize = 44.sp),
 )
 
 @Composable

@@ -44,6 +44,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.SectionRecord
+import com.kshana.app.ui.sky.KshanaFonts
 
 /** What one narration was grounded in, for the footer line. */
 private data class Grounding(val sentences: Int, val rules: Int)
@@ -129,7 +130,7 @@ fun NarrateScreen(profile: BirthProfile, settings: EngineSettings, onBack: () ->
                 onValueChange = { question = it },
                 label = { Text("Anything you want the narration to focus on?", style = MaterialTheme.typography.labelSmall) },
                 minLines = 2,
-                textStyle = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 15.sp, color = KshanaColors.Text),
+                textStyle = TextStyle(fontFamily = KshanaFonts.sans, fontSize = 15.sp, color = KshanaColors.Text),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = KshanaColors.Text,
                     unfocusedTextColor = KshanaColors.Text,
@@ -165,7 +166,7 @@ fun NarrateScreen(profile: BirthProfile, settings: EngineSettings, onBack: () ->
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 for (para in text.split(Regex("\\n\\s*\\n")).map { it.trim() }.filter { it.isNotEmpty() }) {
-                    Text(para, fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 26.sp, color = KshanaColors.Text)
+                    Text(para, fontFamily = KshanaFonts.serif, fontSize = 17.sp, lineHeight = 26.sp, color = KshanaColors.Text)
                 }
                 HorizontalDivider(color = KshanaColors.LineSoft)
                 val g = grounding

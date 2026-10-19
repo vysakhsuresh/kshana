@@ -54,6 +54,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.AreaReading
 import uniffi.kshana_ffi.TimingRecord
+import com.kshana.app.ui.sky.KshanaFonts
 
 private val LEVEL_LABELS = listOf("Maha", "Antar", "Pratyantar", "Sookshma", "Prana")
 
@@ -129,11 +130,11 @@ fun AreasScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> U
                 SectionLabel("Promise")
                 Text(
                     if (p.promised) "${p.area} is promised · strength ${"%.2f".format(p.strength)}" else "${p.area} is not promised · strength ${"%.2f".format(p.strength)}",
-                    fontFamily = FontFamily.Serif, fontSize = 20.sp, color = if (p.promised) KshanaColors.Gold else KshanaColors.TextSoft,
+                    fontFamily = KshanaFonts.serif, fontSize = 20.sp, color = if (p.promised) KshanaColors.Gold else KshanaColors.TextSoft,
                 )
                 Text(
                     "cusp ${p.primaryCusp} · group ${p.group.joinToString(" ")} · sub lord ${p.subLord} · ${p.ruleId} · ${p.source}",
-                    fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted,
+                    fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted,
                 )
                 for (f in p.factors) {
                     HorizontalDivider(color = KshanaColors.LineSoft)
@@ -155,9 +156,9 @@ fun AreasScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> U
                 Spacer(Modifier.height(6.dp))
                 if (tightest != null) {
                     Text("TIGHTEST SLOT", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-                    Text("${LEVEL_LABELS.getOrElse(tightest.level.toInt() - 1) { "level ${tightest.level}" }} · ${tightest.lord}", fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text)
-                    Text("${localText(tightest.start, DATE_TIME_S)} → ${localText(tightest.end, DATE_TIME_S)}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
-                    Text("${microText(tightest.start)} → ${microText(tightest.end)}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Gold)
+                    Text("${LEVEL_LABELS.getOrElse(tightest.level.toInt() - 1) { "level ${tightest.level}" }} · ${tightest.lord}", fontFamily = KshanaFonts.serif, fontSize = 18.sp, color = KshanaColors.Text)
+                    Text("${localText(tightest.start, DATE_TIME_S)} → ${localText(tightest.end, DATE_TIME_S)}", fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky)
+                    Text("${microText(tightest.start)} → ${microText(tightest.end)}", fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Gold)
                 } else {
                     Text("No level of the funnel supports this area now.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
                 }
@@ -172,11 +173,11 @@ private fun FunnelRow(label: String, t: TimingRecord?, widthFraction: Float, dim
     Column(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted.copy(alpha = alpha), modifier = Modifier.width(96.dp))
-            Text(t?.lord ?: "—", fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text.copy(alpha = alpha), modifier = Modifier.weight(1f))
+            Text(t?.lord ?: "—", fontFamily = KshanaFonts.serif, fontSize = 17.sp, color = KshanaColors.Text.copy(alpha = alpha), modifier = Modifier.weight(1f))
             if (t != null) {
                 Text(
                     "${localText(t.start, DATE_TIME)} → ${localText(t.end, DATE_TIME)}",
-                    fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Sky.copy(alpha = alpha),
+                    fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Sky.copy(alpha = alpha),
                 )
             }
         }

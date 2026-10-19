@@ -61,6 +61,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import com.kshana.app.ui.sky.KshanaFonts
 
 /** The eight life areas the engine scores, by their engine names. */
 private val AREAS = listOf("Career", "Marriage", "Children", "Wealth", "Health", "Property", "Education", "Foreign")
@@ -214,7 +215,7 @@ fun RectifyScreen(profile: BirthProfile, settings: EngineSettings, onSaved: (Bir
         )
         Text(
             "Recorded ${profile.birthLocal().format(CLOCK)}, window ${windowText(halfSeconds)}",
-            fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky,
+            fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky,
         )
 
         SectionLabel("Events")
@@ -225,7 +226,7 @@ fun RectifyScreen(profile: BirthProfile, settings: EngineSettings, onSaved: (Bir
             HorizontalDivider(color = KshanaColors.LineSoft)
             Row(Modifier.fillMaxWidth().heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(e.label, fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text)
+                    Text(e.label, fontFamily = KshanaFonts.serif, fontSize = 17.sp, color = KshanaColors.Text)
                     Text("${e.area} · ${e.local(zone).format(DATE_TIME)}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
                 }
                 Box(
@@ -276,7 +277,7 @@ fun RectifyScreen(profile: BirthProfile, settings: EngineSettings, onSaved: (Bir
         Spacer(Modifier.height(12.dp))
         Text(
             "Rectification ranks hypotheses. It cannot recover a time that no event constrains.",
-            fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 14.sp, lineHeight = 20.sp, color = KshanaColors.Muted,
+            fontFamily = KshanaFonts.serif, fontStyle = FontStyle.Italic, fontSize = 14.sp, lineHeight = 20.sp, color = KshanaColors.Muted,
         )
     }
 }
@@ -323,9 +324,9 @@ private fun ScoreCurve(candidates: List<CandidateRecord>, center: ExactInstant, 
             drawCircle(KshanaColors.Gold, radius = 5f, center = Offset(x(best.birth), y(best.score)))
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(localText(byTime.first().birth, CLOCK, zone), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
-            Text("best ${localText(best.birth, TIME_ONLY, zone)} · %.2f".format(best.score), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Gold)
-            Text(localText(byTime.last().birth, CLOCK, zone), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+            Text(localText(byTime.first().birth, CLOCK, zone), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
+            Text("best ${localText(best.birth, TIME_ONLY, zone)} · %.2f".format(best.score), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Gold)
+            Text(localText(byTime.last().birth, CLOCK, zone), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
         }
     }
 }
@@ -338,10 +339,10 @@ private fun CandidateCard(c: CandidateRecord, zone: ZoneId, onUse: () -> Unit) {
         Modifier.fillMaxWidth().clip(shape).background(KshanaColors.Surface).border(1.dp, KshanaColors.Line, shape).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(localText(c.birth, TIME_ONLY, zone), fontFamily = FontFamily.Monospace, fontSize = 18.sp, color = KshanaColors.Text)
+        Text(localText(c.birth, TIME_ONLY, zone), fontFamily = KshanaFonts.mono, fontSize = 18.sp, color = KshanaColors.Text)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ScoreBar(c.score.toFloat(), Modifier.weight(1f))
-            Text("%.2f".format(c.score), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Gold)
+            Text("%.2f".format(c.score), fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Gold)
         }
         Text(
             "Asc ${degMin(c.ascSidereal)} ${signName(c.ascSidereal)} · sub-lord ${c.ascSubLord}",
@@ -351,7 +352,7 @@ private fun CandidateCard(c: CandidateRecord, zone: ZoneId, onUse: () -> Unit) {
         for (e in c.perEvent) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(e.label, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text, modifier = Modifier.weight(1f))
-                Text("%.2f".format(e.score), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
+                Text("%.2f".format(e.score), fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky)
             }
             for (f in e.factors) Text("· $f", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         }
@@ -375,7 +376,7 @@ private fun EventField(value: String, onChange: (String) -> Unit, label: String,
         onValueChange = onChange,
         label = { Text(label, style = MaterialTheme.typography.labelSmall) },
         singleLine = true,
-        textStyle = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 15.sp, color = KshanaColors.Text),
+        textStyle = TextStyle(fontFamily = KshanaFonts.sans, fontSize = 15.sp, color = KshanaColors.Text),
         colors = eventFieldColors(),
         modifier = modifier,
     )
@@ -389,7 +390,7 @@ private fun EventNumberField(value: String, onChange: (String) -> Unit, label: S
         label = { Text(label, style = MaterialTheme.typography.labelSmall) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 15.sp, color = KshanaColors.Text),
+        textStyle = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 15.sp, color = KshanaColors.Text),
         colors = eventFieldColors(),
         modifier = modifier,
     )

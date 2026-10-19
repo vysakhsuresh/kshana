@@ -5,6 +5,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.Engine
 import java.io.File
+import uniffi.kshana_ffi.setRiseConvention
+import com.kshana.app.data.ProfileStore
 
 /**
  * Opens the Rust engine once per process. The kernel ships in the APK's assets and is
@@ -30,6 +32,7 @@ object EngineProvider {
     private fun open(context: Context): Engine {
         val spk = ensureAsset(context, "de421.bsp")
         val eop = runCatching { ensureAsset(context, "finals2000A.all") }.getOrNull()
+        runCatching { setRiseConvention(ProfileStore.settings(context).riseConvention) }
         return Engine.open(spk.absolutePath, eop?.absolutePath)
     }
 

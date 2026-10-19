@@ -15,9 +15,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -28,9 +31,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -41,7 +47,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -55,44 +60,55 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.ChartRecord
-import uniffi.kshana_ffi.ExactInstant
-import uniffi.kshana_ffi.PanchangaDetail
+import uniffi.kshana_ffi.Engine
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
-import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
 /*
  * The living sky: a full-bleed night canvas drawn, offline, from the real sky over a place.
  *
- * Geometry. The horizon is a line at 80 % of the height; the ecliptic is an ellipse centred
- * on it, so its upper half is the sky and its lower half lies under the ground. Looking
- * south (north of the equator) east is on the left, so the Ascendant sits at the left end
- * of the ring on the horizon, the Descendant at the right end, and a body's place along the
- * ring is the longitude distance back from the Ascendant: d = Asc − λ, 0° at the east
- * horizon, 90° at the top, 180° at the west horizon, beyond that under the ground. South of
- * the equator the picture is mirrored (east on the right). Everything is tropical, like the
- * wheel on the Now screen: the ring's sign ticks, the Ascendant from cuspsTropical[0] and
- * the bodies at their tropical longitudes.
+ * Stars. The Yale Bright Star Catalogue to V 5.0 (assets/sky/bsc.bin, see Stars.kt),
+ * precessed to the date and placed from the engine's local sidereal time and the place
+ * latitude, so the sky over the phone is the sky over the person: Orion rises in the east
+ * when Orion rises. The dome is projected stereographically from the horizon point the
+ * observer faces (south north of the equator, north south of it): the horizon is the line
+ * at 80 % of the height, the east and west points are the ends of the ecliptic ring, the
+ * zenith is one ring-half-width above the horizon and the sky beyond it wraps on towards
+ * the top edge. Positions are rewritten in place every 20 s (the sky turns 0.25°/min) and
+ * the chart is refreshed once a minute.
  *
- * Drawing. All geometry is precomputed in a `drawWithCache` block (re-run when the size or
- * the minute's chart changes) into float arrays, brushes and text layouts; the per-frame
- * `onDrawBehind` only reads the twinkle and drift clocks and issues draw calls, so it
- * allocates nothing. Gradient brushes cache their shader against the canvas size.
+ * Light. The Sun's altitude (from the chart: Sun longitude, obliquity, sidereal time)
+ * drives the tint, the horizon band and the limiting magnitude: day above +6°, golden hour
+ * to 0°, civil twilight to −6° (stars brighter than 1.5), nautical to −12° (3.5),
+ * astronomical to −18° (5.0), night below. A Moon above the horizon thins the field by up
+ * to 30 % of its illuminated fraction and warms the sky 2 %.
+ *
+ * Motion. Everything animated reads the motion contract (Motion.kt): twinkle, the 20 s
+ * sidereal drift and the ≤ 8 dp tilt parallax stop under it and the sky is one static
+ * frame refreshed once a minute. All geometry lives in float arrays, brushes and text
+ * layouts built in `drawWithCache` (when the size or the minute's chart changes); the
+ * per-frame `onDrawBehind` reads two clocks and the tilt and allocates nothing: the faint
+ * stars go out as twelve `drawRawPoints` batches, the bright ones as discs.
+ *
+ * The ecliptic ring, bodies and Ascendant are the cartoon they were: the ring is an
+ * ellipse on the horizon, a body's place along it is its longitude distance back from the
+ * Ascendant (0° east, 90° top, 180° west), everything tropical like the wheel on Now.
  */
 
-private const val STAR_COUNT = 450
-private const val MILKY_WAY_BLOBS = 40
-private const val STAR_SEED = 0x4B5348414E41L // "KSHANA": the same sky on every launch
-private const val DRIFT_PX_PER_MINUTE = 0.6
 private const val TWO_PI = 6.2831855f
 private const val HORIZON_FRACTION = 0.80f
-private const val TWILIGHT_SECONDS = 2400.0 // 40 minutes either side of sunrise and sunset
 private const val REFRESH_MILLIS = 60_000L
+private const val PROJECT_NANOS = 20_000_000_000L
+private const val TWINKLE_NANOS = Motion.TWINKLE_PERIOD_MS * 1_000_000L
 private val DAY_BLUE = Color(0xFF0E1A3A)
+private val DAY_HAZE = Color(0xFF6E8FC4)
+private val DUSK_ORANGE = Color(0xFFD9733A)
+private val DUSK_VIOLET = Color(0xFF3A2F6E)
+private val MOON_WARM = Color(0xFF2A2820)
 
 /** Local copy: the screens' glyph map is package-private to ui.screens. */
 private val PLANET_GLYPHS: Map<String, String> = mapOf(
@@ -126,62 +142,92 @@ private fun phaseName(elongationDeg: Double): String {
     }
 }
 
-/** A seeded linear congruential generator (Knuth's MMIX constants). */
-private class Lcg(private var state: Long) {
-    /** The next value in [0, 1). */
-    fun next(): Float {
-        state = state * 6364136223846793005L + 1442695040888963407L
-        return ((state ushr 40).toInt() and 0xFFFFFF) / 16777216f
-    }
+/** What the engine said this minute, with the light derived from it. */
+private class SkyNow(
+    val chart: ChartRecord,
+    /** System.nanoTime() when the chart was computed; the sidereal time advances from here. */
+    val atNanos: Long,
+    val sunAltDeg: Double,
+    val moonAltDeg: Double,
+    /** Illuminated fraction of the Moon, 0 new to 1 full. */
+    val moonIlluminated: Double,
+    /** The J2000 → date precession matrix for the chart's TT date. */
+    val precession: DoubleArray,
+    val description: String,
+) {
+    /** The local sidereal time at frame time [nowNanos], degrees. */
+    fun lstAt(nowNanos: Long): Double = chart.lstDeg + Stars.LST_DEG_PER_SECOND * ((nowNanos - atNanos) / 1e9)
 }
 
-/** The star catalogue in unit coordinates, generated once from the fixed seed. */
-private class StarField(count: Int) {
-    val x = FloatArray(count)
-    val y = FloatArray(count)
-    /** Radius in device pixels, 0.4–1.6, most stars small. */
-    val radius = FloatArray(count)
-    val brightness = FloatArray(count)
-    /** Twinkle phase in radians. */
-    val phase = FloatArray(count)
-    /** 0 warm white (Text), 1 blue (Sky), 2 gold. */
-    val tint = IntArray(count)
-    val bandU = FloatArray(MILKY_WAY_BLOBS)
-    val bandV = FloatArray(MILKY_WAY_BLOBS)
-    val bandRadius = FloatArray(MILKY_WAY_BLOBS)
-    val bandAlpha = FloatArray(MILKY_WAY_BLOBS)
-    val bandTint = IntArray(MILKY_WAY_BLOBS)
+/** The sky light for a solar and lunar altitude. */
+private class SkyLight(
+    /** The faintest magnitude the sky lets through. */
+    val limitingMag: Float,
+    /** 0 at night (−6° and below), 1 by day (+6° and above). */
+    val dayFactor: Float,
+    val top: Color,
+    val bandColor: Color,
+    val bandAlpha: Float,
+    /** Star alpha factor for moonlight, 1 with no Moon. */
+    val moonDim: Float,
+    val bandName: String,
+)
 
-    init {
-        val rng = Lcg(STAR_SEED)
-        for (i in 0 until count) {
-            x[i] = rng.next()
-            y[i] = rng.next()
-            val r = rng.next()
-            radius[i] = 0.4f + 1.2f * r * r
-            brightness[i] = 0.35f + 0.65f * rng.next()
-            phase[i] = rng.next() * TWO_PI
-            val t = rng.next()
-            tint[i] = when {
-                t < 0.80f -> 0
-                t < 0.93f -> 1
-                else -> 2
+private val LIMIT_H = doubleArrayOf(6.0, 0.0, -6.0, -12.0, -18.0, -24.0)
+private val LIMIT_M = floatArrayOf(-3f, -2f, 1.5f, 3.5f, 5.0f, 6.5f)
+
+/** Limiting magnitude by solar altitude, linear between the twilight rows. */
+private fun limitingMagnitude(h: Double): Float {
+    if (h >= LIMIT_H[0]) return LIMIT_M[0]
+    for (i in 1 until LIMIT_H.size) {
+        if (h >= LIMIT_H[i]) {
+            val t = ((LIMIT_H[i - 1] - h) / (LIMIT_H[i - 1] - LIMIT_H[i])).toFloat()
+            return LIMIT_M[i - 1] + (LIMIT_M[i] - LIMIT_M[i - 1]) * t
+        }
+    }
+    return LIMIT_M.last()
+}
+
+private val BAND_H = doubleArrayOf(8.0, 6.0, 0.0, -6.0, -12.0, -18.0)
+private val BAND_C = arrayOf(DAY_HAZE, KshanaColors.Gold, DUSK_ORANGE, DUSK_VIOLET, DUSK_VIOLET, DUSK_VIOLET)
+private val BAND_A = floatArrayOf(0.16f, 0.22f, 0.28f, 0.16f, 0.05f, 0f)
+
+private fun skyLight(now: SkyNow?): SkyLight {
+    val h = now?.sunAltDeg ?: -30.0
+    val dayFactor = ((h + 6.0) / 12.0).coerceIn(0.0, 1.0).toFloat()
+    val moonUp = now != null && now.moonAltDeg > 0.0
+    val k = if (moonUp) now!!.moonIlluminated.toFloat() * ((now.moonAltDeg / 20.0).coerceIn(0.0, 1.0)).toFloat() else 0f
+    var top = lerp(KshanaColors.Night, DAY_BLUE, 0.35f * dayFactor)
+    top = lerp(top, MOON_WARM, 0.02f * k)
+    var bandColor = DUSK_VIOLET
+    var bandAlpha = 0f
+    if (h >= BAND_H[0]) {
+        bandColor = BAND_C[0]; bandAlpha = BAND_A[0]
+    } else {
+        for (i in 1 until BAND_H.size) {
+            if (h >= BAND_H[i]) {
+                val t = ((BAND_H[i - 1] - h) / (BAND_H[i - 1] - BAND_H[i])).toFloat()
+                bandColor = lerp(BAND_C[i - 1], BAND_C[i], t)
+                bandAlpha = BAND_A[i - 1] + (BAND_A[i] - BAND_A[i - 1]) * t
+                break
             }
         }
-        for (i in 0 until MILKY_WAY_BLOBS) {
-            bandU[i] = rng.next()
-            bandV[i] = rng.next() * 2f - 1f
-            bandRadius[i] = 0.07f + 0.09f * rng.next()
-            bandAlpha[i] = 0.02f + 0.02f * rng.next()
-            bandTint[i] = if (rng.next() < 0.75f) 0 else 1
-        }
     }
+    val name = when {
+        h >= 0.0 -> "day"
+        h >= -6.0 -> "civil twilight"
+        h >= -12.0 -> "nautical twilight"
+        h >= -18.0 -> "astronomical twilight"
+        else -> "night"
+    }
+    return SkyLight(limitingMagnitude(h), dayFactor, top, bandColor, bandAlpha, 1f - 0.3f * k, name)
 }
 
-private val STARS = StarField(STAR_COUNT)
-
-/** What the engine said this minute. */
-private class SkyNow(val chart: ChartRecord, val dayFactor: Float, val description: String)
+/** The canvas size the cache last saw, for the frame loop's re-projection. */
+private class SkyGeometry {
+    var width = 0f
+    var height = 0f
+}
 
 /** A planet placed on the ring, with its glyph laid out. */
 private class BodyMark(
@@ -195,33 +241,70 @@ private class BodyMark(
     val glyphY: Float,
 )
 
-private fun ExactInstant.secs(): Double = taiSeconds.toDouble() + nanos.toDouble() / 1e9
-
-/** 0 at −40 min, 1 at +40 min, linear between. */
-private fun twilightRamp(x: Double): Float = ((x + TWILIGHT_SECONDS) / (2.0 * TWILIGHT_SECONDS)).coerceIn(0.0, 1.0).toFloat()
-
-/**
- * How much daylight to tint the sky with: 1 between sunrise and sunset, 0 at night, a linear
- * blend across 40 minutes either side. `today` is the solar day containing now (its sunrise
- * is before now); `tomorrow` is the next solar day, whose sunrise gives the dawn twilight.
- */
-private fun dayFactor(now: ExactInstant, today: PanchangaDetail?, tomorrow: PanchangaDetail?): Float {
-    val t = now.secs()
-    var f = 0f
-    for (d in arrayOf(today, tomorrow)) {
-        val rise = d?.sunrise ?: continue
-        val set = d.sunset ?: continue
-        f = max(f, minOf(twilightRamp(t - rise.secs()), twilightRamp(set.secs() - t)))
-    }
-    return f
-}
-
-private fun describe(place: Place, chart: ChartRecord): String {
+private fun describe(place: Place, chart: ChartRecord, light: String): String {
     val sun = chart.bodies.firstOrNull { it.name == "Sun" }
     val moon = chart.bodies.firstOrNull { it.name == "Moon" }
-    if (sun == null || moon == null) return "The sky over ${place.name} now"
+    if (sun == null || moon == null) return "The sky over ${place.name} now, $light"
     val elongation = norm360(moon.tropical - sun.tropical)
-    return "The sky over ${place.name} now: Sun in ${signName(sun.tropical)}, Moon in ${signName(moon.tropical)}, ${phaseName(elongation)}"
+    return "The sky over ${place.name} now: Sun in ${signName(sun.tropical)}, Moon in ${signName(moon.tropical)}, ${phaseName(elongation)}; $light"
+}
+
+/** One engine call per minute: the chart, and from it the Sun's and Moon's altitude. */
+private fun computeSky(engine: Engine, place: Place, settings: EngineSettings): SkyNow {
+    val now = Instants.now()
+    val chart = engine.chart(now, place.latitude, place.longitude, 0.0, settings.houseSystem, settings.ayanamsa, false)
+    val sun = chart.bodies.firstOrNull { it.name == "Sun" }
+    val moon = chart.bodies.firstOrNull { it.name == "Moon" }
+    val eq = DoubleArray(2)
+    // The Sun's altitude from the ephemeris; if that call fails, the geometric altitude from
+    // the chart's own Sun longitude, obliquity and sidereal time (good to about 1′).
+    val sunAlt = runCatching { engine.sunAltitude(now, place.latitude, place.longitude) }.getOrElse {
+        if (sun != null) {
+            Stars.eclipticToEquatorial(sun.tropical, sun.latitude, chart.obliquityDeg, eq)
+            Stars.altitudeDeg(eq[0], eq[1], chart.lstDeg, place.latitude)
+        } else -30.0
+    }
+    val moonAlt = if (moon != null) {
+        Stars.eclipticToEquatorial(moon.tropical, moon.latitude, chart.obliquityDeg, eq)
+        Stars.altitudeDeg(eq[0], eq[1], chart.lstDeg, place.latitude)
+    } else -30.0
+    val illuminated = if (sun != null && moon != null) (1.0 - cos(Math.toRadians(norm360(moon.tropical - sun.tropical)))) / 2.0 else 0.0
+    val precession = DoubleArray(9)
+    val t = ((chart.ttJd1 - 2451545.0) + chart.ttJd2) / 36525.0
+    if (abs(t) < 10.0) Stars.precessionMatrix(t, precession) else Stars.identity(precession)
+    val lightName = when {
+        sunAlt >= 0.0 -> "day"
+        sunAlt >= -6.0 -> "civil twilight"
+        sunAlt >= -12.0 -> "nautical twilight"
+        sunAlt >= -18.0 -> "astronomical twilight"
+        else -> "night"
+    }
+    return SkyNow(chart, System.nanoTime(), sunAlt, moonAlt, illuminated, precession, describe(place, chart, lightName))
+}
+
+/** Rewrite the star arrays for the sky at frame time [nowNanos] and the canvas [w] × [h]. */
+private fun projectStars(proj: StarProjection, sky: SkyNow, nowNanos: Long, w: Float, h: Float, latitude: Double, southern: Boolean, intensity: Float) {
+    val light = skyLight(sky)
+    proj.project(
+        precession = sky.precession,
+        lstDeg = sky.lstAt(nowNanos),
+        latDeg = latitude,
+        southern = southern,
+        cx = w * 0.5f,
+        horizonY = h * HORIZON_FRACTION,
+        scale = w * 0.46f,
+        width = w,
+        height = h,
+        limitingMag = light.limitingMag,
+        moonDim = light.moonDim,
+        intensity = intensity,
+    )
+}
+
+private fun starColor(tint: Int): Color = when (tint) {
+    0 -> lerp(KshanaColors.Text, KshanaColors.Gold, 0.5f)
+    2 -> lerp(KshanaColors.Text, KshanaColors.Sky, 0.7f)
+    else -> KshanaColors.Text
 }
 
 /**
@@ -247,11 +330,13 @@ private fun DrawScope.drawMoonPhase(cx: Float, cy: Float, r: Float, elongationDe
 }
 
 /**
- * The living sky over [place]: a seeded star field that twinkles and drifts, a faint Milky
- * Way, the ecliptic ring with its sign ticks, the Sun, the phase-correct Moon and the
- * naked-eye planets at their current longitudes (refreshed every minute from the engine),
- * the Ascendant marked on the horizon, and a day/night tint from sunrise and sunset.
- * [intensity] scales the star count and alpha (0.4 for screens that put text on top);
+ * The living sky over [place]: the real stars of the Bright Star Catalogue placed for the
+ * observer and the minute, lit by the Sun's altitude (twilight bands, limiting magnitude)
+ * and thinned by the Moon; the ecliptic ring with its sign ticks, the Sun, the phase-correct
+ * Moon and the naked-eye planets at their current longitudes (refreshed every minute from
+ * the engine), and the Ascendant marked on the horizon. Twinkle, sidereal drift and tilt
+ * parallax obey the motion contract. [intensity] scales the stars' alpha and, at ≥ 0.9,
+ * shows the names of the first-magnitude stars (0.4 for screens that put text on top);
  * [content] renders over the sky.
  */
 @Composable
@@ -263,22 +348,31 @@ fun LivingSky(
     content: @Composable BoxScope.() -> Unit = {},
 ) {
     val context = LocalContext.current
-    var sky by remember { mutableStateOf<SkyNow?>(null) }
+    KshanaFonts.attach(context)
+    remember(context) { Foreground.register(context); 0 }
+    val reduced = Motion.rememberReduced()
+    val starAlpha = intensity.coerceIn(0f, 1f)
+    val southern = place.latitude < 0.0
 
-    // Positions once a minute, off the main thread. A failure keeps the last sky.
+    val catalogue by produceState<StarCatalogue?>(initialValue = null, context) {
+        value = withContext(Dispatchers.IO) { Stars.load(context) }
+    }
+    val projection = remember(catalogue) { catalogue?.let { StarProjection(it) } }
+    var sky by remember { mutableStateOf<SkyNow?>(null) }
+    var projTick by remember { mutableIntStateOf(0) }
+    var twinkleT by remember { mutableFloatStateOf(0f) }
+    val geometry = remember { SkyGeometry() }
+    val tilt = rememberTilt(enabled = !reduced && starAlpha > 0f)
+
+    // The chart once a minute, off the main thread. A failure keeps the last sky.
     LaunchedEffect(place, settings) {
         while (true) {
             try {
                 val engine = EngineProvider.get(context)
-                sky = withContext(Dispatchers.Default) {
-                    val now = Instants.now()
-                    val chart = engine.chart(now, place.latitude, place.longitude, 0.0, settings.houseSystem, settings.ayanamsa, false)
-                    val today = runCatching { engine.panchangaDetail(now, place.latitude, place.longitude, settings.ayanamsa) }.getOrNull()
-                    val tomorrow = runCatching {
-                        engine.panchangaDetail(ExactInstant(now.taiSeconds + 86_400L, now.nanos), place.latitude, place.longitude, settings.ayanamsa)
-                    }.getOrNull()
-                    SkyNow(chart, dayFactor(now, today, tomorrow), describe(place, chart))
-                }
+                val next = withContext(Dispatchers.Default) { computeSky(engine, place, settings) }
+                sky = next
+                SkySound.setSky(next.sunAltDeg)
+                SkySound.resume(context)
             } catch (e: Exception) {
                 // The stars still shine without a chart.
             }
@@ -286,29 +380,43 @@ fun LivingSky(
         }
     }
 
-    // Twinkle: one float 0..1 over 6 s, eased, restarting (sin is continuous across the wrap).
-    val transition = rememberInfiniteTransition(label = "sky")
-    val twinkle by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(6000, easing = EaseInOut), RepeatMode.Restart),
-        label = "twinkle",
-    )
-    // Drift: the whole field slides 0.6 px per minute from the frame clock, so it breathes.
-    var driftPx by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(Unit) {
-        val start = withFrameNanos { it }
+    // The frame loop: twinkle clock, the 20 s re-projection (the real sidereal drift), and
+    // the foreground signal. Under the contract it ticks once a second and moves nothing.
+    LaunchedEffect(reduced, projection) {
+        val origin = withFrameNanos { it }
+        var lastProjected = Long.MIN_VALUE
+        var lastSoundCheck = Long.MIN_VALUE
+        var lastSky: SkyNow? = null
         while (true) {
-            withFrameNanos { now -> driftPx = ((now - start) * (DRIFT_PX_PER_MINUTE / 60e9)).toFloat() }
+            val now = withFrameNanos { it }
+            Foreground.sawFrame()
+            if (!reduced) twinkleT = ((now - origin) % TWINKLE_NANOS) / TWINKLE_NANOS.toFloat()
+            if (now - lastSoundCheck >= 5_000_000_000L) {
+                // Frames flowing again after the UI was hidden: the drone may come back.
+                lastSoundCheck = now
+                SkySound.resume(context)
+            }
+            val s = sky
+            val w = geometry.width
+            val h = geometry.height
+            if (projection != null && s != null && w > 0f && h > 0f) {
+                val due = s !== lastSky || now - lastProjected >= PROJECT_NANOS || w != projection.lastWidth || h != projection.lastHeight
+                if (due) {
+                    projectStars(projection, s, now, w, h, place.latitude, southern, starAlpha)
+                    projTick++
+                    lastProjected = now
+                    lastSky = s
+                }
+            }
+            if (reduced) delay(1000L)
         }
     }
 
     val textMeasurer = rememberTextMeasurer()
-    val labelStyle = remember { TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp) }
-    val starAlpha = intensity.coerceIn(0f, 1f)
-    val starCount = (STAR_COUNT * starAlpha).roundToInt().coerceIn(0, STAR_COUNT)
-    val southern = place.latitude < 0.0
+    val fontsBundled = KshanaFonts.bundled
+    val labelStyle = remember(fontsBundled) { TextStyle(fontFamily = KshanaFonts.mono, fontSize = 9.sp) }
     val description = sky?.description ?: "The sky over ${place.name} now"
+    val density = LocalDensity.current
 
     Box(modifier.fillMaxSize().background(KshanaColors.Night)) {
         Canvas(
@@ -323,7 +431,13 @@ fun LivingSky(
                     val now = sky // state read here: the cache is rebuilt when the minute's chart arrives
                     val chart = now?.chart
                     val hasChart = chart != null
-                    val dayFactor = now?.dayFactor ?: 0f
+                    val light = skyLight(now)
+                    val proj = projection
+                    geometry.width = w
+                    geometry.height = h
+                    if (proj != null && now != null && (proj.lastWidth != w || proj.lastHeight != h)) {
+                        projectStars(proj, now, System.nanoTime(), w, h, place.latitude, southern, starAlpha)
+                    }
 
                     // ---- layout: horizon, and the ecliptic ellipse centred on it ----
                     val horizonY = h * HORIZON_FRACTION
@@ -333,10 +447,19 @@ fun LivingSky(
                     val ry = h * 0.22f
                     val dir = if (southern) -1f else 1f
                     val hair = 1.dp.toPx()
+                    val px = density.density
+                    val ringParallax = Motion.PARALLAX_RING_DP / Motion.PARALLAX_STARS_DP
 
-                    // ---- sky and ground ----
-                    val topColor = lerp(KshanaColors.Night, DAY_BLUE, 0.35f * dayFactor)
-                    val skyBrush = Brush.verticalGradient(0f to topColor, 0.7f to KshanaColors.Night, startY = 0f, endY = h)
+                    // ---- sky, twilight band and ground ----
+                    val skyBrush = Brush.verticalGradient(0f to light.top, 0.7f to KshanaColors.Night, startY = 0f, endY = h)
+                    val bandTop = horizonY * 0.72f
+                    val bandBrush = Brush.verticalGradient(
+                        0f to light.bandColor.copy(alpha = 0f), 1f to light.bandColor.copy(alpha = light.bandAlpha),
+                        startY = bandTop, endY = horizonY,
+                    )
+                    val bandTopLeft = Offset(0f, bandTop)
+                    val bandSize = Size(w, horizonY - bandTop)
+                    val bandOn = light.bandAlpha > 0.002f
                     val groundBrush = Brush.verticalGradient(
                         0f to KshanaColors.LineSoft.copy(alpha = 0.88f), 1f to KshanaColors.Night.copy(alpha = 0.96f),
                         startY = horizonY, endY = h,
@@ -346,30 +469,37 @@ fun LivingSky(
                     val horizonStart = Offset(0f, horizonY)
                     val horizonEnd = Offset(w, horizonY)
 
-                    // ---- stars, in pixels, above the horizon; they fade in daylight ----
-                    val n = starCount
-                    val starX = FloatArray(n) { STARS.x[it] * w }
-                    val starY = FloatArray(n) { STARS.y[it] * horizonY }
-                    val starFade = starAlpha * (1f - 0.6f * dayFactor)
+                    // ---- stars: paints for the twelve point buckets, colours for the discs ----
+                    val bucketPaints = Array(StarProjection.BUCKETS) { b ->
+                        Paint().apply {
+                            color = starColor(b % StarProjection.TINTS)
+                            strokeWidth = 2f * StarProjection.radiusDp(StarProjection.bandMag(b / StarProjection.TINTS)) * px
+                            strokeCap = StrokeCap.Round
+                            isAntiAlias = true
+                        }
+                    }
+                    val discColor = if (proj != null) Array(proj.nBright) { starColor(proj.cat.tint[it].toInt()) } else emptyArray()
+                    val discRadius = if (proj != null) FloatArray(proj.nBright) { StarProjection.radiusDp(proj.cat.mag[it]) * px } else FloatArray(0)
+                    val haloFrom = if (proj != null) {
+                        var n = 0
+                        while (n < proj.nBright && proj.cat.mag[n] < 1.5f) n++
+                        n
+                    } else 0
+                    val drawStars = proj != null && starAlpha > 0f
 
-                    // ---- the Milky Way: soft blobs along a diagonal from upper left to right ----
-                    val bandN = if (starAlpha > 0f) MILKY_WAY_BLOBS else 0
-                    val bandX = FloatArray(bandN)
-                    val bandY = FloatArray(bandN)
-                    val bandR = FloatArray(bandN)
-                    for (i in 0 until bandN) {
-                        val u = STARS.bandU[i]
-                        bandX[i] = w * (0.05f + 0.90f * u)
-                        bandY[i] = horizonY * (0.08f + 0.62f * u) + STARS.bandV[i] * h * 0.07f
-                        bandR[i] = STARS.bandRadius[i] * w
+                    // Names of the first-magnitude stars, only on a quiet sky.
+                    val labelIdx: IntArray
+                    val labels: Array<TextLayoutResult>
+                    if (proj != null && starAlpha >= 0.9f) {
+                        val idx = proj.cat.namedIndices.filter { it < proj.nBright && proj.cat.mag[it] < 1.5f }
+                        labelIdx = idx.toIntArray()
+                        labels = Array(idx.size) { textMeasurer.measure(proj.cat.name[idx[it]] ?: "", labelStyle) }
+                    } else {
+                        labelIdx = IntArray(0)
+                        labels = emptyArray()
                     }
-                    val bandBrush = Array(bandN) { i ->
-                        val c = if (STARS.bandTint[i] == 0) KshanaColors.Text else KshanaColors.Sky
-                        Brush.radialGradient(
-                            0f to c.copy(alpha = STARS.bandAlpha[i] * starFade), 1f to c.copy(alpha = 0f),
-                            center = Offset(bandX[i], bandY[i]), radius = bandR[i],
-                        )
-                    }
+                    val labelGap = 3.dp.toPx()
+                    val labelAlpha = 0.75f * (1f - light.dayFactor)
 
                     // ---- the ecliptic ring ----
                     val ringStroke = Stroke(hair)
@@ -404,21 +534,21 @@ fun LivingSky(
                     val glyphOut = 14.dp.toPx()
                     for (i in 0 until 12) {
                         val th = theta(i * 30.0)
-                        val px = ringX(th)
-                        val py = ringY(th)
+                        val pxr = ringX(th)
+                        val pyr = ringY(th)
                         val nx = normalX(th)
                         val ny = normalY(th)
-                        tickX1[i] = px - nx * tickIn
-                        tickY1[i] = py - ny * tickIn
-                        tickX2[i] = px + nx * tickOut
-                        tickY2[i] = py + ny * tickOut
+                        tickX1[i] = pxr - nx * tickIn
+                        tickY1[i] = pyr - ny * tickIn
+                        tickX2[i] = pxr + nx * tickOut
+                        tickY2[i] = pyr + ny * tickOut
                         val thm = theta(i * 30.0 + 15.0)
                         glyphX[i] = ringX(thm) + normalX(thm) * glyphOut - glyphs[i].size.width / 2f
                         glyphY[i] = ringY(thm) + normalY(thm) * glyphOut - glyphs[i].size.height / 2f
                     }
 
                     // ---- the planets ----
-                    val labelGap = 3.dp.toPx()
+                    val bodyGap = 3.dp.toPx()
                     val bodies: Array<BodyMark> = if (chart == null) emptyArray() else chart.bodies
                         .filter { it.name in VISIBLE_PLANETS }
                         .map { b ->
@@ -438,7 +568,7 @@ fun LivingSky(
                             }
                             val radius = radiusDp.dp.toPx()
                             val glyph = textMeasurer.measure(PLANET_GLYPHS[b.name] ?: b.name.take(2), labelStyle)
-                            BodyMark(x, y, above(b.tropical), color, radius, glyph, x + radius + labelGap, y - glyph.size.height / 2f)
+                            BodyMark(x, y, above(b.tropical), color, radius, glyph, x + radius + bodyGap, y - glyph.size.height / 2f)
                         }
                         .toTypedArray()
 
@@ -461,7 +591,7 @@ fun LivingSky(
                         center = Offset(sunX, sunY), radius = haloR,
                     )
                     val sunGlyph = textMeasurer.measure("☉", labelStyle)
-                    val sunGlyphX = sunX + (if (sunAbove) sunR else markR) + labelGap
+                    val sunGlyphX = sunX + (if (sunAbove) sunR else markR) + bodyGap
                     val sunGlyphY = sunY - sunGlyph.size.height / 2f
 
                     // ---- the Moon: phase from the Moon − Sun elongation; the lit limb faces the Sun ----
@@ -476,7 +606,7 @@ fun LivingSky(
                     val moonMarkR = 3.5.dp.toPx()
                     val rimStroke = Stroke(max(1f, 0.5.dp.toPx()))
                     val moonGlyph = textMeasurer.measure("☽", labelStyle)
-                    val moonGlyphX = moonX + (if (moonAbove) moonR else moonMarkR) + labelGap
+                    val moonGlyphX = moonX + (if (moonAbove) moonR else moonMarkR) + bodyGap
                     val moonGlyphY = moonY - moonGlyph.size.height / 2f
 
                     // ---- the Ascendant: a gold tick on the horizon at the east end of the ring ----
@@ -494,53 +624,83 @@ fun LivingSky(
                     val ascTickWidth = 1.5.dp.toPx()
 
                     onDrawBehind {
-                        // The only state read per frame: the two clocks.
-                        val phaseT = twinkle * TWO_PI
-                        val drift = driftPx
+                        // The only state read per frame: the two clocks and the tilt.
+                        val phaseT = twinkleT * TWO_PI
+                        @Suppress("UNUSED_VARIABLE") val tick = projTick // subscribes this draw to the 20 s re-projection
+                        val tx = tilt.x * px
+                        val ty = tilt.y * px
 
                         drawRect(skyBrush)
-                        for (i in 0 until bandN) drawCircle(bandBrush[i], bandR[i], Offset(bandX[i], bandY[i]))
-                        for (i in 0 until n) {
-                            val x = (starX[i] + drift) % w
-                            val a = (0.55f + 0.45f * sin(STARS.phase[i] + phaseT)) * STARS.brightness[i] * starFade
-                            val c = when (STARS.tint[i]) {
-                                1 -> KshanaColors.Sky
-                                2 -> KshanaColors.Gold
-                                else -> KshanaColors.Text
+                        if (bandOn) drawRect(bandBrush, bandTopLeft, bandSize)
+
+                        if (drawStars && proj != null) {
+                            translate(tx, ty) {
+                                // Faint stars: twelve batches, a whisper of shimmer per batch.
+                                for (b in 0 until StarProjection.BUCKETS) {
+                                    val a = proj.bucketAlpha[b]
+                                    if (a <= 0.004f) continue
+                                    val paint = bucketPaints[b]
+                                    paint.alpha = (a * (0.92f + 0.08f * sin(phaseT + b))).coerceIn(0f, 1f)
+                                    drawContext.canvas.drawRawPoints(PointMode.Points, proj.pts[b], paint)
+                                }
+                                // Bright stars: discs with their own twinkle; the first magnitude gets a halo.
+                                for (i in 0 until proj.nBright) {
+                                    if (!proj.bVisible[i]) continue
+                                    val amp = proj.bTwinkle[i]
+                                    val a = (proj.bAlpha[i] * (1f - amp + amp * sin(proj.bPhase[i] + phaseT))).coerceIn(0f, 1f)
+                                    if (a <= 0.004f) continue
+                                    val c = discColor[i]
+                                    val r = discRadius[i]
+                                    if (i < haloFrom) drawCircle(c, r * 2.4f, Offset(proj.bx[i], proj.by[i]), alpha = a * 0.16f)
+                                    drawCircle(c, r, Offset(proj.bx[i], proj.by[i]), alpha = a)
+                                }
+                                for (k in labelIdx.indices) {
+                                    val i = labelIdx[k]
+                                    if (!proj.bVisible[i]) continue
+                                    val layout = labels[k]
+                                    drawText(
+                                        layout, color = KshanaColors.Muted,
+                                        topLeft = Offset(proj.bx[i] + discRadius[i] + labelGap, proj.by[i] - layout.size.height / 2f),
+                                        alpha = labelAlpha * proj.bAlpha[i],
+                                    )
+                                }
                             }
-                            drawCircle(c, STARS.radius[i], Offset(x, starY[i]), alpha = a)
                         }
 
                         // The ecliptic, its ticks and glyphs; the lower half is then veiled by the ground.
-                        drawOval(KshanaColors.Gold, ringTopLeft, ringSize, alpha = 0.35f, style = ringStroke)
-                        if (hasChart) {
-                            for (i in 0 until 12) {
-                                drawLine(KshanaColors.Gold, Offset(tickX1[i], tickY1[i]), Offset(tickX2[i], tickY2[i]), strokeWidth = hair, alpha = 0.5f)
-                                drawText(glyphs[i], color = KshanaColors.Muted, topLeft = Offset(glyphX[i], glyphY[i]), alpha = 0.85f)
+                        translate(tx * ringParallax, ty * ringParallax) {
+                            drawOval(KshanaColors.Gold, ringTopLeft, ringSize, alpha = 0.35f, style = ringStroke)
+                            if (hasChart) {
+                                for (i in 0 until 12) {
+                                    drawLine(KshanaColors.Gold, Offset(tickX1[i], tickY1[i]), Offset(tickX2[i], tickY2[i]), strokeWidth = hair, alpha = 0.5f)
+                                    drawText(glyphs[i], color = KshanaColors.Muted, topLeft = Offset(glyphX[i], glyphY[i]), alpha = 0.85f)
+                                }
                             }
                         }
                         drawRect(groundBrush, groundTopLeft, groundSize)
                         drawLine(KshanaColors.Line, horizonStart, horizonEnd, strokeWidth = hair, alpha = 0.9f)
 
                         if (hasChart) {
-                            for (b in bodies) {
-                                val a = if (b.above) 1f else 0.3f
-                                drawCircle(b.color, b.radius, Offset(b.x, b.y), alpha = a)
-                                drawText(b.glyph, color = b.color, topLeft = Offset(b.glyphX, b.glyphY), alpha = a * 0.85f)
+                            translate(tx * ringParallax, ty * ringParallax) {
+                                for (b in bodies) {
+                                    val a = if (b.above) 1f else 0.3f
+                                    drawCircle(b.color, b.radius, Offset(b.x, b.y), alpha = a)
+                                    drawText(b.glyph, color = b.color, topLeft = Offset(b.glyphX, b.glyphY), alpha = a * 0.85f)
+                                }
+                                drawCircle(sunHalo, haloR, Offset(sunX, sunY))
+                                if (sunAbove) {
+                                    drawCircle(KshanaColors.Gold, sunR, Offset(sunX, sunY))
+                                } else {
+                                    drawCircle(KshanaColors.Gold, markR, Offset(sunX, sunY), alpha = 0.4f, style = markStroke)
+                                }
+                                drawText(sunGlyph, color = KshanaColors.Gold, topLeft = Offset(sunGlyphX, sunGlyphY), alpha = if (sunAbove) 0.9f else 0.4f)
+                                if (moonAbove) {
+                                    drawMoonPhase(moonX, moonY, moonR, elongation, litRight, rimStroke)
+                                } else {
+                                    drawCircle(KshanaColors.TextSoft, moonMarkR, Offset(moonX, moonY), alpha = 0.35f, style = markStroke)
+                                }
+                                drawText(moonGlyph, color = KshanaColors.TextSoft, topLeft = Offset(moonGlyphX, moonGlyphY), alpha = if (moonAbove) 0.9f else 0.35f)
                             }
-                            drawCircle(sunHalo, haloR, Offset(sunX, sunY))
-                            if (sunAbove) {
-                                drawCircle(KshanaColors.Gold, sunR, Offset(sunX, sunY))
-                            } else {
-                                drawCircle(KshanaColors.Gold, markR, Offset(sunX, sunY), alpha = 0.4f, style = markStroke)
-                            }
-                            drawText(sunGlyph, color = KshanaColors.Gold, topLeft = Offset(sunGlyphX, sunGlyphY), alpha = if (sunAbove) 0.9f else 0.4f)
-                            if (moonAbove) {
-                                drawMoonPhase(moonX, moonY, moonR, elongation, litRight, rimStroke)
-                            } else {
-                                drawCircle(KshanaColors.TextSoft, moonMarkR, Offset(moonX, moonY), alpha = 0.35f, style = markStroke)
-                            }
-                            drawText(moonGlyph, color = KshanaColors.TextSoft, topLeft = Offset(moonGlyphX, moonGlyphY), alpha = if (moonAbove) 0.9f else 0.35f)
                             drawLine(KshanaColors.Gold, ascTickTop, ascTickBottom, strokeWidth = ascTickWidth)
                             drawText(ascLabel, color = KshanaColors.Gold, topLeft = Offset(ascLabelX, ascLabelY))
                         }
@@ -569,17 +729,21 @@ fun MoonDisc(elongationDeg: Double, size: Dp, modifier: Modifier = Modifier) {
 
 /**
  * A ring whose arc shows [progress] in [0, 1] from 12 o'clock and whose stroke alpha
- * breathes on a 4 s cycle, over a faint full track. Size it with [modifier] (44 dp if none).
+ * breathes on a 5 s cycle (0.2 Hz), over a faint full track; still under the motion
+ * contract. Size it with [modifier] (44 dp if none).
  */
 @Composable
 fun BreathingRing(progress: Float, modifier: Modifier = Modifier, color: Color = KshanaColors.Gold) {
-    val transition = rememberInfiniteTransition(label = "ring")
-    val breath by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(2000, easing = EaseInOut), RepeatMode.Reverse),
-        label = "breath",
-    )
+    val reduced = Motion.rememberReduced()
+    val breathState: State<Float>? = if (reduced) null else {
+        val transition = rememberInfiniteTransition(label = "ring")
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(Motion.BREATH_PERIOD_MS / 2, easing = EaseInOut), RepeatMode.Reverse),
+            label = "breath",
+        )
+    }
     val density = LocalDensity.current
     val stroke = remember(density) { Stroke(width = with(density) { 2.dp.toPx() }, cap = StrokeCap.Round) }
     val clamped = progress.coerceIn(0f, 1f)
@@ -590,6 +754,7 @@ fun BreathingRing(progress: Float, modifier: Modifier = Modifier, color: Color =
     ) {
         val d = size.minDimension - stroke.width
         if (d <= 0f) return@Canvas
+        val breath = breathState?.value ?: 0.55f // read in the draw phase: no recomposition per frame
         val topLeft = Offset((size.width - d) / 2f, (size.height - d) / 2f)
         val arcSize = Size(d, d)
         drawArc(color, 0f, 360f, false, topLeft, arcSize, alpha = 0.15f, style = stroke)

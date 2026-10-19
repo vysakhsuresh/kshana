@@ -65,6 +65,7 @@ import uniffi.kshana_ffi.TajikaYogaRecord
 import uniffi.kshana_ffi.VarshaphalaRecord
 import java.time.LocalDate
 import java.time.ZoneId
+import com.kshana.app.ui.sky.KshanaFonts
 
 /** The saham groups, by the meaning's keywords. */
 private enum class SahamGroup(val label: String) {
@@ -210,7 +211,7 @@ fun YearScreen(profile: BirthProfile, here: Place, settings: EngineSettings, onB
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { AnnualChart(rec) }
                 Text(
                     "lagna ${degMin(rec.lagnaSidereal)} ${signName(rec.lagnaSidereal)} · Muntha ${degMin(rec.munthaLongitude)} ${signName(rec.munthaLongitude)}, house ${rec.munthaHouse.toInt()}, lord ${rec.munthaLord}",
-                    fontFamily = FontFamily.Monospace, fontSize = 11.sp, lineHeight = 16.sp, color = KshanaColors.Sky,
+                    fontFamily = KshanaFonts.mono, fontSize = 11.sp, lineHeight = 16.sp, color = KshanaColors.Sky,
                 )
 
                 SectionLabel("Lord of the year")
@@ -233,9 +234,9 @@ fun YearScreen(profile: BirthProfile, here: Place, settings: EngineSettings, onB
                 val yearEnd = rec.mudda.lastOrNull()?.end ?: rec.nextReturn
                 MuddaBar(rec.mudda, yearStart, yearEnd, now, picked) { picked = if (picked == it) null else it }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(localText(yearStart, DATE_ONLY, zone), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+                    Text(localText(yearStart, DATE_ONLY, zone), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
                     Text("${rec.mudda.size} periods across the year", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
-                    Text(localText(yearEnd, DATE_ONLY, zone), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+                    Text(localText(yearEnd, DATE_ONLY, zone), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
                 }
                 MuddaDetail(rec.mudda, now, picked, zone)
                 if (rec.mudda.isNotEmpty()) {
@@ -255,8 +256,8 @@ fun YearScreen(profile: BirthProfile, here: Place, settings: EngineSettings, onB
                                 Modifier.fillMaxWidth().height(44.dp).clickable { picked = i },
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text(m.lord, fontFamily = FontFamily.Serif, fontSize = 16.sp, color = if (running) KshanaColors.Gold else KshanaColors.Text, modifier = Modifier.weight(1f))
-                                Text("${localText(m.start, DATE_TIME, zone)} → ${localText(m.end, DATE_TIME, zone)}", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Sky)
+                                Text(m.lord, fontFamily = KshanaFonts.serif, fontSize = 16.sp, color = if (running) KshanaColors.Gold else KshanaColors.Text, modifier = Modifier.weight(1f))
+                                Text("${localText(m.start, DATE_TIME, zone)} → ${localText(m.end, DATE_TIME, zone)}", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Sky)
                             }
                         }
                         HorizontalDivider(color = KshanaColors.LineSoft)
@@ -265,7 +266,7 @@ fun YearScreen(profile: BirthProfile, here: Place, settings: EngineSettings, onB
 
                 Text(
                     "The return is the exact instant the Sun regains its natal sidereal longitude, solved to 1 µs · Tajika Neelakanthi, Charak",
-                    fontFamily = FontFamily.Monospace, fontSize = 10.sp, lineHeight = 15.sp, color = KshanaColors.Muted,
+                    fontFamily = KshanaFonts.mono, fontSize = 10.sp, lineHeight = 15.sp, color = KshanaColors.Muted,
                     modifier = Modifier.padding(vertical = 8.dp),
                 )
             }
@@ -279,14 +280,14 @@ private fun ReturnHeader(rec: VarshaphalaRecord, zone: ZoneId) {
     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Text("THE RETURN", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(localText(rec.instant, DATE_TIME_S, zone), fontFamily = FontFamily.Monospace, fontSize = 18.sp, color = KshanaColors.Sky)
-            Text(microText(rec.instant), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Gold, modifier = Modifier.padding(start = 6.dp, bottom = 2.dp))
+            Text(localText(rec.instant, DATE_TIME_S, zone), fontFamily = KshanaFonts.mono, fontSize = 18.sp, color = KshanaColors.Sky)
+            Text(microText(rec.instant), fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Gold, modifier = Modifier.padding(start = 6.dp, bottom = 2.dp))
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             YearTag(if (rec.day) "DAY" else "NIGHT", KshanaColors.Gold)
             Text("${zone.id} · age ${rec.age.toInt()} at the return", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         }
-        Text("next return ${localText(rec.nextReturn, DATE_TIME_S, zone)}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Muted)
+        Text("next return ${localText(rec.nextReturn, DATE_TIME_S, zone)}", fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Muted)
     }
 }
 
@@ -308,9 +309,9 @@ private fun YearTag(text: String, colour: Color) {
 @Composable
 private fun AnnualChart(rec: VarshaphalaRecord) {
     val measurer = rememberTextMeasurer()
-    val numStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = KshanaColors.Muted)
-    val planetStyle = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 13.sp, color = KshanaColors.Text)
-    val goldStyle = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 12.sp, color = KshanaColors.Gold)
+    val numStyle = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Muted)
+    val planetStyle = TextStyle(fontFamily = KshanaFonts.sans, fontSize = 13.sp, color = KshanaColors.Text)
+    val goldStyle = TextStyle(fontFamily = KshanaFonts.sans, fontSize = 12.sp, color = KshanaColors.Gold)
     val lagnaSign = signIndex(rec.lagnaSidereal)
     fun houseFor(lon: Double): Int = ((signIndex(lon) - lagnaSign + 12) % 12) + 1
     val byHouse: Map<Int, List<String>> = rec.bodies.groupBy { houseFor(it.sidereal) }
@@ -371,7 +372,7 @@ private fun YearLordCard(rec: VarshaphalaRecord, showBalas: Boolean, onToggleBal
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(PLANET_GLYPHS[rec.varshesha] ?: "", fontSize = 26.sp, color = KshanaColors.Gold)
-            Text(rec.varshesha, fontFamily = FontFamily.Serif, fontSize = 28.sp, color = KshanaColors.Gold, modifier = Modifier.weight(1f))
+            Text(rec.varshesha, fontFamily = KshanaFonts.serif, fontSize = 28.sp, color = KshanaColors.Gold, modifier = Modifier.weight(1f))
             Text("VARSHESHA", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
         }
         HorizontalDivider(color = KshanaColors.LineSoft)
@@ -384,13 +385,13 @@ private fun YearLordCard(rec: VarshaphalaRecord, showBalas: Boolean, onToggleBal
         for (c in rec.candidates) {
             val win = c.lord == rec.varshesha
             Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.Top) {
-                Text(c.lord, fontFamily = FontFamily.Serif, fontSize = 15.sp, color = if (win) KshanaColors.Gold else KshanaColors.Text, modifier = Modifier.weight(1.1f))
+                Text(c.lord, fontFamily = KshanaFonts.serif, fontSize = 15.sp, color = if (win) KshanaColors.Gold else KshanaColors.Text, modifier = Modifier.weight(1.1f))
                 Text(
                     c.offices.joinToString(", ").ifEmpty { "—" },
                     style = MaterialTheme.typography.bodyMedium, color = if (win) KshanaColors.TextSoft else KshanaColors.Muted,
                     modifier = Modifier.weight(2f).padding(end = 6.dp),
                 )
-                Text("%.2f".format(c.vishwa), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = if (win) KshanaColors.Gold else KshanaColors.Sky, textAlign = TextAlign.End, modifier = Modifier.width(52.dp))
+                Text("%.2f".format(c.vishwa), fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = if (win) KshanaColors.Gold else KshanaColors.Sky, textAlign = TextAlign.End, modifier = Modifier.width(52.dp))
                 Text(if (c.aspectsLagna) "✓" else "·", fontSize = 13.sp, color = if (c.aspectsLagna) KshanaColors.Gold else KshanaColors.Muted, textAlign = TextAlign.End, modifier = Modifier.width(44.dp))
             }
         }
@@ -416,20 +417,20 @@ private fun YearLordCard(rec: VarshaphalaRecord, showBalas: Boolean, onToggleBal
                 Row(Modifier.fillMaxWidth()) {
                     Text("", modifier = Modifier.weight(1.3f))
                     for (h in listOf("KSH", "UCH", "HAD", "DRE", "NAV", "TOT", "VIS")) {
-                        Text(h, fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = KshanaColors.Muted, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                        Text(h, fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Muted, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
                     }
                 }
                 for (b in rec.balas) {
                     val win = b.planet == rec.varshesha
                     Row(Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
-                        Text(PLANET_ABBR[b.planet] ?: b.planet.take(2), fontFamily = FontFamily.SansSerif, fontSize = 11.sp, color = if (win) KshanaColors.Gold else KshanaColors.TextSoft, modifier = Modifier.weight(1.3f))
+                        Text(PLANET_ABBR[b.planet] ?: b.planet.take(2), fontFamily = KshanaFonts.sans, fontSize = 11.sp, color = if (win) KshanaColors.Gold else KshanaColors.TextSoft, modifier = Modifier.weight(1.3f))
                         for (v in listOf(b.kshetra, b.uchcha, b.hadda, b.drekkana, b.navamsa, b.total)) {
-                            Text("%.1f".format(v), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Sky, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                            Text("%.1f".format(v), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Sky, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
                         }
-                        Text("%.2f".format(b.vishwa), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = if (win) KshanaColors.Gold else KshanaColors.Sky, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                        Text("%.2f".format(b.vishwa), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = if (win) KshanaColors.Gold else KshanaColors.Sky, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
                     }
                 }
-                Text("kshetra · uchcha · hadda · drekkana · navamsa · total · vishwa bala", fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = KshanaColors.Muted)
+                Text("kshetra · uchcha · hadda · drekkana · navamsa · total · vishwa bala", fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Muted)
             }
         }
     }
@@ -453,11 +454,11 @@ private fun SahamList(sahams: List<SahamRecord>) {
 @Composable
 private fun SahamCell(s: SahamRecord, modifier: Modifier = Modifier) {
     Column(modifier.padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-        Text(s.name, fontFamily = FontFamily.Serif, fontSize = 16.sp, color = KshanaColors.Text)
+        Text(s.name, fontFamily = KshanaFonts.serif, fontSize = 16.sp, color = KshanaColors.Text)
         Text(s.meaning, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(
             "${SIGN_SHORT[signIndex(s.longitude)]} ${degMin(s.longitude)} · H${s.house.toInt()}",
-            fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky,
+            fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky,
         )
     }
 }
@@ -473,12 +474,12 @@ private fun YogaList(yogas: List<TajikaYogaRecord>) {
         HorizontalDivider(color = KshanaColors.LineSoft)
         Column(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(y.name, fontFamily = FontFamily.Serif, fontSize = 17.sp, color = if (y.exact) KshanaColors.Gold else KshanaColors.Text, modifier = Modifier.weight(1f))
+                Text(y.name, fontFamily = KshanaFonts.serif, fontSize = 17.sp, color = if (y.exact) KshanaColors.Gold else KshanaColors.Text, modifier = Modifier.weight(1f))
                 if (y.exact) YearTag("EXACT", KshanaColors.Gold)
             }
             Text(
                 "${y.kind} · ${y.planets.joinToString(" ") { "${PLANET_GLYPHS[it] ?: ""} $it".trim() }}",
-                fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted,
+                fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted,
             )
             Text(y.words, style = MaterialTheme.typography.bodyMedium, color = if (y.exact) KshanaColors.Text else KshanaColors.TextSoft)
         }
@@ -500,7 +501,7 @@ private fun MuddaBar(
     onPick: (Int) -> Unit,
 ) {
     val measurer = rememberTextMeasurer()
-    val labelStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = KshanaColors.Night)
+    val labelStyle = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Night)
     val palette = listOf(KshanaColors.Gold, KshanaColors.Sky, KshanaColors.Text).map { it.copy(alpha = 0.6f) }
     val s0 = yearStart.seconds()
     val span = yearEnd.seconds() - s0
@@ -567,12 +568,12 @@ private fun MuddaDetail(mudda: List<MuddaRecord>, now: ExactInstant, picked: Int
     val running = idx == runningIdx
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("${PLANET_GLYPHS[m.lord] ?: ""} ${m.lord} mudda".trim(), fontFamily = FontFamily.Serif, fontSize = 20.sp, color = if (running) KshanaColors.Gold else KshanaColors.Text, modifier = Modifier.weight(1f))
+            Text("${PLANET_GLYPHS[m.lord] ?: ""} ${m.lord} mudda".trim(), fontFamily = KshanaFonts.serif, fontSize = 20.sp, color = if (running) KshanaColors.Gold else KshanaColors.Text, modifier = Modifier.weight(1f))
             YearTag(if (running) "RUNNING" else "PICKED", if (running) KshanaColors.Gold else KshanaColors.Muted)
         }
         Text(
             "${localText(m.start, DATE_TIME_S, zone)} → ${localText(m.end, DATE_TIME_S, zone)}",
-            fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky,
+            fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky,
         )
         val n = minOf(m.antarLords.size, m.antarStarts.size, m.antarEnds.size)
         for (i in 0 until n) {
@@ -581,13 +582,13 @@ private fun MuddaDetail(mudda: List<MuddaRecord>, now: ExactInstant, picked: Int
                 Text("${m.lord}–${m.antarLords[i]}", style = MaterialTheme.typography.bodyMedium, color = if (on) KshanaColors.Gold else KshanaColors.TextSoft, modifier = Modifier.weight(1f))
                 Text(
                     "${localText(m.antarStarts[i], if (on) DATE_TIME_S else DATE_TIME, zone)} → ${localText(m.antarEnds[i], if (on) DATE_TIME_S else DATE_TIME, zone)}",
-                    fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = if (on) KshanaColors.Sky else KshanaColors.Muted,
+                    fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = if (on) KshanaColors.Sky else KshanaColors.Muted,
                 )
             }
             if (on) {
                 Row(Modifier.padding(start = 12.dp)) {
-                    Text("antardasha changes ${localText(m.antarEnds[i], DATE_TIME_S, zone)}", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
-                    Text(microText(m.antarEnds[i]), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Gold, modifier = Modifier.padding(start = 4.dp))
+                    Text("antardasha changes ${localText(m.antarEnds[i], DATE_TIME_S, zone)}", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
+                    Text(microText(m.antarEnds[i]), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Gold, modifier = Modifier.padding(start = 4.dp))
                 }
             }
         }

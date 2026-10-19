@@ -30,6 +30,7 @@ import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.AyanamsaChoice
 import uniffi.kshana_ffi.EventRecord
 import java.time.format.DateTimeFormatter
+import com.kshana.app.ui.sky.KshanaFonts
 
 private val DAY = DateTimeFormatter.ofPattern("EEE d MMM")
 private val TIME = DateTimeFormatter.ofPattern("HH:mm:ss")
@@ -69,7 +70,7 @@ private fun EventRow(e: EventRecord) {
     Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         Column(Modifier.weight(1f)) {
             Text(local.format(DAY), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
-            Text(title(e), fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text)
+            Text(title(e), fontFamily = KshanaFonts.serif, fontSize = 18.sp, color = KshanaColors.Text)
             Text(detail(e), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             RemindButton(
                 key = "moment:${e.kind}:${e.body}:${e.instant.taiSeconds}",
@@ -80,8 +81,8 @@ private fun EventRow(e: EventRecord) {
             )
         }
         Column(horizontalAlignment = androidx.compose.ui.Alignment.End) {
-            Text(local.format(TIME), fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = KshanaColors.Sky)
-            Text(".${micro.substring(0, 3)} ${micro.substring(3)}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Gold)
+            Text(local.format(TIME), fontFamily = KshanaFonts.mono, fontSize = 13.sp, color = KshanaColors.Sky)
+            Text(".${micro.substring(0, 3)} ${micro.substring(3)}", fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Gold)
         }
     }
 }

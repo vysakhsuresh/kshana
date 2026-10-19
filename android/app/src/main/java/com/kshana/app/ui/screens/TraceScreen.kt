@@ -66,6 +66,9 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import com.kshana.app.ui.sky.KshanaFonts
+import com.kshana.app.ui.sky.BellHost
+import com.kshana.app.ui.sky.BellInstant
 
 /* ------------------------------------------------------------------------------------
  * The River: the person's life as exact instants. One day at a time, every boundary
@@ -365,10 +368,10 @@ private fun DashaChip(level: String, lord: String, end: ExactInstant?, zone: Zon
     Column(
         Modifier.alpha(if (meaningful) 1f else 0.45f).clip(shape).background(KshanaColors.Night).border(1.dp, KshanaColors.Line, shape).padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
-        Text("$level $lord", fontFamily = FontFamily.SansSerif, fontSize = 12.sp, color = KshanaColors.Text)
+        Text("$level $lord", fontFamily = KshanaFonts.sans, fontSize = 12.sp, color = KshanaColors.Text)
         Text(
             if (end != null) "to ${endText(end, zone, today)}" else "—",
-            fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted,
+            fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted,
         )
     }
 }
@@ -377,7 +380,7 @@ private fun DashaChip(level: String, lord: String, end: ExactInstant?, zone: Zon
 private fun LabelledMono(label: String, value: String, colour: Color) {
     Column {
         Text(label, style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
-        Text(value, fontFamily = FontFamily.Monospace, fontSize = 11.sp, lineHeight = 16.sp, color = colour)
+        Text(value, fontFamily = KshanaFonts.mono, fontSize = 11.sp, lineHeight = 16.sp, color = colour)
     }
 }
 
@@ -406,7 +409,7 @@ private fun NextChange(nowState: State<Long>, next: RiverRow?, solving: Boolean)
 /** The only composable that recomposes every tick. */
 @Composable
 private fun CountdownText(nowState: State<Long>, targetMillis: Long, sizeSp: Int) {
-    Text(countdownText(targetMillis - nowState.value), fontFamily = FontFamily.Monospace, fontSize = sizeSp.sp, color = KshanaColors.Gold)
+    Text(countdownText(targetMillis - nowState.value), fontFamily = KshanaFonts.mono, fontSize = sizeSp.sp, color = KshanaColors.Gold)
 }
 
 /* ------------------------------------ Filters ------------------------------------ */
@@ -454,10 +457,10 @@ private fun RiverRowView(row: RiverRow, past: Boolean) {
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.Top) {
             Column(Modifier.padding(end = 12.dp, top = 2.dp)) {
                 Row {
-                    Text(row.local.format(HMS), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Text)
-                    Text(microSuffix(row.at), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Muted)
+                    Text(row.local.format(HMS), fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Text)
+                    Text(microSuffix(row.at), fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Muted)
                 }
-                Text(physicalBar(row), fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = KshanaColors.Muted)
+                Text(physicalBar(row), fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Muted)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 row.items.forEachIndexed { i, t ->
@@ -584,6 +587,7 @@ fun NextChanges(profile: BirthProfile, here: Place, settings: EngineSettings, co
 
     Column(Modifier.fillMaxWidth()) {
         ErrorLine(error)
+        BellHost(instants = upcoming.flatMap { r -> r.items.map { BellInstant(r.epochMillis, bellKind(it), it.words) } })
         if (upcoming.isEmpty()) {
             Text(
                 if (loading) "Solving the next changes…" else "Nothing changes in the next 36 hours.",
@@ -605,7 +609,7 @@ fun NextChanges(profile: BirthProfile, here: Place, settings: EngineSettings, co
                     }
                     Text(
                         (if (r.local.toLocalDate() == todayHere) "today " + r.local.format(HMS) else r.local.format(WEEKDAY_HMS)) + microSuffix(r.at),
-                        fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted,
+                        fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted,
                     )
                 }
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -717,4 +721,18 @@ private fun tagColour(t: TransitionRecord): Color = when (t.kind) {
     "hora" -> KshanaColors.Muted
     "sunrise", "sunset" -> KshanaColors.Gold
     else -> KshanaColors.Muted
+}
+
+/** The haptic and bell phrase for a transition: dasha depth, the Moon, the rising sign, the day's edges. */
+private fun bellKind(t: TransitionRecord): String = when (t.kind) {
+    "dasha" -> if (t.level.toInt() <= 2) "dasha" else "dasha.minor"
+    "sunrise" -> "sunrise"
+    "sunset" -> "sunset"
+    "hora" -> "hora"
+    "enter" -> when {
+        t.body == "Lagna" -> "sub"
+        t.division == "Sub" || t.division == "SubSub" -> "sub"
+        else -> "moon"
+    }
+    else -> "moon"
 }

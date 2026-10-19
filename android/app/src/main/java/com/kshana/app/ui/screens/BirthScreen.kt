@@ -46,6 +46,7 @@ import kotlinx.coroutines.launch
 import java.time.DateTimeException
 import java.time.LocalDateTime
 import java.time.ZoneId
+import com.kshana.app.ui.sky.KshanaFonts
 
 private data class LevelCopy(val headline: String, val detail: String)
 
@@ -181,7 +182,7 @@ fun BirthScreen(existing: BirthProfile?, onCast: (BirthProfile) -> Unit) {
                         Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable { choose(p) }.padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(p.name, fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+                        Text(p.name, fontFamily = KshanaFonts.serif, fontSize = 17.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
                         Text("%.2f° %.2f°".format(p.latitude, p.longitude), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
                     }
                 }
@@ -212,7 +213,7 @@ fun BirthScreen(existing: BirthProfile?, onCast: (BirthProfile) -> Unit) {
             }
         }
 
-        Text(placeName, fontFamily = FontFamily.Serif, fontSize = 20.sp, color = KshanaColors.Text)
+        Text(placeName, fontFamily = KshanaFonts.serif, fontSize = 20.sp, color = KshanaColors.Text)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             NumberField(latitude, { latitude = it.filter { c -> c.isDigit() || c == '.' || c == '-' } }, "Latitude °N", Modifier.weight(1f), decimal = true)
             NumberField(longitude, { longitude = it.filter { c -> c.isDigit() || c == '.' || c == '-' } }, "Longitude °E", Modifier.weight(1f), decimal = true)
@@ -239,7 +240,7 @@ fun BirthScreen(existing: BirthProfile?, onCast: (BirthProfile) -> Unit) {
             for ((i, l) in Uncertainty.labels.withIndex()) {
                 Text(
                     l,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = KshanaFonts.mono,
                     fontSize = 9.sp,
                     color = if (i == level) KshanaColors.Gold else KshanaColors.Muted,
                     modifier = Modifier.clickable { level = i }.padding(vertical = 4.dp),
@@ -269,7 +270,7 @@ private fun Field(value: String, onChange: (String) -> Unit, label: String, modi
         onValueChange = onChange,
         label = { Text(label, style = MaterialTheme.typography.labelSmall) },
         singleLine = true,
-        textStyle = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 15.sp, color = KshanaColors.Text),
+        textStyle = TextStyle(fontFamily = KshanaFonts.sans, fontSize = 15.sp, color = KshanaColors.Text),
         colors = fieldColors(),
         modifier = modifier,
     )
@@ -283,7 +284,7 @@ private fun NumberField(value: String, onChange: (String) -> Unit, label: String
         label = { Text(label, style = MaterialTheme.typography.labelSmall) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Number),
-        textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 15.sp, color = KshanaColors.Text),
+        textStyle = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 15.sp, color = KshanaColors.Text),
         colors = fieldColors(),
         modifier = modifier,
     )

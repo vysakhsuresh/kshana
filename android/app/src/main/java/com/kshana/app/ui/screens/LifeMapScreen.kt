@@ -63,6 +63,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.YearRowRecord
 import java.time.format.DateTimeFormatter
+import com.kshana.app.ui.sky.KshanaFonts
 
 private val LIFE_AREAS = listOf("Career", "Marriage", "Children", "Wealth", "Health", "Property", "Education", "Foreign")
 private val MONTH_YEAR = DateTimeFormatter.ofPattern("MMMM uuuu")
@@ -160,7 +161,7 @@ fun LifeMapScreen(profile: BirthProfile, settings: EngineSettings, onBack: () ->
                 Legend(KshanaColors.Sky, "fair 0.40–0.60")
                 Legend(KshanaColors.Muted, "testing")
                 Spacer(Modifier.weight(1f))
-                Text("${YEAR_WIDTH.value.toInt()} dp / year", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+                Text("${YEAR_WIDTH.value.toInt()} dp / year", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
             }
 
             val row = selectedAge?.let { a -> rows.firstOrNull { it.age.toInt() == a } }
@@ -175,7 +176,7 @@ fun LifeMapScreen(profile: BirthProfile, settings: EngineSettings, onBack: () ->
                     val score = row.areas.getOrNull(area) ?: 0.0
                     Text(
                         "${LIFE_AREAS[area]} looks like ${stretch(score)}.",
-                        fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text,
+                        fontFamily = KshanaFonts.serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text,
                     )
                     for ((i, name) in LIFE_AREAS.withIndex()) {
                         val v = row.areas.getOrNull(i) ?: 0.0
@@ -201,8 +202,8 @@ private fun YearBars(
     onSelect: (Int) -> Unit,
 ) {
     val measurer = rememberTextMeasurer()
-    val lordStyle = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 10.sp, letterSpacing = 1.sp, color = KshanaColors.Gold.copy(alpha = 0.9f))
-    val tickStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = KshanaColors.Muted)
+    val lordStyle = TextStyle(fontFamily = KshanaFonts.sans, fontSize = 10.sp, letterSpacing = 1.sp, color = KshanaColors.Gold.copy(alpha = 0.9f))
+    val tickStyle = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Muted)
     val totalWidth = MAP_PAD * 2 + YEAR_WIDTH * rows.size
     Canvas(
         Modifier.width(totalWidth).height(MAP_HEIGHT).pointerInput(rows, yearPx, padPx) {
@@ -294,7 +295,7 @@ private fun ScrollHint(state: ScrollState, description: String, onClick: () -> U
 private fun Legend(colour: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Box(Modifier.size(8.dp).background(colour))
-        Text(label, fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+        Text(label, fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
     }
 }
 

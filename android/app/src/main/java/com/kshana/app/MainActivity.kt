@@ -67,6 +67,9 @@ import com.kshana.app.ui.onboarding.ArrivalScreen
 import com.kshana.app.ui.sky.LivingSky
 import com.kshana.app.ui.theme.KshanaColors
 import com.kshana.app.ui.theme.KshanaTheme
+import com.kshana.app.ui.screens.DayScreen
+import com.kshana.app.ui.screens.StrengthScreen
+import com.kshana.app.ui.sky.KshanaFonts
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
 
@@ -83,6 +86,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        KshanaFonts.attach(this)
         setContent { KshanaTheme { App() } }
     }
 }
@@ -205,6 +209,7 @@ private fun App() {
                     onMuhurta = { open("muhurta") },
                     onCalendar = { open("calendar") },
                     onMoments = { open("moments") },
+                    onDay = { open("day") },
                 )
             }
             composable("me") {
@@ -230,6 +235,7 @@ private fun App() {
                     onYear = { open("year") },
                     onTimeLords = { open("timelords") },
                     onDiary = { open("diary") },
+                    onStrength = { open("strength") },
                 )
             }
 
@@ -290,6 +296,10 @@ private fun App() {
             }
             composable("areas") { withProfile { AreasScreen(it, settings, onBack = back) } }
             composable("parihara") { withProfile { PariharaScreen(it, settings, onBack = back) } }
+            composable("strength") { withProfile { StrengthScreen(it, settings, onBack = back) } }
+            composable("day") {
+                DayScreen(profile = profile, here = ProfileStore.currentLocation(context), settings = settings, onBack = back)
+            }
             composable("rectify") {
                 withProfile {
                     RectifyScreen(

@@ -38,6 +38,7 @@ import com.kshana.app.ui.theme.KshanaColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.KarakaRecord
+import com.kshana.app.ui.sky.KshanaFonts
 
 /**
  * The fifth tab: who you are to the app, how it should speak, and every door that is
@@ -66,6 +67,7 @@ fun MeScreen(
     onYear: () -> Unit = {},
     onTimeLords: () -> Unit = {},
     onDiary: () -> Unit = {},
+    onStrength: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var atmakaraka by remember { mutableStateOf<KarakaRecord?>(null) }
@@ -105,7 +107,7 @@ fun MeScreen(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     profile.birthLocal().format(DATE_TIME),
-                    fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky,
+                    fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky,
                 )
                 Text(profile.placeName, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             }
@@ -159,11 +161,12 @@ fun MeScreen(
             Door("Transits", "Every graha through your chart with vedha, bindus and kakshya windows.", onTransits)
             Door("The year ahead", "The Tajika annual chart from the exact solar return: year lord, sahams, Mudda.", onYear)
             Door("Time lords", "Five dasha systems, profections, firdaria, zodiacal releasing and progressions at one instant.", onTimeLords)
+            Door("Strength", "Shadbala: how strong each planet stands, the houses and the avasthas, with the numbers.", onStrength)
         }
         Door("Western chart", "The tropical wheel: planets, houses and aspects.", onChart)
         Door("Vedic kundli", "The sidereal chart: rasi, navamsa, nakshatras and dashas.", onVedic)
         Door("Trust & verification", "What the app does not know, the self-test and the error budget.", onTrust)
-        Door("Settings", "Ayanamsa, house system and the topocentric Moon.", onSettings)
+        Door("Settings", "Ayanamsa, house system, the sunrise convention, how the sky feels.", onSettings)
         HorizontalDivider(color = KshanaColors.LineSoft)
 
         Spacer(Modifier.height(4.dp))

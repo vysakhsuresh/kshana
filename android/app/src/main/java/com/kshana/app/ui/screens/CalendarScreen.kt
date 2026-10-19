@@ -36,13 +36,22 @@ import com.kshana.app.engine.Instants
 import com.kshana.app.ui.theme.KshanaColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import uniffi.kshana_ffi.EclipseRecord
+import uniffi.kshana_ffi.ExactInstant
 import uniffi.kshana_ffi.ObservanceRecord
 import java.time.DateTimeException
+import java.time.Instant
 import java.time.YearMonth
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import com.kshana.app.ui.sky.KshanaFonts
 
 private const val DAYS = 60u
+
+/** Eclipses are listed this far ahead: two years, well under the engine's twenty. */
+private const val ECLIPSE_DAYS = 731L
 
 private val MONTH = DateTimeFormatter.ofPattern("MMMM uuuu")
 private val DAY_SHORT = DateTimeFormatter.ofPattern("EEE d MMM")
@@ -53,10 +62,17 @@ private enum class Filter(val label: String, val test: (String) -> Boolean) {
     Fasting("Fasting", { it.startsWith("Ekadashi") || it.startsWith("Pradosha") }),
     Moon("Moon", { it.contains("Moon") || it.startsWith("Purnima") || it.startsWith("Amavasya") }),
     Sankranti("Sankranti", { it.contains("Sankranti") }),
+    Eclipses("Eclipses", { false }),
     Other("Other", { n -> !Fasting.test(n) && !Moon.test(n) && !Sankranti.test(n) }),
 }
 
-/** Sixty days of observances at the place the phone is: each with its observed day and exact instant. */
+/** One row of the calendar, an observance or an eclipse, with its instant and the local day it is grouped under. */
+private sealed class CalRow(val at: Double, val day: ZonedDateTime) {
+    class Obs(val r: ObservanceRecord, zone: ZoneId) : CalRow(r.exact.seconds(), observedLocal(r, zone))
+    class Ecl(val r: EclipseRecord, zone: ZoneId) : CalRow(r.greatest.seconds(), Instants.toLocal(r.greatest, zone))
+}
+
+/** Sixty days of observances at the place the phone is, each with its observed day and exact instant, and two years of eclipses. */
 @Composable
 fun CalendarScreen(here: Place, settings: EngineSettings, onBack: () -> Unit) {
     val context = LocalContext.current
@@ -65,6 +81,22 @@ fun CalendarScreen(here: Place, settings: EngineSettings, onBack: () -> Unit) {
     var filter by remember { mutableStateOf(Filter.All) }
     var status by remember { mutableStateOf("solving $DAYS days of tithis and ingresses…") }
     var error by remember { mutableStateOf<String?>(null) }
+    var eclipses by remember { mutableStateOf<List<EclipseRecord>>(emptyList()) }
+    var eclipseError by remember { mutableStateOf<String?>(null) }
+
+    // Two years of eclipses with their local circumstances, once per place.
+    LaunchedEffect(here) {
+        try {
+            val engine = EngineProvider.get(context)
+            val from = Instants.now()
+            val to = Instants.fromInstant(Instant.now().plus(ECLIPSE_DAYS, ChronoUnit.DAYS))
+            eclipses = withContext(Dispatchers.Default) { engine.eclipses(from, to, here.latitude, here.longitude) }
+                .sortedBy { it.greatest.seconds() }
+            eclipseError = null
+        } catch (e: Exception) {
+            eclipseError = e.message ?: e.toString()
+        }
+    }
 
     LaunchedEffect(here, settings) {
         try {
@@ -81,8 +113,12 @@ fun CalendarScreen(here: Place, settings: EngineSettings, onBack: () -> Unit) {
         }
     }
 
-    val shown = records.filter { filter.test(it.name) }
-    val byMonth = shown.groupBy { YearMonth.from(observedLocal(it, zone)) }.toSortedMap()
+    val shown: List<CalRow> = when (filter) {
+        Filter.All -> records.map<ObservanceRecord, CalRow> { CalRow.Obs(it, zone) } + eclipses.map { CalRow.Ecl(it, zone) }
+        Filter.Eclipses -> eclipses.map { CalRow.Ecl(it, zone) }
+        else -> records.filter { filter.test(it.name) }.map { CalRow.Obs(it, zone) }
+    }.sortedBy { it.at }
+    val byMonth = shown.groupBy { YearMonth.from(it.day) }.toSortedMap()
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(top = 48.dp, bottom = 32.dp),
@@ -96,24 +132,33 @@ fun CalendarScreen(here: Place, settings: EngineSettings, onBack: () -> Unit) {
         Text("Ekadashi, Pradosha, the full and new Moons, Sankranti. Each with the day it is kept and the instant it is exact.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         Text(status, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         ErrorLine(error)
+        ErrorLine(eclipseError)
 
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (f in Filter.values()) Chip(f.label.uppercase(), selected = filter == f, onClick = { filter = f })
         }
 
-        if (records.isNotEmpty() && shown.isEmpty()) {
+        if (filter == Filter.Eclipses) {
+            Text("${eclipses.size} eclipses in the next two years · seen from ${here.name}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        }
+        if (filter == Filter.Eclipses && eclipseError == null && eclipses.isEmpty()) {
+            Text("No eclipse in the next two years.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted, modifier = Modifier.padding(top = 8.dp))
+        } else if (filter != Filter.Eclipses && records.isNotEmpty() && shown.isEmpty()) {
             Text("Nothing of this kind in the next $DAYS days.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted, modifier = Modifier.padding(top = 8.dp))
         }
 
         for ((month, list) in byMonth) {
             SectionLabel(month.atDay(1).format(MONTH))
-            for (r in list) ObservanceRow(r, zone)
+            for (row in list) when (row) {
+                is CalRow.Obs -> ObservanceRow(row.r, zone)
+                is CalRow.Ecl -> EclipseRow(row.r, zone, here)
+            }
         }
 
         Spacer(Modifier.height(12.dp))
         Text(
-            "The observed day is the civil day whose sunrise the tithi rules; the exact instant is when the sky itself turns. Reminders use the observed sunrise where one exists, otherwise an hour before the instant.",
-            fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 14.sp, lineHeight = 20.sp, color = KshanaColors.Muted,
+            "The observed day is the civil day whose sunrise the tithi rules; the exact instant is when the sky itself turns. Reminders use the observed sunrise where one exists, otherwise an hour before the instant; for an eclipse, an hour before its first contact here.",
+            fontFamily = KshanaFonts.serif, fontStyle = FontStyle.Italic, fontSize = 14.sp, lineHeight = 20.sp, color = KshanaColors.Muted,
         )
     }
 }
@@ -146,8 +191,75 @@ private fun ObservanceRow(r: ObservanceRecord, zone: ZoneId) {
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("exact", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.width(48.dp))
-            Text(localText(r.exact, DATE_TIME_S, zone), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky)
+            Text(localText(r.exact, DATE_TIME_S, zone), fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky)
         }
         if (r.note.isNotBlank()) Text(r.note, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+    }
+}
+
+/** "Total solar eclipse", "Penumbral lunar eclipse": the engine's kind and family as a name. */
+private fun eclipseName(r: EclipseRecord): String =
+    "${r.kind.replaceFirstChar { it.uppercaseChar() }} ${r.family.lowercase()} eclipse"
+
+/** The local contacts of a solar eclipse, or the global contacts of a lunar one, with their labels. */
+private fun eclipseContacts(r: EclipseRecord): List<Pair<String, ExactInstant>> =
+    if (r.family == "solar") {
+        listOf("C1" to r.localC1, "C2" to r.localC2, "max" to r.localMax, "C3" to r.localC3, "C4" to r.localC4)
+            .mapNotNull { (k, v) -> v?.let { k to it } }
+    } else {
+        listOf("P1", "U1", "U2", "U3", "U4", "P4").zip(r.contacts).mapNotNull { (k, v) -> v?.let { k to it } }
+    }
+
+@Composable
+private fun EclipseRow(r: EclipseRecord, zone: ZoneId, here: Place) {
+    val name = eclipseName(r)
+    val solar = r.family == "solar"
+    val contacts = eclipseContacts(r)
+    val first = contacts.firstOrNull()?.second ?: r.greatest
+    val remindAt = Instants.toLocal(first, zone).toInstant().toEpochMilli() - 60L * 60L * 1000L
+    val greatestLocal = Instants.toLocal(r.greatest, zone)
+
+    HorizontalDivider(color = KshanaColors.LineSoft)
+    Column(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(name, style = MaterialTheme.typography.titleLarge, color = KshanaColors.Text)
+                Text(
+                    greatestLocal.format(DAY_SHORT) + if (r.visibleHere) " · visible here" else " · not visible from ${here.name}",
+                    style = MaterialTheme.typography.bodyMedium, color = if (r.visibleHere) KshanaColors.Gold else KshanaColors.TextSoft,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            RemindButton(
+                key = "eclipse:${r.family}:${r.greatest.taiSeconds}", atMillis = remindAt,
+                title = "$name in one hour", text = "greatest at ${localText(r.greatest, DATE_TIME_S, zone)}",
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("greatest", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.width(64.dp))
+            Text(localText(r.greatest, DATE_TIME_S, zone), fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky)
+        }
+        if (r.visibleHere) {
+            for ((label, at) in contacts) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(label, style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.width(64.dp))
+                    Text(localText(at, DATE_TIME_S, zone), fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky)
+                }
+            }
+            Text(
+                if (solar) "local magnitude %.3f · obscuration %.1f%%".format(r.localMagnitude, r.localObscuration * 100.0)
+                else "umbral magnitude %.3f · penumbral %.3f".format(r.magnitude, r.penumbralMagnitude),
+                fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky,
+            )
+        } else {
+            Text(
+                "Not visible from ${here.name}; greatest eclipse magnitude %.3f elsewhere.".format(r.magnitude),
+                style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
+            )
+        }
+        Text(
+            "gamma %+.4f · Saros %s".format(r.gamma, r.saros?.toString() ?: "—"),
+            fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Muted,
+        )
     }
 }

@@ -74,6 +74,7 @@ import uniffi.kshana_ffi.TransitWindowRecord
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.kshana.app.ui.sky.KshanaFonts
 
 /** The nine grahas in the engine's lane order. */
 private val BODIES = listOf("Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu")
@@ -302,7 +303,7 @@ fun TransitsScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -
                 LaneLegend(KshanaColors.Muted, "testing")
                 LaneLegend(null, "vedha")
                 Spacer(Modifier.weight(1f))
-                Text("${DAY_WIDTH.value} dp / day", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+                Text("${DAY_WIDTH.value} dp / day", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
             }
 
             val w = selected
@@ -326,7 +327,7 @@ fun TransitsScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -
 
         Text(
             "Every boundary is the exact ingress instant, solved to 1 µs · Vedha per Phaladeepika 26 · Ashtakavarga per BPHS",
-            fontFamily = FontFamily.Monospace, fontSize = 10.sp, lineHeight = 15.sp, color = KshanaColors.Muted,
+            fontFamily = KshanaFonts.mono, fontSize = 10.sp, lineHeight = 15.sp, color = KshanaColors.Muted,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
         )
     }
@@ -350,11 +351,11 @@ private fun NowCard(record: TransitScoreRecord?, loading: Boolean, now: ExactIns
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
                 BreathingRing(record.score.toFloat(), Modifier.size(64.dp), windowColour(record.score))
-                Text("%.2f".format(record.score), fontFamily = FontFamily.Monospace, fontSize = 15.sp, color = KshanaColors.Gold)
+                Text("%.2f".format(record.score), fontFamily = KshanaFonts.mono, fontSize = 15.sp, color = KshanaColors.Gold)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("The sky ${skyWords(record.score)} now.", fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 24.sp, color = KshanaColors.Text)
-                Text(localText(now, DATE_TIME_S, zone), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+                Text("The sky ${skyWords(record.score)} now.", fontFamily = KshanaFonts.serif, fontSize = 18.sp, lineHeight = 24.sp, color = KshanaColors.Text)
+                Text(localText(now, DATE_TIME_S, zone), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
             }
         }
         HorizontalDivider(color = KshanaColors.LineSoft)
@@ -391,18 +392,18 @@ private fun WindowCard(
         Text("${w.body} in $sign", style = MaterialTheme.typography.titleLarge, color = KshanaColors.Text)
         Text(
             "${localText(w.start, DATE_TIME, zone)} – ${localText(w.end, DATE_TIME, zone)}",
-            fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky,
+            fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky,
         )
         Text(
             "house ${w.houseFromMoon.toInt()} from the Moon, ${w.houseFromLagna.toInt()} from the lagna",
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft,
         )
-        Text(w.verdictWords, fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = if (w.favourable) KshanaColors.Text else KshanaColors.TextSoft)
+        Text(w.verdictWords, fontFamily = KshanaFonts.serif, fontSize = 17.sp, lineHeight = 24.sp, color = if (w.favourable) KshanaColors.Text else KshanaColors.TextSoft)
         val vedha = w.vedhaBy
         if (vedha != null) {
             Text("Vedha by $vedha", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         }
-        Text("BAV ${w.bav.toInt()}/8 · SAV ${w.sav.toInt()}/56", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky)
+        Text("BAV ${w.bav.toInt()}/8 · SAV ${w.sav.toInt()}/56", fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky)
         val moorthi = w.moorthi
         if (moorthi != null) {
             val metal = MOORTHI_METAL[moorthi]
@@ -414,7 +415,7 @@ private fun WindowCard(
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) {
                 BreathingRing(w.score.toFloat(), Modifier.size(56.dp), windowColour(w.score))
-                Text("%.2f".format(w.score), fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = windowColour(w.score))
+                Text("%.2f".format(w.score), fontFamily = KshanaFonts.mono, fontSize = 13.sp, color = windowColour(w.score))
             }
             Text("the window's score", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         }
@@ -444,7 +445,7 @@ private fun WindowCard(
                 else -> {
                     for (k in kakshya) KakshyaRow(k, zone)
                     if (w.body == "Moon" && kakshya.size >= MOON_KAKSHYA_LIMIT) {
-                        Text("The first $MOON_KAKSHYA_LIMIT of the Moon's kakshyas.", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+                        Text("The first $MOON_KAKSHYA_LIMIT of the Moon's kakshyas.", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
                     }
                 }
             }
@@ -461,12 +462,12 @@ private fun KakshyaRow(k: KakshyaWindowRecord, zone: ZoneId) {
             Text("3°45′ of ${k.lord}", style = MaterialTheme.typography.bodyMedium, color = colour, modifier = Modifier.weight(1f))
             Text(
                 "${SIGN_SHORT.getOrNull(k.sign.toInt() % 12) ?: k.sign} · k${k.kakshya.toInt() + 1} · ${if (k.favourable) "good" else "weak"}",
-                fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = colour,
+                fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = colour,
             )
         }
         Text(
             "${localText(k.start, DATE_TIME, zone)} – ${localText(k.end, DATE_TIME, zone)}",
-            fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = if (k.favourable) KshanaColors.Sky else KshanaColors.Muted,
+            fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = if (k.favourable) KshanaColors.Sky else KshanaColors.Muted,
         )
     }
 }
@@ -488,10 +489,10 @@ private fun TransitLanes(
 ) {
     val density = LocalDensity.current
     val measurer = rememberTextMeasurer()
-    val tickStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = KshanaColors.Muted)
-    val yearStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = KshanaColors.TextSoft)
-    val barDark = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = KshanaColors.Night)
-    val barMuted = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = KshanaColors.Muted)
+    val tickStyle = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Muted)
+    val yearStyle = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.TextSoft)
+    val barDark = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Night)
+    val barMuted = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Muted)
     val signDark = remember(measurer) { SIGN_SHORT.map { measurer.measure(it, barDark) } }
     val signMuted = remember(measurer) { SIGN_SHORT.map { measurer.measure(it, barMuted) } }
     val topPx = with(density) { TL_TOP.toPx() }
@@ -611,7 +612,7 @@ private fun LaneLegend(colour: Color?, label: String) {
         } else {
             Box(Modifier.size(8.dp).border(1.dp, KshanaColors.Muted))
         }
-        Text(label, fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+        Text(label, fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
     }
 }
 

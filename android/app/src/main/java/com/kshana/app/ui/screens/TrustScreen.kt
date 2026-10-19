@@ -51,6 +51,7 @@ import uniffi.kshana_ffi.SelfTestRecord
 import uniffi.kshana_ffi.StabilityRecord
 import uniffi.kshana_ffi.engineVersion
 import uniffi.kshana_ffi.errorBudget
+import com.kshana.app.ui.sky.KshanaFonts
 
 /** What the screen computes once, off the main thread, for the profile and settings. */
 private data class TrustLoad(val version: String, val budget: List<BudgetRow>, val chart: ChartRecord?, val stability: StabilityRecord?)
@@ -145,7 +146,7 @@ fun TrustScreen(profile: BirthProfile?, settings: EngineSettings, onBack: () -> 
             Text("No birth details yet, so nothing is claimed about a chart.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         } else {
             val level = profile.uncertaintyLevel
-            Text("Birth time stated as ${Uncertainty.label(level)}.", fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text)
+            Text("Birth time stated as ${Uncertainty.label(level)}.", fontFamily = KshanaFonts.serif, fontSize = 18.sp, color = KshanaColors.Text)
             val s = load?.stability
             if (s != null) {
                 Text(
@@ -185,7 +186,7 @@ fun TrustScreen(profile: BirthProfile?, settings: EngineSettings, onBack: () -> 
             HorizontalDivider(color = KshanaColors.LineSoft)
             Text(
                 if (t.allPass) "${t.checks.size} of ${t.checks.size} within tolerance." else "${t.checks.count { it.pass }} of ${t.checks.size} within tolerance.",
-                fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = if (t.allPass) KshanaColors.Gold else KshanaColors.Sky,
+                fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = if (t.allPass) KshanaColors.Gold else KshanaColors.Sky,
             )
         }
 
@@ -211,7 +212,13 @@ fun TrustScreen(profile: BirthProfile?, settings: EngineSettings, onBack: () -> 
 
         SectionLabel("Rules")
         Text("Every sentence traces to a rule. docs/RULES.md in the repository lists them.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
-        Text(calibration, fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
+        Text(calibration, fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky)
+
+        SectionLabel("What this is")
+        Text(
+            "The sky is measured: every position and every instant here is computed from the planetary kernel to the stated error bars. The readings are what two traditions claim about that sky, each sentence with its rule and its source. They are a tradition's claim, not advice: nothing here replaces a doctor, a lawyer or your own judgement, and no remedy is a promise.",
+            style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft,
+        )
 
         SectionLabel("Export")
         if (profile == null) {
@@ -225,7 +232,7 @@ fun TrustScreen(profile: BirthProfile?, settings: EngineSettings, onBack: () -> 
         Spacer(Modifier.height(12.dp))
         Text(
             "Nothing is computed on a server. Nothing is hidden: the numbers, the rules and their sources are all in this report.",
-            fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text,
+            fontFamily = KshanaFonts.serif, fontStyle = FontStyle.Italic, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text,
         )
     }
 }
@@ -239,13 +246,13 @@ private fun CheckRow(c: CheckRecord) {
             Text(c.name, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
             Text(
                 "expected ${numText(c.expected)} · got ${numText(c.got)} · tol ${numText(c.tolerance)} ${c.unit}",
-                fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted,
+                fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted,
             )
         }
         if (c.pass) {
             Box(Modifier.padding(start = 12.dp).size(8.dp).clip(CircleShape).background(KshanaColors.Gold))
         } else {
-            Text("FAIL", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.padding(start = 12.dp))
+            Text("FAIL", fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.padding(start = 12.dp))
         }
     }
 }
@@ -255,9 +262,9 @@ private fun CheckRow(c: CheckRecord) {
 private fun BudgetLines(b: BudgetRow) {
     HorizontalDivider(color = KshanaColors.LineSoft)
     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        Text(b.layer, fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text)
+        Text(b.layer, fontFamily = KshanaFonts.serif, fontSize = 17.sp, color = KshanaColors.Text)
         Text(b.method, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
-        Text(b.error, fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
+        Text(b.error, fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky)
     }
 }
 

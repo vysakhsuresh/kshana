@@ -79,6 +79,7 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
+import com.kshana.app.ui.sky.KshanaFonts
 
 /** The eight life areas, in the engine's order (area strengths come back in this order). */
 private val LEDGER_AREAS = listOf("Career", "Marriage", "Children", "Wealth", "Health", "Property", "Education", "Foreign")
@@ -315,7 +316,7 @@ private fun PeriodCard(r: PastRow) {
             val phase = p.sadeSatiPhase.toInt()
             if (phase > 0) Tag("SADE SATI $phase/3")
         }
-        Text("${r.range} · ${r.ages}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
+        Text("${r.range} · ${r.ages}", fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky)
         Text(p.words, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
         AreaBars(p.areaStrengths, p.topAreas)
     }
@@ -339,7 +340,7 @@ private fun AreaBars(strengths: List<Double>, top: List<String>) {
                     )
                 }
                 Text(
-                    AREA_SHORT[i], fontFamily = FontFamily.Monospace, fontSize = 9.sp,
+                    AREA_SHORT[i], fontFamily = KshanaFonts.mono, fontSize = 9.sp,
                     color = if (lead) KshanaColors.Gold else KshanaColors.Muted, modifier = Modifier.padding(top = 2.dp),
                 )
             }
@@ -355,7 +356,7 @@ private fun Tag(text: String, color: Color = KshanaColors.Gold) {
         Modifier.height(22.dp).clip(shape).border(1.dp, color.copy(alpha = 0.6f), shape).padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, fontFamily = FontFamily.SansSerif, fontSize = 9.sp, letterSpacing = 1.sp, color = color)
+        Text(text, fontFamily = KshanaFonts.sans, fontSize = 9.sp, letterSpacing = 1.sp, color = color)
     }
 }
 
@@ -453,7 +454,7 @@ private fun EventRow(
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(e.note.trim().ifEmpty { "${e.kind} · ${e.area}" }, fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text)
+                Text(e.note.trim().ifEmpty { "${e.kind} · ${e.area}" }, fontFamily = KshanaFonts.serif, fontSize = 17.sp, color = KshanaColors.Text)
                 Text(
                     "${localText(e.at, DATE_TIME, zone)} · ${e.area} · ${e.kind.lowercase()}",
                     style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
@@ -461,11 +462,11 @@ private fun EventRow(
             }
             Text(
                 if (score != null) "%.2f".format(score.fit) else "…",
-                fontFamily = FontFamily.Monospace, fontSize = 12.sp,
+                fontFamily = KshanaFonts.mono, fontSize = 12.sp,
                 color = if (score != null) KshanaColors.Gold else KshanaColors.Muted,
                 modifier = Modifier.padding(start = 12.dp),
             )
-            Text(if (open) "−" else "+", fontFamily = FontFamily.Monospace, fontSize = 14.sp, color = KshanaColors.Gold, modifier = Modifier.padding(start = 10.dp))
+            Text(if (open) "−" else "+", fontFamily = KshanaFonts.mono, fontSize = 14.sp, color = KshanaColors.Gold, modifier = Modifier.padding(start = 10.dp))
         }
         if (open) {
             if (score == null) {
@@ -492,23 +493,23 @@ private fun ScorePanel(s: LedgerScoreRecord) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
             BreathingRing(s.fit.toFloat(), Modifier.size(64.dp), color = KshanaColors.Gold)
-            Text("%.2f".format(s.fit), fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = KshanaColors.Text)
+            Text("%.2f".format(s.fit), fontFamily = KshanaFonts.mono, fontSize = 13.sp, color = KshanaColors.Text)
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text("FIT", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
             Text(
                 "running " + s.running.joinToString(" › ").ifEmpty { "—" },
-                fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky,
+                fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky,
             )
             Text(
                 "dasha %.2f · parashari %.2f · transit %.2f%s".format(s.dashaSupport, s.parashari, s.transit, if (s.adverse) " · adverse" else ""),
-                fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted,
+                fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted,
             )
             val phase = s.sadeSatiPhase.toInt()
             Text(
                 "Jupiter ${ordinal(s.jupiterFromMoon.toInt())} · Saturn ${ordinal(s.saturnFromMoon.toInt())} from the Moon" +
                     (if (phase > 0) " · Sade Sati $phase/3" else ""),
-                fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted,
+                fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted,
             )
         }
     }
@@ -661,10 +662,10 @@ private fun KnowTab(
             }
             SectionLabel("Lift")
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("lift", fontFamily = FontFamily.Monospace, fontSize = 20.sp, color = KshanaColors.Muted, modifier = Modifier.padding(bottom = 6.dp))
-                Text("%+.2f".format(result.lift), fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium, fontSize = 44.sp, color = KshanaColors.Sky)
+                Text("lift", fontFamily = KshanaFonts.mono, fontSize = 20.sp, color = KshanaColors.Muted, modifier = Modifier.padding(bottom = 6.dp))
+                Text("%+.2f".format(result.lift), fontFamily = KshanaFonts.mono, fontWeight = FontWeight.Medium, fontSize = 44.sp, color = KshanaColors.Sky)
             }
-            Text(result.verdict, fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text)
+            Text(result.verdict, fontFamily = KshanaFonts.serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text)
 
             SectionLabel("Numbers")
             MonoRow("events", result.n.toString())
@@ -688,7 +689,7 @@ private fun KnowTab(
             )
             Text(
                 "With a handful of events this says little either way. Log more, and the measure sharpens.",
-                fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 14.sp, lineHeight = 20.sp, color = KshanaColors.Muted,
+                fontFamily = KshanaFonts.serif, fontStyle = FontStyle.Italic, fontSize = 14.sp, lineHeight = 20.sp, color = KshanaColors.Muted,
             )
         }
     }
@@ -702,8 +703,8 @@ private fun KnowTab(
 @Composable
 private fun ReliabilityChart(bins: List<ReliabilityBinRecord>) {
     val measurer = rememberTextMeasurer()
-    val label = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = KshanaColors.Muted)
-    val labelGold = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = KshanaColors.Gold)
+    val label = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Muted)
+    val labelGold = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Gold)
     val shape = RoundedCornerShape(8.dp)
     Column(
         Modifier.fillMaxWidth().clip(shape).background(KshanaColors.Surface).border(1.dp, KshanaColors.Line, shape).padding(12.dp),
@@ -746,8 +747,8 @@ private fun ReliabilityChart(bins: List<ReliabilityBinRecord>) {
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("bins by fit →", fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = KshanaColors.Muted)
-            Text("bar share logged · dot mean fit", fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = KshanaColors.Muted)
+            Text("bins by fit →", fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Muted)
+            Text("bar share logged · dot mean fit", fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Muted)
         }
     }
 }
@@ -761,7 +762,7 @@ private fun LedgerTextField(value: String, onChange: (String) -> Unit, label: St
         onValueChange = onChange,
         label = { Text(label, style = MaterialTheme.typography.labelSmall) },
         singleLine = true,
-        textStyle = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 15.sp, color = KshanaColors.Text),
+        textStyle = TextStyle(fontFamily = KshanaFonts.sans, fontSize = 15.sp, color = KshanaColors.Text),
         colors = ledgerFieldColors(),
         modifier = modifier,
     )
@@ -776,7 +777,7 @@ private fun LedgerNumberField(value: String, onChange: (String) -> Unit, label: 
         singleLine = true,
         enabled = enabled,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 15.sp, color = KshanaColors.Text),
+        textStyle = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 15.sp, color = KshanaColors.Text),
         colors = ledgerFieldColors(),
         modifier = modifier,
     )

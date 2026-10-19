@@ -51,6 +51,13 @@ import uniffi.kshana_ffi.HouseSystem
 import uniffi.kshana_ffi.engineVersion
 import java.time.Instant
 import java.time.ZoneId
+import com.kshana.app.notify.Reminders
+import com.kshana.app.ui.sky.Haptics
+import com.kshana.app.ui.sky.Motion
+import com.kshana.app.ui.sky.SkySound
+import uniffi.kshana_ffi.setRiseConvention
+import kotlinx.coroutines.delay
+import com.kshana.app.ui.sky.KshanaFonts
 
 private val AYANAMSAS = listOf(
     "Lahiri" to AyanamsaChoice.LAHIRI,
@@ -112,6 +119,7 @@ fun SettingsScreen(
 
     fun save(s: EngineSettings) {
         ProfileStore.saveSettings(context, s)
+        runCatching { setRiseConvention(s.riseConvention) }
         onSettingsChanged(s)
     }
 
@@ -150,8 +158,8 @@ fun SettingsScreen(
         if (profile == null) {
             Text("No birth details yet.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         } else {
-            Text(profile.name, fontFamily = FontFamily.Serif, fontSize = 20.sp, color = KshanaColors.Text)
-            Text(profile.birthLocal().format(DATE_TIME_S), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky)
+            Text(profile.name, fontFamily = KshanaFonts.serif, fontSize = 20.sp, color = KshanaColors.Text)
+            Text(profile.birthLocal().format(DATE_TIME_S), fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky)
             Text(
                 "${profile.placeName} · ${"%.4f".format(profile.latitude)}° ${"%.4f".format(profile.longitude)}° · ${profile.zoneId} · time ${Uncertainty.label(profile.uncertaintyLevel)}",
                 style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
@@ -186,6 +194,42 @@ fun SettingsScreen(
                     uncheckedBorderColor = KshanaColors.Line,
                 ),
             )
+        }
+
+        SectionLabel("Sunrise")
+        Text(
+            "Hindu almanacs take sunrise when the Sun's centre reaches the true horizon; Western tables take the refracted upper limb, a few minutes earlier. Every ghati, hora and choghadiya follows the choice.",
+            style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Chip("HINDU", selected = settings.riseConvention == "hindu", onClick = { save(settings.copy(riseConvention = "hindu")) })
+            Chip("WESTERN", selected = settings.riseConvention == "western", onClick = { save(settings.copy(riseConvention = "western")) })
+        }
+
+        SectionLabel("Feel")
+        var stillSky by remember { mutableStateOf(Motion.stillSky(context)) }
+        var haptics by remember { mutableStateOf(Haptics.enabled(context)) }
+        var sound by remember { mutableStateOf(SkySound.enabled(context)) }
+        FeelRow("Still sky", "No breathing, drifting or parallax; the sky is drawn once and stays.", stillSky) { stillSky = it; Motion.setStillSky(context, it) }
+        FeelRow("Haptics", "A felt tick at each exact instant and on every choice.", haptics) { haptics = it; Haptics.setEnabled(context, it) }
+        FeelRow("Sound", "A quiet drone that follows the daylight and a bell at each exact instant. Off unless you ask.", sound) { sound = it; SkySound.setEnabled(context, it) }
+
+        SectionLabel("Reminders")
+        var exactAlarms by remember { mutableStateOf(Reminders.exactAllowed(context)) }
+        LaunchedEffect(Unit) {
+            while (true) {
+                delay(1000)
+                exactAlarms = Reminders.exactAllowed(context)
+            }
+        }
+        if (exactAlarms) {
+            Text("Reminders fire at the exact second.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        } else {
+            Text(
+                "Android is holding this app's reminders to an inexact slot, which can be minutes late. Allow exact alarms so each one fires at its second.",
+                style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
+            )
+            QuietButton("ALLOW EXACT ALARMS", onClick = { Reminders.requestExact(context) })
         }
 
         SectionLabel("Provenance")
@@ -246,7 +290,7 @@ fun SettingsScreen(
                 label = { Text("Claude API key", style = MaterialTheme.typography.labelSmall) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
-                textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = KshanaColors.Text),
+                textStyle = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 13.sp, color = KshanaColors.Text),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = KshanaColors.Text,
                     unfocusedTextColor = KshanaColors.Text,
@@ -270,5 +314,27 @@ fun SettingsScreen(
         SectionLabel("Trust")
         Text("What the app does not know, a self-test on this phone, the error budget, and the full report to export.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         QuietButton("TRUST & VERIFICATION", onClick = onTrust)
+    }
+}
+
+/** A labelled switch row in the house colours. */
+@Composable
+private fun FeelRow(title: String, description: String, checked: Boolean, onChecked: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onChecked,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = KshanaColors.Night,
+                checkedTrackColor = KshanaColors.Gold,
+                uncheckedThumbColor = KshanaColors.Muted,
+                uncheckedTrackColor = KshanaColors.Surface,
+                uncheckedBorderColor = KshanaColors.Line,
+            ),
+        )
     }
 }

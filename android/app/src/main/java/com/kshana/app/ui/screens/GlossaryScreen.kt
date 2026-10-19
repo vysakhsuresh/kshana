@@ -36,6 +36,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.GlossaryRecord
 import uniffi.kshana_ffi.glossary
+import com.kshana.app.ui.sky.KshanaFonts
 
 private val TRADITIONS = listOf("All", "Vedic", "Western", "Both", "Engine")
 
@@ -78,7 +79,7 @@ fun GlossaryScreen(onBack: () -> Unit, initialTerm: String? = null) {
                 onValueChange = { query = it },
                 label = { Text("Search a term or a meaning", style = MaterialTheme.typography.labelSmall) },
                 singleLine = true,
-                textStyle = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 15.sp, color = KshanaColors.Text),
+                textStyle = TextStyle(fontFamily = KshanaFonts.sans, fontSize = 15.sp, color = KshanaColors.Text),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = KshanaColors.Text,
                     unfocusedTextColor = KshanaColors.Text,

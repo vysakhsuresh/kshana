@@ -40,6 +40,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.SectionRecord
 import uniffi.kshana_ffi.SentenceRecord
+import com.kshana.app.ui.sky.KshanaFonts
 
 private const val WHO = "Who you are"
 private const val NOW = "Right now"
@@ -174,7 +175,7 @@ private fun AreaTile(section: SectionRecord, selected: Boolean, modifier: Modifi
             .padding(14.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(section.title, fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text)
+        Text(section.title, fontFamily = KshanaFonts.serif, fontSize = 18.sp, color = KshanaColors.Text)
         Spacer(Modifier.height(8.dp))
         val mark = if (promised) KshanaColors.Gold else KshanaColors.Muted
         Box(
@@ -193,7 +194,7 @@ private fun AreaDetail(section: SectionRecord) {
         Modifier.fillMaxWidth().clip(shape).background(KshanaColors.Surface).border(1.dp, KshanaColors.Gold.copy(alpha = 0.5f), shape).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text("${section.title} · ${section.summary}", fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text)
+        Text("${section.title} · ${section.summary}", fontFamily = KshanaFonts.serif, fontSize = 17.sp, color = KshanaColors.Text)
         if (section.sentences.isEmpty()) {
             Text("Nothing more to say for this area.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         }
@@ -222,7 +223,7 @@ private fun SentenceBlock(s: SentenceRecord, key: String) {
             for (w in s.why) Text("· $w", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky, modifier = Modifier.padding(top = 2.dp))
             Text(
                 "confidence ${"%.2f".format(s.confidence)}${if (s.rules.isNotEmpty()) " · rules ${s.rules.joinToString(" ")}" else ""}",
-                fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted, modifier = Modifier.padding(top = 4.dp),
+                fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted, modifier = Modifier.padding(top = 4.dp),
             )
         }
     }

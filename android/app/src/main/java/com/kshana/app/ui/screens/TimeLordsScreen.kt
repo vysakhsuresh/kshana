@@ -55,6 +55,7 @@ import uniffi.kshana_ffi.ProfectionRecord
 import uniffi.kshana_ffi.ProgressedRecord
 import uniffi.kshana_ffi.ZrRecord
 import java.time.ZoneId
+import com.kshana.app.ui.sky.KshanaFonts
 
 private const val TL_DAY_S = 86_400L
 private const val TL_TWO_YEARS_S = 731L * TL_DAY_S
@@ -193,8 +194,8 @@ fun TimeLordsScreen(profile: BirthProfile, settings: EngineSettings, onBack: () 
             QuietButton("YEAR ›", onClick = { at = shiftAt(at, zone, 0, 1); isNow = false })
         }
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(localText(at, DATE_TIME_S, zone), fontFamily = FontFamily.Monospace, fontSize = 18.sp, color = KshanaColors.Sky)
-            Text(microText(at), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Gold, modifier = Modifier.padding(start = 6.dp, bottom = 2.dp))
+            Text(localText(at, DATE_TIME_S, zone), fontFamily = KshanaFonts.mono, fontSize = 18.sp, color = KshanaColors.Sky)
+            Text(microText(at), fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Gold, modifier = Modifier.padding(start = 6.dp, bottom = 2.dp))
         }
         Text(
             if (loading) "Laying out every period system at this instant…" else zone.id,
@@ -258,7 +259,7 @@ fun TimeLordsScreen(profile: BirthProfile, settings: EngineSettings, onBack: () 
 
         Text(
             "Every boundary is exact arithmetic from the birth instant or a solved root; conventions are listed per system.",
-            fontFamily = FontFamily.Monospace, fontSize = 10.sp, lineHeight = 15.sp, color = KshanaColors.Muted,
+            fontFamily = KshanaFonts.mono, fontSize = 10.sp, lineHeight = 15.sp, color = KshanaColors.Muted,
             modifier = Modifier.padding(vertical = 8.dp),
         )
     }
@@ -284,7 +285,7 @@ private fun TlCard(content: @Composable () -> Unit) {
 @Composable
 private fun TlCardTitle(title: String, tag: String) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, fontFamily = FontFamily.Serif, fontSize = 20.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+        Text(title, fontFamily = KshanaFonts.serif, fontSize = 20.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
         Text(tag, style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
     }
 }
@@ -303,7 +304,7 @@ private fun TlTag(text: String, colour: Color = KshanaColors.Gold) {
 private fun TlBounds(start: ExactInstant, end: ExactInstant, zone: ZoneId, colour: Color = KshanaColors.Sky) {
     Text(
         "${localText(start, DATE_TIME_S, zone)} → ${localText(end, DATE_TIME_S, zone)}",
-        fontFamily = FontFamily.Monospace, fontSize = 11.sp, lineHeight = 16.sp, color = colour,
+        fontFamily = KshanaFonts.mono, fontSize = 11.sp, lineHeight = 16.sp, color = colour,
     )
 }
 
@@ -315,8 +316,8 @@ private fun TlBounds(start: ExactInstant, end: ExactInstant, zone: ZoneId, colou
 @Composable
 private fun TlStrip(start: ExactInstant, end: ExactInstant, segments: List<TlSeg>, at: ExactInstant) {
     val measurer = rememberTextMeasurer()
-    val onStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = KshanaColors.Night)
-    val offStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp, color = KshanaColors.Muted)
+    val onStyle = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Night)
+    val offStyle = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 9.sp, color = KshanaColors.Muted)
     val s0 = start.seconds()
     val span = end.seconds() - s0
     val atS = at.seconds()
@@ -350,7 +351,7 @@ private fun DashaSystemCard(d: DashaSystemRecord, at: ExactInstant, zone: ZoneId
     val runningSub = subs.firstOrNull { tlWithin(it.start, it.end, at) }
     TlCard {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(d.system.replaceFirstChar { it.uppercase() }, fontFamily = FontFamily.Serif, fontSize = 20.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+            Text(d.system.replaceFirstChar { it.uppercase() }, fontFamily = KshanaFonts.serif, fontSize = 20.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
             if (!d.applies) {
                 Text("does not apply here", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             }
@@ -359,7 +360,7 @@ private fun DashaSystemCard(d: DashaSystemRecord, at: ExactInstant, zone: ZoneId
             Text("The instant falls outside the laid-out periods.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         } else {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("${planetGlyphFor(l1.label)} ${l1.label}".trim(), fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Gold, modifier = Modifier.weight(1f))
+                Text("${planetGlyphFor(l1.label)} ${l1.label}".trim(), fontFamily = KshanaFonts.serif, fontSize = 17.sp, color = KshanaColors.Gold, modifier = Modifier.weight(1f))
                 Text("LEVEL 1", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
             }
             TlBounds(l1.start, l1.end, zone)
@@ -399,14 +400,14 @@ private fun DashaSystemCard(d: DashaSystemRecord, at: ExactInstant, zone: ZoneId
 private fun ProfectionBody(p: ProfectionRecord, zone: ZoneId) {
     Text("Year ${p.age.toInt()} · month ${p.month.toInt() + 1} of 12", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("${signGlyphFor(p.yearSign)} ${p.yearSign}".trim(), fontFamily = FontFamily.Serif, fontSize = 20.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
-        Text("${planetGlyphFor(p.yearLord)} ${p.yearLord}".trim(), fontFamily = FontFamily.Serif, fontSize = 20.sp, color = KshanaColors.Gold)
+        Text("${signGlyphFor(p.yearSign)} ${p.yearSign}".trim(), fontFamily = KshanaFonts.serif, fontSize = 20.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+        Text("${planetGlyphFor(p.yearLord)} ${p.yearLord}".trim(), fontFamily = KshanaFonts.serif, fontSize = 20.sp, color = KshanaColors.Gold)
     }
     TlBounds(p.yearStart, p.yearEnd, zone)
     HorizontalDivider(color = KshanaColors.LineSoft)
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("${signGlyphFor(p.monthSign)} ${p.monthSign}".trim(), fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
-        Text("${planetGlyphFor(p.monthLord)} ${p.monthLord}".trim(), fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Gold)
+        Text("${signGlyphFor(p.monthSign)} ${p.monthSign}".trim(), fontFamily = KshanaFonts.serif, fontSize = 17.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+        Text("${planetGlyphFor(p.monthLord)} ${p.monthLord}".trim(), fontFamily = KshanaFonts.serif, fontSize = 17.sp, color = KshanaColors.Gold)
     }
     TlBounds(p.monthStart, p.monthEnd, zone)
     Text("the year's sign counted one per year from the Ascendant · the month one per month from the year's sign", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
@@ -427,7 +428,7 @@ private fun FirdariaBody(list: List<FirdariaRecord>, at: ExactInstant, zone: Zon
     val majorStart = list[j0].start
     val majorEnd = list[j1].end
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text("${planetGlyphFor(cur.lord)} ${cur.lord}".trim(), fontFamily = FontFamily.Serif, fontSize = 20.sp, color = KshanaColors.Gold, modifier = Modifier.weight(1f))
+        Text("${planetGlyphFor(cur.lord)} ${cur.lord}".trim(), fontFamily = KshanaFonts.serif, fontSize = 20.sp, color = KshanaColors.Gold, modifier = Modifier.weight(1f))
         Text("MAJOR", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
     }
     TlBounds(majorStart, majorEnd, zone)
@@ -436,7 +437,7 @@ private fun FirdariaBody(list: List<FirdariaRecord>, at: ExactInstant, zone: Zon
     val sub = cur.sub
     if (sub != null) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("${planetGlyphFor(sub)} $sub".trim(), fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+            Text("${planetGlyphFor(sub)} $sub".trim(), fontFamily = KshanaFonts.serif, fontSize = 17.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
             Text("SUB", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
         }
         TlBounds(cur.start, cur.end, zone)
@@ -460,7 +461,7 @@ private fun ZrLot(title: String, periods: List<ZrRecord>, at: ExactInstant, zone
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
                 "${signGlyphFor(p.sign)} ${p.sign}".trim(),
-                fontFamily = FontFamily.Serif, fontSize = if (level == 1) 20.sp else 17.sp,
+                fontFamily = KshanaFonts.serif, fontSize = if (level == 1) 20.sp else 17.sp,
                 color = if (level == 1) KshanaColors.Gold else KshanaColors.Text, modifier = Modifier.weight(1f),
             )
             if (p.peak) TlTag("PEAK")
@@ -497,12 +498,12 @@ private fun HitsBody(hits: List<DirectionHitRecord>, at: ExactInstant, zone: Zon
         val kind = if (h.kind == "solar_arc") "SA" else "P"
         val retro = if (h.retrograde == true) " ℞" else ""
         Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.Top) {
-            Text(kind, fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Gold, modifier = Modifier.width(24.dp).padding(top = 2.dp))
+            Text(kind, fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Gold, modifier = Modifier.width(24.dp).padding(top = 2.dp))
             Text(
                 "${planetGlyphFor(h.moving)} ${h.moving} ${h.aspect} ${h.natal}$retro".trim(),
                 style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1f),
             )
-            Text(localText(h.at, DATE_TIME, zone), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Sky)
+            Text(localText(h.at, DATE_TIME, zone), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Sky)
         }
     }
     Text("P progressed Sun or Moon · SA solar arc · ℞ the progressed body is retrograde", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
@@ -520,8 +521,8 @@ private fun LunarBody(returns: List<ExactInstant>, at: ExactInstant, zone: ZoneI
         val days = ((r.seconds() - atS) / TL_DAY_S.toDouble()).toInt()
         Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Return ${i + 1}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted, modifier = Modifier.weight(1f))
-            Text("in $days d", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted, modifier = Modifier.padding(end = 10.dp))
-            Text(localText(r, DATE_TIME_S, zone), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = if (i == 0) KshanaColors.Gold else KshanaColors.Sky)
+            Text("in $days d", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted, modifier = Modifier.padding(end = 10.dp))
+            Text(localText(r, DATE_TIME_S, zone), fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = if (i == 0) KshanaColors.Gold else KshanaColors.Sky)
         }
     }
     Text("the Moon back at its natal sidereal longitude, solved as a root", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)

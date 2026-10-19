@@ -33,6 +33,7 @@ import com.kshana.app.data.BirthProfile
 import com.kshana.app.data.FamilyStore
 import com.kshana.app.data.ProfileStore
 import com.kshana.app.ui.theme.KshanaColors
+import com.kshana.app.ui.sky.KshanaFonts
 
 /**
  * The people the app knows besides you. Adding or editing reuses the birth form; the
@@ -91,8 +92,8 @@ fun FamilyScreen(onBack: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(p.name, fontFamily = FontFamily.Serif, fontSize = 20.sp, color = KshanaColors.Text)
-                            Text(p.birthLocal().format(DATE_TIME), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
+                            Text(p.name, fontFamily = KshanaFonts.serif, fontSize = 20.sp, color = KshanaColors.Text)
+                            Text(p.birthLocal().format(DATE_TIME), fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky)
                             Text(p.placeName, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
                         }
                         QuietButton(

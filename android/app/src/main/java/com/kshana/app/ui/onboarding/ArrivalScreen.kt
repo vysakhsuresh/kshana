@@ -69,6 +69,7 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
+import com.kshana.app.ui.sky.KshanaFonts
 
 /*
  * The first run as a ritual, in three steps and under a minute. (1) An invocation: a near-black
@@ -221,7 +222,7 @@ private fun Invocation(reduced: Boolean, onBegin: () -> Unit) {
         Column(Modifier.align(Alignment.Center).padding(horizontal = 32.dp)) {
             Text(
                 LINE_ONE.take(shownOne),
-                fontFamily = FontFamily.Serif, fontSize = 24.sp, lineHeight = 34.sp, color = KshanaColors.TextSoft,
+                fontFamily = KshanaFonts.serif, fontSize = 24.sp, lineHeight = 34.sp, color = KshanaColors.TextSoft,
                 minLines = 2,
             )
             Spacer(Modifier.height(28.dp))
@@ -319,7 +320,7 @@ private fun Rewind(profile: BirthProfile, reduced: Boolean, onEnter: () -> Unit)
                     }
                     Text(
                         "This is the sky when you arrived. Every number from here is computed from it.",
-                        fontFamily = FontFamily.Serif, fontSize = 20.sp, lineHeight = 28.sp, color = KshanaColors.Text,
+                        fontFamily = KshanaFonts.serif, fontSize = 20.sp, lineHeight = 28.sp, color = KshanaColors.Text,
                     )
                     GoldButton("ENTER", onClick = onEnter, modifier = Modifier.fillMaxWidth())
                 }
@@ -347,11 +348,11 @@ private fun RewindClock(sky: RewindSky?, zone: ZoneId, progress: FloatState) {
     val at = sky.nowMillis - (span * e.toDouble()).toLong()
     Text(
         Instant.ofEpochMilli(at).atZone(zone).format(STAMP),
-        fontFamily = FontFamily.Monospace, fontSize = 22.sp, color = KshanaColors.Sky,
+        fontFamily = KshanaFonts.mono, fontSize = 22.sp, color = KshanaColors.Sky,
     )
     Text(
         "${spanText(at - sky.birthMillis)} to go",
-        fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Muted,
+        fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Muted,
     )
 }
 
@@ -373,7 +374,7 @@ private class Slide(
 @Composable
 private fun RewindCanvas(sky: RewindSky?, profile: BirthProfile, progress: FloatState, modifier: Modifier) {
     val textMeasurer = rememberTextMeasurer()
-    val labelStyle = remember { TextStyle(fontFamily = FontFamily.Monospace, fontSize = 9.sp) }
+    val labelStyle = remember { TextStyle(fontFamily = KshanaFonts.mono, fontSize = 9.sp) }
     val southern = profile.latitude < 0.0
     val description = if (sky == null) "The sky over ${profile.placeName}" else "The sky over ${profile.placeName} rewinding to the moment you arrived"
 

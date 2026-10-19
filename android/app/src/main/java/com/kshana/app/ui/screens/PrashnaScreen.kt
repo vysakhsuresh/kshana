@@ -50,6 +50,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import com.kshana.app.ui.sky.KshanaFonts
 
 /** Display label → engine area name. */
 private val AREA_CHIPS = listOf(
@@ -165,7 +166,7 @@ fun PrashnaScreen(place: Place, settings: EngineSettings, onBack: () -> Unit) {
                 value = typed, onValueChange = { typed = it },
                 label = { Text("A few words of the question", style = MaterialTheme.typography.labelSmall) },
                 singleLine = true,
-                textStyle = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 15.sp, color = KshanaColors.Text),
+                textStyle = TextStyle(fontFamily = KshanaFonts.sans, fontSize = 15.sp, color = KshanaColors.Text),
                 colors = prashnaFieldColors(), modifier = Modifier.fillMaxWidth(),
             )
             if (typed.isNotBlank()) {
@@ -182,7 +183,7 @@ fun PrashnaScreen(place: Place, settings: EngineSettings, onBack: () -> Unit) {
                 label = { Text("1–249, or blank for the lagna of the moment", style = MaterialTheme.typography.labelSmall) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 15.sp, color = KshanaColors.Text),
+                textStyle = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 15.sp, color = KshanaColors.Text),
                 colors = prashnaFieldColors(), modifier = Modifier.fillMaxWidth(),
             )
             if (!kpValid) Text("The number must be between 1 and 249.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
@@ -204,10 +205,10 @@ private fun LiveClock(tickMillis: Long) {
     val local = ZonedDateTime.ofInstant(Instant.ofEpochMilli(tickMillis), ZoneId.systemDefault())
     val micro = ((System.nanoTime() / 1_000) % 1_000_000).toString().padStart(6, '0')
     Column {
-        Text(local.format(CLOCK_DATE), fontFamily = FontFamily.Serif, fontSize = 20.sp, color = KshanaColors.TextSoft)
+        Text(local.format(CLOCK_DATE), fontFamily = KshanaFonts.serif, fontSize = 20.sp, color = KshanaColors.TextSoft)
         Row(verticalAlignment = Alignment.Bottom) {
             Text(local.format(CLOCK_TIME), style = MaterialTheme.typography.headlineLarge, color = KshanaColors.Text)
-            Text(".${micro.substring(0, 3)} ${micro.substring(3)}", fontFamily = FontFamily.Monospace, fontSize = 20.sp, color = KshanaColors.Gold, modifier = Modifier.padding(start = 6.dp, bottom = 6.dp))
+            Text(".${micro.substring(0, 3)} ${micro.substring(3)}", fontFamily = KshanaFonts.mono, fontSize = 20.sp, color = KshanaColors.Gold, modifier = Modifier.padding(start = 6.dp, bottom = 6.dp))
         }
     }
 }
@@ -216,14 +217,14 @@ private fun LiveClock(tickMillis: Long) {
 private fun AnswerCard(rec: PrashnaRecord, at: ExactInstant, area: String, place: Place, onReset: () -> Unit) {
     Text(area.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
     Text(rec.verdict, style = MaterialTheme.typography.displayLarge, color = KshanaColors.Gold)
-    Text("asked ${localText(at, DATE_TIME_S)}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky)
-    Text(microText(at), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Gold)
+    Text("asked ${localText(at, DATE_TIME_S)}", fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky)
+    Text(microText(at), fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Gold)
     if (!rec.questionGenuine) {
         Text("The chart does not mark this question as genuine; read the answer lightly.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Sky)
     }
     Text(
         "lagna ${degMin(rec.lagnaSidereal)} ${signName(rec.lagnaSidereal)} · Moon ${degMin(rec.moonSidereal)} ${signName(rec.moonSidereal)} · Moon sub ${rec.moonSubLord}",
-        fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted,
+        fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted,
     )
 
     SectionLabel("Why")
@@ -234,13 +235,13 @@ private fun AnswerCard(rec: PrashnaRecord, at: ExactInstant, area: String, place
         Text(f, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.padding(vertical = 6.dp))
     }
     for (h in rec.hits) {
-        Text("${h.ruleId} · ${h.source} · weight ${"%.2f".format(h.weight)}", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+        Text("${h.ruleId} · ${h.source} · weight ${"%.2f".format(h.weight)}", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
     }
 
     SectionLabel("Ruling planets")
-    Text(rec.rulingPlanets.joinToString(" · ").ifEmpty { "—" }, fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text)
+    Text(rec.rulingPlanets.joinToString(" · ").ifEmpty { "—" }, fontFamily = KshanaFonts.serif, fontSize = 18.sp, color = KshanaColors.Text)
     SectionLabel("Agents")
-    Text(rec.agents.joinToString(" · ").ifEmpty { "—" }, fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text)
+    Text(rec.agents.joinToString(" · ").ifEmpty { "—" }, fontFamily = KshanaFonts.serif, fontSize = 18.sp, color = KshanaColors.Text)
 
     SectionLabel("Moon windows")
     if (rec.windows.isEmpty()) Text("none in the next $WINDOW_DAYS days", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
@@ -248,12 +249,12 @@ private fun AnswerCard(rec: PrashnaRecord, at: ExactInstant, area: String, place
         HorizontalDivider(color = KshanaColors.LineSoft)
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("${w.star} star · ${w.sub} sub", fontFamily = FontFamily.Serif, fontSize = 16.sp, color = KshanaColors.Text)
-                Text("${localText(w.start, DATE_TIME_S)} → ${localText(w.end, DATE_TIME_S)}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
+                Text("${w.star} star · ${w.sub} sub", fontFamily = KshanaFonts.serif, fontSize = 16.sp, color = KshanaColors.Text)
+                Text("${localText(w.start, DATE_TIME_S)} → ${localText(w.end, DATE_TIME_S)}", fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky)
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text(microText(w.start), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Gold)
-                Text(microText(w.end), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Gold)
+                Text(microText(w.start), fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Gold)
+                Text(microText(w.end), fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Gold)
             }
         }
     }

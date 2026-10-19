@@ -62,6 +62,7 @@ import uniffi.kshana_ffi.TransitReport
 import java.time.DateTimeException
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.kshana.app.ui.sky.KshanaFonts
 
 private val GREETING_DATE = DateTimeFormatter.ofPattern("EEEE, d MMMM uuuu")
 private val SHORT_TIME = DateTimeFormatter.ofPattern("HH:mm")
@@ -170,7 +171,7 @@ fun TodayScreen(
         if (d == null) {
             if (loading) Text("Reading the sky for today…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         } else {
-            Text(d.headline, fontFamily = FontFamily.Serif, fontSize = 22.sp, lineHeight = 30.sp, color = KshanaColors.Text, modifier = Modifier.padding(top = 6.dp))
+            Text(d.headline, fontFamily = KshanaFonts.serif, fontSize = 22.sp, lineHeight = 30.sp, color = KshanaColors.Text, modifier = Modifier.padding(top = 6.dp))
 
             TodayLamp(profile, here, settings)
             SectionLabel("Your day")
@@ -179,9 +180,9 @@ fun TodayScreen(
             if (sunrise != null && nextSunrise != null) {
                 DayBar(sunrise, d.sunset, nextSunrise, d.windows, now)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("rise ${localText(sunrise, SHORT_TIME, zone)}", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
-                    d.sunset?.let { Text("set ${localText(it, SHORT_TIME, zone)}", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted) }
-                    Text("rise ${localText(nextSunrise, SHORT_TIME, zone)}", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+                    Text("rise ${localText(sunrise, SHORT_TIME, zone)}", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
+                    d.sunset?.let { Text("set ${localText(it, SHORT_TIME, zone)}", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted) }
+                    Text("rise ${localText(nextSunrise, SHORT_TIME, zone)}", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
                 }
             } else {
                 Text("The Sun does not rise and set here today, so there are no hour windows.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
@@ -196,8 +197,8 @@ fun TodayScreen(
                 for (e in events) {
                     HorizontalDivider(color = KshanaColors.LineSoft)
                     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(momentTitle(e), fontFamily = FontFamily.Serif, fontSize = 16.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
-                        Text(localText(e.instant, MOMENT_TIME, zone), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
+                        Text(momentTitle(e), fontFamily = KshanaFonts.serif, fontSize = 16.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+                        Text(localText(e.instant, MOMENT_TIME, zone), fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky)
                     }
                 }
             }
@@ -220,7 +221,7 @@ fun TodayScreen(
                 MonoRow("Moon nakshatra", d.moonNakshatra)
                 MonoRow("Tara", "${d.tara} · ${if (d.taraGood) "good" else "unfavourable"}", if (d.taraGood) KshanaColors.Gold else KshanaColors.Sky)
                 MonoRow("Chandra bala", "${ordinal(d.chandraHouse.toInt())} from Moon · ${if (d.chandraGood) "good" else "weak"}", if (d.chandraGood) KshanaColors.Gold else KshanaColors.Sky)
-                Text("${zone.id} · judged at ${localText(now, DATE_TIME_S, zone)}", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+                Text("${zone.id} · judged at ${localText(now, DATE_TIME_S, zone)}", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
             }
         }
 
@@ -290,7 +291,7 @@ private fun WindowRow(w: HourWindowRecord, now: ExactInstant, zone: ZoneId) {
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(
             "${localText(w.start, SHORT_TIME, zone)} – ${localText(w.end, SHORT_TIME, zone)}",
-            fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = if (live) KshanaColors.Gold else KshanaColors.Sky,
+            fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = if (live) KshanaColors.Gold else KshanaColors.Sky,
         )
         Text(
             if (w.avoid) "avoid · ${w.reason}" else w.reason,
@@ -318,13 +319,13 @@ private fun SkyCard(report: TransitReport?, zone: ZoneId, loading: Boolean) {
             val until = ss.phaseEnd?.let { localText(it, DATE_ONLY, zone) }
             Text(
                 "You are in Sade Sati (phase $phase of 3)${until?.let { " until $it" } ?: ""}.",
-                fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Gold,
+                fontFamily = KshanaFonts.serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Gold,
             )
         } else {
             val next = ss.nextStart?.let { localText(it, DATE_ONLY, zone) }
             Text(
                 if (next != null) "Not in Sade Sati; next begins $next." else "Not in Sade Sati, and none begins in the next thirty years.",
-                fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text,
+                fontFamily = KshanaFonts.serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text,
             )
         }
         for (body in listOf("Jupiter", "Saturn")) {

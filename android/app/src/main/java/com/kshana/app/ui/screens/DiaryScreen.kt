@@ -51,6 +51,7 @@ import java.time.Instant
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.kshana.app.ui.sky.KshanaFonts
 
 private val MONTH_CHIP = DateTimeFormatter.ofPattern("MMM uuuu")
 private const val CONFIRM_WINDOW_MS = 4_000L
@@ -160,10 +161,10 @@ fun DiaryScreen(profile: BirthProfile, here: Place, settings: EngineSettings, on
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it },
-                    placeholder = { Text("Write under this sky", fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Muted) },
+                    placeholder = { Text("Write under this sky", fontFamily = KshanaFonts.serif, fontSize = 17.sp, color = KshanaColors.Muted) },
                     minLines = 3,
                     maxLines = 8,
-                    textStyle = TextStyle(fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text),
+                    textStyle = TextStyle(fontFamily = KshanaFonts.serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text),
                     colors = diaryFieldColors(),
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -221,10 +222,10 @@ fun DiaryScreen(profile: BirthProfile, here: Place, settings: EngineSettings, on
 @Composable
 private fun EntryRow(entry: DiaryEntry, zone: ZoneId, confirming: Boolean, onRemove: () -> Unit) {
     Column(Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 4.dp)) {
-        Text(entry.text, fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text)
+        Text(entry.text, fontFamily = KshanaFonts.serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text)
         Text(
             Instant.ofEpochMilli(entry.atMillis).atZone(zone).format(DATE_TIME_S),
-            fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky,
+            fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky,
             modifier = Modifier.padding(top = 8.dp),
         )
         if (entry.snapshot.isNotEmpty()) {

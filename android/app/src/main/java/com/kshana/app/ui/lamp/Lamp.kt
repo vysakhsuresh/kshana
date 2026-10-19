@@ -66,6 +66,7 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import kotlin.math.sin
+import com.kshana.app.ui.sky.KshanaFonts
 
 /*
  * The lamp: the return mechanic without guilt. A diya on the Today screen is lit when the
@@ -268,7 +269,7 @@ fun TodayLamp(profile: BirthProfile, here: Place, settings: EngineSettings, modi
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 if (lit) "The lamp is lit for this day" else "Light the lamp for this day",
-                fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text,
+                fontFamily = KshanaFonts.serif, fontSize = 17.sp, color = KshanaColors.Text,
             )
             Text(
                 when {

@@ -41,6 +41,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.NamingRecord
 import uniffi.kshana_ffi.naming
+import com.kshana.app.ui.sky.KshanaFonts
 
 private data class NamingResult(val record: NamingRecord, val moonSidereal: Double)
 
@@ -125,12 +126,12 @@ fun NamingScreen(settings: EngineSettings, onBack: () -> Unit) {
         val r = result
         if (p != null) {
             SectionLabel(p.name)
-            Text("${p.birthLocal().format(DATE_TIME)} · ${p.placeName}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Muted)
+            Text("${p.birthLocal().format(DATE_TIME)} · ${p.placeName}", fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Muted)
             if (r == null) {
                 if (busy || error == null) Text("finding the Moon…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             } else {
                 Spacer(Modifier.height(8.dp))
-                Text(r.record.syllable, fontFamily = FontFamily.Serif, fontSize = 88.sp, lineHeight = 92.sp, color = KshanaColors.Gold)
+                Text(r.record.syllable, fontFamily = KshanaFonts.serif, fontSize = 88.sp, lineHeight = 92.sp, color = KshanaColors.Gold)
                 Text("Moon in ${r.record.nakshatra}, pada ${r.record.pada}", style = MaterialTheme.typography.titleLarge, color = KshanaColors.Text)
                 MonoRow("Moon sign", signName(r.moonSidereal))
                 MonoRow("Moon longitude", "${signName(r.moonSidereal)} ${degMin(r.moonSidereal)}")

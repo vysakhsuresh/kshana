@@ -43,6 +43,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.CompatibilityRecord
 import uniffi.kshana_ffi.MangalRecord
+import com.kshana.app.ui.sky.KshanaFonts
 
 /** Two people, matched: the eight kutas, the doshas, Mangal, Western synastry, and the sentences. */
 @Composable
@@ -126,7 +127,7 @@ fun CompatibilityScreen(settings: EngineSettings, onFamily: () -> Unit, onBack: 
                 Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text(k.name, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text, modifier = Modifier.weight(1f))
-                        Text("${num(k.points)}/${num(k.max)}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky)
+                        Text("${num(k.points)}/${num(k.max)}", fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky)
                     }
                     Bar(fraction = if (k.max > 0.0) (k.points / k.max).toFloat() else 0f)
                     if (k.detail.isNotBlank()) {
@@ -154,7 +155,7 @@ fun CompatibilityScreen(settings: EngineSettings, onFamily: () -> Unit, onBack: 
                 HorizontalDivider(color = KshanaColors.LineSoft)
                 Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("${s.a} ${s.aspect} ${s.b}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1f))
-                    Text("%.2f°".format(s.orb), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.padding(horizontal = 10.dp))
+                    Text("%.2f°".format(s.orb), fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.padding(horizontal = 10.dp))
                     Text(toneWord, style = MaterialTheme.typography.labelSmall, color = toneColor)
                 }
             }
@@ -191,7 +192,7 @@ private fun MangalCard(name: String, m: MangalRecord, modifier: Modifier = Modif
         Text(headline, style = MaterialTheme.typography.bodyMedium, color = if (m.effective) KshanaColors.Gold else KshanaColors.TextSoft)
         Text(
             "Mars in house ${m.fromLagna} from lagna · ${m.fromMoon} from Moon · ${m.fromVenus} from Venus",
-            fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Sky,
+            fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Sky,
         )
     }
 }
@@ -203,15 +204,15 @@ private fun SentenceRow(key: Int, text: String, why: List<String>, confidence: D
     Column(Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable { open = !open }.padding(vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(sentence(text), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1f))
-            Text(if (open) "why −" else "why +", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Gold, modifier = Modifier.padding(start = 12.dp))
+            Text(if (open) "why −" else "why +", fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Gold, modifier = Modifier.padding(start = 12.dp))
         }
         if (open) {
             for (w in why) {
-                Text("· $w", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Sky, modifier = Modifier.padding(top = 3.dp))
+                Text("· $w", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Sky, modifier = Modifier.padding(top = 3.dp))
             }
             Text(
                 "confidence ${"%.2f".format(confidence)}${if (rules.isNotEmpty()) " · rules ${rules.joinToString(" ")}" else ""}",
-                fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted, modifier = Modifier.padding(top = 4.dp),
+                fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted, modifier = Modifier.padding(top = 4.dp),
             )
         }
     }
