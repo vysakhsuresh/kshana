@@ -129,3 +129,28 @@ its 7th moves to the 10th from there).
 The 27 × 4 syllable table (namakshara) is the one printed in Indian almanacs; regional
 variants exist and the app shows the nakshatra and pada beside the syllable so a family
 can consult its own.
+
+## The ledger and calibration
+
+| Id | Rule | Source |
+|---|---|---|
+| (fit) | For a logged event, fit = 0.5 × dasha support + 0.3 × Parashari period quality + 0.2 × transit support, each in [0, 1]. Dasha support is the share of the five Vimshottari levels, from the mahadasha down, whose lords signify the area's houses (for a Loss or Crisis, its negating houses); period quality is the mean for the maha and antar lords (inverted for an adverse event); transit support is Jupiter's and Saturn's standing from the natal Moon by the classical table, shifted by a running Sade Sati | KP timing funnel, BPHS dasha phala, Phaladeepika 26 |
+| (baseline) | Every logged event is matched by instants nobody logged, evenly spread over the life in the same area and orientation; lift = mean fit of events − mean fit of the baseline. Zero lift is chance. Brier = mean of (fit − 1)² over events and fit² over the baseline; five reliability bins | Brier (1950); forecasting practice |
+| (net KP support) | A dasha lord's net support for an area = fulfilling significations weighted by level ÷ group size − 0.8 × negating significations ÷ negating size + 0.2 if the primary cusp's house is signified, clamped to [0, 1]; the funnel's strength blends the levels 0.35 / 0.30 / 0.20 / 0.10 / 0.05 | KP Readers III and VI (the lord must signify the matter's houses and not the houses that deny it) |
+
+## Gochara scoring
+
+| Id | Rule | Source |
+|---|---|---|
+| (vedha) | Favourable houses from the Moon and their obstruction houses per graha: Sun 3→9, 6→12, 10→4, 11→5; Moon 1→5, 3→9, 6→12, 7→2, 10→4, 11→8; Mars and Saturn 3→12, 6→9, 11→5; Mercury 2→5, 4→3, 6→9, 8→1, 10→8, 11→12; Jupiter 2→12, 5→4, 7→3, 9→10, 11→8; Venus 1→8, 2→7, 3→1, 4→10, 5→9, 8→5, 9→11, 11→6, 12→3; Rahu and Ketu as Saturn by convention. Sun–Saturn and Moon–Mercury do not obstruct each other | Phaladeepika 26.3–26.9; B. V. Raman, Hindu Predictive Astrology ch. 34 |
+| (Moorthi) | At a graha's ingress, the transit Moon's house from the natal Moon: 1, 6, 11 gold; 2, 5, 9 silver; 3, 7, 10 copper; 4, 8, 12 iron | Common usage |
+| (kakshya) | Each sign in eight parts of 3°45′ lorded by Saturn, Jupiter, Mars, Sun, Venus, Mercury, Moon, Lagna; a transit through a kakshya is favourable when that lord gave the graha a bindu in the sign | BPHS Ashtakavarga; Jagannatha Hora |
+| (score) | verdict 0.40, BAV 0.25 (over 8), SAV 0.15 (28 at the middle), Moorthi 0.10, kakshya 0.10, absent terms renormalised | Convention, stated |
+
+## Further dashas
+
+Yogini (36-year cycle, starting yogini = (nakshatra number + 3) mod 8, antardashas proportional from the running yogini; BPHS), Ashtottari (108 years; Sun 6, Moon 15, Mars 8, Mercury 17, Saturn 10, Jupiter 19, Rahu 12, Venus 21; nakshatra groups alternating 4/3 from Ardra; applies when Rahu is in a kendra or trikona from the lagna lord and not in the lagna; BPHS 47), Kalachakra (the 108-row BPHS table, paramayus 100/85/83/86, deha and jeeva signs, pada-fraction balance; BPHS 46), Chara (K. N. Rao: direction by the ninth house's oddness; years = count to the lord's sign minus one, own sign 12, exalted +1, debilitated −1; antardashas start from the sign after the dasha sign). Every boundary is integer arithmetic from the birth instant.
+
+## Western timing
+
+Secondary progressions (day-for-a-year on the mean tropical year of 365.2422 d, progressed MC by solar arc, progressed Asc from it at the natal latitude), solar arc (progressed Sun − natal Sun), annual profections turning at the exact solar return with twelve equal months, firdaria (75-year cycle, day sequence Sun 10 … South Node 2, night from the Moon, sevenfold sub-periods in Chaldean order), zodiacal releasing (360-day year, Aries 15 … Pisces 12, levels to 5-hour units, loosing of the bond once per parent, peaks at the 1st, 4th, 7th and 10th from the lot), lunar and demi returns, transit hits to every natal point with the Ptolemaic aspects. Sources are cited in the crate's doc comments.

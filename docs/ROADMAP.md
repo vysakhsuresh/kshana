@@ -41,5 +41,12 @@ online features (place search, IERS refresh, grounded narration). Remaining: con
 with a human astrologer and pooled calibration across users (both need a backend and an
 account system, deliberately left out of the offline app); bundled fonts; Play listing.
 
+**M7 · The trace (done).** Every astrological state transition of a life as an exact
+instant (`docs/TRACE.md`), thirty-fold faster apparent positions, the ledger with
+calibration, gochara scoring, four further dasha systems, Western directions, Tajika
+varshaphala, the River and Transits screens, the living sky. Remaining from the
+research round: the revamped remedies (karma mapping), the mystical onboarding and
+voice, and whatever the completeness critic adds.
+
 **Always.** No number ships without a comparison test, and every disagreement with
 another ephemeris is written up in `docs/PRECISION.md`.
