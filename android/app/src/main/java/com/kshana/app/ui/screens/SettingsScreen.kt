@@ -58,6 +58,8 @@ import com.kshana.app.ui.sky.SkySound
 import uniffi.kshana_ffi.setRiseConvention
 import kotlinx.coroutines.delay
 import com.kshana.app.ui.sky.KshanaFonts
+import com.kshana.app.data.LanguageStore
+import uniffi.kshana_ffi.languageNames
 
 private val AYANAMSAS = listOf(
     "Lahiri" to AyanamsaChoice.LAHIRI,
@@ -84,6 +86,7 @@ fun SettingsScreen(
     onTrust: () -> Unit,
     onNarrate: () -> Unit,
     onBack: () -> Unit,
+    onLexicon: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -181,7 +184,7 @@ fun SettingsScreen(
         Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) {
                 Text("Topocentric Moon", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
-                Text("Seen from the place rather than the Earth's centre; up to about 1° of parallax.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                Text("Seen from the place rather than the Earth's centre; up to about 1° of parallax. Placements only: dasha balances and every timing use the geocentric Moon, as the texts do.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             }
             Switch(
                 checked = settings.topocentricMoon,
@@ -231,6 +234,18 @@ fun SettingsScreen(
             )
             QuietButton("ALLOW EXACT ALARMS", onClick = { Reminders.requestExact(context) })
         }
+
+        SectionLabel("Language")
+        Text(
+            "The names of the stars, tithis, grahas and periods in your own script wherever a screen names them; the sentences stay in English.",
+            style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+        )
+        var language by remember { mutableStateOf(LanguageStore.code(context)) }
+        val languages = remember { runCatching { languageNames() }.getOrDefault(emptyList()) }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (l in languages) Chip(l.native, selected = language == l.code, onClick = { language = l.code; LanguageStore.save(context, l.code) })
+        }
+        QuietButton("OPEN THE LEXICON", onClick = onLexicon)
 
         SectionLabel("Provenance")
         ErrorLine(error)

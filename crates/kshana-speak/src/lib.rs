@@ -5,6 +5,7 @@
 #![forbid(unsafe_code)]
 
 pub mod glossary;
+pub mod lexicon;
 
 use kshana_chart::Chart;
 use kshana_ephem::Spk;
@@ -18,6 +19,10 @@ use kshana_vedic::panchanga::NAKSHATRA_NAMES;
 use kshana_vedic::{chara_karakas, nakshatra, naming_for, Ayanamsa, DashaLord};
 
 pub use glossary::{glossary, GlossaryEntry};
+pub use lexicon::{
+    kollavarsham, language_names, lexicon, malayalam_month, nazhika_vinazhika, tamil_month, term,
+    term_latin, vakya_note, Language, LexiconEntry,
+};
 
 /// One sentence with its evidence.
 #[derive(Clone, Debug, PartialEq)]

@@ -55,6 +55,7 @@ fun MeScreen(
     onCompatibility: () -> Unit,
     onNaming: () -> Unit,
     onGlossary: () -> Unit,
+    onLexicon: () -> Unit = {},
     onChart: () -> Unit,
     onVedic: () -> Unit,
     onTrust: () -> Unit,
@@ -148,6 +149,7 @@ fun MeScreen(
             Door("Baby name syllable", "The traditional first sound of a name, from the Moon's star at birth.", onNaming)
         }
         Door("Glossary", "Every word the app uses, explained.", onGlossary)
+        Door("Lexicon", "The stars, tithis and periods in Malayalam, Tamil, Hindi, Telugu or Kannada; nazhika since sunrise.", onLexicon)
         if (profile != null) {
             Door("Narration", "An optional online story of your reading, only if you allow it.", onNarrate)
         }

@@ -146,7 +146,7 @@ fun TraceScreen(profile: BirthProfile, here: Place, settings: EngineSettings, on
             }
             natalMoon = chart.panchanga.moonSidereal
             val moonSpeed = chart.bodies.firstOrNull { it.name == "Moon" }?.speed ?: 13.2
-            sensitivity = dashaSensitivity(moonSpeed, profile.uncertaintySeconds().toDouble())
+            sensitivity = dashaSensitivity(chart.panchanga.moonSidereal, moonSpeed, profile.uncertaintySeconds().toDouble())
             if (levels.isEmpty()) levels = dashaLevelNames()
         } catch (e: CancellationException) {
             throw e

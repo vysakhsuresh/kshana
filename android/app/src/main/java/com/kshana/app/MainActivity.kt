@@ -72,6 +72,7 @@ import com.kshana.app.ui.screens.StrengthScreen
 import com.kshana.app.ui.sky.KshanaFonts
 import com.kshana.app.ui.screens.SealedScreen
 import com.kshana.app.ui.screens.QuizScreen
+import com.kshana.app.ui.screens.LexiconScreen
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
 
@@ -225,6 +226,7 @@ private fun App() {
                     onCompatibility = { open("compatibility") },
                     onNaming = { open("naming") },
                     onGlossary = { open("glossary") },
+                    onLexicon = { open("lexicon") },
                     onChart = { open("chart") },
                     onVedic = { open("vedic") },
                     onTrust = { open("trust") },
@@ -301,6 +303,7 @@ private fun App() {
             composable("areas") { withProfile { AreasScreen(it, settings, onBack = back) } }
             composable("parihara") { withProfile { PariharaScreen(it, settings, onBack = back) } }
             composable("strength") { withProfile { StrengthScreen(it, settings, onBack = back) } }
+            composable("lexicon") { LexiconScreen(onBack = back) }
             composable("sealed") { withProfile { SealedScreen(it, settings, onBack = back) } }
             composable("quiz") { withProfile { QuizScreen(it, settings, onBack = back) } }
             composable("day") {
@@ -348,6 +351,7 @@ private fun App() {
                     onRectify = { open("rectify") },
                     onTrust = { open("trust") },
                     onNarrate = { open("narrate") },
+                    onLexicon = { open("lexicon") },
                     onBack = back,
                 )
             }

@@ -214,6 +214,25 @@ exact cones and the projected ellipsoid, kinds per Meeus ch. 54, local contacts 
 topocentric directions. Saros by Kluepfel's reduction, anchored and tested on seven
 eclipses. Measured against NASA: every tested contact within 5 s.
 
+## Prasna Marga and Jaimini extras
+
+| Id | Rule | Source |
+|---|---|---|
+| (sphutas) | Trisphuta = lagna + Moon + Gulika; Chatussphuta adds the Sun; Panchasphuta adds Rahu; Prana = 5 × lagna + Gulika; Deha = 8 × Moon + Gulika; Mrityu = 7 × Gulika + Sun; Sookshma Trisphuta = 9 × Trisphuta; Beeja = Sun + Venus + Jupiter; Kshetra = Moon + Mars + Jupiter; Yogi point = Sun + Moon + 93°20′ (Yogi its star lord, Sahayogi its sign lord, Avayogi the star lord at +186°40′); Bhrigu Bindu = the shorter-arc midpoint of Moon and Rahu. Gulika from the start of Saturn's part of the day (JHora), the Kerala Mandi table as the alternative | Prasna Marga VIII; Jataka Parijata |
+| (ayurdaya) | Pindayu, Nisargayu and Amsayu per BPHS 43 with the four haranas, the bharanas, the lagna's share and the 120-year Paramayu; the method chosen by the Shadbala of Sun, Moon and lagna. Every result opens with the caveat that this is a classical exercise of the text and never a prediction of death | BPHS 43; Jataka Parijata V |
+| (ashtamangala) | Digits to planets (1 Sun, 2 Mars, 3 Jupiter, 4 Mercury, 5 Venus, 6 Saturn, 7 Moon, 8 Rahu), odd good; the number's sign and nakshatra as Kerala practice takes them (marked practice); Veethi and Chatra rasis from the Sun and the Arudha | Prasna Marga IV and XV; Raman's Chatra section |
+| (jaimini extras) | Rasi drishti (movable to fixed except the adjacent, and so on), argala and virodhargala by the 2/12, 4/10, 11/3 pairs with 5/9 secondary, malefics in the 3rd as unobstructed, Ketu reversed; karakamsa from the atmakaraka's navamsa with the sutra one-liners; Pada lagna and Upapada by the double count | Jaimini Sutras 1.1 to 1.4; Rath |
+| (sandhi) | Dasha sandhi as the last and first sub-period on each side of an exact boundary (or a stated fraction); chidra lords from the marakas, the 22nd drekkana from the lagna, the 64th navamsa from the Moon, and the 2nd, 7th and 12th from the dasha lord | BPHS 44; the classical chhidra list |
+| (vimshopaka) | Shadvarga, Saptavarga, Dashavarga and Shodashavarga weights per BPHS 8; own 20, friend 18 … great enemy 5; no exaltation bonus | BPHS 8 |
+
+## The lexicon
+
+Every regional name (Malayalam, Tamil, Hindi, Telugu, Kannada) is stored with the
+source it was read from; a cell the sources did not confirm is left empty and the
+screen shows a dash rather than a guess. Kshana is a Drik panchangam: its tithi and
+nakshatra endings can differ from a Vakya almanac by up to a few ghatis, and the
+lexicon says so.
+
 ## Strength
 
 Shadbala in virupas per BPHS ch. 27 with Raman's and JHora's conventions where the
