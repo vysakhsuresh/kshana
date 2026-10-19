@@ -71,6 +71,7 @@ fun MeScreen(
     onStrength: () -> Unit = {},
     onSealed: () -> Unit = {},
     onQuiz: () -> Unit = {},
+    onMarga: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var atmakaraka by remember { mutableStateOf<KarakaRecord?>(null) }
@@ -168,6 +169,7 @@ fun MeScreen(
             Door("The year ahead", "The Tajika annual chart from the exact solar return: year lord, sahams, Mudda.", onYear)
             Door("Time lords", "Five dasha systems, profections, firdaria, zodiacal releasing and progressions at one instant.", onTimeLords)
             Door("Strength", "Shadbala: how strong each planet stands, the houses and the avasthas, with the numbers.", onStrength)
+            Door("Prasna Marga", "The Kerala instrument: sphutas, Ashtamangala, Jaimini, sandhi, Vimshopaka.", onMarga)
         }
         Door("Western chart", "The tropical wheel: planets, houses and aspects.", onChart)
         Door("Vedic kundli", "The sidereal chart: rasi, navamsa, nakshatras and dashas.", onVedic)

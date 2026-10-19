@@ -73,6 +73,7 @@ import com.kshana.app.ui.sky.KshanaFonts
 import com.kshana.app.ui.screens.SealedScreen
 import com.kshana.app.ui.screens.QuizScreen
 import com.kshana.app.ui.screens.LexiconScreen
+import com.kshana.app.ui.screens.MargaScreen
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector)
 
@@ -242,6 +243,7 @@ private fun App() {
                     onStrength = { open("strength") },
                     onSealed = { open("sealed") },
                     onQuiz = { open("quiz") },
+                    onMarga = { open("marga") },
                 )
             }
 
@@ -304,6 +306,9 @@ private fun App() {
             composable("parihara") { withProfile { PariharaScreen(it, settings, onBack = back) } }
             composable("strength") { withProfile { StrengthScreen(it, settings, onBack = back) } }
             composable("lexicon") { LexiconScreen(onBack = back) }
+            composable("marga") {
+                withProfile { MargaScreen(it, ProfileStore.currentLocation(context), settings, onBack = back) }
+            }
             composable("sealed") { withProfile { SealedScreen(it, settings, onBack = back) } }
             composable("quiz") { withProfile { QuizScreen(it, settings, onBack = back) } }
             composable("day") {
