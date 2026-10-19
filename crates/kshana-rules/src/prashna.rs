@@ -266,8 +266,8 @@ pub fn prashna_windows(
     let step = 15 * 60 * NS_PER_SEC;
     let to = from.add_ns(days as i128 * 86_400 * NS_PER_SEC);
     let refine = |mut a: Instant, mut b: Instant, want_on: bool| -> Instant {
-        // f(a) != want_on, f(b) == want_on
-        while b.ns_since(a) > 1_000_000 {
+        // f(a) != want_on, f(b) == want_on; bracket to 1 µs, like every other instant
+        while b.ns_since(a) > 1_000 {
             let m = a.add_ns(b.ns_since(a) / 2);
             if on(lords_at(m)) == want_on {
                 b = m;
@@ -294,7 +294,7 @@ pub fn prashna_windows(
             } else if let Some(st) = start.take() {
                 let end = refine(t, n, false);
                 let (star, sub) =
-                    lords_at(st.add_ns(1_000_000)).unwrap_or((DashaLord::Moon, DashaLord::Moon));
+                    lords_at(st.add_ns(1_000)).unwrap_or((DashaLord::Moon, DashaLord::Moon));
                 out.push(MoonWindow {
                     start: st,
                     end,
@@ -307,8 +307,7 @@ pub fn prashna_windows(
         t = n;
     }
     if let Some(st) = start {
-        let (star, sub) =
-            lords_at(st.add_ns(1_000_000)).unwrap_or((DashaLord::Moon, DashaLord::Moon));
+        let (star, sub) = lords_at(st.add_ns(1_000)).unwrap_or((DashaLord::Moon, DashaLord::Moon));
         out.push(MoonWindow {
             start: st,
             end: to,
