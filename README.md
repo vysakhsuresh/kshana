@@ -41,11 +41,12 @@ a person can carry, and to be honest about how well it knows.
 | `kshana-cli` | `kshana` binary: chart, next, areas, prashna, muhurta, rectify, life, match, calendar | working |
 | `kshana-rules` | The prediction layer: facts from a chart; KP significators with node agency, cusp sub-lord promise, timing funnel; Prashna judgment with ruling planets and Moon windows; Parashari dignities, aspects, yogas, per-area assessment, period quality; Parihara remedies; Muhurta window search; birth-time rectification from life events; Ashtakoota matching, Mangal dosha, Western synastry | tested on real and synthetic charts; catalogue in `docs/RULES.md` |
 | `kshana-forecast` | What the sky does to one chart: sign transits with exact sidereal ingress instants, Sade Sati phases, the day's good and avoid hours, the 100-year life map, the observance calendar (Ekadashi, Pradosha, lunations, Sankranti) | tested against the kernel |
+| `kshana-trace` | The life trace: every dasha level to nine deep and every zodiac crossing (sign, nakshatra, pada, KP sub, sub-sub), tithi, karana, yoga, hora, sunrise and sunset as exact instants; snapshots at any instant | tested against snapshots; `docs/TRACE.md` |
 | `kshana-speak` | Plain words: a reading in sentences, each carrying its factors, confidence and rule ids; compatibility in words; a 56-term glossary | tested |
 | `kshana-chart` | One instant, one place, the whole chart: placements with KP lords and houses, cusps, nodes, panchanga, provenance stamp | tested; shared by the CLI and the FFI |
 | `kshana-ffi` | UniFFI surface: `Engine` object (kernel loaded once); chart, events, areas, prashna, parihara, muhurta, rectify, plain reading, life map, daily, transits, compatibility, calendar, karakas, naming, glossary, self-test, export | tested through the boundary; Kotlin bindings generate cleanly |
 
-See `docs/ARCHITECTURE.md`, `docs/PRECISION.md` and `docs/ROADMAP.md`.
+See `docs/ARCHITECTURE.md`, `docs/PRECISION.md`, `docs/TRACE.md` and `docs/ROADMAP.md`.
 
 ## Build
 
