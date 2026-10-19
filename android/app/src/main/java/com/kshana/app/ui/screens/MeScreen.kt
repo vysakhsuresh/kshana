@@ -63,6 +63,8 @@ fun MeScreen(
     onTransits: () -> Unit = {},
     onRiver: () -> Unit = {},
     onLedger: () -> Unit = {},
+    onYear: () -> Unit = {},
+    onTimeLords: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var atmakaraka by remember { mutableStateOf<KarakaRecord?>(null) }
@@ -153,6 +155,8 @@ fun MeScreen(
         if (profile != null) {
             Door("The river", "Every exact instant of your day: dashas, the Moon's subs, the rising sign.", onRiver)
             Door("Transits", "Every graha through your chart with vedha, bindus and kakshya windows.", onTransits)
+            Door("The year ahead", "The Tajika annual chart from the exact solar return: year lord, sahams, Mudda.", onYear)
+            Door("Time lords", "Five dasha systems, profections, firdaria, zodiacal releasing and progressions at one instant.", onTimeLords)
         }
         Door("Western chart", "The tropical wheel: planets, houses and aspects.", onChart)
         Door("Vedic kundli", "The sidereal chart: rasi, navamsa, nakshatras and dashas.", onVedic)

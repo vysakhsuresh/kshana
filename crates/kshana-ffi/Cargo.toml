@@ -36,6 +36,9 @@ kshana-trace = { workspace = true }
 kshana-ledger = { workspace = true }
 kshana-directions = { workspace = true }
 kshana-tajika = { workspace = true }
+kshana-eclipse = { workspace = true }
+kshana-day = { workspace = true }
+kshana-bala = { workspace = true }
 
 [lints]
 workspace = true

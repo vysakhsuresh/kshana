@@ -55,11 +55,13 @@ import com.kshana.app.ui.screens.ReadingScreen
 import com.kshana.app.ui.screens.RectifyScreen
 import com.kshana.app.ui.screens.RightTimeScreen
 import com.kshana.app.ui.screens.SettingsScreen
+import com.kshana.app.ui.screens.TimeLordsScreen
 import com.kshana.app.ui.screens.TodayScreen
 import com.kshana.app.ui.screens.TraceScreen
 import com.kshana.app.ui.screens.TransitsScreen
 import com.kshana.app.ui.screens.TrustScreen
 import com.kshana.app.ui.screens.VedicScreen
+import com.kshana.app.ui.screens.YearScreen
 import com.kshana.app.ui.sky.LivingSky
 import com.kshana.app.ui.theme.KshanaColors
 import com.kshana.app.ui.theme.KshanaTheme
@@ -223,6 +225,8 @@ private fun App() {
                     onTransits = { open("transits") },
                     onRiver = { open("trace") },
                     onLedger = { open("ledger") },
+                    onYear = { open("year") },
+                    onTimeLords = { open("timelords") },
                 )
             }
 
@@ -230,6 +234,10 @@ private fun App() {
             composable("lifemap") { withProfile { LifeMapScreen(it, settings, onBack = back) } }
             composable("transits") { withProfile { TransitsScreen(it, settings, onBack = back) } }
             composable("ledger") { withProfile { LedgerScreen(it, settings, onBack = back) } }
+            composable("year") {
+                withProfile { YearScreen(it, ProfileStore.currentLocation(context), settings, onBack = back) }
+            }
+            composable("timelords") { withProfile { TimeLordsScreen(it, settings, onBack = back) } }
             composable("trace") {
                 withProfile { TraceScreen(it, ProfileStore.currentLocation(context), settings, onBack = back) }
             }
