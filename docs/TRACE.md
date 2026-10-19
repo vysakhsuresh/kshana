@@ -46,6 +46,14 @@ to the instant shown.
 | ΔT (TT − UT1) for dates past the IERS table | grows ~0.1 s per year ahead | affects wall-clock labels only, not the sky's own order | | | |
 | Ayanamsa model (anchored to Swiss Ephemeris values) | 0.002″ over 1900–2050 | 13 ms | 0.2 s | 8 s | 20 s |
 | Sunrise: refraction and the horizon | 20 s typical, more at high latitude | — | | | |
+| ΔT uncertainty for the year (IERS sigma, or the long-term fit's) | 0.01 s today, seconds a century out, minutes a millennium out | added to every rotation-bound instant: hora, sunrise, sunset, the lagna clock | | | |
+| Civil labels past the leap-second table | 1 s per possible insertion (June 30 and December 31) until 2035; 1 s before 1972 | the instant is exact in TAI; its wall-clock label can only be printed to this floor | | | |
+
+**Which sunrise.** Hindu almanacs take sunrise when the Sun's centre reaches the true
+horizon (altitude 0°, no refraction); Western tables take the refracted upper limb
+(−0.8333°). The two differ by a few minutes and every ghati, hora, choghadiya and
+muhurta follows the choice, so the app makes it a setting (Hindu by default) and
+stamps it in the trace's provenance.
 
 So: a dasha boundary is exact by definition; a Moon sub-sub entry is right to a few
 tenths of a second in the real sky and shown to the microsecond; a Saturn sign ingress

@@ -138,6 +138,18 @@ can consult its own.
 | (baseline) | Every logged event is matched by instants nobody logged, evenly spread over the life in the same area and orientation; lift = mean fit of events − mean fit of the baseline. Zero lift is chance. Brier = mean of (fit − 1)² over events and fit² over the baseline; five reliability bins | Brier (1950); forecasting practice |
 | (net KP support) | A dasha lord's net support for an area = fulfilling significations weighted by level ÷ group size − 0.8 × negating significations ÷ negating size + 0.2 if the primary cusp's house is signified, clamped to [0, 1]; the funnel's strength blends the levels 0.35 / 0.30 / 0.20 / 0.10 / 0.05 | KP Readers III and VI (the lord must signify the matter's houses and not the houses that deny it) |
 
+## Honest measurement
+
+| Id | Rule | Source |
+|---|---|---|
+| (coverage) | The chance baseline for an area is exact on the dasha cells: the span is cut at every maha, antar and pratyantar boundary, the sookshma and prana shares are computed analytically inside each cell (f = Σ years of supporting lords ÷ 120, both levels f²), the transit factor is sampled once per cell at its midpoint; coverage = the fraction of the span with fit ≥ 0.5. The number of logged events chance alone would explain follows the Poisson-binomial of the per-event coverages; an area covered more than 70 % of the time "cannot fail" and is shown but kept out of the headline | the KP timing funnel; Poisson-binomial tail by polynomial product |
+| (specificity) | A hit in an area also counts for every other area that shares its tested houses; the weight 1 ÷ (1 + expected equivalent areas) discounts it. A weight, not a probability | the forking-paths discount for a fixed taxonomy |
+| (time-shift) | Surrogate test: every logged event is moved together by T·j ÷ (k+1), j = 1..k, wrapped into the span; p = (1 + the number of shifts whose mean fit ≥ the real mean) ÷ (1 + k) | Phipson and Smyth (2010); circular shift surrogates |
+| (metrics) | Brier, the climatological reference ō(1−ō), skill = 1 − BS ÷ BS_ref, Murphy's reliability, resolution and uncertainty with the within-bin terms so the identity is exact, ECE, Wilson intervals. No percentage from fewer than ten resolutions; a bin shown at five; the curve at twenty | Brier (1950); Murphy (1973); Stephenson, Coelho and Jolliffe (2008); Wilson (1927) |
+| (sealed) | A forecast counts only if sealed before its window opens; its id is the SHA-256 of everything except the resolution, so any later edit shows; Brier is taken over resolved forecasts only | forecasting practice; FIPS 180-4 |
+| (decoy) | Asked-first retrodiction: the strongest antardashas of the lived span are the signals, decoys of the closest log-length come from the weakest half, the order is shuffled by a seed committed as a hash before the question is shown; the grade is the exact binomial tail against 1 ÷ (decoys + 1) | the asked-first design; binomial test |
+| (posterior) | The birth-time posterior over the stated window: one chart per candidate (at most 400, the step widened to fit), log L = Σ ln(max(fit, 0.05) ÷ max(mean fit over the lived span, 0.05)), uniform prior; MAP, mean, HPD50 and HPD90 as hulls with the number of separate runs | likelihood ratio of support to coverage; Rodden's C rating for the words |
+
 ## Gochara scoring
 
 | Id | Rule | Source |
@@ -185,6 +197,10 @@ Panchaka from 0° Aquarius to the end of Revati; Bhadra = Vishti karana; nine
 inauspicious yogas. The Pancha Pakshi activity matrix is decoded from the JHora
 database and could not be verified against a primary text: the engine marks those
 functions and the app says so.
+
+The sunrise every clock hangs on follows the chosen convention: Hindu (the Sun's
+centre on the true horizon) by default, or Western (the refracted upper limb), set
+once in Settings and applied to every ghati, hora, choghadiya and muhurta.
 
 ## Eclipses
 

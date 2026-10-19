@@ -48,5 +48,15 @@ varshaphala, the River and Transits screens, the living sky. Remaining from the
 research round: the revamped remedies (karma mapping), the mystical onboarding and
 voice, and whatever the completeness critic adds.
 
+**M8 · Honest to the second (done).** The sunrise convention as a setting, the
+leap-second floor on civil labels, ΔT in every rotation-bound error bar, kernel
+clipping; the honest-measurement layer in the ledger (exact chance baselines, the
+specificity discount, time-shift surrogates, sealed forecasts, asked-first decoy
+quizzes, a birth-time posterior); the day's clocks and eclipses on screen; remedies as
+commitments with a kept/planned ledger; Shadbala on screen; the real sky with the
+catalogue stars, haptic phrases, the bell and the drone; bundled type; the Prasna
+Marga suite and the regional lexicon. Remaining: the Play listing, and the first
+on-device build as the verification step.
+
 **Always.** No number ships without a comparison test, and every disagreement with
 another ephemeris is written up in `docs/PRECISION.md`.
