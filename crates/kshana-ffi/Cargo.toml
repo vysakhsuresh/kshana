@@ -32,6 +32,7 @@ kshana-chart = { workspace = true }
 kshana-rules = { workspace = true }
 kshana-forecast = { workspace = true }
 kshana-speak = { workspace = true }
+kshana-trace = { workspace = true }
 
 [lints]
 workspace = true

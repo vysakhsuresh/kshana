@@ -347,6 +347,60 @@ fn main() {
         ayanamsa: Ayanamsa::Lahiri,
         topocentric_moon: std::env::args().any(|a| a == "--topo"),
     };
+    if sub == "trace" {
+        let days: i64 = arg("--days").and_then(|s| s.parse().ok()).unwrap_or(1);
+        let depth: usize = arg("--depth").and_then(|s| s.parse().ok()).unwrap_or(5);
+        let tz = arg("--tz").and_then(|s| parse_tz(&s)).unwrap_or(0);
+        let moon: f64 = arg("--natal-moon").and_then(|s| s.parse().ok()).unwrap_or_else(|| {
+            eprintln!("trace needs --natal-moon <sidereal deg> (from `kshana chart` of the birth) and --utc <window start>");
+            std::process::exit(2);
+        });
+        let birth = arg("--birth")
+            .and_then(|s| parse_utc(&s))
+            .and_then(|u| u.to_instant().ok())
+            .unwrap_or_else(|| {
+                eprintln!("trace needs --birth YYYY-MM-DDTHH:MM:SS");
+                std::process::exit(2);
+            });
+        let who = kshana_trace::Person {
+            birth,
+            moon_sidereal: moon,
+            observer: input.observer,
+            ayanamsa: Ayanamsa::Lahiri,
+            year_ns: kshana_vedic::dasha::YEAR_365_25_NS,
+        };
+        let from = input.instant;
+        let to = from.add_ns(days as i128 * 86_400 * 1_000_000_000);
+        let opts = kshana_trace::TraceOptions {
+            dasha_depth: depth,
+            ..kshana_trace::TraceOptions::default()
+        };
+        let t = kshana_trace::trace(&spk, eop.as_ref(), &who, from, to, opts).unwrap_or_else(|e| {
+            eprintln!("trace: {e:?}");
+            std::process::exit(1);
+        });
+        println!(
+            "KSHANA · life trace · {} transitions · local UTC{}",
+            t.len(),
+            arg("--tz").unwrap_or_default()
+        );
+        for x in &t {
+            let u = Utc::from_instant(x.at.add_ns(tz as i128 * 60_000_000_000));
+            println!(
+                "{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:06}  ±{:<6} {}",
+                u.year,
+                u.month,
+                u.day,
+                u.hour,
+                u.minute,
+                u.second,
+                u.nanos / 1_000,
+                format!("{}µs", x.half_width_ns / 1_000),
+                x.describe()
+            );
+        }
+        return;
+    }
     if sub == "life" {
         let ch = compute(&spk, eop.as_ref(), &input).unwrap_or_else(|e| {
             eprintln!("life: {e:?}");

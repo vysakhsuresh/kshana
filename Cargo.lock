@@ -273,6 +273,7 @@ dependencies = [
  "kshana-sky",
  "kshana-speak",
  "kshana-time",
+ "kshana-trace",
  "kshana-vedic",
 ]
 
@@ -310,6 +311,7 @@ dependencies = [
  "kshana-solver",
  "kshana-speak",
  "kshana-time",
+ "kshana-trace",
  "kshana-vedic",
  "kshana-western",
  "serde_json",

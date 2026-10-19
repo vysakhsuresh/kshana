@@ -33,6 +33,7 @@ kshana-chart = { path = "crates/kshana-chart" }
 kshana-rules = { path = "crates/kshana-rules" }
 kshana-forecast = { path = "crates/kshana-forecast" }
 kshana-speak = { path = "crates/kshana-speak" }
+kshana-trace = { path = "crates/kshana-trace" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
