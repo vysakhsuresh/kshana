@@ -1,6 +1,7 @@
 //! The life trace: a person's life as a sequence of exact instants at which some
 //! astrological state changes. Dasha levels down to minutes, every planet's entry
-//! into a sign, nakshatra, pada, KP sub and sub-sub, every tithi, karana and yoga,
+//! into a sign, nakshatra, pada, KP sub and sub-sub (the nodes by their true
+//! longitude), every tithi, karana and yoga,
 //! every hora, sunrise and sunset. Each instant is a solved root or exact integer
 //! arithmetic; none is interpolated.
 //!
@@ -17,7 +18,7 @@ pub mod zodiac;
 
 use kshana_ephem::{Body, Spk};
 use kshana_events::{hora_at, solar_day, sun_rise_set, EventError, SolarDay};
-use kshana_sky::{apparent, mean_node_longitude, Observer};
+use kshana_sky::{apparent, true_node_longitude, Observer};
 use kshana_time::{EopTable, Instant, NS_PER_DAY, NS_PER_SEC};
 use kshana_vedic::panchanga::{NAKSHATRA_NAMES, TITHI_NAMES, YOGA_NAMES};
 use kshana_vedic::{ayanamsa_degrees, karana, sidereal, sub_table, Ayanamsa, DashaLord};
@@ -119,7 +120,7 @@ pub fn physical_uncertainty_ns(c: &Change) -> i128 {
             "Mars" => 60 * S,
             "Jupiter" => 210 * S,
             "Saturn" => 540 * S,
-            "Rahu" | "Ketu" => 0,
+            "Rahu" | "Ketu" => 2 * S,
             "Lagna" => 20 * S,
             _ => 60 * S,
         },
@@ -336,28 +337,22 @@ pub fn trace(
         }
     }
     if let Some(finest) = opts.planet_finest {
-        // Mean nodes: always retrograde; sign and nakshatra only (subs of a mean point
-        // are not a KP convention).
-        let allowed = divisions_up_to(finest)
-            .into_iter()
-            .filter(|d| matches!(d, Division::Sign | Division::Nakshatra))
-            .collect::<Vec<_>>();
+        // The true (osculating) node, as the chart's facts use it: it wobbles about the
+        // mean node by up to 1.7° with a 173-day period and runs direct for short
+        // spells, so it crosses subs both ways. Scanned daily.
         for (name, offset) in [("Rahu", 0.0), ("Ketu", 180.0)] {
             let f = |t: Instant| {
                 let tc = t.tt_centuries_since_j2000();
-                Ok(sidereal(
-                    mean_node_longitude(tc) + offset,
-                    ayanamsa_degrees(ay, tc),
-                ))
+                true_node_longitude(spk, t).map(|n| sidereal(n + offset, ayanamsa_degrees(ay, tc)))
             };
-            for div in &allowed {
-                for c in crossings(f, *div, from, to, 5 * 86_400 * NS_PER_SEC, tol)? {
+            for div in divisions_up_to(finest) {
+                for c in crossings(f, div, from, to, 86_400 * NS_PER_SEC, tol)? {
                     out.push(Transition {
                         at: c.at,
                         half_width_ns: c.half_width_ns,
                         change: Change::Enter {
                             body: name,
-                            division: *div,
+                            division: div,
                             index: c.entered,
                             direct: c.direct,
                         },
@@ -579,9 +574,11 @@ pub fn snapshot(
         }
         push(name, lon, ap.speed >= 0.0);
     }
-    let node = sidereal(mean_node_longitude(tc), a);
-    push("Rahu", node, false);
-    push("Ketu", (node + 180.0).rem_euclid(360.0), false);
+    let node = sidereal(true_node_longitude(spk, at)?, a);
+    let node_later = sidereal(true_node_longitude(spk, at.add_ns(3_600 * NS_PER_SEC))?, a);
+    let node_direct = kshana_solver::wrap180(node_later - node) > 0.0;
+    push("Rahu", node, node_direct);
+    push("Ketu", (node + 180.0).rem_euclid(360.0), node_direct);
     push(
         "Lagna",
         ascendant_sidereal(eop, &who.observer, who.ayanamsa, at),

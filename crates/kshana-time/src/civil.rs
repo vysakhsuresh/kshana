@@ -113,7 +113,21 @@ impl Utc {
     pub fn to_instant(&self) -> Result<Instant, UtcError> {
         let day = self.utc_day();
         if day < LEAP_SECONDS[0].0 {
-            return Err(UtcError::BeforeModernUtc);
+            // Before 1972 there is no modern UTC. The civil time is read as Universal
+            // Time, and TAI = UT + ΔT − 32.184 s with ΔT taken for the calendar year
+            // (so the conversion inverts exactly). Good to about a second, which is
+            // what a pre-1972 birth record can carry anyway.
+            if self.second == 60 {
+                return Err(UtcError::NoLeapSecondHere);
+            }
+            let ut_s = (day - TAI_EPOCH_DAYS_FROM_1970) as i128 * 86_400
+                + self.hour as i128 * 3_600
+                + self.minute as i128 * 60
+                + self.second as i128;
+            let ut_ns = ut_s * NS_PER_SEC + self.nanos as i128;
+            return Ok(Instant::from_tai_ns(
+                ut_ns + pre_1972_tai_minus_ut_ns(self.year),
+            ));
         }
         // Seconds since the TAI epoch counting every civil day as 86 400 s …
         let civil_s = (day - TAI_EPOCH_DAYS_FROM_1970) as i128 * 86_400
@@ -161,7 +175,14 @@ impl Utc {
                 return Self::from_civil_seconds(civil_s, nanos);
             }
         }
-        Self::from_civil_seconds(tai_s - 10, nanos)
+        // Before 1972: invert the Universal-Time reading above, with ΔT for the
+        // calendar year estimated from the instant itself.
+        let rough = Self::from_civil_seconds(tai_s - 10, nanos);
+        let ut_ns = i.tai_ns() - pre_1972_tai_minus_ut_ns(rough.year);
+        Self::from_civil_seconds(
+            ut_ns.div_euclid(NS_PER_SEC),
+            ut_ns.rem_euclid(NS_PER_SEC) as u32,
+        )
     }
 
     fn from_civil_seconds(civil_s: i128, nanos: u32) -> Self {
@@ -194,8 +215,35 @@ fn days_in_month(y: i64, m: u32) -> u32 {
     }
 }
 
+/// TAI − UT in nanoseconds for a calendar year before 1972: ΔT − 32.184 s, rounded to
+/// the millisecond so the two directions of the conversion agree exactly.
+fn pre_1972_tai_minus_ut_ns(year: i64) -> i128 {
+    let dt = crate::delta_t::delta_t_for_year(year as f64).seconds;
+    (((dt - 32.184) * 1_000.0).round() as i128) * 1_000_000
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn births_before_1972_round_trip_through_universal_time() {
+        use super::*;
+        let u = Utc::new(1950, 6, 15, 4, 30, 0, 123_456_789).unwrap();
+        let i = u.to_instant().unwrap();
+        let back = Utc::from_instant(i);
+        assert_eq!(back, u);
+        // 1950: ΔT ≈ 29 s, so TAI − UT ≈ −3 s: the instant lies a few seconds before
+        // the naive civil reading.
+        let naive = (u.utc_day() - TAI_EPOCH_DAYS_FROM_1970) as i128 * 86_400 * NS_PER_SEC
+            + (4 * 3_600 + 30 * 60) as i128 * NS_PER_SEC
+            + 123_456_789;
+        let diff_s = (i.tai_ns() - naive) as f64 / 1e9;
+        assert!(diff_s > -6.0 && diff_s < 0.0, "{diff_s}");
+        assert!(Utc::new(1900, 1, 1, 0, 0, 0, 0)
+            .unwrap()
+            .to_instant()
+            .is_ok());
+    }
+
     use super::*;
 
     #[test]

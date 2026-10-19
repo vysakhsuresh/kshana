@@ -97,6 +97,70 @@ pub struct SnapshotRecord {
     pub hora_end: Option<ExactInstant>,
 }
 
+/// A transition as the app receives it.
+fn transition_record(x: kshana_trace::Transition) -> TransitionRecord {
+    let words = x.describe();
+    let physical_ns = x.physical_uncertainty_ns().min(i64::MAX as i128) as i64;
+    let mut r = TransitionRecord {
+        at: x.at.into(),
+        half_width_ns: x.half_width_ns.min(i64::MAX as i128) as i64,
+        physical_ns,
+        kind: String::new(),
+        level: 0,
+        chain: Vec::new(),
+        until: None,
+        body: String::new(),
+        division: String::new(),
+        index: 0,
+        direct: true,
+        lord: String::new(),
+        words,
+    };
+    match x.change {
+        Change::Dasha {
+            level,
+            chain,
+            until,
+        } => {
+            r.kind = "dasha".into();
+            r.level = level;
+            r.chain = chain.iter().map(|l| format!("{l:?}")).collect();
+            r.until = Some(until.into());
+        }
+        Change::Enter {
+            body,
+            division,
+            index,
+            direct,
+        } => {
+            r.kind = "enter".into();
+            r.body = body.into();
+            r.division = division.name().into();
+            r.index = index as u32;
+            r.direct = direct;
+        }
+        Change::Tithi(n) => {
+            r.kind = "tithi".into();
+            r.index = n as u32;
+        }
+        Change::Karana(k) => {
+            r.kind = "karana".into();
+            r.index = k as u32;
+        }
+        Change::Yoga(y) => {
+            r.kind = "yoga".into();
+            r.index = y as u32;
+        }
+        Change::Hora(l) => {
+            r.kind = "hora".into();
+            r.lord = l.into();
+        }
+        Change::Sunrise => r.kind = "sunrise".into(),
+        Change::Sunset => r.kind = "sunset".into(),
+    }
+    r
+}
+
 fn person(
     birth: ExactInstant,
     moon_sidereal: f64,
@@ -156,70 +220,7 @@ impl Engine {
         };
         let t = kshana_trace::trace(&self.spk, self.eop.as_ref(), &who, from_i, to_i, opts)
             .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
-        Ok(t.into_iter()
-            .map(|x| {
-                let words = x.describe();
-                let physical_ns = x.physical_uncertainty_ns().min(i64::MAX as i128) as i64;
-                let mut r = TransitionRecord {
-                    at: x.at.into(),
-                    half_width_ns: x.half_width_ns.min(i64::MAX as i128) as i64,
-                    physical_ns,
-                    kind: String::new(),
-                    level: 0,
-                    chain: Vec::new(),
-                    until: None,
-                    body: String::new(),
-                    division: String::new(),
-                    index: 0,
-                    direct: true,
-                    lord: String::new(),
-                    words,
-                };
-                match x.change {
-                    Change::Dasha {
-                        level,
-                        chain,
-                        until,
-                    } => {
-                        r.kind = "dasha".into();
-                        r.level = level;
-                        r.chain = chain.iter().map(|l| format!("{l:?}")).collect();
-                        r.until = Some(until.into());
-                    }
-                    Change::Enter {
-                        body,
-                        division,
-                        index,
-                        direct,
-                    } => {
-                        r.kind = "enter".into();
-                        r.body = body.into();
-                        r.division = division.name().into();
-                        r.index = index as u32;
-                        r.direct = direct;
-                    }
-                    Change::Tithi(n) => {
-                        r.kind = "tithi".into();
-                        r.index = n as u32;
-                    }
-                    Change::Karana(k) => {
-                        r.kind = "karana".into();
-                        r.index = k as u32;
-                    }
-                    Change::Yoga(y) => {
-                        r.kind = "yoga".into();
-                        r.index = y as u32;
-                    }
-                    Change::Hora(l) => {
-                        r.kind = "hora".into();
-                        r.lord = l.into();
-                    }
-                    Change::Sunrise => r.kind = "sunrise".into(),
-                    Change::Sunset => r.kind = "sunset".into(),
-                }
-                r
-            })
-            .collect())
+        Ok(t.into_iter().map(transition_record).collect())
     }
 
     /// Everything running at `at` for a person, dasha chain to `depth` (1–9).
@@ -272,6 +273,107 @@ impl Engine {
             hora_start: s.hora.map(|h| h.1.into()),
             hora_end: s.hora.map(|h| h.2.into()),
         })
+    }
+}
+
+/// The kernel's coverage.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct CoverageRecord {
+    pub start: ExactInstant,
+    pub end: ExactInstant,
+    pub segments: u32,
+}
+
+#[uniffi::export]
+impl Engine {
+    /// The next `count` transitions after `from`, found by widening the window
+    /// (6 h, 1 d, 7 d, 30 d, 400 d) until enough are solved. Same options as `trace`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn next_transitions(
+        &self,
+        birth: ExactInstant,
+        moon_sidereal: f64,
+        latitude_deg: f64,
+        longitude_deg: f64,
+        ayanamsa: AyanamsaChoice,
+        from: ExactInstant,
+        count: u32,
+        dasha_depth: u8,
+        moon_finest: Finest,
+        planet_finest: Finest,
+        panchanga: bool,
+        horas: bool,
+        lagna_finest: Finest,
+    ) -> Result<Vec<TransitionRecord>, KshanaError> {
+        let who = person(birth, moon_sidereal, latitude_deg, longitude_deg, ayanamsa);
+        let from_i: Instant = from.into();
+        let opts = TraceOptions {
+            dasha_depth: dasha_depth.min(9) as usize,
+            moon_finest: moon_finest.division(),
+            planet_finest: planet_finest.division(),
+            panchanga,
+            horas,
+            lagna_finest: lagna_finest.division(),
+        };
+        const HOUR: i128 = 3_600 * 1_000_000_000;
+        for span in [
+            6 * HOUR,
+            24 * HOUR,
+            7 * 24 * HOUR,
+            30 * 24 * HOUR,
+            400 * 24 * HOUR,
+        ] {
+            let t = kshana_trace::trace(
+                &self.spk,
+                self.eop.as_ref(),
+                &who,
+                from_i,
+                from_i.add_ns(span),
+                opts,
+            )
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+            if t.len() >= count as usize || span == 400 * 24 * HOUR {
+                return Ok(t
+                    .into_iter()
+                    .take(count as usize)
+                    .map(transition_record)
+                    .collect());
+            }
+        }
+        Ok(Vec::new())
+    }
+
+    /// The Sun's apparent altitude in degrees at a place, refraction excluded.
+    pub fn sun_altitude(
+        &self,
+        at: ExactInstant,
+        latitude_deg: f64,
+        longitude_deg: f64,
+    ) -> Result<f64, KshanaError> {
+        let obs = Observer {
+            latitude_deg,
+            longitude_deg,
+            height_m: 0.0,
+        };
+        kshana_events::sun_altitude(&self.spk, self.eop.as_ref(), &obs, at.into())
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))
+    }
+
+    /// The span of time the loaded kernel covers (the intersection of its segments).
+    pub fn kernel_coverage(&self) -> CoverageRecord {
+        let segs = self.spk.segments();
+        let start = segs
+            .iter()
+            .map(|s| s.start_et)
+            .fold(f64::NEG_INFINITY, f64::max);
+        let end = segs.iter().map(|s| s.end_et).fold(f64::INFINITY, f64::min);
+        let j2000 = Instant::j2000();
+        CoverageRecord {
+            start: j2000.add_seconds_f64(start).into(),
+            end: j2000.add_seconds_f64(end).into(),
+            segments: segs.len() as u32,
+        }
     }
 }
 
@@ -381,6 +483,33 @@ mod tests {
             .unwrap();
         assert!(t.len() > 100);
         assert!(t.iter().any(|x| x.body == "Lagna"));
+        let n = engine
+            .next_transitions(
+                birth,
+                316.344,
+                9.9312,
+                76.2673,
+                AyanamsaChoice::Lahiri,
+                from,
+                12,
+                5,
+                Finest::Sub,
+                Finest::Sign,
+                true,
+                true,
+                Finest::Nakshatra,
+            )
+            .unwrap();
+        assert_eq!(n.len(), 12);
+        assert!(n
+            .windows(2)
+            .all(|w| (w[0].at.tai_seconds, w[0].at.nanos) <= (w[1].at.tai_seconds, w[1].at.nanos)));
+        let alt = engine.sun_altitude(from, 9.9312, 76.2673).unwrap();
+        assert!((-90.0..=90.0).contains(&alt));
+        let cov = engine.kernel_coverage();
+        assert!(
+            cov.start.tai_seconds < birth.tai_seconds && cov.end.tai_seconds > from.tai_seconds
+        );
         assert_eq!(dasha_sensitivity(13.2, 300.0).meaningful_depth, 2);
         assert!(t.iter().all(|x| !x.words.is_empty() && !x.kind.is_empty()));
         let s = engine

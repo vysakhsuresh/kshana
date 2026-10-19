@@ -14,7 +14,8 @@ window from birth to age 120 and merged into one ordered list.
 | Level 6–9 (deha and below) | level 6 hourly, level 9 every few minutes | same arithmetic, nine deep | exact |
 | Moon enters sign / nakshatra / pada / KP sub / KP sub-sub | 0.4 / 1 / 4 / 9 / 80 | crossing solver on the sidereal longitude, bisected until one boundary per piece, then Brent | 1 µs |
 | Sun, Mercury, Venus, Mars, Jupiter, Saturn enter sign / nakshatra / pada / sub | days to years apart | same, with retrograde handling (the cell entered is the lower one) | 1 µs |
-| Rahu, Ketu (mean node) enter sign / nakshatra | months apart | same, always retrograde | 1 µs |
+| Rahu, Ketu (true node, as the chart's facts use it) enter sign / nakshatra / pada / sub | days to months apart; the true node wobbles ±1.7° and runs direct for short spells, so a sub may be crossed both ways | same, scanned daily | 1 µs |
+| The rising degree (Lagna) enters sign / nakshatra / pada / sub / sub-sub | 12 / 27 / 108 / 249 / 2 241 | same, on the ascendant from local sidereal time; subs on demand | 1 µs numerically; see below |
 | Tithi, karana, yoga begin | 1, 2, 1 | crossing solver on Moon − Sun and Moon + Sun | 1 µs |
 | Sunrise, sunset | 1, 1 | altitude root with refraction −0°50′ | 1 ms numerically; see below |
 | Horas | 24 | twelfths of the day and of the night | follows sunrise |
@@ -50,6 +51,24 @@ So: a dasha boundary is exact by definition; a Moon sub-sub entry is right to a 
 tenths of a second in the real sky and shown to the microsecond; a Saturn sign ingress
 is right to about ten minutes in the real sky and shown to the microsecond. The app
 prints the numerical resolution beside each instant and this table in Trust.
+
+## The birth time and the dasha levels
+
+A dasha boundary is exact arithmetic from the birth instant, but the birth instant is
+what the record says it is. One second of birth-time error moves every Vimshottari
+boundary by about twelve hours (the Moon moves 0.55″ in a second; one arcsecond of
+the Moon is 22 hours of the 120-year cycle). A window of ±5 minutes moves them by
+±150 days; ±3 hours by ±15 years. The River greys the levels whose periods do not
+outlast four times that shift: ±1 s keeps five levels, ±5 min keeps two, ±3 h keeps
+only the mahadasha. The sky's own events (the Moon's subs, the rising degree, the
+tithis) do not depend on the birth time at all.
+
+The rising degree moves one sub-sub in about twenty seconds. Its physical error bar is
+the Earth-rotation time: about 20 s where the IERS table ends and ΔT is extrapolated,
+far less within the table.
+
+Births before 1972 (no modern UTC) are read as Universal Time with ΔT for the year:
+TAI = UT + ΔT − 32.184 s, good to about a second, which is what such a record carries.
 
 ## Performance (release build, this machine)
 
