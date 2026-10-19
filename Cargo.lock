@@ -278,6 +278,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "kshana-directions"
+version = "0.1.0"
+dependencies = [
+ "kshana-chart",
+ "kshana-ephem",
+ "kshana-events",
+ "kshana-forecast",
+ "kshana-frames",
+ "kshana-houses",
+ "kshana-rules",
+ "kshana-sky",
+ "kshana-solver",
+ "kshana-time",
+ "kshana-trace",
+ "kshana-vedic",
+ "kshana-western",
+]
+
+[[package]]
 name = "kshana-ephem"
 version = "0.1.0"
 dependencies = [
@@ -346,6 +365,25 @@ name = "kshana-houses"
 version = "0.1.0"
 
 [[package]]
+name = "kshana-ledger"
+version = "0.1.0"
+dependencies = [
+ "kshana-chart",
+ "kshana-ephem",
+ "kshana-events",
+ "kshana-forecast",
+ "kshana-frames",
+ "kshana-houses",
+ "kshana-rules",
+ "kshana-sky",
+ "kshana-solver",
+ "kshana-time",
+ "kshana-trace",
+ "kshana-vedic",
+ "kshana-western",
+]
+
+[[package]]
 name = "kshana-rules"
 version = "0.1.0"
 dependencies = [
@@ -388,6 +426,25 @@ dependencies = [
  "kshana-sky",
  "kshana-time",
  "kshana-vedic",
+]
+
+[[package]]
+name = "kshana-tajika"
+version = "0.1.0"
+dependencies = [
+ "kshana-chart",
+ "kshana-ephem",
+ "kshana-events",
+ "kshana-forecast",
+ "kshana-frames",
+ "kshana-houses",
+ "kshana-rules",
+ "kshana-sky",
+ "kshana-solver",
+ "kshana-time",
+ "kshana-trace",
+ "kshana-vedic",
+ "kshana-western",
 ]
 
 [[package]]

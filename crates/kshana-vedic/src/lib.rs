@@ -6,6 +6,7 @@
 pub mod ashtakavarga;
 pub mod ayanamsa;
 pub mod dasha;
+pub mod dashas;
 pub mod jaimini;
 pub mod kp;
 pub mod naming;

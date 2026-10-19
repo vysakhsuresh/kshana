@@ -10,6 +10,7 @@
 
 pub mod calendar;
 pub mod daily;
+pub mod gochara;
 pub mod lifemap;
 pub mod transits;
 
