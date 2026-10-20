@@ -542,6 +542,10 @@ private fun App() {
                 }
             }
             composable("areas") { withProfile { AreasScreen(it, settings, onBack = { nav.popBackStack() }) } }
+            composable("gifts") { withProfile { com.kshana.app.ui.screens.GiftsScreen(it, settings, onBack = back, onRemedy = { open("parihara") }) } }
+            composable("almanac") { com.kshana.app.ui.screens.AlmanacScreen(here, settings, onBack = back) }
+            composable("kpfull") { withProfile { com.kshana.app.ui.screens.KpFullScreen(it, here, settings, onBack = back) } }
+            composable("dashasmore") { withProfile { com.kshana.app.ui.screens.DashasMoreScreen(it, settings, onBack = back) } }
             composable("parihara") { withProfile { com.kshana.app.ui.screens.RemedyTreeScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }) } }
             composable("parihara_classic") { withProfile { PariharaScreen(it, settings, onBack = { nav.popBackStack() }) } }
             composable("parihara/{life}", arguments = listOf(navArgument("life") { type = NavType.StringType })) { entry ->

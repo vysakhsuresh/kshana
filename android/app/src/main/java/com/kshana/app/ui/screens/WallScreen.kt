@@ -101,7 +101,7 @@ fun WallScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
             val (c, f) = withContext(Dispatchers.Default) {
                 Pair(
                     engine.countdowns(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now()),
-                    engine.festivals(profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), 35u),
+                    engine.festivalsHere(profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa, place.latitude, place.longitude, com.kshana.app.data.PlaceClock.offsetMinutes(place), Instants.now(), 35u),
                 )
             }
             WallCache.key = key

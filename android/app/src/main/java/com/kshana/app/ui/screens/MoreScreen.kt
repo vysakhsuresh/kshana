@@ -63,9 +63,11 @@ internal val MORE_PAGES = listOf(
     MorePage(S_PLAN, "Plan a day out", "say what you are going for; it finds the best hour", "plan"),
     MorePage(S_PLAN, "Your week's appointments", "your calendar, checked; a weak slot gets a better one", "calendar"),
     MorePage(S_PLAN, "The month's letter", "one calm page for the thirty days ahead", "letter"),
+    MorePage(S_PLAN, "Calendar and festivals", "today in the Malayalam, Tamil and lunar calendars, and the festivals ahead where you are", "almanac"),
 
     MorePage(S_WAIT, "What you are waiting for", "every date that matters, counting down", "wall"),
 
+    MorePage(S_STORY, "Your gifts", "the strengths and tender spots you were born with, and when each comes forward", "gifts"),
     MorePage(S_STORY, "The book of your life", "the years behind and ahead, as chapters", "book"),
     MorePage(S_STORY, "Look back at a day", "any day of your life, read as it was", "hindsight"),
     MorePage(S_STORY, "Your past, read", "dated stretches of your life from your birth time alone; every answer sharpens your birth time", "pastcheck"),
@@ -87,6 +89,8 @@ internal val MORE_PAGES = listOf(
     MorePage("Chart pages", "Remedies, classic list", "every remedy for the running periods, with sources", "parihara_classic", true),
     MorePage("Chart pages", "Your birth chart", "Western wheel and aspects", "chart", true),
     MorePage("Chart pages", "Vedic chart", "rasi, vargas, Vimshottari, Ashtakavarga", "vedic", true),
+    MorePage("Chart pages", "KP, in full", "sub-sub lords, four-level significators, cuspal interlinks, ruling planets", "kpfull", true),
+    MorePage("Chart pages", "Every period system", "Narayana, Sthira, Shoola, Drig and the conditional dashas", "dashasmore", true),
     MorePage("Chart pages", "Life areas, in full", "KP promise and Parashari assessment with every rule", "areas", true),
     MorePage("Chart pages", "Strongest area, with rules", "the strongest area now with its rule trace", "reading_expert", true),
     MorePage("Chart pages", "Exact moments", "ingresses, stations, lunations", "moments", true),

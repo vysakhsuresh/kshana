@@ -69,6 +69,7 @@ fun PastCheckScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var refine by remember { mutableStateOf<BirthRefineRecord?>(null) }
     var refining by remember { mutableStateOf(false) }
+    var learnLine by remember { mutableStateOf<String?>(null) }
     var seal by remember { mutableStateOf(PastReveal.pending(context)) }
     var timeNote by remember { mutableStateOf<String?>(null) }
     val windowMin = (profile.uncertaintySeconds() / 60.0).coerceIn(15.0, 180.0)
@@ -111,6 +112,13 @@ fun PastCheckScreen(
                         profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa, windowMin,
                         answered.map { PastAnswerInput(it.from(), it.to(), it.life, it.good, it.verdict) },
                     )
+                }
+                // Which way of reading fits this person's own past best, said plainly.
+                learnLine = withContext(Dispatchers.Default) {
+                    engine.learnTechniques(
+                        profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa,
+                        answered.map { PastAnswerInput(it.from(), it.to(), it.life, it.good, it.verdict) }, Lang.code,
+                    ).plain
                 }
             }
             refining = false
@@ -170,7 +178,7 @@ fun PastCheckScreen(
         if (allAnswered) {
             ScoreCard(items.toList())
             BirthTimeCard(
-                profile, refine, refining, timeNote,
+                profile, refine, refining, timeNote, learnLine,
                 onUse = { fit ->
                     val local = Instants.toLocal(fit.birth, profile.zone())
                     val p = profile.copy(year = local.year, month = local.monthValue, day = local.dayOfMonth, hour = local.hour, minute = local.minute, second = local.second)
@@ -252,7 +260,7 @@ private fun ScoreCard(items: List<PastReveal.Item>) {
 }
 
 @Composable
-private fun BirthTimeCard(profile: BirthProfile, r: BirthRefineRecord?, working: Boolean, note: String?, onUse: (uniffi.kshana_ffi.BirthFitRecord) -> Unit) {
+private fun BirthTimeCard(profile: BirthProfile, r: BirthRefineRecord?, working: Boolean, note: String?, learnLine: String?, onUse: (uniffi.kshana_ffi.BirthFitRecord) -> Unit) {
     val recorded = "%02d:%02d".format(profile.hour, profile.minute)
     Column(Modifier.fillMaxWidth().glass(16.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("YOUR BIRTH TIME", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Sky)
@@ -287,6 +295,19 @@ private fun BirthTimeCard(profile: BirthProfile, r: BirthRefineRecord?, working:
                 Text("More answers make this surer. $WRONG_HELPS", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             }
         }
+        // The stretch of birth times the answers point to, once they point anywhere firmly.
+        if (r != null && note == null && !working) {
+            val a = r.bracketFrom
+            val b = r.bracketTo
+            if (a != null && b != null && r.log10Bayes >= 1.0) {
+                val f = { e: uniffi.kshana_ffi.ExactInstant -> Instants.toLocal(e, profile.zone()).let { "%02d:%02d".format(it.hour, it.minute) } }
+                Text(
+                    "Your answers place your birth between ${f(a)} and ${f(b)}: inside that stretch, everything they rest on holds.",
+                    style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky,
+                )
+            }
+        }
+        if (!learnLine.isNullOrBlank() && note == null) Text(learnLine, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Leaf)
     }
 }
 
