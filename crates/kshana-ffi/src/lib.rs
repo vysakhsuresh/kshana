@@ -15,6 +15,7 @@ pub mod dashas;
 pub mod day;
 pub mod directions;
 pub mod eclipse;
+pub mod kp_full;
 pub mod ledger;
 pub mod lexicon;
 pub mod life;
