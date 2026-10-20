@@ -294,6 +294,7 @@ fun LoopScreen(
             }
             item {
                 Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SealOnNow(onRemedy = onRemedy, onOpen = onOpen)
                     WhatHelpsCard(testing = brief?.saturnActive == true, onRemedy = onRemedy)
                     DiscoverCard(testing = brief?.saturnActive == true, onOpen = onOpen)
                 }
@@ -925,6 +926,39 @@ private fun WindowRow(w: WindowRecord, tick: Instant, onPlan: () -> Unit = {}) {
             )
         }
     }
+}
+
+/**
+ * The sealed prediction, kept in sight: counting down while it is sealed, asking "did it
+ * happen?" once it opens, and offering to seal the next one after an answer.
+ */
+@Composable
+private fun SealOnNow(onRemedy: () -> Unit, onOpen: (String) -> Unit) {
+    val context = LocalContext.current
+    var seal by remember { mutableStateOf(com.kshana.app.data.PastReveal.pending(context)) }
+    var answered by remember { mutableStateOf<String?>(null) }
+    val s = seal
+    if (answered != null) {
+        Column(Modifier.fillMaxWidth().glass(16.dp).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("THE SEALED PREDICTION", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            Text(
+                when (answered) {
+                    "yes" -> "It came true. That goes on your record, and it confirms your birth time."
+                    "close" -> "Close. That goes on your record and helps place your birth time."
+                    else -> "It did not happen. That goes on your record honestly. A wrong guess still helps, because it narrows down the birth time."
+                },
+                fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 22.sp, color = KshanaColors.Text,
+            )
+            Text("SEAL THE NEXT ONE ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable { onOpen("pastcheck") }.padding(vertical = 4.dp))
+        }
+        return
+    }
+    if (s == null) return
+    SealCard(s, onRemedy, onAnswer = { v ->
+        com.kshana.app.data.PastReveal.resolve(context, s, v)
+        answered = v
+        seal = null
+    })
 }
 
 /**

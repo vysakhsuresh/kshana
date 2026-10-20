@@ -191,10 +191,16 @@ fn deflect_by_sun(
     Ok(ld(u, q, e, em))
 }
 
-/// Mean lunar node, tropical longitude of date in degrees (Meeus), for `t` TT centuries.
-/// The true node needs the lunar orbit's osculating elements and comes in milestone 3.
+/// Mean lunar node, tropical longitude in degrees on the TRUE equinox of date, for `t`
+/// TT centuries: the Meeus (Chapront) mean-equinox polynomial plus the nutation in
+/// longitude, so it sits in the same frame as the apparent planets and the true-equinox
+/// ayanamsa it is compared with (Swiss Ephemeris `SE_MEAN_NODE` does the same; without
+/// the nutation term the sidereal mean node was off by up to 17″).
 pub fn mean_node_longitude(t: f64) -> f64 {
-    (125.044_52 - 1_934.136_261 * t + 0.002_070_8 * t * t + t * t * t / 450_000.0).rem_euclid(360.0)
+    let mean_equinox =
+        125.044_52 - 1_934.136_261 * t + 0.002_070_8 * t * t + t * t * t / 450_000.0;
+    let (dpsi, _) = kshana_frames::nutation_cached(t);
+    (mean_equinox + dpsi.to_degrees()).rem_euclid(360.0)
 }
 
 /// Low-precision apparent solar longitude (Meeus, ≈0.01°), used only as a cross-check.

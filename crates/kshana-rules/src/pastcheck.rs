@@ -35,9 +35,9 @@ pub struct PastCheck {
     pub strength: f64,
 }
 
-type T3 = [&'static str; 3];
+pub(crate) type T3 = [&'static str; 3];
 
-fn rest(life: Life, good: bool) -> T3 {
+pub(crate) fn rest(life: Life, good: bool) -> T3 {
     use Life::*;
     match (life, good) {
         (Love, false) => ["was there strain, distance or a break in love or marriage?", "പ്രണയത്തിലോ വിവാഹത്തിലോ ഉലച്ചിലോ അകൽച്ചയോ വേർപിരിയലോ ഉണ്ടായോ?", "क्या प्रेम या विवाह में तनाव, दूरी या टूटन आई?"],
@@ -169,7 +169,7 @@ mod tests {
     }
 }
 
-fn said(life: Life, good: bool) -> T3 {
+pub(crate) fn said(life: Life, good: bool) -> T3 {
     use Life::*;
     match (life, good) {
         (Love, false) => ["strain, distance or a break in love or marriage", "പ്രണയത്തിലോ വിവാഹത്തിലോ ഉലച്ചിൽ, അകൽച്ച, അല്ലെങ്കിൽ വേർപിരിയൽ", "प्रेम या विवाह में तनाव, दूरी या टूटन"],

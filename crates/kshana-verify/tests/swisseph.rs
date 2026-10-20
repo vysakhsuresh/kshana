@@ -149,6 +149,12 @@ fn positions_match_swisseph_moshier() {
         let want_tn = f(&r["bodies"]["true_node"]["lon_deg"]);
         let d = wrap(tn - want_tn).abs() * 3_600.0;
         assert!(d < 120.0, "{label} true node: {tn} vs {want_tn} ({d:.1}″)");
+        // mean node: SE_MEAN_NODE is on the true equinox of date (it carries Δψ). Before the
+        // nutation term was added Kshana's mean node was off by up to 17″ here.
+        let mn = kshana_sky::mean_node_longitude(t.tt_centuries_since_j2000());
+        let want_mn = f(&r["bodies"]["mean_node"]["lon_deg"]);
+        let d = wrap(mn - want_mn).abs() * 3_600.0;
+        assert!(d < 5.0, "{label} mean node: {mn} vs {want_mn} ({d:.1}″)");
     }
     eprintln!("worst relative to tolerance: {:.2} at {}", worst.0, worst.1);
 }

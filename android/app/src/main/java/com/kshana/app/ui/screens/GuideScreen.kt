@@ -41,8 +41,9 @@ private val TABS_GUIDE = listOf(
 
 private val TIPS = listOf(
     "Reading the numbers" to "Above 60 is a good stretch, 40 to 60 is steady, below 40 asks for care. The words under each number tell you what it means for you; you never need to know how it is worked out.",
-    "Exact birth time" to "The closer your birth time, the sharper every date. If you are not sure of it, More › Find your exact birth time works it out from things that happened in your life.",
-    "Remedies" to "When something weighs on you, More › What to do gives simple steps anyone can take, with prayers of your own faith if you want them. Nothing is ever required.",
+    "Exact birth time" to "The closer your birth time, the sharper every date. Explore › Your past, read tells you dated stretches of your own life; say Yes, Close or No and it works out the birth time that fits your life best. A wrong guess still helps, because it narrows down the birth time. Ask for more questions as often as you like.",
+    "The sealed prediction" to "After reading your past, Kshana writes down one thing about the coming weeks and seals it. It opens on its date, on the Now screen, and you say whether it happened. The seal code proves the words were not changed.",
+    "Remedies" to "When something weighs on you, Explore › What helps gives simple steps anyone can take, with prayers of your own faith if you want them. Nothing is ever required.",
     "Reminders" to "Tap REMIND ME on any date to get a notice before it begins, or CALENDAR to put it in your phone's calendar.",
     "Did it happen?" to "Tell the app whether its readings came true. It keeps an open score of how often it was right for you, and it learns which parts of your life it reads best.",
     "Your data" to "Everything stays on this phone. A copy is saved in Downloads › Kshana, so if you change phones or reinstall, choose RESTORE FROM MY BACKUP FILE on the first screen.",
@@ -129,6 +130,7 @@ fun AboutScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
         AboutCard("The name", "Kshana is the Sanskrit word for a moment: the smallest piece of time that still matters. The app is built on one idea: that every moment of your life has its own weather, and that knowing it ahead helps you meet it well.")
         AboutCard("Why we made it", "Most astrology apps speak a language only astrologers understand, or say the same thing to everyone. Kshana works from your own birth and the real sky, and tells you in plain words what is coming, when, how strongly, and what to do. Guidance, never a guarantee, and it shows you openly how often it has been right.")
         AboutCard("What it stands on", "The positions of the sun, moon and planets come from NASA's planetary data and the international Earth-rotation service, worked out on this phone to a fraction of a second. The readings follow long-tested rules from the classic Indian texts, weighed together and checked against your own life.")
+        AboutCard("Places", "Every town and village in India and every town of 1,000 people or more worldwide, with their own coordinates and time zones, from GeoNames (geonames.org), used under the Creative Commons Attribution 4.0 licence.")
         AboutCard("Your privacy", "No account, no sign-in, no advertising, no tracking. Nothing you enter leaves this phone unless you send it yourself.")
         AboutCard("Made by", "${com.kshana.app.data.BrandLinks.BRAND_LABEL}, with care.")
 

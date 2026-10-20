@@ -590,9 +590,12 @@ private fun App() {
             }
             composable("pastcheck") {
                 withProfile {
-                    com.kshana.app.ui.screens.PastCheckScreen(profile = it, settings = settings, onDone = {
-                        nav.navigate("loop") { launchSingleTop = true; popUpTo(nav.graph.findStartDestination().id) { inclusive = true } }
-                    })
+                    com.kshana.app.ui.screens.PastCheckScreen(
+                        profile = it, settings = settings,
+                        onDone = { nav.navigate("loop") { launchSingleTop = true; popUpTo(nav.graph.findStartDestination().id) { inclusive = true } } },
+                        onProfile = { p -> profile = p },
+                        onRemedy = { open("parihara") },
+                    )
                 }
             }
             composable("settings") {

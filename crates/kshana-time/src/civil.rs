@@ -238,6 +238,30 @@ pub fn civil_label_uncertainty_s(i: Instant) -> f64 {
     1.0
 }
 
+/// ΔT (TT − UT1) to use for an instant when no IERS UT1 − UTC is loaded.
+///
+/// Before 1972 this is exactly the ΔT that [`Utc::to_instant`] used to read the civil
+/// time as Universal Time, so `UT1 = TT − ΔT` gives back the civil reading itself and the
+/// sidereal time (hence the Ascendant) is that of the clock time entered. (Taking ΔT at
+/// a different fraction of the year there moved UT1 off the entered time by up to about
+/// a second in the 1910s, 15″ of sidereal time.) From 1972 on it is the ΔT table at the
+/// exact decimal year.
+pub fn delta_t_for_instant(i: Instant) -> crate::delta_t::DeltaT {
+    let u = Utc::from_instant(i);
+    if u.utc_day() < LEAP_SECONDS[0].0 {
+        let tai_minus_ut = pre_1972_tai_minus_ut_ns(u.year) as f64 / 1e9;
+        return crate::delta_t::DeltaT {
+            seconds: tai_minus_ut + 32.184,
+            sigma: crate::delta_t::delta_t_for_year(u.year as f64).sigma,
+        };
+    }
+    let jan1 = days_from_civil(u.year, 1, 1);
+    let len = (days_from_civil(u.year + 1, 1, 1) - jan1) as f64;
+    let sod = u.hour as f64 * 3_600.0 + u.minute as f64 * 60.0 + u.second.min(59) as f64;
+    let year = u.year as f64 + ((u.utc_day() - jan1) as f64 + sod / 86_400.0) / len;
+    crate::delta_t::delta_t_for_year(year)
+}
+
 /// TAI − UT in nanoseconds for a calendar year before 1972: ΔT − 32.184 s, rounded to
 /// the millisecond so the two directions of the conversion agree exactly.
 fn pre_1972_tai_minus_ut_ns(year: i64) -> i128 {
@@ -301,6 +325,27 @@ mod tests {
     }
 
     use super::*;
+
+    #[test]
+    fn before_1972_ut1_is_the_civil_reading_itself() {
+        // A pre-1972 civil time is read as UT; UT1 = TT − ΔT must give it back exactly, or
+        // the sidereal time (and the Ascendant) drifts off the clock time entered. Late in
+        // the year is the worst case for a per-year ΔT (1915: ΔT grows ~1 s a year).
+        for (y, m, d, h) in [(1915, 12, 28, 6), (1950, 11, 30, 22), (1969, 7, 20, 20)] {
+            let u = Utc::new(y, m, d, h, 17, 0, 0).unwrap();
+            let i = u.to_instant().unwrap();
+            let ut1 = crate::delta_t::ut1_jd_from_delta_t(i, delta_t_for_instant(i));
+            let want = 2_440_587.5
+                + u.utc_day() as f64
+                + (h as f64 * 3_600.0 + 17.0 * 60.0) / 86_400.0;
+            let got = ut1.jd1 + ut1.jd2;
+            assert!(
+                ((got - want) * 86_400.0).abs() < 1e-3,
+                "{y}-{m}-{d}: UT1 off the civil time by {} s",
+                (got - want) * 86_400.0
+            );
+        }
+    }
 
     #[test]
     fn hinnant_round_trip() {

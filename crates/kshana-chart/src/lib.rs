@@ -11,7 +11,7 @@ use kshana_houses::{cusps, horary_cusps, HouseError, HouseSystem};
 use kshana_sky::{
     apparent, apparent_topocentric, mean_node_longitude, true_node_longitude, Observer,
 };
-use kshana_time::{delta_t_for_year, ut1_jd_from_delta_t, EopTable, Instant, TwoPartJd, Utc};
+use kshana_time::{delta_t_for_instant, ut1_jd_from_delta_t, EopTable, Instant, TwoPartJd, Utc};
 use kshana_vedic::{
     ayanamsa_degrees, horary_longitude, karana, kp_lords, nakshatra, sidereal, tithi, yoga,
     Ayanamsa, DashaLord,
@@ -172,8 +172,7 @@ pub fn ut1_for(instant: Instant, eop: Option<&EopTable>) -> (TwoPartJd, String) 
             ),
         );
     }
-    let year = utc.year as f64 + (utc.month as f64 - 1.0) / 12.0;
-    let dt = delta_t_for_year(year);
+    let dt = delta_t_for_instant(instant);
     (
         ut1_jd_from_delta_t(instant, dt),
         format!("ΔT table {:.3} s ±{:.2} s", dt.seconds, dt.sigma),
@@ -428,5 +427,63 @@ mod tests {
         );
         assert_eq!(ch.panchanga.tithi.0, 5);
         assert!(ch.provenance.models.contains("Placidus"));
+    }
+
+    /// End-to-end pin: birth 1990-02-20 10:34 IST (05:04 UTC) at Kochi.
+    ///
+    /// Independent checks, by hand from Meeus, *Astronomical Algorithms* (2nd ed.):
+    /// GMST (eq. 12.4) at 05:04 UT = 225.880°, + 76.2673° E = LST 302.147°; the Ascendant
+    /// from RAMC 302.146°, ε 23.4425°, φ 9.9312° (tan λ = cos RAMC / −(sin ε
+    /// tan φ + cos ε sin RAMC)) is 36.96° = 6°57′ Taurus; the Meeus mean node is
+    /// 315.80°. Lahiri 1990-02 from Swiss Ephemeris `SE_SIDM_LAHIRI` (tests/golden
+    /// swisseph.json trend, ±0.01″ over 1900–2050) is 23°43′22.6″. The Sun entered Pisces
+    /// on 1990-02-19 and the new Moon fell on 1990-02-25 08:54 UT, so the tithi is Krishna
+    /// Dashami (25). The arcsecond values pinned below are this engine's DE421 output,
+    /// whose pipeline matches Skyfield/ERFA to 0.001″ in kshana-verify.
+    #[test]
+    fn kochi_1990_02_20_birth_chart_and_dasha_balance() {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/de421.bsp");
+        let Ok(spk) = Spk::open(&p) else { return };
+        let t = Utc::new(1990, 2, 20, 5, 4, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        let input = ChartInput {
+            instant: t,
+            observer: Observer {
+                latitude_deg: 9.9312,
+                longitude_deg: 76.2673,
+                height_m: 0.0,
+            },
+            system: HouseSystem::Placidus,
+            ayanamsa: Ayanamsa::Lahiri,
+            topocentric_moon: false,
+        };
+        let ch = compute(&spk, None, &input).unwrap();
+        let arcsec = |a: f64, b: f64| ((a - b + 180.0).rem_euclid(360.0) - 180.0).abs() * 3_600.0;
+        // ayanamsa 23°43′22.56″
+        assert!(arcsec(ch.ayanamsa_deg, 23.722_934) < 0.5, "{}", ch.ayanamsa_deg);
+        // LST and Ascendant (ΔT table here; with IERS UT1 the CLI gives the same to 0.1″)
+        assert!(arcsec(ch.lst_deg, 302.145_641) < 2.0, "{}", ch.lst_deg);
+        assert!(arcsec(ch.cusps[0], 36.958_244) < 2.0, "{}", ch.cusps[0]);
+        // Sun 1°17′43.92″ Pisces, Moon 28°13′43.02″ Sagittarius (tropical)
+        assert!(arcsec(ch.bodies[0].tropical, 331.295_533) < 0.5, "{}", ch.bodies[0].tropical);
+        assert!(arcsec(ch.bodies[1].tropical, 268.228_617) < 0.5, "{}", ch.bodies[1].tropical);
+        // Moon sidereal 4°30′20.46″ Sagittarius: Mula pada 2, 33.8 % elapsed
+        let moon = ch.bodies[1].sidereal;
+        assert!(arcsec(moon, 244.505_683) < 0.5, "{moon}");
+        assert_eq!((ch.bodies[1].nakshatra.0, ch.bodies[1].nakshatra.1), (18, 2));
+        assert_eq!(ch.panchanga.tithi.0, 25);
+        // mean node on the true equinox, within a few arcseconds of Meeus + Δψ
+        assert!(arcsec(ch.mean_node.0, 315.799) < 40.0, "{}", ch.mean_node.0);
+        // Vimshottari: Mula → Ketu; balance = (1 − 0.337926) × 7 years of 365.25 days
+        // = 1 692.758 days, so Venus mahadasha begins on 1994-10-09 (IST).
+        let v = kshana_vedic::vimshottari(moon, t, kshana_vedic::dasha::YEAR_365_25_NS);
+        assert_eq!(v[0].lord, DashaLord::Ketu);
+        assert_eq!(v[1].lord, DashaLord::Venus);
+        let balance_days = v[0].end.ns_since(t) as f64 / kshana_time::NS_PER_DAY as f64;
+        assert!((balance_days - 1_692.758).abs() < 0.01, "{balance_days}");
+        let venus = Utc::from_instant(v[1].start);
+        assert_eq!((venus.year, venus.month, venus.day), (1994, 10, 9), "{venus:?}");
     }
 }

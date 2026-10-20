@@ -469,7 +469,7 @@ use kshana_frames::{
     earth_rotation_angle, gast, local_sidereal_time, mean_obliquity_iau2006, nutation_iau2006a,
 };
 use kshana_sky::Observer;
-use kshana_time::{delta_t_for_year, ut1_jd_from_delta_t, EopTable, Utc};
+use kshana_time::{delta_t_for_instant, ut1_jd_from_delta_t, EopTable, Utc};
 
 /// Apparent altitude (degrees) of the Sun's centre above the geometric horizon, without
 /// refraction, for an observer, using UT1 from `eop` when available.
@@ -506,10 +506,7 @@ pub fn sun_altitude(
             jd1: 2_400_000.5 + mjd.floor(),
             jd2: mjd.fract() + u.ut1_minus_utc / 86_400.0,
         },
-        None => ut1_jd_from_delta_t(
-            t,
-            delta_t_for_year(utc.year as f64 + (utc.month as f64 - 1.0) / 12.0),
-        ),
+        None => ut1_jd_from_delta_t(t, delta_t_for_instant(t)),
     };
     let lst = local_sidereal_time(
         gast(earth_rotation_angle(ut1), tc),

@@ -68,7 +68,7 @@ internal val MORE_PAGES = listOf(
 
     MorePage(S_STORY, "The book of your life", "the years behind and ahead, as chapters", "book"),
     MorePage(S_STORY, "Look back at a day", "any day of your life, read as it was", "hindsight"),
-    MorePage(S_STORY, "Check it against your past", "a few stretches of your last years: did they happen?", "pastcheck"),
+    MorePage(S_STORY, "Your past, read", "dated stretches of your life from your birth time alone; every answer sharpens your birth time", "pastcheck"),
     MorePage(S_STORY, "Your journal", "write down what happened; see how often the app was right", "journal"),
     MorePage(S_STORY, "Did it happen?", "say whether the app was right; it keeps score", "record"),
 

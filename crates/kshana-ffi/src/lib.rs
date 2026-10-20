@@ -4757,6 +4757,51 @@ pub struct PastCheckRecord {
     pub strength: f64,
 }
 
+/// One answered stretch of the past, for sharpening the birth time.
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct PastAnswerInput {
+    /// First day of the stretch.
+    pub from: ExactInstant,
+    /// Last day of the stretch.
+    pub to: ExactInstant,
+    /// The life's key ("Love").
+    pub life: String,
+    /// True if the stretch was said to be good.
+    pub good: bool,
+    /// "yes", "close" or "no".
+    pub verdict: String,
+}
+
+/// One candidate birth time, scored against the answers.
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct BirthFitRecord {
+    /// The candidate birth instant.
+    pub birth: ExactInstant,
+    /// Minutes from the recorded time (positive = later).
+    pub shift_min: f64,
+    /// Share of the belief on this time, 0..1.
+    pub prob: f64,
+    /// How many answers this time explains.
+    pub explained: u32,
+    /// Rising sign, 0 = Aries (for the expert view only).
+    pub lagna_sign: u8,
+    /// Moon's star, 0 = Ashwini (for the expert view only).
+    pub moon_star: u32,
+}
+
+/// What the answers say about the birth time.
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct BirthRefineRecord {
+    /// The best few candidates, best first.
+    pub fits: Vec<BirthFitRecord>,
+    /// The time to suggest, if the answers clearly prefer it over the recorded one.
+    pub suggested: Option<BirthFitRecord>,
+    /// Share of the belief within five minutes of the best time: how settled it is.
+    pub settled: f64,
+    /// How many answers the recorded time explains.
+    pub recorded_explains: u32,
+}
+
 /// A person for a group reading.
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct PersonInput {
@@ -4871,6 +4916,115 @@ impl Engine {
             .into_iter()
             .map(|x| PastCheckRecord { from: x.from.into(), to: x.to.into(), life: x.life.name().to_string(), question: x.question, statement: x.statement, good: x.good, strength: x.strength })
             .collect())
+    }
+
+    /// The past, told first: the strongest dated stretches from the person's early teens
+    /// to now, skipping those already asked (`asked_from`/`asked_to` pairs).
+    /// `window_min` is how far the birth time may be off, in minutes. `sharpen` picks the
+    /// stretches that best split nearby birth times ("ask me more"); otherwise the
+    /// safest, the ones every nearby time agrees on.
+    #[allow(clippy::too_many_arguments)]
+    pub fn past_reveal(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        at: ExactInstant,
+        lang: String,
+        window_min: f64,
+        asked_from: Vec<ExactInstant>,
+        asked_to: Vec<ExactInstant>,
+        count: u32,
+        sharpen: bool,
+    ) -> Result<Vec<PastCheckRecord>, KshanaError> {
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let obs = Observer { latitude_deg: birth_lat, longitude_deg: birth_lon, height_m: 0.0 };
+        let asked: Vec<(kshana_time::Instant, kshana_time::Instant)> = asked_from.iter().zip(&asked_to).map(|(a, b)| ((*a).into(), (*b).into())).collect();
+        let c = kshana_rules::past_reveal(
+            &self.spk,
+            self.eop.as_ref(),
+            &natal,
+            &obs,
+            to_house_system(system),
+            ayanamsa.into(),
+            kshana_rules::Lang::parse(&lang),
+            at.into(),
+            window_min,
+            &asked,
+            count as usize,
+            sharpen,
+        )
+        .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(c.into_iter().map(past_check_record).collect())
+    }
+
+    /// Every birth time within ±`window_min` minutes, scored against the person's
+    /// answers about their past. A No counts as much as a Yes: a wrong guess still
+    /// helps, because it narrows down the birth time.
+    #[allow(clippy::too_many_arguments)]
+    pub fn refine_birth_time(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        window_min: f64,
+        answers: Vec<PastAnswerInput>,
+    ) -> BirthRefineRecord {
+        let obs = Observer { latitude_deg: birth_lat, longitude_deg: birth_lon, height_m: 0.0 };
+        let ans: Vec<kshana_rules::PastAnswer> = answers
+            .iter()
+            .filter_map(|a| {
+                let life = kshana_rules::Life::parse(&a.life)?;
+                let verdict = match a.verdict.as_str() {
+                    "yes" => kshana_rules::PastVerdict::Yes,
+                    "close" => kshana_rules::PastVerdict::Close,
+                    "no" => kshana_rules::PastVerdict::No,
+                    _ => return None,
+                };
+                Some(kshana_rules::PastAnswer { from: a.from.into(), to: a.to.into(), life, good: a.good, verdict })
+            })
+            .collect();
+        let fits = kshana_rules::refine_birth(&self.spk, self.eop.as_ref(), &obs, to_house_system(system), ayanamsa.into(), birth.into(), window_min, 2.0, &ans);
+        let rec = |f: &kshana_rules::BirthFit| BirthFitRecord {
+            birth: f.birth.into(),
+            shift_min: f.shift_min,
+            prob: f.prob,
+            explained: f.explained as u32,
+            lagna_sign: f.lagna_sign,
+            moon_star: f.moon_star as u32,
+        };
+        let settled = fits.first().map(|b| fits.iter().filter(|f| (f.shift_min - b.shift_min).abs() <= 5.0).map(|f| f.prob).sum()).unwrap_or(0.0);
+        let recorded_explains = fits.iter().find(|f| f.shift_min.abs() < 1e-9).map(|f| f.explained as u32).unwrap_or(0);
+        BirthRefineRecord {
+            suggested: kshana_rules::suggested_shift(&fits, ans.len()).as_ref().map(rec),
+            fits: fits.iter().take(7).map(rec).collect(),
+            settled,
+            recorded_explains,
+        }
+    }
+
+    /// One stretch of the coming weeks, to be sealed now and opened when it has passed;
+    /// a good one when there is one. None when nothing stands out enough to seal.
+    #[allow(clippy::too_many_arguments)]
+    pub fn seal_pick(
+        &self,
+        birth: ExactInstant,
+        birth_lat: f64,
+        birth_lon: f64,
+        system: HouseSystem,
+        ayanamsa: AyanamsaChoice,
+        at: ExactInstant,
+        lang: String,
+    ) -> Result<Option<PastCheckRecord>, KshanaError> {
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let obs = Observer { latitude_deg: birth_lat, longitude_deg: birth_lon, height_m: 0.0 };
+        let s = kshana_rules::seal_pick(&self.spk, self.eop.as_ref(), &natal, &obs, ayanamsa.into(), kshana_rules::Lang::parse(&lang), at.into())
+            .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(s.map(past_check_record))
     }
 
     /// The best `limit` hours in the next `days` for `purpose` (a key from `purposes()`)
@@ -5205,4 +5359,8 @@ pub fn remedy_how_it_helps(planet: String, source: String, life: Option<String>)
     };
     let life = life.and_then(|n| kshana_rules::Life::ALL.iter().copied().find(|l| l.name().eq_ignore_ascii_case(n.trim())));
     kshana_rules::remedy_tree::how_it_helps(g, &source, life)
+}
+
+fn past_check_record(x: kshana_rules::PastCheck) -> PastCheckRecord {
+    PastCheckRecord { from: x.from.into(), to: x.to.into(), life: x.life.name().to_string(), question: x.question, statement: x.statement, good: x.good, strength: x.strength }
 }

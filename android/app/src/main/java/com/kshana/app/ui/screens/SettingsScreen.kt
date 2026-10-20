@@ -183,6 +183,11 @@ fun SettingsScreen(
             val birth = profile?.place()
             (listOfNotNull(birth) + ProfileStore.places).distinctBy { it.name }
         }
+        Text("Now: ${here.name}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
+        PlacePicker(label = "Search the town you are in", onPick = { p ->
+            ProfileStore.saveCurrentLocation(context, p)
+            onPlaceChanged(p)
+        })
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (p in choices) {
                 Chip(p.name.uppercase(), selected = here.name == p.name, onClick = {

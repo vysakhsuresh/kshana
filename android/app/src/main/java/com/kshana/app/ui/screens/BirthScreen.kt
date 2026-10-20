@@ -1,6 +1,7 @@
 package com.kshana.app.ui.screens
 
 import androidx.compose.foundation.clickable
+import com.kshana.app.ui.theme.glass
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -142,8 +143,19 @@ fun BirthScreen(
         if (y == null || mo == null || d == null) { problem = "The date needs a year, a month and a day."; return null }
         if (h == null || mi == null) { problem = "The time needs an hour and a minute. If it is unknown, enter 12:00 and set the slider to unknown."; return null }
         if (lat == null || lon == null || lat < -90 || lat > 90 || lon < -180 || lon > 180) { problem = "Latitude must be −90…90 and longitude −180…180."; return null }
-        try { LocalDateTime.of(y, mo, d, h, mi, s) } catch (e: DateTimeException) { problem = "That date and time do not exist on the calendar."; return null }
-        try { ZoneId.of(zoneId.trim()) } catch (e: DateTimeException) { problem = "Unknown time zone id. Use an IANA name such as Asia/Kolkata."; return null }
+        val local = try { LocalDateTime.of(y, mo, d, h, mi, s) } catch (e: DateTimeException) { problem = "That date and time do not exist on the calendar."; return null }
+        val zone = try { ZoneId.of(zoneId.trim()) } catch (e: DateTimeException) { problem = "Unknown time zone id. Use an IANA name such as Asia/Kolkata."; return null }
+        // A clock time inside a summer-time change is either skipped (it never happened) or
+        // happened twice; java.time would silently move or pick one, an hour off the birth.
+        val offsets = zone.rules.getValidOffsets(local)
+        if (offsets.isEmpty()) {
+            problem = "In ${zone.id} the clocks jumped forward over that time, so it never showed on a clock there. Check the hour on the record."
+            return null
+        }
+        if (offsets.size > 1) {
+            problem = "In ${zone.id} the clocks went back and that time happened twice, an hour apart. Replace the time zone with the offset on the record: ${offsets.joinToString(" or ") { "UTC" + it.id }}."
+            return null
+        }
         problem = null
         return BirthProfile(
             name = name.trim().ifEmpty { if (persist) "You" else "Partner" },
@@ -183,7 +195,11 @@ fun BirthScreen(
         }
 
         SectionLabel("Place")
-        Field(query, { query = it }, "Search a city", Modifier.fillMaxWidth())
+        PlacePicker(onPick = { choose(it) })
+        Text(
+            "Pick the town or village itself, not just the nearest city: every place has its own coordinates, and they set the exact rising sign and hours.",
+            style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+        )
         if (matches.isNotEmpty()) {
             Column(Modifier.fillMaxWidth()) {
                 for (p in matches) {
@@ -229,6 +245,7 @@ fun BirthScreen(
             NumberField(longitude, { longitude = it.filter { c -> c.isDigit() || c == '.' || c == '-' } }, "Longitude °E", Modifier.weight(1f), decimal = true)
         }
         Field(zoneId, { zoneId = it }, "Time zone (IANA id)", Modifier.fillMaxWidth())
+        OldCityClock(year.toIntOrNull(), latitude.toDoubleOrNull(), longitude.toDoubleOrNull(), zoneId) { zoneId = it }
         Field(placeName, { placeName = it }, "Place name", Modifier.fillMaxWidth())
 
         SectionLabel("How sure is the time?")
@@ -274,7 +291,7 @@ fun BirthScreen(
 }
 
 @Composable
-private fun Field(value: String, onChange: (String) -> Unit, label: String, modifier: Modifier = Modifier) {
+internal fun Field(value: String, onChange: (String) -> Unit, label: String, modifier: Modifier = Modifier) {
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
@@ -312,3 +329,37 @@ private fun fieldColors() = OutlinedTextFieldDefaults.colors(
     focusedContainerColor = KshanaColors.Surface,
     unfocusedContainerColor = KshanaColors.Surface,
 )
+
+/**
+ * Bombay kept its own clock (Bombay Time, UTC+04:51) until 1955 and Calcutta its own
+ * (Calcutta Time, UTC+05:53:20) until 1948; the time zone database files both under
+ * Indian time from 1906, so an old birth record written in the city's clock would be
+ * read 39 or 23 minutes off. When the place and year fit, say so and offer the city's
+ * clock; the person decides, since many records of the time were already in IST.
+ */
+@Composable
+private fun OldCityClock(year: Int?, lat: Double?, lon: Double?, zone: String, onUse: (String) -> Unit) {
+    if (year == null || lat == null || lon == null) return
+    val near = { la: Double, lo: Double -> kotlin.math.abs(lat - la) < 0.6 && kotlin.math.abs(lon - lo) < 0.6 }
+    val (city, offset, until, gap) = when {
+        near(19.08, 72.88) && year < 1955 -> listOf("Bombay", "+04:51", "1955", "39")
+        near(22.57, 88.36) && year < 1948 -> listOf("Calcutta", "+05:53:20", "1948", "23")
+        else -> return
+    }
+    val using = zone.trim() == offset
+    androidx.compose.foundation.layout.Column(
+        Modifier.fillMaxWidth().glass(12.dp).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            if (using) "Using $city Time (UTC$offset), the city's own clock before $until."
+            else "$city kept its own clock until $until, $gap minutes apart from Indian Standard Time. If the record was written in $city Time (common for births at home and in older registers), use it; if it says IST, keep Asia/Kolkata.",
+            style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft,
+        )
+        Text(
+            if (using) "USE INDIAN STANDARD TIME INSTEAD ›" else "USE $city TIME ›".uppercase(),
+            style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
+            modifier = Modifier.clickable { onUse(if (using) "Asia/Kolkata" else offset) }.padding(vertical = 4.dp),
+        )
+    }
+}
