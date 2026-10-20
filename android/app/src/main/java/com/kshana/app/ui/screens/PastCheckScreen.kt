@@ -300,7 +300,7 @@ private fun BirthTimeCard(profile: BirthProfile, r: BirthRefineRecord?, working:
             val a = r.bracketFrom
             val b = r.bracketTo
             if (a != null && b != null && r.log10Bayes >= 1.0) {
-                val f = { e: uniffi.kshana_ffi.ExactInstant -> Instants.toLocal(e, profile.zone()).let { "%02d:%02d".format(it.hour, it.minute) } }
+                val f = { e: uniffi.kshana_ffi.ExactInstant -> Instants.toLocal(e, profile.birthZone()).let { "%02d:%02d".format(it.hour, it.minute) } }
                 Text(
                     "Your answers place your birth between ${f(a)} and ${f(b)}: inside that stretch, everything they rest on holds.",
                     style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky,

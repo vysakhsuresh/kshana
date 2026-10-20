@@ -68,8 +68,14 @@ fun GiftsScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> U
     Page("YOUR GIFTS", "What you were born with", "The strengths and the tender spots your birth shows, and when each one comes forward in life.", onBack) {
         ErrorLine(error)
         val l = list ?: run { if (error == null) Working("reading the patterns in your birth…"); return@Page }
-        val gifts = l.filter { it.good }
-        val tend = l.filter { !it.good }
+        // One card per gift: the same pattern formed by several pairs of planets is one
+        // gift with several times of life, strongest first.
+        val merged = l.groupBy { it.good to it.title }.values.map { same ->
+            val top = same.maxBy { it.strength }
+            top.copy(`when` = same.map { it.`when` }.filter { it.isNotBlank() }.distinct().joinToString(" "))
+        }
+        val gifts = merged.filter { it.good }.sortedByDescending { it.strength }
+        val tend = merged.filter { !it.good }.sortedByDescending { it.strength }
         if (gifts.isNotEmpty()) SectionLabel("Your gifts")
         for (y in gifts) YogaCard(y, expert, null)
         if (tend.isNotEmpty()) SectionLabel("What asks for care")
@@ -106,7 +112,7 @@ fun AlmanacScreen(place: Place, settings: EngineSettings, onBack: () -> Unit) {
     LaunchedEffect(place) {
         runCatching {
             val engine = EngineProvider.get(context)
-            val today = java.time.LocalDate.now(runCatching { java.time.ZoneId.of(place.zoneId) }.getOrDefault(java.time.ZoneId.systemDefault()))
+            val today = java.time.LocalDate.now(com.kshana.app.data.CityClocks.of(place.zoneId))
             days = withContext(Dispatchers.Default) {
                 engine.calendarDays(place.latitude, place.longitude, PlaceClock.offsetMinutes(place), today.year.toLong(), today.monthValue.toUInt(), today.dayOfMonth.toUInt(), 45u, settings.ayanamsa)
             }
@@ -119,7 +125,7 @@ fun AlmanacScreen(place: Place, settings: EngineSettings, onBack: () -> Unit) {
         Column(Modifier.fillMaxWidth().glass(18.dp).padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("TODAY · ${today.weekday.uppercase()} ${today.day} ${java.time.Month.of(today.month.toInt()).name.take(3)} ${today.year}", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
             Text("${today.lunarMonth}${if (today.extraMonth) " (the extra month)" else ""} · ${today.fortnight}", fontFamily = FontFamily.Serif, fontSize = 20.sp, color = KshanaColors.Text)
-            for (s in today.solar) Text("${s.calendar}: ${s.day} ${s.month} ${s.year}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+            for (s in today.solar) Text("${s.calendar.replaceFirstChar { it.uppercase() }}: ${s.day} ${s.month} ${s.year}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
             Text("Indian national date: ${today.nationalDate} · ${today.season.replaceFirstChar { it.uppercase() }}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             if (today.festivals.isNotEmpty()) Text(today.festivals.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Gold)
             if (expert) {
