@@ -16,6 +16,7 @@ pub mod day;
 pub mod directions;
 pub mod eclipse;
 pub mod ledger;
+pub mod learn;
 pub mod lexicon;
 pub mod life;
 pub mod marga;
@@ -4394,6 +4395,9 @@ mod plain_audit {
         // The chart reason behind a remedy, shown only when the person taps "How this
         // helps" (asked for by the owner on 2026-10-20): it names the planet on purpose.
         "how_it_helps",
+        // Per-user technique comparison (learn.rs) and the birth-time witnesses: the
+        // technique names and keys are for the expert view; `plain` and `name` are read.
+        "technique_expert", "best_key", "witness_keys",
     ];
 
     /// A remedy plan as the common screens show it: the nested expert lists (dosha
@@ -4787,6 +4791,9 @@ pub struct BirthFitRecord {
     pub lagna_sign: u8,
     /// Moon's star, 0 = Ashwini (for the expert view only).
     pub moon_star: u32,
+    /// Each technique's own log-likelihood of the answers against chance, nats, in the
+    /// order of `BirthRefineRecord::witness_keys` (for the expert view only).
+    pub by_witness: Vec<f64>,
 }
 
 /// What the answers say about the birth time.
@@ -4800,6 +4807,20 @@ pub struct BirthRefineRecord {
     pub settled: f64,
     /// How many answers the recorded time explains.
     pub recorded_explains: u32,
+    /// log10 of the evidence that the answers say anything about the birth time at all,
+    /// against answers given at random; a shift is suggested only from 1.3 (20 to 1).
+    pub log10_bayes: f64,
+    /// The moments in the window where the chart changes, in time order.
+    pub boundaries: Vec<learn::BirthBoundaryRecord>,
+    /// The boundary before the best time (or the window's start): with `bracket_to`, the
+    /// stretch of birth times where everything the boundaries mark holds.
+    pub bracket_from: Option<ExactInstant>,
+    /// The boundary after the best time (or the window's end).
+    pub bracket_to: Option<ExactInstant>,
+    /// Finest-division (D60) changes inside the bracket: a flag only, never scored.
+    pub d60_in_bracket: u32,
+    /// Keys of `BirthFitRecord::by_witness` (for the expert view only).
+    pub witness_keys: Vec<String>,
 }
 
 /// A person for a group reading.
@@ -4975,20 +4996,9 @@ impl Engine {
         answers: Vec<PastAnswerInput>,
     ) -> BirthRefineRecord {
         let obs = Observer { latitude_deg: birth_lat, longitude_deg: birth_lon, height_m: 0.0 };
-        let ans: Vec<kshana_rules::PastAnswer> = answers
-            .iter()
-            .filter_map(|a| {
-                let life = kshana_rules::Life::parse(&a.life)?;
-                let verdict = match a.verdict.as_str() {
-                    "yes" => kshana_rules::PastVerdict::Yes,
-                    "close" => kshana_rules::PastVerdict::Close,
-                    "no" => kshana_rules::PastVerdict::No,
-                    _ => return None,
-                };
-                Some(kshana_rules::PastAnswer { from: a.from.into(), to: a.to.into(), life, good: a.good, verdict })
-            })
-            .collect();
-        let fits = kshana_rules::refine_birth(&self.spk, self.eop.as_ref(), &obs, to_house_system(system), ayanamsa.into(), birth.into(), window_min, 2.0, &ans);
+        let ans = learn::answers_of(&answers);
+        let r = kshana_rules::refine_birth_detail(&self.spk, self.eop.as_ref(), &obs, to_house_system(system), ayanamsa.into(), birth.into(), window_min, 2.0, &ans, true);
+        let fits = &r.fits;
         let rec = |f: &kshana_rules::BirthFit| BirthFitRecord {
             birth: f.birth.into(),
             shift_min: f.shift_min,
@@ -4996,14 +5006,21 @@ impl Engine {
             explained: f.explained as u32,
             lagna_sign: f.lagna_sign,
             moon_star: f.moon_star as u32,
+            by_witness: f.by_witness.to_vec(),
         };
         let settled = fits.first().map(|b| fits.iter().filter(|f| (f.shift_min - b.shift_min).abs() <= 5.0).map(|f| f.prob).sum()).unwrap_or(0.0);
         let recorded_explains = fits.iter().find(|f| f.shift_min.abs() < 1e-9).map(|f| f.explained as u32).unwrap_or(0);
         BirthRefineRecord {
-            suggested: kshana_rules::suggested_shift(&fits, ans.len()).as_ref().map(rec),
+            suggested: r.suggested(ans.len()).as_ref().map(rec),
             fits: fits.iter().take(7).map(rec).collect(),
             settled,
             recorded_explains,
+            log10_bayes: r.log10_bayes,
+            boundaries: r.boundaries.iter().map(learn::boundary_record).collect(),
+            bracket_from: r.bracket.map(|b| b.0.into()),
+            bracket_to: r.bracket.map(|b| b.1.into()),
+            d60_in_bracket: r.d60_in_bracket as u32,
+            witness_keys: kshana_rules::witness::WITNESSES.iter().map(|w| w.key().to_string()).collect(),
         }
     }
 

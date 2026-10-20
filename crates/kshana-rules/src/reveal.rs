@@ -13,12 +13,17 @@
 //! explains the answers. A Yes rewards the times that mark the stretch strongly, a No
 //! rewards the times that do not mark it, and Close counts half. A wrong guess still
 //! helps, because it narrows down the birth time. A mild prior keeps the recorded time
-//! unless the answers clearly prefer another.
+//! unless the answers clearly prefer another. Each candidate is judged by several
+//! witnesses (the slow score, Yogini, Chara and Kalachakra periods, the KP cusp chain,
+//! the matter's divisional chart; [`crate::witness`]) pooled on the log-odds scale, and
+//! [`refine_birth_detail`] also reports how strong the evidence is against answers
+//! given at random and where in the window the chart itself changes.
 //!
 //! [`seal_pick`]: one stretch of the coming weeks, the strongest the reading marks,
 //! said plainly so it can be sealed now and opened when it has passed.
 
-use crate::forecast::{sky, slow_scores, ForecastError, Life, Natal};
+use crate::forecast::{sky, slow_scores, ForecastError, Life, Natal, Sky};
+use crate::witness::{ascendant, boundaries, rebased, Boundary, Reading, Witness, NW, SLOPE, WITNESSES};
 use crate::lang::{date, month_year};
 use crate::pastcheck::{rest, said, PastCheck};
 use crate::plain::Lang;
@@ -74,6 +79,10 @@ pub struct BirthFit {
     pub lagna_sign: u8,
     /// Moon's star, 0 = Ashwini.
     pub moon_star: usize,
+    /// Each witness's own log-likelihood of the answers against chance (nats), in the
+    /// order of [`crate::witness::WITNESSES`]: what each technique alone says of this
+    /// time.
+    pub by_witness: [f64; NW],
 }
 
 fn local_max(z: &[f64], i: usize) -> bool {
@@ -158,14 +167,30 @@ pub fn past_reveal(
     let months: Vec<Instant> = (0..n).map(|k| start.add_ns(MONTH_NS * k as i128)).collect();
 
     // The recorded birth, and nearby births across the window.
-    let cands = candidates(natal.birth, window_min, if sharpen { 3 } else { 2 });
-    let mut zs: Vec<Vec<Vec<f64>>> = Vec::with_capacity(cands.len());
-    for (k, (_, b)) in cands.iter().enumerate() {
-        let nat = if k == 0 { None } else { Natal::compute(spk, eop, *b, obs, system, ayanamsa).ok() };
+    // Sharpening looks at more nearby times, since splitting them is its whole purpose.
+    let cands = candidates(natal.birth, window_min, if sharpen { 6 } else { 2 });
+    // The sky of each month once (it does not depend on the birth time), then every
+    // candidate on the phone's cores: the slow score's distance for the statement, and
+    // the pooled reading of every witness for how much the candidates disagree.
+    let skies: Vec<Sky> = par_map(&months, |t| sky(spk, eop, natal, obs, HouseSystem::WholeSign, ayanamsa, *t)).into_iter().collect::<Result<_, _>>()?;
+    let idx: Vec<usize> = (0..cands.len()).collect();
+    let per: Vec<(Vec<Vec<f64>>, Vec<Vec<f64>>)> = par_map(&idx, |&k| {
+        let nat = if k == 0 { None } else { Natal::compute(spk, eop, cands[k].1, obs, system, ayanamsa).ok() };
         let n_ref = nat.as_ref().unwrap_or(natal);
-        let vals = scores_at(spk, eop, n_ref, obs, ayanamsa, &months)?;
-        zs.push(zscores(&vals));
-    }
+        let asc = ascendant(spk, eop, n_ref.birth, obs, ayanamsa).map(|a| a.0).unwrap_or(n_ref.facts.cusps[0]);
+        let r = Reading::new(n_ref, asc);
+        let vals: Vec<[[f64; 9]; NW]> = months
+            .iter()
+            .zip(&skies)
+            .map(|(t, s)| {
+                let own = rebased(s, n_ref);
+                r.values(own.as_ref().unwrap_or(s), *t)
+            })
+            .collect();
+        let slow: Vec<Vec<f64>> = vals.iter().map(|v| v[Witness::Slow.index()].to_vec()).collect();
+        (zscores(&slow), r.pooled_rolling(&vals, WINDOW))
+    });
+    let (zs, pooled): (Vec<Vec<Vec<f64>>>, Vec<Vec<Vec<f64>>>) = per.into_iter().unzip();
 
     let asked_idx: Vec<(i128, i128)> = asked.iter().map(|(a, b)| (a.ns_since(start) / MONTH_NS, b.ns_since(start) / MONTH_NS)).collect();
     // (value, life, index, good, strength)
@@ -185,7 +210,13 @@ pub fn past_reveal(
             let others: Vec<f64> = zs[1..].iter().map(|z| z[li].get(i).copied().unwrap_or(0.0) * sign).collect();
             let (agree, spread) = if others.is_empty() { (z0[i].abs(), 0.0) } else { mean_sd(&others) };
             let spread = if others.is_empty() { 0.0 } else { spread };
-            let value = if sharpen { 1.5 * spread + 0.3 * z0[i].abs() } else { z0[i].abs() + 0.5 * agree - 0.7 * spread };
+            let value = if sharpen {
+                // How much the candidates' pooled readings of this stretch disagree.
+                let all: Vec<f64> = pooled.iter().map(|p| p[li].get(i).copied().unwrap_or(0.0) * sign).collect();
+                1.5 * mean_sd(&all).1 + 0.3 * z0[i].abs()
+            } else {
+                z0[i].abs() + 0.5 * agree - 0.7 * spread
+            };
             pool.push((value, li, i, sign > 0.0, z0[i].abs()));
         }
     }
@@ -228,32 +259,34 @@ pub fn past_reveal(
         .collect())
 }
 
-/// Score every birth time within ±`window_min` minutes of `birth` in steps of
-/// `step_min` against the answers. Best first. A No counts as much as a Yes: a wrong
-/// guess still helps, because it narrows down the birth time.
-#[allow(clippy::too_many_arguments)]
-pub fn refine_birth(
-    spk: &Spk,
-    eop: Option<&EopTable>,
-    obs: &Observer,
-    system: HouseSystem,
-    ayanamsa: Ayanamsa,
-    birth: Instant,
-    window_min: f64,
-    step_min: f64,
-    answers: &[Answer],
-) -> Vec<BirthFit> {
-    if answers.is_empty() {
-        return Vec::new();
-    }
-    let window_min = window_min.clamp(0.0, 180.0);
-    // At most 61 candidates: the step widens with the window.
-    let step = step_min.max(window_min / 30.0).max(0.5);
-    let n_side = (window_min / step).floor() as i64;
-    // The months that set each life's average: from two years before the first answer
-    // to the last, every second month, plus every month inside each answer.
-    let first = answers.iter().map(|a| a.from).min().unwrap_or(birth);
-    let last = answers.iter().map(|a| a.to).max().unwrap_or(birth);
+/// The months a set of answers is judged over (from two years before the first answer
+/// to the last, every second month, which sets each life's average; plus every month
+/// inside each answer), with their skies.
+pub(crate) struct Prepared {
+    base: Vec<Instant>,
+    inside: Vec<Vec<Instant>>,
+    base_sky: Vec<Sky>,
+    inside_sky: Vec<Vec<Sky>>,
+}
+
+fn threads() -> usize {
+    std::thread::available_parallelism().map(|n| n.get()).unwrap_or(2).clamp(1, 8)
+}
+
+/// Run `f` over `items` on the phone's cores, keeping the order.
+pub(crate) fn par_map<T: Sync, R: Send>(items: &[T], f: impl Fn(&T) -> R + Sync) -> Vec<R> {
+    let chunk = items.len().div_ceil(threads()).max(1);
+    std::thread::scope(|s| {
+        let handles: Vec<_> = items.chunks(chunk).map(|part| s.spawn(|| part.iter().map(&f).collect::<Vec<R>>())).collect();
+        handles.into_iter().flat_map(|h| h.join().unwrap_or_default()).collect()
+    })
+}
+
+/// The transits of every month the answers need, computed once: the sky does not depend
+/// on the birth time, only the houses from the natal Moon do (see `witness::rebased`).
+pub(crate) fn prepare(spk: &Spk, eop: Option<&EopTable>, obs: &Observer, system: HouseSystem, ayanamsa: Ayanamsa, birth: Instant, answers: &[Answer]) -> Option<Prepared> {
+    let first = answers.iter().map(|a| a.from).min()?;
+    let last = answers.iter().map(|a| a.to).max()?;
     let base_from = first.add_ns(-24 * MONTH_NS).max(birth.add_ns(12 * YEAR_NS));
     let mut base: Vec<Instant> = Vec::new();
     let mut t = base_from;
@@ -276,57 +309,219 @@ pub fn refine_birth(
             v
         })
         .collect();
+    let natal = Natal::compute(spk, eop, birth, obs, system, ayanamsa).ok()?;
+    let all: Vec<Instant> = base.iter().copied().chain(inside.iter().flatten().copied()).collect();
+    let skies: Vec<Sky> = par_map(&all, |t| sky(spk, eop, &natal, obs, HouseSystem::WholeSign, ayanamsa, *t).ok()).into_iter().collect::<Option<Vec<Sky>>>()?;
+    let mut skies = skies.into_iter();
+    let base_sky: Vec<Sky> = skies.by_ref().take(base.len()).collect();
+    let inside_sky: Vec<Vec<Sky>> = inside.iter().map(|v| skies.by_ref().take(v.len()).collect()).collect();
+    Some(Prepared { base, inside, base_sky, inside_sky })
+}
 
-    let sigma = window_min.max(4.0);
-    let score = |k: i64| -> Option<(f64, BirthFit)> {
-        let shift = k as f64 * step;
-        let b = birth.add_ns((shift * 60.0 * NS_PER_SEC as f64) as i128);
-        let natal = Natal::compute(spk, eop, b, obs, system, ayanamsa).ok()?;
-        let bv = scores_at(spk, eop, &natal, obs, ayanamsa, &base).ok()?;
-        let mut logp = -0.5 * (shift / sigma) * (shift / sigma);
-        let mut explained = 0;
-        for (a, months) in answers.iter().zip(&inside) {
-            let li = Life::ALL.iter().position(|l| *l == a.life).unwrap_or(0);
-            let col: Vec<f64> = bv.iter().map(|v| v[li]).collect();
-            let (m, sd) = mean_sd(&col);
-            let Ok(iv) = scores_at(spk, eop, &natal, obs, ayanamsa, months) else { continue };
-            let w = iv.iter().map(|v| v[li]).sum::<f64>() / iv.len() as f64;
-            let z = (w - m) / sd * if a.good { 1.0 } else { -1.0 };
-            let p = (1.0 / (1.0 + (-1.6 * z).exp())).clamp(0.02, 0.98);
-            let (l, hit) = match a.verdict {
-                Verdict::Yes => (p.ln(), z > 0.3),
-                Verdict::Close => ((0.5 * p + 0.25).ln(), z > 0.0),
-                Verdict::No => ((1.0 - p).ln(), z < 0.3),
-            };
-            logp += l;
-            if hit {
-                explained += 1;
-            }
-        }
-        Some((
-            logp,
-            BirthFit { birth: b, shift_min: shift, prob: 0.0, explained, lagna_sign: natal.facts.lagna_sign, moon_star: natal.janma() },
-        ))
+/// One candidate chart's witnesses on every answer.
+pub(crate) struct Judged {
+    /// Per answer, each witness's signed distance (see `Reading::zs`), already scaled by
+    /// the witness's trust (the KP promise).
+    pub(crate) zs: Vec<[Option<f64>; NW]>,
+    /// Rising sign.
+    pub(crate) lagna_sign: u8,
+    /// Moon's star.
+    pub(crate) moon_star: usize,
+}
+
+/// Judge the chart born at `b` against the answers.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn judge(spk: &Spk, eop: Option<&EopTable>, obs: &Observer, system: HouseSystem, ayanamsa: Ayanamsa, b: Instant, prep: &Prepared, answers: &[Answer]) -> Option<Judged> {
+    let natal = Natal::compute(spk, eop, b, obs, system, ayanamsa).ok()?;
+    let (asc, _) = ascendant(spk, eop, b, obs, ayanamsa)?;
+    let r = Reading::new(&natal, asc);
+    let read = |s: &Sky, t: Instant| match rebased(s, &natal) {
+        Some(own) => r.values(&own, t),
+        None => r.values(s, t),
     };
-    // Every candidate is independent: spread them over the phone's cores.
+    let base: Vec<[[f64; 9]; NW]> = prep.base.iter().zip(&prep.base_sky).map(|(t, s)| read(s, *t)).collect();
+    let zs = answers
+        .iter()
+        .zip(prep.inside.iter().zip(&prep.inside_sky))
+        .map(|(a, (ts, ss))| {
+            let ins: Vec<[[f64; 9]; NW]> = ts.iter().zip(ss).map(|(t, s)| read(s, *t)).collect();
+            let z = Reading::zs(&base, &ins, a.life, a.good);
+            std::array::from_fn(|w| z[w].map(|v| v * r.conf(w, a.life)))
+        })
+        .collect();
+    Some(Judged { zs, lagna_sign: natal.facts.lagna_sign, moon_star: natal.janma() })
+}
+
+/// The probability a reading gives to the stretch being as it was said, from its
+/// log-odds, kept within 2 % of certainty.
+pub(crate) fn prob(logit: f64) -> f64 {
+    (1.0 / (1.0 + (-logit).exp())).clamp(0.02, 0.98)
+}
+
+/// Log-likelihood of a verdict against chance (ln ½): Yes `ln p`, No `ln(1 − p)`, Close
+/// `ln(½p + ¼)` (half of a Yes), each less `ln ½`.
+pub(crate) fn gain(v: Verdict, p: f64) -> f64 {
+    let l = match v {
+        Verdict::Yes => p.ln(),
+        Verdict::Close => (0.5 * p + 0.25).ln(),
+        Verdict::No => (1.0 - p).ln(),
+    };
+    l - 0.5f64.ln()
+}
+
+/// What the answers say about the birth time.
+#[derive(Clone, Debug, PartialEq)]
+pub struct BirthRefine {
+    /// Every candidate, best first.
+    pub fits: Vec<BirthFit>,
+    /// Evidence that the answers carry information about the birth time at all: log10 of
+    /// the Bayes factor of the pooled reading (averaged over the prior on the window)
+    /// against answers given at random. Each answer's pooled prediction is a proper
+    /// distribution, so under random answering the factor's expectation is 1 and, by
+    /// Markov's inequality, a factor of 20 or more turns up by chance at most one time in
+    /// twenty. Kass & Raftery 1995 (*JASA* 90, 773): above 20 (log10 1.3) is "strong".
+    pub log10_bayes: f64,
+    /// The moments in the window where the chart changes, in time order.
+    pub boundaries: Vec<Boundary>,
+    /// The boundaries on either side of the best time (the window's edge where none):
+    /// the stretch of birth times over which everything the boundaries mark holds.
+    pub bracket: Option<(Instant, Instant)>,
+    /// D60 rising changes inside the bracket: a flag only.
+    pub d60_in_bracket: usize,
+}
+
+/// A Bayes factor of at least 20 (log10 1.3), Kass & Raftery's "strong", before a shift
+/// is suggested.
+pub const SUGGEST_LOG10_BAYES: f64 = 1.3;
+
+impl BirthRefine {
+    /// The time to suggest: [`suggested_shift`]'s rule, and the answers must carry strong
+    /// evidence at all ([`SUGGEST_LOG10_BAYES`]), so answers given at random do not move
+    /// the birth time.
+    pub fn suggested(&self, answered: usize) -> Option<BirthFit> {
+        if self.log10_bayes < SUGGEST_LOG10_BAYES {
+            return None;
+        }
+        suggested_shift(&self.fits, answered)
+    }
+}
+
+/// Score every birth time within ±`window_min` minutes of `birth` in steps of
+/// `step_min` against the answers. Best first. A No counts as much as a Yes: a wrong
+/// guess still helps, because it narrows down the birth time.
+#[allow(clippy::too_many_arguments)]
+pub fn refine_birth(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    obs: &Observer,
+    system: HouseSystem,
+    ayanamsa: Ayanamsa,
+    birth: Instant,
+    window_min: f64,
+    step_min: f64,
+    answers: &[Answer],
+) -> Vec<BirthFit> {
+    refine_birth_detail(spk, eop, obs, system, ayanamsa, birth, window_min, step_min, answers, false).fits
+}
+
+/// [`refine_birth`] with the evidence and, when `with_boundaries`, the moments in the
+/// window where the chart changes.
+///
+/// Each candidate is judged by every witness of [`crate::witness`]; per answer the
+/// witnesses' signed distances are pooled as `logit p = 1.6 Σ wᵢ zᵢ` and the answer
+/// scores `ln p` for a Yes, `ln(1 − p)` for a No and `ln(½p + ¼)` for a Close. A mild
+/// Gaussian prior (σ = the window, at least four minutes) keeps the recorded time unless
+/// the answers clearly prefer another.
+#[allow(clippy::too_many_arguments)]
+pub fn refine_birth_detail(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    obs: &Observer,
+    system: HouseSystem,
+    ayanamsa: Ayanamsa,
+    birth: Instant,
+    window_min: f64,
+    step_min: f64,
+    answers: &[Answer],
+    with_boundaries: bool,
+) -> BirthRefine {
+    let empty = BirthRefine { fits: Vec::new(), log10_bayes: 0.0, boundaries: Vec::new(), bracket: None, d60_in_bracket: 0 };
+    if answers.is_empty() {
+        return empty;
+    }
+    let window_min = window_min.clamp(0.0, 180.0);
+    // At most 61 candidates: the step widens with the window.
+    let step = step_min.max(window_min / 30.0).max(0.5);
+    let n_side = (window_min / step).floor() as i64;
+    let sigma = window_min.max(4.0);
     let ks: Vec<i64> = (-n_side..=n_side).collect();
-    let threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(2).clamp(1, 8);
-    let chunk = ks.len().div_ceil(threads).max(1);
-    let out: Vec<(f64, BirthFit)> = std::thread::scope(|s| {
-        let handles: Vec<_> = ks.chunks(chunk).map(|part| s.spawn(|| part.iter().filter_map(|&k| score(k)).collect::<Vec<_>>())).collect();
-        handles.into_iter().flat_map(|h| h.join().unwrap_or_default()).collect()
+    let (scored, bounds) = std::thread::scope(|s| {
+        let bounds = with_boundaries.then(|| s.spawn(|| boundaries(spk, eop, obs, ayanamsa, birth, window_min)));
+        let scored: Vec<(f64, f64, BirthFit)> = match prepare(spk, eop, obs, system, ayanamsa, birth, answers) {
+            None => Vec::new(),
+            Some(prep) => par_map(&ks, |&k| {
+                let shift = k as f64 * step;
+                let b = birth.add_ns((shift * 60.0 * NS_PER_SEC as f64) as i128);
+                let j = judge(spk, eop, obs, system, ayanamsa, b, &prep, answers)?;
+                let mut like = 0.0;
+                let mut explained = 0;
+                let mut by_witness = [0.0; NW];
+                for (a, z) in answers.iter().zip(&j.zs) {
+                    let logit: f64 = WITNESSES.iter().map(|w| w.weight() * z[w.index()].unwrap_or(0.0)).sum::<f64>() * SLOPE;
+                    like += gain(a.verdict, prob(logit));
+                    for (w, zw) in z.iter().enumerate() {
+                        if let Some(zw) = zw {
+                            by_witness[w] += gain(a.verdict, prob(SLOPE * zw));
+                        }
+                    }
+                    // The slow score's own thresholds (z > 0.3) on the pooled scale.
+                    let hit = match a.verdict {
+                        Verdict::Yes => logit > 0.48,
+                        Verdict::Close => logit > 0.0,
+                        Verdict::No => logit < 0.48,
+                    };
+                    if hit {
+                        explained += 1;
+                    }
+                }
+                let prior = -0.5 * (shift / sigma) * (shift / sigma);
+                Some((prior, like, BirthFit { birth: b, shift_min: shift, prob: 0.0, explained, lagna_sign: j.lagna_sign, moon_star: j.moon_star, by_witness }))
+            })
+            .into_iter()
+            .flatten()
+            .collect(),
+        };
+        (scored, bounds.and_then(|h| h.join().ok()))
     });
-    let top = out.iter().map(|x| x.0).fold(f64::NEG_INFINITY, f64::max);
-    let total: f64 = out.iter().map(|x| (x.0 - top).exp()).sum();
-    let mut fits: Vec<BirthFit> = out
+    if scored.is_empty() {
+        return empty;
+    }
+    let lse = |v: Vec<f64>| -> f64 {
+        let top = v.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        top + v.iter().map(|x| (x - top).exp()).sum::<f64>().ln()
+    };
+    let log_prior_norm = lse(scored.iter().map(|x| x.0).collect());
+    let log_post_norm = lse(scored.iter().map(|x| x.0 + x.1).collect());
+    let log_bf = log_post_norm - log_prior_norm;
+    let mut fits: Vec<BirthFit> = scored
         .into_iter()
-        .map(|(l, mut f)| {
-            f.prob = (l - top).exp() / total.max(1e-12);
+        .map(|(p, l, mut f)| {
+            f.prob = (p + l - log_post_norm).exp();
             f
         })
         .collect();
     fits.sort_by(|a, b| b.prob.partial_cmp(&a.prob).unwrap_or(std::cmp::Ordering::Equal));
-    fits
+    let (boundaries, d60) = bounds.unwrap_or_default();
+    let (bracket, d60_in_bracket) = match (with_boundaries, fits.first()) {
+        (true, Some(best)) => {
+            let edge = |m: f64| birth.add_ns((m * 60.0 * NS_PER_SEC as f64) as i128);
+            let lo = boundaries.iter().filter(|b| b.shift_min <= best.shift_min).map(|b| b.at).next_back().unwrap_or(edge(-window_min));
+            let hi = boundaries.iter().find(|b| b.shift_min > best.shift_min).map(|b| b.at).unwrap_or(edge(window_min));
+            (Some((lo, hi)), d60.iter().filter(|t| **t >= lo && **t < hi).count())
+        }
+        _ => (None, 0),
+    };
+    BirthRefine { fits, log10_bayes: log_bf / std::f64::consts::LN_10, boundaries, bracket, d60_in_bracket }
 }
 
 /// The time the answers point to, if they clearly beat the recorded one: at least four
@@ -433,32 +628,111 @@ mod tests {
     #[test]
     fn answers_pull_the_birth_time_toward_the_time_that_explains_them() {
         let Some((spk, obs, natal, at)) = setup() else { return };
-        // Answers as a person born 12 minutes later would give them: take that chart's
-        // reveal, say Yes to all of it.
-        let shift = 12.0;
-        let truth = Natal::compute(&spk, None, natal.birth.add_ns((shift * 60.0) as i128 * NS_PER_SEC), &obs, HouseSystem::Placidus, Ayanamsa::Lahiri).unwrap();
-        let mut asked = Vec::new();
-        let mut answers = Vec::new();
-        for round in 0..3 {
-            let qs = past_reveal(&spk, None, &natal, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, Lang::En, at, 30.0, &asked, 4, round > 0).unwrap();
-            for q in qs {
-                asked.push((q.from, q.to));
-                // Does the true chart mark this stretch the same way?
-                let fits = refine_birth(&spk, None, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, truth.birth, 0.0, 1.0, &[Answer { from: q.from, to: q.to, life: q.life, good: q.good, verdict: Verdict::Yes }]);
-                let yes = fits.first().map(|f| f.explained == 1).unwrap_or(false);
-                answers.push(Answer { from: q.from, to: q.to, life: q.life, good: q.good, verdict: if yes { Verdict::Yes } else { Verdict::No } });
-            }
-        }
-        let t = std::time::Instant::now();
-        let fits = refine_birth(&spk, None, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, natal.birth, 30.0, 2.0, &answers);
-        eprintln!("refine {} answers over {} times in {:?}", answers.len(), fits.len(), t.elapsed());
-        let yes = answers.iter().filter(|a| a.verdict == Verdict::Yes).count();
-        eprintln!("{} yes of {}; best shift {:+.0} min ({:.0}%)", yes, answers.len(), fits[0].shift_min, fits[0].prob * 100.0);
+        // Answers as a person born 12 minutes later would give them.
+        let (answers, r) = simulate(&spk, &obs, &natal, at, 12.0, 30.0, 3);
+        let fits = &r.fits;
         let total: f64 = fits.iter().map(|f| f.prob).sum();
         assert!((total - 1.0).abs() < 1e-6);
         // The answers must move the belief toward the truth, not away from it.
         let mean: f64 = fits.iter().map(|f| f.prob * f.shift_min).sum();
         assert!(mean > 0.0, "belief moved the wrong way: mean shift {mean:+.1}");
+        assert!(r.log10_bayes > 0.0, "answers from a real chart carry evidence: {}", r.log10_bayes);
+        let _ = answers;
+    }
+
+    /// Answers as a person born `shift` minutes from the recorded time would give them,
+    /// to three rounds of questions asked over ±`window` minutes: does the true chart
+    /// mark each stretch the same way? Then the refined belief over the window.
+    fn simulate(spk: &Spk, obs: &Observer, natal: &Natal, at: Instant, shift: f64, window: f64, rounds: usize) -> (Vec<Answer>, BirthRefine) {
+        let truth = natal.birth.add_ns((shift * 60.0) as i128 * NS_PER_SEC);
+        let mut asked = Vec::new();
+        let mut answers = Vec::new();
+        for round in 0..rounds {
+            let qs = past_reveal(spk, None, natal, obs, HouseSystem::Placidus, Ayanamsa::Lahiri, Lang::En, at, window, &asked, 4, round > 0).unwrap();
+            for q in qs {
+                asked.push((q.from, q.to));
+                let fits = refine_birth(spk, None, obs, HouseSystem::Placidus, Ayanamsa::Lahiri, truth, 0.0, 1.0, &[Answer { from: q.from, to: q.to, life: q.life, good: q.good, verdict: Verdict::Yes }]);
+                let yes = fits.first().map(|f| f.explained == 1).unwrap_or(false);
+                answers.push(Answer { from: q.from, to: q.to, life: q.life, good: q.good, verdict: if yes { Verdict::Yes } else { Verdict::No } });
+            }
+        }
+        let t = std::time::Instant::now();
+        let r = refine_birth_detail(spk, None, obs, HouseSystem::Placidus, Ayanamsa::Lahiri, natal.birth, window, 2.0, &answers, true);
+        let el = t.elapsed();
+        let yes = answers.iter().filter(|a| a.verdict == Verdict::Yes).count();
+        let mean: f64 = r.fits.iter().map(|f| f.prob * f.shift_min).sum();
+        eprintln!(
+            "truth {shift:+} min, ±{window}: {} answers ({yes} yes) over {} times in {el:?}; best {:+.0} min ({:.0}%), mean {mean:+.1}, log10 BF {:.2}, {} boundaries, suggested {:?}",
+            answers.len(),
+            r.fits.len(),
+            r.fits[0].shift_min,
+            r.fits[0].prob * 100.0,
+            r.log10_bayes,
+            r.boundaries.len(),
+            r.suggested(answers.len()).map(|f| f.shift_min)
+        );
+        (answers, r)
+    }
+
+    #[test]
+    fn a_birth_twenty_minutes_early_is_found_in_an_hour_wide_window() {
+        let Some((spk, obs, natal, at)) = setup() else { return };
+        let (answers, r) = simulate(&spk, &obs, &natal, at, -20.0, 60.0, 6);
+        assert_eq!(r.fits.len(), 61);
+        // Pinned 2026-10-20: 24 answers, mean shift −6.2 min, belief earlier 0.76 against
+        // later 0.21, best −10 min, a suggestion of −10 min, log10 BF 3.7.
+        let mean: f64 = r.fits.iter().map(|f| f.prob * f.shift_min).sum();
+        assert!(mean < -3.0, "belief should move toward −20: mean shift {mean:+.1}");
+        let earlier: f64 = r.fits.iter().filter(|f| f.shift_min < -1.0).map(|f| f.prob).sum();
+        let later: f64 = r.fits.iter().filter(|f| f.shift_min > 1.0).map(|f| f.prob).sum();
+        assert!(earlier > 2.0 * later, "earlier {earlier:.2} vs later {later:.2}");
+        assert!(r.log10_bayes > SUGGEST_LOG10_BAYES, "{}", r.log10_bayes);
+        if let Some(s) = r.suggested(answers.len()) {
+            assert!(s.shift_min < 0.0, "suggested the wrong side: {s:?}");
+        }
+        // The boundaries are in time order, inside the window, and bracket the best time.
+        assert!(!r.boundaries.is_empty());
+        for w in r.boundaries.windows(2) {
+            assert!(w[0].shift_min <= w[1].shift_min);
+        }
+        for b in &r.boundaries {
+            assert!(b.shift_min.abs() <= 60.0 && b.before != b.after, "{b:?}");
+        }
+        let (lo, hi) = r.bracket.expect("a bracket");
+        assert!(lo <= r.fits[0].birth && r.fits[0].birth < hi);
+    }
+
+    #[test]
+    fn random_answers_never_move_the_birth_time() {
+        let Some((spk, obs, natal, at)) = setup() else { return };
+        let mut asked = Vec::new();
+        let mut qs = Vec::new();
+        for round in 0..3 {
+            for q in past_reveal(&spk, None, &natal, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, Lang::En, at, 60.0, &asked, 4, round > 0).unwrap() {
+                asked.push((q.from, q.to));
+                qs.push(q);
+            }
+        }
+        // Several fixed seeds of a 64-bit LCG (Knuth, MMIX constants).
+        for seed in [1u64, 7, 42, 2026, 99991] {
+            let mut x = seed;
+            let answers: Vec<Answer> = qs
+                .iter()
+                .map(|q| {
+                    x = x.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                    let verdict = match (x >> 33) % 5 {
+                        0 | 1 => Verdict::Yes,
+                        2 | 3 => Verdict::No,
+                        _ => Verdict::Close,
+                    };
+                    Answer { from: q.from, to: q.to, life: q.life, good: q.good, verdict }
+                })
+                .collect();
+            let r = refine_birth_detail(&spk, None, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, natal.birth, 60.0, 2.0, &answers, false);
+            let s = r.suggested(answers.len());
+            eprintln!("seed {seed}: best {:+.0} min ({:.0}%), log10 BF {:.2}, suggested {:?}", r.fits[0].shift_min, r.fits[0].prob * 100.0, r.log10_bayes, s.as_ref().map(|f| f.shift_min));
+            assert!(s.is_none(), "random answers suggested {s:?}");
+        }
     }
 
     #[test]
