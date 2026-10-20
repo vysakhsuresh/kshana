@@ -308,7 +308,8 @@ fun AskScreen(
                     }
                 }
             }
-            if (a.score < 56) {
+            // A low score, or any answer that says wait or no, comes with what to do meanwhile.
+            if (a.score < 56 || a.verdict in HOLD_VERDICTS) {
                 QuietButton("WHAT TO DO FOR ${lifeName(a.life).uppercase()}", onClick = { onRemedy(a.life) }, modifier = Modifier.fillMaxWidth())
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -323,6 +324,12 @@ fun AskScreen(
         }
     }
 }
+
+/** The engine's wait-or-no verdicts (ask.rs); each is shown with the remedy button. */
+private val HOLD_VERDICTS = setOf(
+    "Hold", "Not yet", "Not in this phase", "Not in this period", "Not as it was",
+    "Not today", "Not this minute", "Wait for the hour", "Not within two years", "Beyond a year",
+)
 
 @Composable
 private fun Stat(label: String, v: Double) {

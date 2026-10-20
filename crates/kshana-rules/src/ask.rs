@@ -460,7 +460,7 @@ fn answer_with(
                 let b = best.unwrap();
                 ("Take it, from the window".to_string(), (0.4 * b.2 + 0.4 * ground + 0.2 * witness).clamp(0.0, 1.0), agreement(&[ground, b.2, witness]), format!("Take it, but not this week. This week reads {:.0}; from {} the same step reads {:.0}. Prepare now, move then.", week * 100.0, date_words(b.0, lon), b.2 * 100.0), Some((b.0, b.1)), "the window to move in".to_string())
             } else if ground < 0.45 && week < 0.5 {
-                ("Hold".to_string(), (0.4 * week + 0.4 * ground + 0.2 * witness).clamp(0.0, 1.0), agreement(&[ground, week, witness]), format!("Hold. Your birth chart does not make {name} easy ({:.0}) and the coming week is slow ({:.0}). If you must move, keep the stakes small and the exit open.", ground * 100.0, week * 100.0), best.map(|b| (b.0, b.1)), "the least bad window".to_string())
+                ("Hold".to_string(), (0.4 * week + 0.4 * ground + 0.2 * witness).clamp(0.0, 1.0), agreement(&[ground, week, witness]), format!("Hold. Your birth chart does not make {name} easy ({:.0}) and the coming week is slow ({:.0}). If you must move, keep the stakes small and the exit open.", ground * 100.0, week * 100.0), best.map(|b| (b.0, b.1)), "the gentlest window".to_string())
             } else {
                 ("Take it, with small stakes".to_string(), (0.4 * week + 0.4 * ground + 0.2 * witness).clamp(0.0, 1.0), agreement(&[ground, week, witness]), format!("Take it with small stakes. The week is fair ({:.0}) and your birth chart is {} on {name}; a step you can undo is the right size.", week * 100.0, if ground >= 0.5 { "willing" } else { "cautious" }), Some((at, at.add_ns(7 * NS_PER_DAY))), "this week, lightly".to_string())
             }

@@ -223,8 +223,15 @@ fun LoopScreen(
                     Text(
                         seasonLine(b),
                         style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft,
-                        modifier = Modifier.padding(top = 6.dp),
+                        modifier = Modifier.padding(top = 6.dp).then(if (b.saturnActive) Modifier.clickable(onClick = onRemedy) else Modifier),
                     )
+                    // While the long test runs, what helps is one tap from the line that names it.
+                    if (b.saturnActive) {
+                        Text(
+                            tr("WHAT HELPS NOW") + " ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
+                            modifier = Modifier.clickable(onClick = onRemedy).padding(vertical = 4.dp),
+                        )
+                    }
                 }
                 ErrorLine(error)
                 // Time travel: step the whole loop forward or back.
@@ -295,7 +302,7 @@ fun LoopScreen(
             }
             item {
                 Column(Modifier.padding(horizontal = 24.dp)) {
-                    PeopleToday(profile, place, settings, shownTick, onTogether)
+                    PeopleToday(profile, place, settings, shownTick, onTogether, onRemedy)
                 }
             }
             item {
@@ -414,7 +421,7 @@ internal object PeopleCache {
 
 /** The partner's day on your Loop, and the talk window for the two of you. */
 @Composable
-private fun PeopleToday(profile: BirthProfile, place: Place, settings: EngineSettings, tick: Instant, onTogether: () -> Unit) {
+private fun PeopleToday(profile: BirthProfile, place: Place, settings: EngineSettings, tick: Instant, onTogether: () -> Unit, onRemedy: () -> Unit) {
     val context = LocalContext.current
     val people = remember { ProfileStore.partners(context) }
     if (people.isEmpty()) return
@@ -464,7 +471,10 @@ private fun PeopleToday(profile: BirthProfile, place: Place, settings: EngineSet
                         val top = pm.lives.maxByOrNull { it.score }
                         val low = pm.lives.minByOrNull { it.score }
                         Text("Going well for them: ${top?.life?.let { lifeName(it).lowercase() }}. Go gently today with: ${low?.life?.let { lifeName(it).lowercase() }}.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
-                        if (pm.saturnActive) Text(firstSentence(pm.saturnWords.replaceFirstChar { it.uppercase() }), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Ember)
+                        if (pm.saturnActive) {
+                            Text(firstSentence(pm.saturnWords.replaceFirstChar { it.uppercase() }), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Ember)
+                            Text("WHAT HELPS THEM ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onTogether).padding(vertical = 4.dp))
+                        }
                     }
                 }
                 if (pm != null) ScoreRing(pm.overall, size = 48.dp, stroke = 4.dp)
@@ -898,7 +908,7 @@ private fun WindowRow(w: WindowRecord, tick: Instant) {
     }
     if (!past) {
         Text(
-            if (w.caution) "Finish things, start nothing new." else "The best minutes of the day to begin.",
+            if (w.caution) "Finish things, start nothing new. A good use of it: settle a small debt, or make the call you owe someone." else "The best minutes of the day to begin.",
             style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(start = 18.dp),
         )
     }

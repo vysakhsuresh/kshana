@@ -393,7 +393,7 @@ pub fn explain(
         let windows = [
             ("the unlucky stretch", rahu_kala(d, obs)),
             ("the risky stretch", slot_window(d, YAMAGANDA[wd])),
-            ("the heavy stretch", slot_window(d, GULIKA[wd])),
+            ("the quiet stretch", slot_window(d, GULIKA[wd])),
             ("the lucky minutes", abhijit_window(d)),
         ];
         for (label, (s, e)) in windows {

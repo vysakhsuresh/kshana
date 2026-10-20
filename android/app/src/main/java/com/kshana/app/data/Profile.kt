@@ -206,6 +206,23 @@ object ProfileStore {
         o.put(name, relation)
         prefs(context).edit().putString(K_RELATIONS, o.toString()).apply()
     }
+    private const val K_TOGETHER = "partners.together.json"
+
+    /**
+     * Whether the person and this partner already share a life. Then the match is read
+     * as care for a bond that exists, never as a yes or no. Unset, a spouse or partner
+     * counts as together.
+     */
+    fun isTogether(context: Context, name: String): Boolean {
+        val o = runCatching { org.json.JSONObject(prefs(context).getString(K_TOGETHER, "{}") ?: "{}") }.getOrDefault(org.json.JSONObject())
+        return if (o.has(name)) o.optBoolean(name) else relationOf(context, name) in setOf("Spouse", "Partner")
+    }
+
+    fun saveTogether(context: Context, name: String, together: Boolean) {
+        val o = runCatching { org.json.JSONObject(prefs(context).getString(K_TOGETHER, "{}") ?: "{}") }.getOrDefault(org.json.JSONObject())
+        o.put(name, together)
+        prefs(context).edit().putString(K_TOGETHER, o.toString()).apply()
+    }
     private const val K_PARTNER_SELECTED = "partners.selected"
     private const val K_SELF_GROOM = "partners.selfIsGroom"
 

@@ -177,7 +177,7 @@ fn chapter(natal: &Natal, lord: DashaLord, parent: Option<DashaLord>, level: u8,
             Band::Good => "Good",
             Band::Steady => "Even",
             Band::Slow => "Slow",
-            Band::Hold => "Hard",
+            Band::Hold => "Patient",
         },
         best.name().to_ascii_lowercase(),
         crate::plain::subject(&weak.name().to_ascii_lowercase())

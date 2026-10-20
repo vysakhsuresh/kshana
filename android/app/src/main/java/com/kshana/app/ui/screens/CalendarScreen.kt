@@ -109,7 +109,7 @@ internal object CalendarCheck {
  * The calendar is read on the phone and never stored or sent.
  */
 @Composable
-fun CalendarScreen(profile: BirthProfile, place: Place, settings: EngineSettings, onBack: () -> Unit) {
+fun CalendarScreen(profile: BirthProfile, place: Place, settings: EngineSettings, onBack: () -> Unit, onRemedy: () -> Unit = {}) {
     val context = LocalContext.current
     var allowed by remember { mutableStateOf(CalendarCheck.permitted(context) && CalendarCheck.on(context)) }
     var checks by remember { mutableStateOf<List<CalCheck>?>(null) }
@@ -184,8 +184,8 @@ fun CalendarScreen(profile: BirthProfile, place: Place, settings: EngineSettings
                 Text("${Instant.ofEpochMilli(c.event.begin).atZone(z).format(day)} · ${Instant.ofEpochMilli(c.event.begin).atZone(z).format(hm)}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky)
                 Text(
                     when {
-                        c.window != null -> "It falls in a ${c.window.lowercase()}. Things begun now tend to stall."
-                        c.score < 44 -> "A weak hour for you: expect friction or delay."
+                        c.window != null -> "It falls in a ${c.window.lowercase()}: a slower hour. Give it extra preparation, and keep what you begin then simple."
+                        c.score < 44 -> "A slower hour for you; give it extra preparation and allow a little more time."
                         c.score >= 56 -> "A good hour for you. Keep it."
                         else -> "An even hour. Fine to keep."
                     },
@@ -195,6 +195,10 @@ fun CalendarScreen(profile: BirthProfile, place: Place, settings: EngineSettings
                 val b = c.better
                 if (bad && b != null && c.betterScore > c.score) {
                     Text("Better that day: ${Instant.ofEpochMilli(b.first).atZone(z).format(hm)} – ${Instant.ofEpochMilli(b.second).atZone(z).format(hm)} (${c.betterScore.toInt()})", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Leaf)
+                } else if (bad) {
+                    // No better hour that day: keep it, and carry something good into it.
+                    Text("If it must stay: begin with a small kindness that morning, a word of thanks or a little help to someone, and go in unhurried.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+                    Text("WHAT HELPS ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRemedy).padding(vertical = 4.dp))
                 }
                 Text(
                     "OPEN IN CALENDAR ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,

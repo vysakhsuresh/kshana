@@ -148,7 +148,7 @@ pub struct Appointment {
     pub score: f64,
     /// Band.
     pub band: Band,
-    /// `Go`, `Go, with care`, `Shift it if you can`, `Avoid this time`.
+    /// `Go`, `Go, with care`, `Shift it if you can`, `Better at another time`.
     pub verdict: String,
     /// One or two sentences.
     pub headline: String,
@@ -187,7 +187,7 @@ fn verdict_words(score: f64, caution: Option<&str>) -> (&'static str, Band) {
         } else if score >= 0.40 {
             "Shift it if you can"
         } else {
-            "Avoid this time"
+            "Better at another time"
         },
         b,
     )
@@ -323,7 +323,7 @@ pub fn appointment(
             purpose.phrase()
         ),
         _ => format!(
-            "Avoid this time. {} is on hold then, and {} would carry that weight. Move it to one of the times below.",
+            "Better at another time. {} is on hold then, and {} would carry that weight. One of the times below serves it better.",
             top.name(),
             purpose.phrase()
         ),

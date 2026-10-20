@@ -76,6 +76,7 @@ fun PlanScreen(
     place: Place,
     settings: EngineSettings,
     onLife: (String) -> Unit = {},
+    onRemedy: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val zone: ZoneId = remember(place) { runCatching { ZoneId.of(place.zoneId) }.getOrDefault(ZoneId.systemDefault()) }
@@ -337,6 +338,29 @@ fun PlanScreen(
                     Spacer(Modifier.width(10.dp))
                     Text(localText(bd, WEEKDAY_DAY, zone), fontFamily = FontFamily.Monospace, fontSize = 14.sp, color = KshanaColors.Gold, modifier = Modifier.width(110.dp))
                     Text(a.betterDayWords, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1f))
+                }
+            }
+
+            // A weak time, or one with nothing better that day, is not left bare: one deed to
+            // carry into it, and the way to the remedies for the part of life it leans on hardest.
+            if (a.score < 50 || (a.betterToday.isEmpty() && a.score < 62)) {
+                val weakest = a.lives.minByOrNull { it.score }?.life
+                Column(
+                    Modifier.fillMaxWidth().glass(14.dp).padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text("IF YOU MUST GO", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+                    Text(
+                        "Before you set out, give something small to someone who needs it: food, a coin, or ten minutes of your help. Then go well prepared, a little early, with a calm word ready. A time asked for care still goes well when it is met with care.",
+                        style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft,
+                    )
+                    if (weakest != null) {
+                        Text(
+                            "WHAT TO DO FOR ${lifeName(weakest).uppercase()} ›",
+                            style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
+                            modifier = Modifier.clickable { onRemedy(weakest) }.padding(vertical = 4.dp),
+                        )
+                    }
                 }
             }
 

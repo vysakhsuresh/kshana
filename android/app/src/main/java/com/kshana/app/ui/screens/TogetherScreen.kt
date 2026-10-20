@@ -187,7 +187,7 @@ fun TogetherScreen(
         }
         if (partners.size >= 2) {
             PeopleGrid(partners, place, settings, onPick = { i -> selected = i; ProfileStore.selectPartner(context, i) })
-            MatchTwo(partners, settings)
+            MatchTwo(partners, settings, onRemedy)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Count me as", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
@@ -199,10 +199,21 @@ fun TogetherScreen(
             style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
         )
 
+        // Already together, or thinking of it: the match is read differently.
+        var togetherVersion by remember { mutableStateOf(0) }
+        val together = remember(partner.name, togetherVersion, relVersion) { ProfileStore.isTogether(context, partner.name) }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("We are", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            Chip("ALREADY TOGETHER", selected = together, onClick = { ProfileStore.saveTogether(context, partner.name, true); togetherVersion++ })
+            Chip("THINKING OF IT", selected = !together, onClick = { ProfileStore.saveTogether(context, partner.name, false); togetherVersion++ })
+        }
+
         val k = kundali
         if (k == null) {
             if (error == null) Working("putting the two of you side by side…")
         } else {
+            val me = profile.name.substringBefore(' ').ifBlank { "You" }
+            val them = partner.name.substringBefore(' ')
             Column(
                 Modifier.fillMaxWidth().glass(18.dp).padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -210,12 +221,36 @@ fun TogetherScreen(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     ScoreRing(k.total / 36.0 * 100.0, size = 84.dp, stroke = 7.dp, label = "of 36")
                     Column(Modifier.weight(1f)) {
-                        Text("THE MATCH · ${"%.1f".format(k.total)} points", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
-                        Text(k.verdict, style = MaterialTheme.typography.displayMedium, color = scoreColor(k.total / 36.0 * 100.0))
+                        Text(if (together) "YOUR BOND · ${"%.1f".format(k.total)} points" else "THE MATCH · ${"%.1f".format(k.total)} points", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
+                        Text(
+                            if (together) k.togetherVerdict else k.verdict,
+                            style = MaterialTheme.typography.displayMedium,
+                            color = if (together) KshanaColors.Gold else scoreColor(k.total / 36.0 * 100.0),
+                        )
                     }
                 }
-                Text(k.headline, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)
-                Text(personalise(k.kujaWords, profile.name.substringBefore(' ').ifBlank { "You" }, partner.name.substringBefore(' ')), style = MaterialTheme.typography.bodyMedium, color = if (k.kujaA != k.kujaB) KshanaColors.Ember else KshanaColors.TextSoft)
+                Text(personalise(if (together) k.togetherHeadline else k.headline, me, them), fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)
+                if (!together) {
+                    Text(personalise(k.kujaWords, me, them), style = MaterialTheme.typography.bodyMedium, color = if (k.kujaA != k.kujaB) KshanaColors.Ember else KshanaColors.TextSoft)
+                    if (k.care.isNotEmpty()) Text(
+                        "A low score is not a no. It marks where two people need to take care of each other; every part of it has steps below that ease it.",
+                        style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft,
+                    )
+                } else {
+                    Text(
+                        "Many happy couples carry low scores. The score shows where to take care, not how your marriage will go: that is decided by how you treat each other.",
+                        style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft,
+                    )
+                }
+            }
+            if (k.strengths.isNotEmpty()) {
+                SectionLabel("Where your bond is strong")
+                for (s in k.strengths) Bullet(personalise(s, me, them), KshanaColors.Leaf)
+            }
+            if (k.care.isNotEmpty()) {
+                SectionLabel(if (together) "Where your bond asks for care" else "Where you would need to take care")
+                for (c in k.care) BondCareCard(c, me, them)
+                QuietButton("MORE REMEDIES FOR LOVE", onClick = { onRemedy("Love") }, modifier = Modifier.fillMaxWidth())
             }
             Text(
                 if (showKootas) "LESS −" else "THE EIGHT POINTS OF THE MATCH +",
@@ -237,14 +272,6 @@ fun TogetherScreen(
                             Text(x.words.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.padding(top = 4.dp))
                         }
                     }
-                }
-                if (k.strengths.isNotEmpty()) {
-                    SectionLabel("What binds")
-                    for (s in k.strengths) Bullet(s, KshanaColors.Leaf)
-                }
-                if (k.frictions.isNotEmpty()) {
-                    SectionLabel("What rubs")
-                    for (s in k.frictions) Bullet(s, KshanaColors.Ember)
                 }
             }
         }
@@ -298,21 +325,11 @@ fun TogetherScreen(
             PersonBriefing(them, c.bBriefing, KshanaColors.Leaf)
 
             SectionLabel("What to do about it")
-            val remedies = k?.remedies.orEmpty()
-            if (remedies.isEmpty() && c.aBriefing.remedy == null && c.bBriefing.remedy == null) {
-                Text("Nothing about the two of you needs a remedy today.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            if (k?.care.isNullOrEmpty() && c.aBriefing.remedy == null && c.bBriefing.remedy == null) {
+                Text("Nothing about the two of you needs a remedy today. Keep doing what you do for each other.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             }
-            if (remedies.isNotEmpty()) {
-                Text("For the match itself", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Gold)
-                for (r in remedies) {
-                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
-                        Text(doshaWord(r.dosha), style = MaterialTheme.typography.labelSmall, color = if (r.optional) KshanaColors.Muted else KshanaColors.Gold, modifier = Modifier.width(78.dp).padding(top = 3.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(r.title, style = MaterialTheme.typography.titleMedium, color = if (r.optional) KshanaColors.TextSoft else KshanaColors.Text)
-                            Text(r.why, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
-                        }
-                    }
-                }
+            if (!k?.care.isNullOrEmpty()) {
+                Text("For the match itself, the steps are above under each part that asks for care.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             }
             for ((who, rb) in listOf(me to c.aBriefing.remedy, them to c.bBriefing.remedy)) {
                 if (rb == null) continue
@@ -327,6 +344,7 @@ fun TogetherScreen(
                         }
                     }
                 }
+                HowThisHelps(remember(rb.planet) { uniffi.kshana_ffi.remedyHowItHelps(rb.planet, "dasha", null) })
             }
             QuietButton("THE FULL REMEDY FOR LOVE", onClick = { onRemedy("Love") }, modifier = Modifier.fillMaxWidth())
 
@@ -461,7 +479,7 @@ private fun PeopleGrid(people: List<BirthProfile>, place: Place, settings: Engin
 
 /** Pick two of your people and read their match. */
 @Composable
-private fun MatchTwo(people: List<BirthProfile>, settings: EngineSettings) {
+private fun MatchTwo(people: List<BirthProfile>, settings: EngineSettings, onRemedy: (String) -> Unit) {
     val context = LocalContext.current
     var a by remember { mutableStateOf(0) }
     var b by remember { mutableStateOf(1) }
@@ -494,13 +512,78 @@ private fun MatchTwo(people: List<BirthProfile>, settings: EngineSettings) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             ScoreRing(r.total / 36.0 * 100.0, size = 64.dp, stroke = 6.dp, label = "of 36")
             Column(Modifier.weight(1f)) {
-                Text("${people[a].name.substringBefore(' ')} and ${people[b].name.substringBefore(' ')} · ${r.verdict}", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
-                Text(r.headline, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
-                Text(r.kujaWords, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                val na = people[a].name.substringBefore(' ')
+                val nb = people[b].name.substringBefore(' ')
+                val tog = ProfileStore.isTogether(context, people[a].name) && ProfileStore.isTogether(context, people[b].name)
+                Text("$na and $nb · ${if (tog) r.togetherVerdict else r.verdict}", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
+                Text(byNames(if (tog) r.togetherHeadline else r.headline, na, nb), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
             }
         }
-        Text("The first is counted as the groom. Open the two of them under With for the full match and its remedies.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        for (c in r.care) BondCareCard(c, people[a].name.substringBefore(' '), people[b].name.substringBefore(' '), firstIsYou = false)
+        if (r.care.isNotEmpty()) QuietButton("MORE REMEDIES FOR LOVE", onClick = { onRemedy("Love") }, modifier = Modifier.fillMaxWidth())
+        Text("The first is counted as the groom.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
     }
+}
+
+/**
+ * One part of the match that asks for care: what it brings to two people living
+ * together, what each can do for the other, what helps (deeds first, prayer if they
+ * wish), and the chart reason one tap away.
+ */
+@Composable
+private fun BondCareCard(c: uniffi.kshana_ffi.BondCareRecord, me: String, them: String, firstIsYou: Boolean = true) {
+    val say: (String) -> String = { t -> if (firstIsYou) personalise(t, me, them) else byNames(t, me, them) }
+    var showHow by remember(c.key) { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().glass(16.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(c.area.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(say(c.living), fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 25.sp, color = KshanaColors.Text)
+
+        Text("WHAT EACH OF YOU CAN DO FOR THE OTHER", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Sky, modifier = Modifier.padding(top = 4.dp))
+        for (s in c.care) Bullet(say(s), KshanaColors.Sky)
+
+        val deeds = c.remedies.filter { !it.optional }
+        val prayer = c.remedies.filter { it.optional }
+        if (deeds.isNotEmpty()) {
+            Text("WHAT HELPS · DEEDS", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Leaf, modifier = Modifier.padding(top = 4.dp))
+            for (r in deeds) RemedyLine(r.title, r.why, KshanaColors.Leaf)
+        }
+        if (prayer.isNotEmpty()) {
+            Text("PRAYER, IF YOU WISH", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.padding(top = 4.dp))
+            for (r in prayer) RemedyLine(r.title, r.why, KshanaColors.Gold)
+        }
+
+        Text(
+            if (showHow) "HOW THIS HELPS −" else "HOW THIS HELPS +",
+            style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
+            modifier = Modifier.clickable { showHow = !showHow }.padding(top = 6.dp, bottom = 2.dp),
+        )
+        androidx.compose.animation.AnimatedVisibility(showHow) {
+            Text(say(c.howItHelps), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+        }
+    }
+}
+
+@Composable
+private fun RemedyLine(title: String, why: String, c: Color) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.Top) {
+        Box(Modifier.padding(top = 8.dp).size(6.dp).clip(CircleShape).background(c))
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
+            Text(why, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+        }
+    }
+}
+
+/** Like [personalise] when neither of the two is the person using the app. */
+private fun byNames(s: String, aRaw: String, bRaw: String): String {
+    val a = properName(aRaw)
+    val b = properName(bRaw)
+    return s.replace("The first person's", "$a's").replace("the first person's", "$a's")
+        .replace("The second person's", "$b's").replace("the second person's", "$b's")
+        .replace("The first person", a).replace("the first person", a)
+        .replace("The second person", b).replace("the second person", b)
+        .replace("First person:", "$a:").replace("Second person:", "$b:")
 }
 
 /** The engine speaks of "the first chart" and "the second"; the screen uses names. */

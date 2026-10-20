@@ -475,7 +475,7 @@ pub fn window_label(lang: Lang, en: &str) -> String {
     let t = match en {
         "Unlucky stretch" => ["Unlucky stretch", "നിർഭാഗ്യ സമയം", "अशुभ समय"],
         "Risky stretch" => ["Risky stretch", "അപകട സമയം", "जोखिम का समय"],
-        "Heavy stretch" => ["Heavy stretch", "ഭാരിച്ച സമയം", "भारी समय"],
+        "Quiet stretch" => ["Quiet stretch", "ശാന്തമായ സമയം", "शांत समय"],
         "Lucky minutes" => ["Lucky minutes", "ഭാഗ്യ നിമിഷങ്ങൾ", "शुभ घड़ी"],
         _ => return en.to_string(),
     };

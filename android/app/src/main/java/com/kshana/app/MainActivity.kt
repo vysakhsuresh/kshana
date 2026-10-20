@@ -288,7 +288,7 @@ private fun App() {
                 withProfile {
                     com.kshana.app.ui.screens.FutureHub(
                         profile = it, place = here, settings = settings,
-                        onLife = { life -> open("life/$life") }, onRemedy = { l -> open("parihara/$l") },
+                        onLife = { life -> open("life/$life") }, onRemedy = { l -> open(l?.let { "parihara/$it" } ?: "parihara") },
                         onLetter = { open("letter") }, onBook = { open("book") }, onHindsight = { open("hindsight") }, onSettings = { open("settings") },
                     )
                 }
@@ -299,7 +299,7 @@ private fun App() {
                         profile = it, place = here, settings = settings,
                         doors = com.kshana.app.ui.screens.ReadingDoors(
                             ask = { open("prashna") },
-                            remedy = { l -> open("parihara/$l") },
+                            remedy = { l -> open(l?.let { "parihara/$it" } ?: "parihara") },
                             future = { com.kshana.app.ui.screens.FutureHubRequest.mode = "far"; goTab("future") },
                             ahead = { com.kshana.app.ui.screens.FutureHubRequest.mode = "near"; goTab("future") },
                             today = { goTab("loop") },
@@ -312,8 +312,8 @@ private fun App() {
                     )
                 }
             }
-            composable("calendar") { withProfile { com.kshana.app.ui.screens.CalendarScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }) } }
-            composable("wall") { withProfile { WallScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }) } }
+            composable("calendar") { withProfile { com.kshana.app.ui.screens.CalendarScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }, onRemedy = { open("parihara") }) } }
+            composable("wall") { withProfile { WallScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }, onRemedy = { open("parihara") }) } }
             composable("letter") {
                 withProfile { LetterScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }, onLife = { life -> open("life/$life") }, onWall = { open("wall") }) }
             }
@@ -358,7 +358,7 @@ private fun App() {
                 )
             }
             composable("book") {
-                withProfile { BookScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }, onLife = { life -> open("life/$life") }) }
+                withProfile { BookScreen(profile = it, place = here, settings = settings, onBack = { nav.popBackStack() }, onLife = { life -> open("life/$life") }, onRemedy = { open("parihara") }) }
             }
             composable("rectify") {
                 withProfile {

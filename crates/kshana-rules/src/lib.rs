@@ -63,7 +63,7 @@ pub use hora::{hora_lore, moment_title, HoraLore};
 pub use topics::{topic, topics_for, Topic, TOPICS};
 pub use varsha::{year_chapter, YearChapter};
 pub use explain::{explain, Cause, Explanation, Relief, Turning};
-pub use kundali::{couple, couple_ask, kundali, talk_window, Couple, CoupleAnswer, Koota, Kundali};
+pub use kundali::{couple, couple_ask, kundali, talk_window, BondCare, Couple, CoupleAnswer, DoshaRemedy, Koota, Kundali};
 pub use timeline::{timeline, Chapter, Passage, Return, SaturnSpan, Timeline};
 pub use transit::{next_sign_change, returns, sidereal_longitude, sign_changes, SignChange};
 pub use facts::{Facts, PlanetFact};

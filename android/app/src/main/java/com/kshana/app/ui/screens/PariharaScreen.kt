@@ -230,6 +230,7 @@ private fun PariharaPlainScreen(profile: BirthProfile, settings: EngineSettings,
                 Text(when { rec.severity >= 0.66 -> "PRESSING HARD"; rec.severity >= 0.33 -> "PRESSING MODERATELY"; else -> "PRESSING LIGHTLY" }, style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
                 Text(rec.cause, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text, modifier = Modifier.padding(top = 6.dp))
             }
+            HowThisHelps(remember(rec.planet, life) { uniffi.kshana_ffi.remedyHowItHelps(rec.planet, if (rec.runningLevel != null) "dasha" else "natal", life) })
 
             // The streak: today's tick on each held remedy, and the longest run.
             var streakVersion by remember { mutableStateOf(0) }

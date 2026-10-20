@@ -2863,6 +2863,26 @@ pub struct KundaliRecord {
     pub strengths: Vec<String>,
     pub frictions: Vec<String>,
     pub remedies: Vec<DoshaRemedyRecord>,
+    pub together_verdict: String,
+    pub together_headline: String,
+    pub care: Vec<BondCareRecord>,
+}
+
+/// One part of a match that asks for care: what it brings, what each can do, its
+/// remedies, and the chart reason (shown only when the person taps for it).
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct BondCareRecord {
+    pub key: String,
+    pub area: String,
+    pub living: String,
+    pub care: Vec<String>,
+    pub remedies: Vec<DoshaRemedyRecord>,
+    pub how_it_helps: String,
+}
+
+fn dosha_remedy_record(r: &kshana_rules::DoshaRemedy) -> DoshaRemedyRecord {
+    DoshaRemedyRecord { dosha: r.dosha.to_string(), title: r.title.to_string(), why: r.why.to_string(), source: r.source.to_string(), optional: r.optional }
 }
 
 /// A remedy for a dosha of the match.
@@ -3061,6 +3081,20 @@ impl Engine {
                     why: r.why.to_string(),
                     source: r.source.to_string(),
                     optional: r.optional,
+                })
+                .collect(),
+            together_verdict: k.together_verdict.clone(),
+            together_headline: k.together_headline.clone(),
+            care: k
+                .care
+                .iter()
+                .map(|c| BondCareRecord {
+                    key: c.key.to_string(),
+                    area: c.area.clone(),
+                    living: c.living.clone(),
+                    care: c.care.clone(),
+                    remedies: c.remedies.iter().map(dosha_remedy_record).collect(),
+                    how_it_helps: c.how_it_helps.clone(),
                 })
                 .collect(),
         })
@@ -4357,6 +4391,9 @@ mod plain_audit {
         // the rung's claim, cadence, the ledger line and the hora/tithi windows.
         "cause_expert", "dignity", "running_level", "karma_class", "karma_kind", "karma_basis", "karma_source",
         "may_claim", "remedy_family", "offended", "ledger_hint", "cadence", "measurable",
+        // The chart reason behind a remedy, shown only when the person taps "How this
+        // helps" (asked for by the owner on 2026-10-20): it names the planet on purpose.
+        "how_it_helps",
     ];
 
     /// A remedy plan as the common screens show it: the nested expert lists (dosha
@@ -4686,6 +4723,8 @@ pub struct CauseNodeRecord {
     pub strength_words: String,
     /// The seven branches.
     pub branches: Vec<BranchRecord>,
+    /// The chart reason, shown only when the person taps "How this helps".
+    pub how_it_helps: String,
 }
 
 /// The remedy tree for a life.
@@ -4780,6 +4819,7 @@ impl Engine {
                 .causes
                 .into_iter()
                 .map(|c| CauseNodeRecord {
+                    how_it_helps: c.how_it_helps.clone(),
                     key: lord_name(c.key),
                     source: c.source.to_string(),
                     title: c.title,
@@ -5144,4 +5184,25 @@ pub fn understand(text: String) -> UnderstandingRecord {
         confidence: u.confidence,
         reason: u.reason.into(),
     }
+}
+
+/// The chart reason behind remedies for `planet` (an engine key such as "Saturn"),
+/// pressing through `source` (`dasha`, `gochara` or `natal`) on `life` (a life name, or
+/// none for life in general). Shown only when the person taps "How this helps".
+#[uniffi::export]
+pub fn remedy_how_it_helps(planet: String, source: String, life: Option<String>) -> String {
+    let g = match planet.trim() {
+        "Sun" => DashaLord::Sun,
+        "Moon" => DashaLord::Moon,
+        "Mars" => DashaLord::Mars,
+        "Mercury" => DashaLord::Mercury,
+        "Jupiter" => DashaLord::Jupiter,
+        "Venus" => DashaLord::Venus,
+        "Saturn" => DashaLord::Saturn,
+        "Rahu" => DashaLord::Rahu,
+        "Ketu" => DashaLord::Ketu,
+        _ => return String::new(),
+    };
+    let life = life.and_then(|n| kshana_rules::Life::ALL.iter().copied().find(|l| l.name().eq_ignore_ascii_case(n.trim())));
+    kshana_rules::remedy_tree::how_it_helps(g, &source, life)
 }

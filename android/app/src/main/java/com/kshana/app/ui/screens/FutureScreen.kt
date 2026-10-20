@@ -70,7 +70,7 @@ private fun kindColour(kind: String): Color = when (kind) {
  * testing periods, each with its months, how strong it is and what to do.
  */
 @Composable
-fun FutureScreen(profile: BirthProfile, place: Place, settings: EngineSettings, onRemedy: (String) -> Unit, onSettings: () -> Unit) {
+fun FutureScreen(profile: BirthProfile, place: Place, settings: EngineSettings, onRemedy: (String?) -> Unit, onSettings: () -> Unit) {
     val context = LocalContext.current
     var months by remember { mutableStateOf(36) }
     var filter by remember { mutableStateOf("all") }
@@ -142,14 +142,14 @@ fun FutureScreen(profile: BirthProfile, place: Place, settings: EngineSettings, 
         for (e in shown) FutureRow(e, mon, yr, onRemedy)
         Spacer(Modifier.height(4.dp))
         Text(
-            "This is the weather of each season, not a fixed fate. A hard stretch eased by the right deeds is lighter; an opening not taken passes. Your choices count.",
+            "This is the weather of each season, not a fixed fate. A testing stretch eased by the right deeds is lighter; an opening not taken passes. Your choices count.",
             style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
         )
     }
 }
 
 @Composable
-private fun FutureRow(e: FutureEventRecord, mon: DateTimeFormatter, yr: DateTimeFormatter, onRemedy: (String) -> Unit) {
+private fun FutureRow(e: FutureEventRecord, mon: DateTimeFormatter, yr: DateTimeFormatter, onRemedy: (String?) -> Unit) {
     val context = LocalContext.current
     val c = kindColour(e.kind)
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
@@ -168,7 +168,7 @@ private fun FutureRow(e: FutureEventRecord, mon: DateTimeFormatter, yr: DateTime
             Text(
                 (e.life?.let { "${lifeGlyph(it)} ${lifeName(it).uppercase()}" } ?: "YOUR WHOLE LIFE") + " · " + when (e.kind) {
                     "opening" -> "AN OPENING"
-                    "pressure" -> "A HARD STRETCH"
+                    "pressure" -> "A STRETCH TO TEND"
                     "chapter" -> "A NEW CHAPTER"
                     "test_begins" -> "A TESTING TIME BEGINS"
                     "test_returns" -> "THE TESTING TIME RETURNS"
@@ -180,8 +180,10 @@ private fun FutureRow(e: FutureEventRecord, mon: DateTimeFormatter, yr: DateTime
             Text(e.headline, fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text)
             Text(e.detail, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                if (e.kind == "pressure" && e.life != null) {
-                    Text("WHAT TO DO ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable { onRemedy(e.life!!) }.padding(vertical = 4.dp))
+                // Every stretch that asks something of the person carries what to do about it;
+                // a whole-life one (no life named) opens the general remedies.
+                if (e.kind == "pressure" || e.kind == "test_begins" || e.kind == "test_returns") {
+                    Text("WHAT TO DO ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable { onRemedy(e.life) }.padding(vertical = 4.dp))
                 }
                 Text("REMIND ME ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable {
                     val at = Instants.toLocal(e.from).toInstant().toEpochMilli()

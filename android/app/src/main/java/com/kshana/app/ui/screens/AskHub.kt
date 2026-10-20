@@ -36,7 +36,7 @@ fun AskHub(
     var mode by rememberSaveable { mutableStateOf(initialMode) }
     Box(Modifier.fillMaxSize()) {
         when (mode) {
-            "time" -> PlanScreen(profile = profile, place = place, settings = settings, onLife = onLife)
+            "time" -> PlanScreen(profile = profile, place = place, settings = settings, onLife = onLife, onRemedy = onRemedy)
             else -> AskScreen(profile = profile, place = place, settings = settings, onRemedy = onRemedy, onBack = onBack, onGo = onGo)
         }
         // The mode switch floats over the top of either screen.
@@ -67,7 +67,7 @@ fun FutureHub(
     place: Place,
     settings: EngineSettings,
     onLife: (String) -> Unit,
-    onRemedy: (String) -> Unit,
+    onRemedy: (String?) -> Unit,
     onLetter: () -> Unit,
     onBook: () -> Unit,
     onHindsight: () -> Unit,

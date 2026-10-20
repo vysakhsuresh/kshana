@@ -32,7 +32,7 @@ pub struct Ashtakoota {
     pub nadi_dosha: bool,
     /// Bhakoot dosha (0 Bhakoot points) present.
     pub bhakoot_dosha: bool,
-    /// Verdict band: Excellent (≥ 28), Good (≥ 24), Acceptable (≥ 18), Weak.
+    /// Verdict band: Excellent (≥ 28), Good (≥ 24), Acceptable (≥ 18), Asks for care.
     pub verdict: &'static str,
 }
 
@@ -245,7 +245,7 @@ pub fn ashtakoota(moon_a: f64, moon_b: f64) -> Ashtakoota {
     } else if total >= 18.0 {
         "Acceptable"
     } else {
-        "Weak"
+        "Asks for care"
     };
     Ashtakoota {
         nadi_dosha: da == db,

@@ -223,11 +223,11 @@ pub fn future(
                 let headline = format!("{}: {}", between(lang, from, to, lon), lang.pick(words));
                 let peak_words = match (lang, opening) {
                     (Lang::En, true) => format!("Strongest around {}.", month_year(lang, peak.0, lon)),
-                    (Lang::En, false) => format!("Hardest around {}.", month_year(lang, peak.0, lon)),
+                    (Lang::En, false) => format!("Needs most care around {}.", month_year(lang, peak.0, lon)),
                     (Lang::Ml, true) => format!("{}-ഓടെ ഏറ്റവും ശക്തം.", month_year(lang, peak.0, lon)),
-                    (Lang::Ml, false) => format!("{}-ഓടെ ഏറ്റവും കഠിനം.", month_year(lang, peak.0, lon)),
+                    (Lang::Ml, false) => format!("{}-ഓടെ ഏറ്റവും കരുതൽ വേണം.", month_year(lang, peak.0, lon)),
                     (Lang::Hi, true) => format!("{} के आसपास सबसे मज़बूत।", month_year(lang, peak.0, lon)),
-                    (Lang::Hi, false) => format!("{} के आसपास सबसे कठिन।", month_year(lang, peak.0, lon)),
+                    (Lang::Hi, false) => format!("{} के आसपास सबसे अधिक ध्यान चाहिए।", month_year(lang, peak.0, lon)),
                 };
                 let detail = format!("{} {} {}", life_name(lang, life), strength_words(lang, strength, opening), peak_words);
                 out.push(FutureEvent {

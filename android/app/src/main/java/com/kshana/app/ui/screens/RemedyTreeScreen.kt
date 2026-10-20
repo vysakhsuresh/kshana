@@ -148,6 +148,27 @@ private fun CauseCard(index: Int, c: CauseNodeRecord, faith: String, onPlan: () 
             }
             Spacer(Modifier.height(4.dp))
         }
+        HowThisHelps(c.howItHelps)
+    }
+}
+
+/**
+ * The chart reason behind a set of remedies, closed until the person asks: which planet
+ * presses this part of life, and why serving its people, giving on its day and praying
+ * eases it.
+ */
+@Composable
+internal fun HowThisHelps(text: String) {
+    if (text.isBlank()) return
+    var show by remember { mutableStateOf(false) }
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(KshanaColors.Night.copy(alpha = 0.45f)).clickable { show = !show }.padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(if (show) "HOW THIS HELPS −" else "HOW THIS HELPS +  ·  the reason in the chart", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        androidx.compose.animation.AnimatedVisibility(show) {
+            Text(text, style = MaterialTheme.typography.bodyMedium, lineHeight = 22.sp, color = KshanaColors.TextSoft)
+        }
     }
 }
 

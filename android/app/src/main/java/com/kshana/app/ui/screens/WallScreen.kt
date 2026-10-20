@@ -85,7 +85,7 @@ internal fun addToCalendar(context: android.content.Context, title: String, star
  * the month's observances.
  */
 @Composable
-fun WallScreen(profile: BirthProfile, place: Place, settings: EngineSettings, onBack: () -> Unit) {
+fun WallScreen(profile: BirthProfile, place: Place, settings: EngineSettings, onBack: () -> Unit, onRemedy: () -> Unit = {}) {
     val context = LocalContext.current
     val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${java.time.LocalDate.now()}"
     var items by remember { mutableStateOf(if (WallCache.key == key) WallCache.countdowns else null) }
@@ -148,6 +148,8 @@ fun WallScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
                         version++
                     })
                     Chip("CALENDAR", selected = false, onClick = { addToCalendar(context, "Kshana · ${c.title}", at.toEpochMilli(), null, c.words) })
+                    // A day that weighs is never left on the wall alone: what helps is one tap away.
+                    if (!c.good) Chip("WHAT HELPS", selected = false, onClick = onRemedy)
                 }
             }
         }

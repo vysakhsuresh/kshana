@@ -121,7 +121,7 @@ private fun YearSection(profile: BirthProfile, place: Place, settings: EngineSet
 }
 
 @Composable
-fun BookScreen(profile: BirthProfile, place: Place, settings: EngineSettings, onBack: () -> Unit, onLife: (String) -> Unit = {}) {
+fun BookScreen(profile: BirthProfile, place: Place, settings: EngineSettings, onBack: () -> Unit, onLife: (String) -> Unit = {}, onRemedy: () -> Unit = {}) {
     val context = LocalContext.current
     val key = "${profile.birthInstant().taiSeconds}|${profile.latitude}|${profile.longitude}|${settings.ayanamsa}|${settings.houseSystem}"
     var book by remember { mutableStateOf(if (BookCache.key == key) BookCache.record else null) }
@@ -164,7 +164,7 @@ fun BookScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
 
         YearSection(profile, place, settings, onLife)
 
-        SectionLabel("The hard stretches of your life")
+        SectionLabel("The testing stretches of your life")
         Text("Every long testing period from your birth to the years ahead, to the day.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         for (s in t.saturn) {
             val past = s.end.seconds() < t.at.seconds()
@@ -183,6 +183,7 @@ fun BookScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
                 Text("${dayMon(s.start)} ${localText(s.start, YEAR_ONLY)} – ${dayMon(s.end)} ${localText(s.end, YEAR_ONLY)}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky.copy(alpha = alpha))
                 if (s.current) {
                     Text("You are in it now. It ends ${localText(s.end, DATE_TIME)}.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
+                    Text("WHAT HELPS NOW ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRemedy).padding(vertical = 4.dp))
                     for (p in s.phases) {
                         Text("${localText(p.at, DATE_ONLY)} · ${p.words}", style = MaterialTheme.typography.bodySmall, color = if (p.at.seconds() <= t.at.seconds()) KshanaColors.Muted else KshanaColors.Sky)
                     }

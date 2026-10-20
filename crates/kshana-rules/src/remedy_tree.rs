@@ -86,6 +86,8 @@ pub struct CauseNode {
     pub strength_words: String,
     /// The remedies, branch by branch.
     pub branches: Vec<Branch>,
+    /// The chart reason, shown only when the person taps "How this helps".
+    pub how_it_helps: String,
 }
 
 /// The whole tree.
@@ -954,6 +956,7 @@ pub fn remedy_tree(
                 strength: (pull.abs() * 100.0).min(50.0),
                 strength_words: strength_words(lang, pull).to_string(),
                 branches: branches(lang, g),
+                how_it_helps: how_it_helps(g, kind, Some(life)),
             }
         })
         .collect();
@@ -1023,4 +1026,35 @@ mod tests {
             }
         }
     }
+}
+
+/// The chart reason behind a cause and its remedies, for the person who taps "How this
+/// helps": which planet presses the life, why, and why each kind of remedy eases it.
+/// Names the planet on purpose; the common screens show it only on request.
+pub fn how_it_helps(g: DashaLord, source: &str, life: Option<Life>) -> String {
+    let (name, stands, people, day, gift, inner, deity) = match g {
+        DashaLord::Sun => ("the Sun", "the self, the father, authority and government", "your father, seniors and those in authority", "Sunday", "wheat, jaggery or copper", "pride and the need to be seen", "Surya (or Shiva), with the Aditya Hridayam"),
+        DashaLord::Moon => ("the Moon", "the mind, the mother, home and feelings", "your mother, older women and anyone who nurses others", "Monday", "rice, milk or white cloth", "the restless, worried mind", "Shiva and Parvati"),
+        DashaLord::Mars => ("Mars", "energy, courage, conflict, brothers and property", "brothers, soldiers, police and people who work with fire and tools", "Tuesday", "red lentils or jaggery", "anger and haste", "Hanuman, or Murugan (Subrahmanya)"),
+        DashaLord::Mercury => ("Mercury", "speech, learning, trade and paperwork", "students, young people, traders and your mother's brothers", "Wednesday", "green gram, green cloth or books", "scattered attention and careless words", "Vishnu"),
+        DashaLord::Jupiter => ("Jupiter", "wisdom, teachers, children, faith and wealth", "teachers, elders, priests and children", "Thursday", "turmeric, chana dal, yellow cloth or books", "over-confidence and broken promises", "Dakshinamurthy (or Vishnu)"),
+        DashaLord::Venus => ("Venus", "love, marriage, comfort and beauty", "your wife or husband, women and artists", "Friday", "white sweets, rice, curd or clothes", "excess and indulgence", "Lakshmi"),
+        DashaLord::Saturn => ("Saturn", "work, duty, delay, discipline and the fruit of past deeds (karma)", "the old, the poor, labourers, servants and the disabled", "Saturday", "black sesame, mustard oil, iron or a dark blanket", "laziness, fear and cutting corners", "Shani, Hanuman or Ayyappa"),
+        DashaLord::Rahu => ("Rahu (the Moon's north node)", "ambition, confusion, foreign things and sudden turns", "outcasts, foreigners, the forgotten and people fighting addiction", "Saturday", "a coconut, or black and blue cloth", "craving and confusion", "Durga"),
+        DashaLord::Ketu => ("Ketu (the Moon's south node)", "letting go, loss, detachment and the inner life", "monks, the sick, and stray dogs", "Tuesday", "a blanket, or food for dogs", "withdrawal and sudden loss of heart", "Ganesha"),
+    };
+    let why_now = match source {
+        "dasha" => format!("{name} is running a period of your life now (its chapter or sub-chapter), so what it stands for comes to the front."),
+        "gochara" => format!("{name} is moving through a hard place counted from your birth Moon now, so it presses for a while and then moves on."),
+        _ => format!("{name} sits weak or troubled in your birth chart, so it presses all your life and asks for steady care."),
+    };
+    let life_words = life.map(|l| l.name().to_lowercase()).unwrap_or_else(|| "life".to_string());
+    format!(
+        "Why this is happening: {why_now} {cap_name} stands for {stands}, and here it presses your {life_words}.\n\n\
+         How the deeds help: in the remedial tradition every planet has its people. {cap_name}'s are {people}. Serving them is serving {name}: it is pleased and its pressure softens. That is why the deeds come first; they carry the work and need no faith.\n\n\
+         How the giving helps: {gift}, given by hand on a {day} ({name}'s day), is the classical gift for {name}.\n\n\
+         How the habits and quiet help: they work on the part of you that {name} rules, {inner}, so its pressure has less to grip.\n\n\
+         How prayer helps: {deity} is the tradition's deity for {name}. In your own faith, any prayer on a {day} that holds these people in mind does the same work.",
+        cap_name = cap(name),
+    )
 }

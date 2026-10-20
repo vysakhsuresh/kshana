@@ -39,7 +39,7 @@ internal fun bandWord(band: String): String = com.kshana.app.data.Lang.t(
         "good" -> "Good"
         "steady" -> "Steady"
         "slow" -> "Slow"
-        else -> "Hold"
+        else -> "Wait"
     },
 )
 

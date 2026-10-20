@@ -44,7 +44,7 @@ pub struct Kundali {
     pub total: f64,
     /// The eight kootas, in the classical order.
     pub kootas: Vec<Koota>,
-    /// `Excellent match`, `Very good`, `Good enough`, `Needs work`, `Hard match`.
+    /// `Excellent match`, `Very good`, `Good enough`, `Asks for care`, `Asks for much care`.
     pub verdict: String,
     /// One or two sentences.
     pub headline: String,
@@ -66,6 +66,14 @@ pub struct Kundali {
     pub frictions: Vec<String>,
     /// The classical remedies for the doshas the match carries.
     pub remedies: Vec<DoshaRemedy>,
+    /// The verdict for two people already together: never a yes or no, only how much
+    /// care the bond asks for.
+    pub together_verdict: String,
+    /// The headline for two people already together.
+    pub together_headline: String,
+    /// Every area that asks for care: what it brings, what each can do, the remedies
+    /// and the chart reason on request.
+    pub care: Vec<BondCare>,
 }
 
 /// A remedy for a dosha of the match, from the Vivaha tradition.
@@ -118,6 +126,282 @@ fn dosha_remedies(nadi: bool, bhakoot: bool, gana: bool, kuja_unbalanced: bool, 
         v.push(DoshaRemedy { dosha: "Yoni", title: "Unhurried time without a screen, at the same hour, twice a week", why: "Bodies and habits that must learn each other need kept time, not a rite.", source: "Dharma reading of the dosha", optional: false });
     }
     v
+}
+
+/// One part of the match that asks for care, read for two people who share (or will
+/// share) a life: what it brings day to day, what each can do for the other, and the
+/// remedies, deeds first and prayer as a choice. Nothing here says "do not marry": it
+/// says where to take care and how.
+#[derive(Clone, Debug, PartialEq)]
+pub struct BondCare {
+    /// The engine's key (`Nadi`, `Bhakoot`, `Gana`, `Kuja`, `Graha Maitri`, `Yoni`,
+    /// `Tara`, `Vashya`, `Varna`, `Venus`); never shown.
+    pub key: &'static str,
+    /// The plain name of the area ("Health and children").
+    pub area: String,
+    /// What it tends to bring when two such people live together, in plain words.
+    pub living: String,
+    /// What each of you can do for the other. "The first person" and "The second
+    /// person" are replaced by names on the screen.
+    pub care: Vec<String>,
+    /// The remedies for this area: deeds and giving first, prayer and rites marked
+    /// optional.
+    pub remedies: Vec<DoshaRemedy>,
+    /// The chart reason, for the person who taps "how this helps": which part of the
+    /// two charts causes it and why the remedies ease it. Names planets; shown only on
+    /// request.
+    pub how_it_helps: String,
+}
+
+/// A prayer of the person's own faith, offered for every area so no one is left with
+/// only one tradition's rites.
+fn own_faith(dosha: &'static str, title: &'static str, why: &'static str) -> DoshaRemedy {
+    DoshaRemedy { dosha, title, why, source: "Faith-neutral prayer", optional: true }
+}
+
+/// Every area of the match that asks for care, heaviest first.
+#[allow(clippy::too_many_arguments)]
+fn bond_care(
+    kootas: &[Koota],
+    all: &[DoshaRemedy],
+    a: &Natal,
+    b: &Natal,
+    na: usize,
+    nb: usize,
+    d: u8,
+    la: DashaLord,
+    lb: DashaLord,
+    ka: bool,
+    kb: bool,
+    vd: u8,
+) -> Vec<BondCare> {
+    let pts = |key: &str| kootas.iter().find(|k| k.key == key).map(|k| k.points).unwrap_or(0.0);
+    let take = |key: &'static str| -> Vec<DoshaRemedy> { all.iter().filter(|r| r.dosha == key).cloned().collect() };
+    let mut out = Vec::new();
+
+    // Nadi: the heaviest.
+    if pts("Nadi") == 0.0 {
+        let mut r = take("Nadi");
+        r.push(own_faith("Nadi", "Pray together, in your own faith, for each other's health, once a week", "Holding the other's health in mind each week keeps the care in the habit."));
+        out.push(BondCare {
+            key: "Nadi",
+            area: "Health and children".into(),
+            living: "You two have the same kind of body and rhythm. You tend to tire, fall ill and recover at the same times, so it is easy for both of you to be low together. The care this asks for is about health, and about pregnancy and children if you plan them. It is a call for care, not a sentence: many couples with this live long, healthy lives together.".into(),
+            care: vec![
+                "Look after each other's health without waiting to be asked: when one of you is unwell, the other takes over, even when tired.".into(),
+                "Keep shared meal and sleep times, and do not both work late in the same week.".into(),
+                "A yearly health check for both of you, on the same day, as a small ritual of care.".into(),
+                "If you plan a child, see a doctor early and keep every check-up; the old warning is about taking care, not about fate.".into(),
+            ],
+            remedies: r,
+            how_it_helps: format!(
+                "Nadi compares your two birth-stars ({} and {}). Both fall in the {} Nadi, which the old texts tie to the same body type (one of vata, pitta and kapha), so the same strains reach both of you. The Moon rules the body's fluids, health and the mind. Food and clothes given to the poor on a Monday, the Moon's day, is the tradition's way to strengthen the Moon: care given to others comes back as health. The Mahamrityunjaya prayer is addressed to Shiva as the giver of health and long life, the deity the tradition sets over this warning. Keeping a shared rhythm is the practical side of the same remedy.",
+                NAKSHATRA_NAMES[na], NAKSHATRA_NAMES[nb], NADI_NAMES[NADI[na] as usize]
+            ),
+        });
+    }
+
+    // Bhakoot: shared fortunes.
+    if pts("Bhakoot") == 0.0 {
+        let other = match (14 - d as i32).rem_euclid(12) { 0 => 12, x => x };
+        let (living, care): (&str, Vec<&str>) = match d {
+            2 | 12 => (
+                "Money and words are where you two rub. One of you tends to save while the other spends, and words said about money cut deeper than either of you means.",
+                vec![
+                    "Keep one shared money plan, and a small private allowance each, so neither feels watched.",
+                    "Never decide about money during a quarrel; sleep on it and talk in the morning.",
+                    "Praise in front of others, correct only in private.",
+                ],
+            ),
+            5 | 9 => (
+                "Children, beliefs and plans for the future are where you two rub. You may see faith, teachers or the raising of children differently.",
+                vec![
+                    "Respect each other's faith and teachers, even where you do not share them.",
+                    "Decide matters about children together, never one over the other's head.",
+                    "Once a month, talk about the future you each want, and listen to the end.",
+                ],
+            ),
+            _ => (
+                "Health, debts and sudden turns are where you two rub. When one of you has a hard time, the other is pulled into it.",
+                vec![
+                    "Stand by each other in illness and in money trouble; never keep a debt secret.",
+                    "Keep some savings for sudden turns, so a shock does not become a quarrel.",
+                    "When one of you is down, the other stays steady instead of sinking too.",
+                ],
+            ),
+        };
+        let mut r = take("Bhakoot");
+        r.push(own_faith("Bhakoot", "Pray together, in your own faith, for the household, on a Friday", "Asking together for the home's good joins two sets of hopes into one."));
+        out.push(BondCare {
+            key: "Bhakoot",
+            area: "Shared fortunes".into(),
+            living: format!("{living} This marks where to take care, and it eases with the steps below."),
+            care: care.into_iter().map(String::from).collect(),
+            remedies: r,
+            how_it_helps: format!(
+                "Bhakoot measures how far apart the two Moon signs are: yours sit {d} and {other} signs from each other. The texts call this distance hard because each Moon falls in a house of loss, conflict or change from the other. The Moon sign carries a person's mind and fortune, so two fortunes pull in different ways. Water, rice and white cloth given on a Monday, and a light Monday fast, strengthen and calm the Moon. Worship of the divine couple (Lakshmi-Narayana or Gauri-Shankara) is the tradition's way to join two fortunes into one. The money and talk rules work on the place where the strain shows."
+            ),
+        });
+    }
+
+    // Kuja: heat in one chart only.
+    if ka != kb {
+        let (who, other_who, n) = if ka { ("The first person", "The second person", a) } else { ("The second person", "The first person", b) };
+        let mars = n.facts.planet(DashaLord::Mars);
+        let from_moon = ((mars.sign as i64 - n.moon_sign()).rem_euclid(12) + 1) as u8;
+        let mut r = take("Kuja");
+        r.push(own_faith("Kuja", "Pray, in your own faith, for patience, on a Tuesday", "A weekly prayer for patience names the thing to watch and asks for help with it."));
+        out.push(BondCare {
+            key: "Kuja",
+            area: "Heat and quarrels".into(),
+            living: format!("{who} brings more drive, haste and temper into the home. Quarrels can flare fast and turn hurtful, and {} may feel run over. Used well, the same fire is energy that protects and builds the home.", other_who.to_lowercase()),
+            care: vec![
+                format!("{who}: spend the heat on work, exercise and repairs; never make a big decision while angry."),
+                format!("{other_who}: do not answer heat with heat. Let it cool, then talk."),
+                "Both: one rule, that a quarrel is ended, with an apology from whoever started it, before you sleep.".into(),
+            ],
+            remedies: r,
+            how_it_helps: format!(
+                "In {}'s chart, Mars sits in house {} from the rising sign and {} from the Moon: the classic Mars (Kuja) dosha, held by only one of you. Mars is the planet of fire, courage and conflict. Hanuman is the picture of strength under discipline, and red lentils are Mars' grain: given on a Tuesday, Mars' day, they turn Mars' fire into service. Hard physical work uses up the same energy on purpose, so less of it reaches the partner. When both partners carry it, it balances; here it does not, so the remedies matter.",
+                if ka { "the first person" } else { "the second person" },
+                mars.rasi_house,
+                from_moon
+            ),
+        });
+    }
+
+    // Gana: temperament.
+    if pts("Gana") <= 1.0 {
+        let mut r = take("Gana");
+        r.push(own_faith("Gana", "Pray, each in your own faith, for a gentle tongue, every evening", "A short evening prayer ends the day softly, at the very hour when sharp words come."));
+        out.push(BondCare {
+            key: "Gana",
+            area: "Temperament".into(),
+            living: "One of you is easy-going and the other quick to anger. Sharp words come, often late in the evening or when tired, and the gentler one may go quiet and store the hurt. Neither temper is wrong; they need a few rules to live together well.".into(),
+            care: vec![
+                "The quicker one: pause before replying, or walk away for ten minutes rather than say the sharp thing.".into(),
+                "The gentler one: say what hurt the same day, calmly, instead of storing it.".into(),
+                "Both: no serious talks after nine at night, and an apology before sleep.".into(),
+            ],
+            remedies: r,
+            how_it_helps: format!(
+                "Gana sorts the 27 birth-stars into three temperaments: gentle (Deva), human (Manushya) and fiery (Rakshasa). Your birth-stars, {} and {}, are {} and {}. The Moon is the mind, and its star sets the temper. Gauri (the gentle mother) and Durga (the fierce one) are two faces of one Goddess, so their worship is the tradition's picture of two tempers made one. The rule about hours and words works directly where the friction shows.",
+                NAKSHATRA_NAMES[na], NAKSHATRA_NAMES[nb], GANA_NAMES[GANA[na] as usize], GANA_NAMES[GANA[nb] as usize]
+            ),
+        });
+    }
+
+    // Graha Maitri: minds.
+    if pts("Graha Maitri") <= 1.0 {
+        let mut r = take("Graha Maitri");
+        r.push(own_faith("Graha Maitri", "Pray, in your own faith, for understanding before a hard talk", "A moment of quiet before talking turns a fight into a conversation."));
+        out.push(BondCare {
+            key: "Graha Maitri",
+            area: "Meeting of minds".into(),
+            living: "You think in different ways. What is obvious to one of you can seem strange to the other, so it is easy to feel misunderstood. Learned, the difference becomes a strength: two ways of seeing are wiser than one.".into(),
+            care: vec![
+                "Ask \"what did you mean?\" before reacting.".into(),
+                "Write the hard thing down first, then talk about it.".into(),
+                "Once a week, do one thing the other's way, without comment.".into(),
+            ],
+            remedies: r,
+            how_it_helps: format!(
+                "Graha Maitri compares the lords of your two Moon signs: {la:?} and {lb:?}, which are not friends by nature. The lord of the Moon sign colours how each mind works, so the two minds pull apart. Doing small things the other's way, and kind acts on the weekday of the other's lord ({} and {}), please both lords and bring the minds closer.",
+                weekday_of(lb),
+                weekday_of(la)
+            ),
+        });
+    }
+
+    // Yoni: physical ease.
+    if pts("Yoni") <= 1.0 {
+        let mut r = take("Yoni");
+        r.push(own_faith("Yoni", "Pray, in your own faith, for tenderness between you, on a Friday", "Asking for tenderness keeps it in mind for the week."));
+        out.push(BondCare {
+            key: "Yoni",
+            area: "Physical ease".into(),
+            living: "Your bodies, rhythms and habits are different: one of you may want closeness when the other wants rest. This can feel like rejection when it is only difference. With patience it becomes ease.".into(),
+            care: vec![
+                "Talk about what each of you likes, kindly and without blame.".into(),
+                "Keep unhurried time together, without phones, twice a week.".into(),
+                "Never use closeness as a reward or a punishment.".into(),
+            ],
+            remedies: r,
+            how_it_helps: format!(
+                "Yoni pairs each birth-star with an animal nature; yours are the {} and the {}, not natural companions in the classical table. Venus rules pleasure and closeness, and Friday is Venus' day: worship of the divine couple on a Friday is the tradition's way to bring ease. Kept, gentle time does on purpose what the stars do not do by themselves.",
+                YONI_NAMES[YONI[na]].to_lowercase(),
+                YONI_NAMES[YONI[nb]].to_lowercase()
+            ),
+        });
+    }
+
+    // Tara: luck together.
+    if pts("Tara") == 0.0 {
+        out.push(BondCare {
+            key: "Tara",
+            area: "Luck together".into(),
+            living: "Big decisions made together in a hurry tend to go wrong for you two. Made calmly, they go well.".into(),
+            care: vec![
+                "Before a big step, each of you thinks it over alone first, then you decide together.".into(),
+                "Begin big things on a good day; the app marks them under Future.".into(),
+            ],
+            remedies: vec![
+                DoshaRemedy { dosha: "Tara", title: "Give food to someone in need on the day you begin anything big together", why: "Starting with a gift turns a shared beginning into a blessed one.", source: VIVAHA, optional: false },
+                own_faith("Tara", "Pray together, in your own faith, before a big step", "A shared moment of quiet slows the hurry that causes the trouble."),
+            ],
+            how_it_helps: "Tara counts from one birth-star to the other in groups of nine. Yours fall on the 3rd, 5th or 7th of the group (the stars of danger, obstacle and loss) both ways. Giving food on a day of beginnings is the classical remedy for a bad tara, and a calm, unhurried start avoids the clash the count warns of.".into(),
+        });
+    }
+
+    // Vashya: mutual pull.
+    if pts("Vashya") == 0.0 {
+        out.push(BondCare {
+            key: "Vashya",
+            area: "Mutual pull".into(),
+            living: "Neither of you naturally gives way to the other, so closeness has to be built on purpose rather than left to happen.".into(),
+            care: vec![
+                "Take turns choosing: this week one decides, next week the other.".into(),
+                "Say thank you for small things, every day.".into(),
+            ],
+            remedies: vec![
+                DoshaRemedy { dosha: "Vashya", title: "Do one task a week together that neither of you leads, like cooking or a walk", why: "Shared work without a leader builds the pull the match does not give by itself.", source: "Dharma reading of the dosha", optional: false },
+                own_faith("Vashya", "Pray, in your own faith, for each other by name, once a week", "Praying for someone by name keeps them close."),
+            ],
+            how_it_helps: "Vashya sorts the Moon signs into five kinds (four-footed, human, water, wild and insect) and asks which kind is drawn to the other. Yours are not drawn either way. The remedy is to build the pull on purpose, which is what shared work does.".into(),
+        });
+    }
+
+    // Venus: taste in love and comfort.
+    if matches!(vd, 6 | 8) {
+        out.push(BondCare {
+            key: "Venus",
+            area: "Love and comfort".into(),
+            living: "What pleases one of you in love and comfort can puzzle the other. Gifts and gestures may miss, not for lack of love but for lack of knowing.".into(),
+            care: vec![
+                "Ask what pleases the other; do not assume.".into(),
+                "Each of you names one small thing a week that made you feel loved.".into(),
+            ],
+            remedies: vec![
+                DoshaRemedy { dosha: "Venus", title: "On a Friday, give sweets or clothes to a woman in need", why: "Giving comfort to others is the tradition's way to bring comfort home.", source: "Graha daana for Venus", optional: false },
+                own_faith("Venus", "Pray, in your own faith, in thanks for each other, on a Friday", "Thankfulness is what keeps affection noticed."),
+            ],
+            how_it_helps: format!("Your two Venus signs sit {vd} signs apart (a 6-8 distance). Venus rules love, comfort and taste, so your tastes differ. Friday is Venus' day; giving comfort to women on a Friday is the classical gift for Venus, and asking instead of assuming does the same work in daily life."),
+        });
+    }
+    out
+}
+
+fn weekday_of(l: DashaLord) -> &'static str {
+    match l {
+        DashaLord::Sun => "Sunday",
+        DashaLord::Moon => "Monday",
+        DashaLord::Mars => "Tuesday",
+        DashaLord::Mercury => "Wednesday",
+        DashaLord::Jupiter => "Thursday",
+        DashaLord::Venus => "Friday",
+        DashaLord::Saturn | DashaLord::Rahu => "Saturday",
+        DashaLord::Ketu => "Tuesday",
+    }
 }
 
 const MC: &str = "Muhurta Chintamani, Vivaha prakarana; Kerala and Tamil matching tables";
@@ -444,9 +728,9 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
     } else if total >= 18.0 {
         "Good enough"
     } else if total >= 13.0 {
-        "Needs work"
+        "Asks for care"
     } else {
-        "Hard match"
+        "Asks for much care"
     };
 
     let (ka, kwa) = kuja(a);
@@ -518,7 +802,35 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
         points_of("Yoni") <= 1.0,
     );
 
+    let care = bond_care(&kootas, &remedies, a, b, na, nb, d, la, lb, ka, kb, vd);
+    let together_verdict = if total >= 28.0 {
+        "A naturally strong bond"
+    } else if total >= 24.0 {
+        "A strong bond"
+    } else if total >= 18.0 {
+        "A good bond, with places to tend"
+    } else {
+        "A bond that grows with care"
+    }
+    .to_string();
+    let together_headline = format!(
+        "You already share a life, so this is not a yes or a no. Matching was made for choosing a partner; once two people are together, what matters is how they care for each other. {}{}",
+        if strengths.is_empty() {
+            String::new()
+        } else {
+            format!("Your bond is naturally strong in {}. ", strengths[0].split(':').next().unwrap_or("").to_lowercase())
+        },
+        match care.len() {
+            0 => "Nothing in the match stands against you.".to_string(),
+            1 => "One part of it asks for care; below is what it brings, what each of you can do for the other, and what helps.".to_string(),
+            n => format!("{n} parts of it ask for care; below is what each brings, what each of you can do for the other, and what helps."),
+        }
+    );
+
     Kundali {
+        together_verdict,
+        together_headline,
+        care,
         total,
         kootas,
         verdict: verdict.to_string(),

@@ -71,7 +71,7 @@ internal object AskPrefill {
 /** Where the reading's doors lead. */
 internal class ReadingDoors(
     val ask: () -> Unit,
-    val remedy: (String) -> Unit,
+    val remedy: (String?) -> Unit,
     val future: () -> Unit,
     val ahead: () -> Unit,
     val today: () -> Unit,
@@ -208,10 +208,18 @@ internal fun ConsultScreen(profile: BirthProfile, place: Place, settings: Engine
             val top = f.sortedByDescending { it.strength }.take(5).sortedBy { it.from.taiSeconds }
             if (top.isEmpty()) Text("A quiet year: nothing strong opens or presses for the parts of life you chose.", style = MaterialTheme.typography.bodyLarge, color = KshanaColors.TextSoft)
             for (e in top) {
-                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.Top) {
+                // A pressing stretch opens what helps with it.
+                val presses = e.kind == "pressure" || e.kind == "test_begins" || e.kind == "test_returns"
+                Row(
+                    Modifier.fillMaxWidth().then(if (presses) Modifier.clickable { doors.remedy(e.life) } else Modifier).padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
                     Box(Modifier.padding(top = 7.dp).size(8.dp).clip(CircleShape).background(if (e.kind == "opening") KshanaColors.Leaf else if (e.kind == "chapter") KshanaColors.Gold else KshanaColors.Ember))
                     Spacer(Modifier.size(10.dp))
-                    Text(e.headline, style = MaterialTheme.typography.bodyLarge, color = KshanaColors.Text)
+                    Column(Modifier.weight(1f)) {
+                        Text(e.headline, style = MaterialTheme.typography.bodyLarge, color = KshanaColors.Text)
+                        if (presses) Text("WHAT HELPS ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.padding(top = 2.dp))
+                    }
                 }
             }
         }
@@ -235,7 +243,7 @@ internal fun ConsultScreen(profile: BirthProfile, place: Place, settings: Engine
             }
             Text("Deeds first, for any faith or none. Nothing here costs money unless you choose to give.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         }
-        Door("Everything that helps, and why", onClick = { doors.remedy(tree?.life ?: "Love") })
+        Door("Everything that helps, and why", onClick = { doors.remedy(tree?.life) })
 
         // 6. How sure is this.
         SectionLabel("How sure is this?")
@@ -337,7 +345,7 @@ private fun ChartFearCard(brief: BriefingRecord?, tree: RemedyTreeRecord?, doors
             "Nothing in a chart needs an expensive pooja to be set right. Deeds, giving and patience do the real work. Be careful of anyone who asks for large sums to remove a 'dosha'.",
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Sky,
         )
-        Door("What will help, free", onClick = { doors.remedy(tree?.life ?: "Love") })
+        Door("What will help, free", onClick = { doors.remedy(tree?.life) })
         Door("How Kshana works it out", onClick = doors.how)
     }
 }

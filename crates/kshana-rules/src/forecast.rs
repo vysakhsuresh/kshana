@@ -917,7 +917,7 @@ pub(crate) fn kala_component(sky: &Sky, day: Option<&SolarDay>, obs: &Observer, 
             notes.push("a risky stretch of the day: pause, do not start".into());
         } else if in_window(at, slot_window(d, GULIKA[wd])) {
             score = 0.2;
-            notes.push("a heavy stretch of the day: let things stand".into());
+            notes.push("a quiet stretch of the day: let things stand".into());
         } else if in_window(at, abhijit_window(d)) {
             score = 1.0;
             notes.push("the day's lucky minutes: begin what matters".into());
@@ -1333,7 +1333,7 @@ pub fn moment(
         });
         let (gs, ge) = slot_window(d, GULIKA[wd]);
         windows.push(Window {
-            label: "Heavy stretch".into(),
+            label: "Quiet stretch".into(),
             start: gs,
             end: ge,
             caution: true,
