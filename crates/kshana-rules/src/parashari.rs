@@ -39,7 +39,7 @@ impl Dignity {
 }
 
 /// Exaltation sign (0 = Aries) and degree of deepest exaltation.
-fn exaltation(g: DashaLord) -> Option<(u8, f64)> {
+pub(crate) fn exaltation(g: DashaLord) -> Option<(u8, f64)> {
     match g {
         DashaLord::Sun => Some((0, 10.0)),
         DashaLord::Moon => Some((1, 3.0)),
