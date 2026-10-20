@@ -271,7 +271,7 @@ fun RectifyScreen(profile: BirthProfile, settings: EngineSettings, onBack: () ->
             SectionLabel("What the window can change")
             Text("The best-fitting times in your window. A higher fit explains more of what happened to you.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             for (c in r.bySign) CandidateRow(c, profile, best = c == r.bySign.firstOrNull(), onUse = { chosen ->
-                val local = Instants.toLocal(chosen.birth, profile.zone())
+                val local = Instants.toLocal(chosen.birth, profile.birthZone())
                 val p = profile.copy(year = local.year, month = local.monthValue, day = local.dayOfMonth, hour = local.hour, minute = local.minute, second = local.second, uncertaintyLevel = 1)
                 ProfileStore.save(context, p)
                 onSaved(p)
@@ -285,7 +285,7 @@ fun RectifyScreen(profile: BirthProfile, settings: EngineSettings, onBack: () ->
                 for (c in r.candidates.take(40)) {
                     HorizontalDivider(color = KshanaColors.LineSoft)
                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(Instants.toLocal(c.birth, profile.zone()).format(DateTimeFormatter.ofPattern("HH:mm")), fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = KshanaColors.Sky, modifier = Modifier.width(60.dp))
+                        Text(Instants.toLocal(c.birth, profile.birthZone()).format(DateTimeFormatter.ofPattern("HH:mm")), fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = KshanaColors.Sky, modifier = Modifier.width(60.dp))
                         Text(c.words, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1f))
                         Text(c.fit.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 14.sp, color = scoreColor(c.fit))
                     }
@@ -408,7 +408,7 @@ private fun ChartReaderRectify(profile: BirthProfile, settings: EngineSettings, 
     }
 
     fun useInstant(birth: ExactInstant) {
-        val local = Instants.toLocal(birth, zone)
+        val local = Instants.toLocal(birth, profile.birthZone())
         val p = profile.copy(
             year = local.year, month = local.monthValue, day = local.dayOfMonth,
             hour = local.hour, minute = local.minute, second = local.second,
@@ -729,7 +729,7 @@ private fun CandidateRow(c: CandidateRecord, profile: BirthProfile, best: Boolea
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(Instants.toLocal(c.birth, profile.zone()).format(DateTimeFormatter.ofPattern("HH:mm:ss")), fontFamily = FontFamily.Monospace, fontSize = 20.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+            Text(Instants.toLocal(c.birth, profile.birthZone()).format(DateTimeFormatter.ofPattern("HH:mm:ss")), fontFamily = FontFamily.Monospace, fontSize = 20.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
             Text("fit ${c.fit.toInt()}", fontFamily = FontFamily.Monospace, fontSize = 14.sp, color = scoreColor(c.fit))
         }
         Text(c.words, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)

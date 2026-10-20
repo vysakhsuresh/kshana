@@ -183,7 +183,10 @@ fn sunrise_matches_swisseph_default_convention() {
                 .min()
                 .unwrap_or(i128::MAX);
             assert!(
-                best < 20 * 1_000_000_000,
+                // Measured: Kochi 10.7–10.9 s, London 19.8–20.0 s (the horizon convention
+                // differs). The IERS monthly ΔT for 2026 (69.13 s) replaced an extrapolated
+                // 69.25 s, which moved every event by 0.12 s, half earlier, half later.
+                best < 21 * 1_000_000_000,
                 "{} {} {key}: off by {:.1} s",
                 r["place"],
                 r["date_utc"],

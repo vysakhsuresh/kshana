@@ -247,7 +247,7 @@ private fun Invocation(reduced: Boolean, onBegin: () -> Unit) {
 @Composable
 private fun Rewind(profile: BirthProfile, reduced: Boolean, onEnter: () -> Unit) {
     val context = LocalContext.current
-    val zone = remember(profile) { profile.zone() }
+    val zone = remember(profile) { profile.birthZone() }
     var sky by remember(profile) { mutableStateOf<RewindSky?>(null) }
     var error by remember(profile) { mutableStateOf<String?>(null) }
     val progress = remember(profile) { mutableFloatStateOf(if (reduced) 1f else 0f) }

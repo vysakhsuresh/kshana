@@ -138,8 +138,11 @@ which kernel, which UT1 source and which models produced a number.
 
 ## Ephemeris data
 
-The app ships `de421.bsp` (17 MB, 1900–2050) inside the APK's assets and opens it from
-the files directory. DE440s (32 MB, 1849–2150) replaces it when fetched from NAIF.
+The app ships JPL `de440s.bsp` (32 MB, 1849-12-26 … 2150-01-22) inside the APK's assets
+and opens it from the files directory, so births back to 1850 and forecasts to 2150 can be
+read. `build-engine.sh` copies it from `data/` (fetch with `scripts/fetch-ephemeris.sh`);
+`data/de421.bsp` (1900–2053) is kept only for the Rust tests. For births before 1850 the
+long DE441 kernel (−13200 … 17191, ~3 GB) would be needed; not bundled.
 Nothing is computed on a server.
 
 ## The look: a night sky

@@ -228,7 +228,7 @@ private class SolarDay(val startMillis: Long, val sunriseText: String?)
 fun TodayLamp(profile: BirthProfile, here: Place, settings: EngineSettings, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val zone = remember(here, profile) {
-        try { ZoneId.of(here.zoneId) } catch (e: DateTimeException) { profile.zone() }
+        try { com.kshana.app.data.CityClocks.of(here.zoneId) } catch (e: DateTimeException) { profile.zone() }
     }
     var day by remember(here, settings) { mutableStateOf<SolarDay?>(null) }
     var lit by remember { mutableStateOf(false) }

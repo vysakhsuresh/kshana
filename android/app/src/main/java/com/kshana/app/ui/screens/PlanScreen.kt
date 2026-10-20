@@ -79,7 +79,7 @@ fun PlanScreen(
     onRemedy: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
-    val zone: ZoneId = remember(place) { runCatching { ZoneId.of(place.zoneId) }.getOrDefault(ZoneId.systemDefault()) }
+    val zone: ZoneId = remember(place) { runCatching { com.kshana.app.data.CityClocks.of(place.zoneId) }.getOrDefault(ZoneId.systemDefault()) }
     val ps: List<PurposeRecord> = remember { purposes() }
     val startLocal = remember { ZonedDateTime.now(zone).plusHours(1).withMinute(0).withSecond(0).withNano(0) }
     var date by remember { mutableStateOf(startLocal.toLocalDate()) }

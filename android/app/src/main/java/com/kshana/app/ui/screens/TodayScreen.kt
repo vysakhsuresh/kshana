@@ -89,7 +89,7 @@ fun TodayScreen(
 ) {
     val context = LocalContext.current
     val zone = remember(here, profile) {
-        try { ZoneId.of(here.zoneId) } catch (e: DateTimeException) { profile.zone() }
+        try { com.kshana.app.data.CityClocks.of(here.zoneId) } catch (e: DateTimeException) { profile.zone() }
     }
     var now by remember { mutableStateOf(Instants.now()) }
     var daily by remember { mutableStateOf<DailyRecord?>(null) }

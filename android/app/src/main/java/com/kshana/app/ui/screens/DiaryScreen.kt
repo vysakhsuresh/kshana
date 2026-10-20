@@ -69,7 +69,7 @@ fun DiaryScreen(profile: BirthProfile, here: Place, settings: EngineSettings, on
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val zone = remember(here, profile) {
-        try { ZoneId.of(here.zoneId) } catch (e: DateTimeException) { profile.zone() }
+        try { com.kshana.app.data.CityClocks.of(here.zoneId) } catch (e: DateTimeException) { profile.zone() }
     }
     var entries by remember(profile.name) { mutableStateOf(DiaryStore.entries(context, profile.name)) }
     var text by remember { mutableStateOf("") }

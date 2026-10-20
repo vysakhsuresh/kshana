@@ -70,8 +70,8 @@ days); Us (the thirty-six-point match, Kuja dosha, the pair this second and over
 thirty-six months, questions answered from both charts); the Book (chapters and pages,
 every sade sati and dhaiya to the second, Jupiter's passages, the returns). Remaining:
 calibration of weights against recorded outcomes, notifications at
-shifts the user chooses, widgets, Malayalam and Hindi copy, DE440s so the Book sees
-past 2053.
+shifts the user chooses, widgets, Malayalam and Hindi copy, DE441 for births before
+1850 (the app ships DE440s, 1849–2150).
 
 **Always.** No number ships without a comparison test, and every disagreement with
 another ephemeris is written up in `docs/PRECISION.md`.

@@ -29,8 +29,18 @@ object EngineProvider {
         engine = null
     }
 
+    /**
+     * The bundled planet file: JPL DE440s (1849-12-26 … 2150-01-22), so births back to 1850
+     * and forecasts to 2150 can be read. Builds that predate it shipped DE421 (1900–2053); a
+     * copy left in the files directory by such a build is removed once DE440s is in place.
+     */
+    private const val KERNEL = "de440s.bsp"
+    private const val OLD_KERNEL = "de421.bsp"
+
     private fun open(context: Context): Engine {
-        val spk = ensureAsset(context, "de421.bsp")
+        val spk = runCatching { ensureAsset(context, KERNEL) }
+            .onSuccess { runCatching { File(context.filesDir, OLD_KERNEL).delete() } }
+            .getOrElse { ensureAsset(context, OLD_KERNEL) }
         val eop = runCatching { ensureAsset(context, "finals2000A.all") }.getOrNull()
         runCatching { setRiseConvention(ProfileStore.settings(context).riseConvention) }
         return Engine.open(spk.absolutePath, eop?.absolutePath)
@@ -39,8 +49,14 @@ object EngineProvider {
     private fun ensureAsset(context: Context, name: String): File {
         val target = File(context.filesDir, name)
         if (!target.exists() || target.length() == 0L) {
+            // Copy to a temporary name first so a killed process never leaves half a kernel.
+            val part = File(context.filesDir, "$name.part")
             context.assets.open(name).use { input ->
-                target.outputStream().use { output -> input.copyTo(output) }
+                part.outputStream().use { output -> input.copyTo(output) }
+            }
+            if (!part.renameTo(target)) {
+                part.delete()
+                error("could not install $name")
             }
         }
         return target

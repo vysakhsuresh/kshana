@@ -37,6 +37,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kshana.app.data.BirthProfile
+import com.kshana.app.data.CityClocks
+import com.kshana.app.data.OldClockCard
 import com.kshana.app.data.FamilyStore
 import com.kshana.app.data.Place
 import com.kshana.app.data.ProfileStore
@@ -94,6 +96,8 @@ fun BirthScreen(
     var latitude by remember { mutableStateOf("%.4f".format(initialPlace.latitude)) }
     var longitude by remember { mutableStateOf("%.4f".format(initialPlace.longitude)) }
     var zoneId by remember { mutableStateOf(initialPlace.zoneId) }
+    // The zone the picked place itself carries, so the old-clock hint can offer to go back to it.
+    var placeZone by remember { mutableStateOf(initialPlace.zoneId) }
     var problem by remember { mutableStateOf<String?>(null) }
 
     // Online place search (any place on Earth). Off until the user allows online features.
@@ -114,6 +118,7 @@ fun BirthScreen(
         latitude = "%.4f".format(p.latitude)
         longitude = "%.4f".format(p.longitude)
         zoneId = p.zoneId
+        placeZone = p.zoneId
         query = ""
         earthResults = emptyList()
         earthError = null
@@ -144,7 +149,7 @@ fun BirthScreen(
         if (h == null || mi == null) { problem = "The time needs an hour and a minute. If it is unknown, enter 12:00 and set the slider to unknown."; return null }
         if (lat == null || lon == null || lat < -90 || lat > 90 || lon < -180 || lon > 180) { problem = "Latitude must be −90…90 and longitude −180…180."; return null }
         val local = try { LocalDateTime.of(y, mo, d, h, mi, s) } catch (e: DateTimeException) { problem = "That date and time do not exist on the calendar."; return null }
-        val zone = try { ZoneId.of(zoneId.trim()) } catch (e: DateTimeException) { problem = "Unknown time zone id. Use an IANA name such as Asia/Kolkata."; return null }
+        val zone = CityClocks.zone(zoneId.trim(), local) ?: run { problem = "Unknown time zone id. Use an IANA name such as Asia/Kolkata."; return null }
         // A clock time inside a summer-time change is either skipped (it never happened) or
         // happened twice; java.time would silently move or pick one, an hour off the birth.
         val offsets = zone.rules.getValidOffsets(local)
@@ -245,7 +250,7 @@ fun BirthScreen(
             NumberField(longitude, { longitude = it.filter { c -> c.isDigit() || c == '.' || c == '-' } }, "Longitude °E", Modifier.weight(1f), decimal = true)
         }
         Field(zoneId, { zoneId = it }, "Time zone (IANA id)", Modifier.fillMaxWidth())
-        OldCityClock(year.toIntOrNull(), latitude.toDoubleOrNull(), longitude.toDoubleOrNull(), zoneId) { zoneId = it }
+        OldCityClock(year.toIntOrNull(), latitude.toDoubleOrNull(), longitude.toDoubleOrNull(), zoneId, placeZone) { zoneId = it }
         Field(placeName, { placeName = it }, "Place name", Modifier.fillMaxWidth())
 
         SectionLabel("How sure is the time?")
@@ -331,35 +336,30 @@ private fun fieldColors() = OutlinedTextFieldDefaults.colors(
 )
 
 /**
- * Bombay kept its own clock (Bombay Time, UTC+04:51) until 1955 and Calcutta its own
- * (Calcutta Time, UTC+05:53:20) until 1948; the time zone database files both under
- * Indian time from 1906, so an old birth record written in the city's clock would be
- * read 39 or 23 minutes off. When the place and year fit, say so and offer the city's
- * clock; the person decides, since many records of the time were already in IST.
+ * Old clocks. Bombay kept its own clock (Bombay Time, UTC+04:51) until 1955 and Calcutta its
+ * own (Calcutta Time, UTC+05:53:20) until 1948, while the time zone database files both
+ * under Indian time from 1906 ([CityClocks] has the sources). Places in Greater Bombay and
+ * Calcutta now carry the city-clock zone ("Kshana/Bombay", "Kshana/Calcutta") by default, which
+ * is the city clock before the switch and IST after it; this card says which clock is in use
+ * and lets the person change it, since many records of the time were already written in IST.
+ * For records before 1906, when towns kept the sun's own time, it also offers local mean time
+ * (longitude / 15 hours).
  */
 @Composable
-private fun OldCityClock(year: Int?, lat: Double?, lon: Double?, zone: String, onUse: (String) -> Unit) {
+private fun OldCityClock(year: Int?, lat: Double?, lon: Double?, zone: String, placeZone: String, onUse: (String) -> Unit) {
     if (year == null || lat == null || lon == null) return
-    val near = { la: Double, lo: Double -> kotlin.math.abs(lat - la) < 0.6 && kotlin.math.abs(lon - lo) < 0.6 }
-    val (city, offset, until, gap) = when {
-        near(19.08, 72.88) && year < 1955 -> listOf("Bombay", "+04:51", "1955", "39")
-        near(22.57, 88.36) && year < 1948 -> listOf("Calcutta", "+05:53:20", "1948", "23")
-        else -> return
-    }
-    val using = zone.trim() == offset
-    androidx.compose.foundation.layout.Column(
+    val card = OldClockCard.of(year, lat, lon, zone, placeZone) ?: return
+    Column(
         Modifier.fillMaxWidth().glass(12.dp).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(
-            if (using) "Using $city Time (UTC$offset), the city's own clock before $until."
-            else "$city kept its own clock until $until, $gap minutes apart from Indian Standard Time. If the record was written in $city Time (common for births at home and in older registers), use it; if it says IST, keep Asia/Kolkata.",
-            style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft,
-        )
-        Text(
-            if (using) "USE INDIAN STANDARD TIME INSTEAD ›" else "USE $city TIME ›".uppercase(),
-            style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
-            modifier = Modifier.clickable { onUse(if (using) "Asia/Kolkata" else offset) }.padding(vertical = 4.dp),
-        )
+        for (l in card.lines) Text(l, style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
+        for ((label, id) in card.actions) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
+                modifier = Modifier.clickable { onUse(id) }.padding(vertical = 4.dp),
+            )
+        }
     }
 }

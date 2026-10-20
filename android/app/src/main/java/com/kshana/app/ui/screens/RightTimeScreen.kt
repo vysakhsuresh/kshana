@@ -63,7 +63,7 @@ fun RightTimeScreen(
     onDay: () -> Unit = {},
 ) {
     val context = LocalContext.current
-    val zone = remember(here) { try { ZoneId.of(here.zoneId) } catch (e: DateTimeException) { ZoneId.systemDefault() } }
+    val zone = remember(here) { try { com.kshana.app.data.CityClocks.of(here.zoneId) } catch (e: DateTimeException) { ZoneId.systemDefault() } }
     var daily by remember { mutableStateOf<DailyRecord?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }

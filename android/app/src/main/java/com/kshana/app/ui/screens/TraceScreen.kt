@@ -625,7 +625,7 @@ fun NextChanges(profile: BirthProfile, here: Place, settings: EngineSettings, co
 
 /** Where the person is now, falling back to the birth zone and then the device. */
 private fun zoneFor(here: Place, profile: BirthProfile): ZoneId =
-    try { ZoneId.of(here.zoneId) } catch (e: DateTimeException) { profile.zone() }
+    try { com.kshana.app.data.CityClocks.of(here.zoneId) } catch (e: DateTimeException) { profile.zone() }
 
 /** Local midnight of a civil date as an exact instant. */
 private fun dayStart(date: LocalDate, zone: ZoneId): ExactInstant =

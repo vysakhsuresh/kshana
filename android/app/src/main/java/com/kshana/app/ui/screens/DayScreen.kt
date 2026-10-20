@@ -125,7 +125,7 @@ private class GhatiReading(val ghati: Int, val vighati: Int, val vipala: Double)
 fun DayScreen(profile: BirthProfile?, here: Place, settings: EngineSettings, onBack: () -> Unit) {
     val context = LocalContext.current
     val zone = remember(here, profile) {
-        try { ZoneId.of(here.zoneId) } catch (e: DateTimeException) { profile?.zone() ?: ZoneId.systemDefault() }
+        try { com.kshana.app.data.CityClocks.of(here.zoneId) } catch (e: DateTimeException) { profile?.zone() ?: ZoneId.systemDefault() }
     }
 
     // The clock: ticks every second. Only the composables that read it recompose at that rate.

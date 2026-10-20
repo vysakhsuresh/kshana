@@ -361,7 +361,8 @@ mod tests {
             e
         );
         let m = upagraha_instant(&day, &KOCHI, Upagraha::Mandi, KalaPoint::Middle, false);
-        assert_eq!(m.ns_since(s), e.ns_since(m));
+        // The middle splits an odd nanosecond count one way.
+        assert!((m.ns_since(s) - e.ns_since(m)).abs() <= 1);
         // longitudes: Gulika at the start, Mandi at the middle, both ascendants
         let g = upagraha_longitude(
             None,
