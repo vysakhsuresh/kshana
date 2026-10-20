@@ -783,7 +783,7 @@ private fun RingWithTrace(m: MomentRecord, tick: Instant, size: androidx.compose
 
 /** A ring filled to `score`/100 with the number inside. */
 @Composable
-internal fun ScoreRing(score: Double, size: androidx.compose.ui.unit.Dp, stroke: androidx.compose.ui.unit.Dp, label: String? = null) {
+internal fun ScoreRing(score: Double, size: androidx.compose.ui.unit.Dp, stroke: androidx.compose.ui.unit.Dp, label: String? = null, shown: String? = null) {
     val color = scoreColor(score)
     // The ring draws itself to its number, and carries a soft light of its own colour.
     val sweep by androidx.compose.animation.core.animateFloatAsState(
@@ -806,7 +806,7 @@ internal fun ScoreRing(score: Double, size: androidx.compose.ui.unit.Dp, stroke:
             }
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(score.toInt().toString(), fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium, fontSize = (size.value / 3.2).sp, color = KshanaColors.Text)
+            Text(shown ?: score.toInt().toString(), fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium, fontSize = (size.value / 3.2).sp, color = KshanaColors.Text)
             if (label != null) Text(label, style = MaterialTheme.typography.labelSmall, color = color)
         }
     }

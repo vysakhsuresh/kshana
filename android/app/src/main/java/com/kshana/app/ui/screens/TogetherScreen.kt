@@ -219,9 +219,9 @@ fun TogetherScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    ScoreRing(k.total / 36.0 * 100.0, size = 84.dp, stroke = 7.dp, label = "of 36")
+                    ScoreRing(k.total / 36.0 * 100.0, size = 84.dp, stroke = 7.dp, label = "of 36", shown = pointsWord(k.total))
                     Column(Modifier.weight(1f)) {
-                        Text(if (together) "YOUR BOND · ${"%.1f".format(k.total)} points" else "THE MATCH · ${"%.1f".format(k.total)} points", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
+                        Text(if (together) "YOUR BOND" else "THE MATCH", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
                         Text(
                             if (together) k.togetherVerdict else k.verdict,
                             style = MaterialTheme.typography.displayMedium,
@@ -510,7 +510,7 @@ private fun MatchTwo(people: List<BirthProfile>, settings: EngineSettings, onRem
         Text("Pick two different people.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
     } else if (r != null) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            ScoreRing(r.total / 36.0 * 100.0, size = 64.dp, stroke = 6.dp, label = "of 36")
+            ScoreRing(r.total / 36.0 * 100.0, size = 64.dp, stroke = 6.dp, label = "of 36", shown = pointsWord(r.total))
             Column(Modifier.weight(1f)) {
                 val na = people[a].name.substringBefore(' ')
                 val nb = people[b].name.substringBefore(' ')
@@ -730,4 +730,10 @@ private fun CoupleChart(c: CoupleRecord) {
         line({ it.together }, KshanaColors.Gold, 3f)
         drawCircle(KshanaColors.Gold, 5f, Offset(nowIdx * stepX, y(s[nowIdx].together)))
     }
+}
+
+/** 15.0 reads as "15", 15.5 as "15½": the points out of 36, as the dial shows them. */
+private fun pointsWord(t: Double): String {
+    val whole = t.toInt()
+    return if (t - whole >= 0.5) "$whole½" else "$whole"
 }
