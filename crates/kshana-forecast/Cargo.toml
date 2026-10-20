@@ -1,0 +1,26 @@
+[package]
+name = "kshana-forecast"
+description = "Forecasts for a person: transits over the natal chart, Sade Sati, the day's good and bad hours, the life map"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+kshana-time = { workspace = true }
+kshana-ephem = { workspace = true }
+kshana-sky = { workspace = true }
+kshana-events = { workspace = true }
+kshana-chart = { workspace = true }
+kshana-vedic = { workspace = true }
+kshana-western = { workspace = true }
+kshana-rules = { workspace = true }
+kshana-solver = { workspace = true }
+
+[dev-dependencies]
+kshana-houses = { workspace = true }
+
+[lints]
+workspace = true

@@ -49,6 +49,7 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.cos
 import kotlin.math.sin
+import com.kshana.app.ui.sky.KshanaFonts
 
 private val SIGN_GLYPHS = listOf("♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓")
 
@@ -93,7 +94,7 @@ fun NowScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("KSHANA", color = KshanaColors.Gold, fontFamily = FontFamily.Serif, fontSize = 22.sp, letterSpacing = 7.sp)
+            Text("KSHANA", color = KshanaColors.Gold, fontFamily = KshanaFonts.serif, fontSize = 22.sp, letterSpacing = 7.sp)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     "ASK",
@@ -124,10 +125,10 @@ private fun Clock(tickMillis: Long) {
     // microseconds within the second, from the monotonic clock so the digits keep moving
     val micro = ((System.nanoTime() / 1_000) % 1_000_000).toString().padStart(6, '0')
     Column {
-        Text(date, fontFamily = FontFamily.Serif, fontSize = 20.sp, color = KshanaColors.TextSoft)
+        Text(date, fontFamily = KshanaFonts.serif, fontSize = 20.sp, color = KshanaColors.TextSoft)
         Row(verticalAlignment = Alignment.Bottom) {
             Text(hms, style = MaterialTheme.typography.headlineLarge, color = KshanaColors.Text)
-            Text(".${micro.substring(0, 3)} ${micro.substring(3)}", fontFamily = FontFamily.Monospace, fontSize = 20.sp, color = KshanaColors.Gold, modifier = Modifier.padding(start = 6.dp, bottom = 6.dp))
+            Text(".${micro.substring(0, 3)} ${micro.substring(3)}", fontFamily = KshanaFonts.mono, fontSize = 20.sp, color = KshanaColors.Gold, modifier = Modifier.padding(start = 6.dp, bottom = 6.dp))
         }
         Text("${local.zone.id} · UTC${local.offset}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
     }
@@ -172,7 +173,7 @@ private fun Wheel(chart: ChartRecord) {
     }
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         Text("ASCENDANT", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
-        Text(dms(asc), fontFamily = FontFamily.Monospace, fontSize = 18.sp, color = KshanaColors.Text)
+        Text(dms(asc), fontFamily = KshanaFonts.mono, fontSize = 18.sp, color = KshanaColors.Text)
         Text("${SIGN_GLYPHS[(asc / 30).toInt() % 12]} ${signName(asc)} · MC ${dms(mc)}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
     }
 }
@@ -196,7 +197,7 @@ private fun PanchangaRow(chart: ChartRecord) {
 private fun Tile(label: String, value: String, modifier: Modifier = Modifier) {
     Column(modifier.padding(top = 8.dp)) {
         Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
-        Text(value, fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text)
+        Text(value, fontFamily = KshanaFonts.serif, fontSize = 17.sp, color = KshanaColors.Text)
     }
 }
 

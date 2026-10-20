@@ -310,6 +310,20 @@ house marked favourable by the transit table (2, 5, 7, 9, 11). Returns are the i
 Saturn, Jupiter and Rahu stand again at their natal sidereal longitude, from two years
 after birth, with crossings under 1.5 years apart counted once.
 
+## Rectification (chart pages: KP promise and the dasha levels)
+
+Each candidate birth instant in the window is cast and scored per event, then averaged.
+
+| Consideration | Weight | Source |
+|---|---|---|
+| The event's area is promised by the cusp sub-lord (KS-K-0001) | 0.30, plus 0.10 × strength | KP Reader III |
+| Vimshottari levels (maha, antar, pratyantar) whose lords signify the area at the event | 0.40 × agreeing levels / 3 | KP Reader III |
+| Parashari quality of the running antardasha lord for the area | 0.20 | BPHS, Dasha phala |
+
+The quantity that changes between candidates is the Ascendant and its sub-lord; the
+screen shows both, and says that candidates within 0.05 of each other are not
+distinguishable without more events.
+
 ## Parihara
 
 Remedies are keyed to the graha located as the cause (the weakest running period lord,
@@ -374,3 +388,160 @@ Measured with three sets of phrasings (tests `every_phrasing…`, `held_out`, `t
 set of 94 written after, first run 54 right / 27 unsure / 13 wrong (several dangerous),
 after the gate and general rules 61 right / 33 unsure / 0 wrong. A wrong answer is a
 failure; "not sure, pick one" is the safe outcome.
+
+## Compatibility
+
+| Id | Rule | Source |
+|---|---|---|
+| (Ashtakoota) | Eight kutas of the two Moons scored out of 36: Varna 1 (Moon-sign class, groom's not below bride's), Vashya 2 (control groups, the published 5×5 table), Tara 3 (nakshatra count mod 9, 3/5/7 fail, each direction 1.5), Yoni 4 (the symmetric 14-animal table), Graha Maitri 5 (natural friendship of the Moon lords), Gana 6 (Deva/Manushya/Rakshasa: same 6, Deva–Manushya 5, Deva–Rakshasa 1, Manushya–Rakshasa 0), Bhakoot 7 (0 for 2/12, 5/9, 6/8), Nadi 8 (0 when the same). Verdict bands: ≥ 28 excellent, ≥ 24 good, ≥ 18 acceptable, else weak | Muhurta Chintamani; the tables as published across Indian almanacs (convention: no exceptions applied automatically; the engine reports Nadi and Bhakoot dosha and states that some texts lift them) |
+| (Mangal dosha) | Mars in 1, 2, 4, 7, 8 or 12 from the lagna, the Moon or Venus (convention: South Indian, including the 2nd). Cancellations reported: Mars in own sign, exalted, in Cancer or Leo, aspected or joined by Jupiter. Two uncancelled doshas cancel each other | Common usage; BPHS has no single verse |
+| (synastry) | Cross-aspects between the two tropical charts within 6°, weighted by closeness and by the Sun, Moon, Mercury, Venus and Mars; trine and sextile harmonious, square and opposition tense, conjunction neutral | Western practice |
+
+## Gochara (transits)
+
+| Id | Rule | Source |
+|---|---|---|
+| (Sade Sati) | Saturn in the sign before, over, or after the natal Moon: three phases of about 2½ years; each boundary is an exact sidereal ingress solved to 1 µs | Phaladeepika 26; common usage |
+| (from the Moon) | Jupiter favourable in 2, 5, 7, 9, 11 from the Moon; Saturn favourable in 3, 6, 11; others reported as demanding | Phaladeepika 26, Gochara phala |
+| (over natal) | A transiting graha in the same sidereal sign as a natal point, with the exact separation | Convention |
+
+## Daily (for one person)
+
+| Id | Rule | Source |
+|---|---|---|
+| (Tara bala) | Count from the natal Moon's nakshatra to the transit Moon's, mod 9: Janma, Sampat, Vipat, Kshema, Pratyak, Sadhana, Naidhana, Mitra, Parama Mitra; 3, 5, 7 unfavourable | Muhurta Chintamani |
+| (Chandra bala) | The transit Moon in 1, 3, 6, 7, 10 or 11 from the natal Moon sign is favourable | Muhurta Chintamani |
+| (hours) | Rahu kala from the weekday and the actual sunrise; horas of Jupiter, Venus, Mercury and the Moon as good windows; Abhijit around local noon | Standard almanac rules |
+
+## Calendar
+
+Tithi observances (Ekadashi, Pradosha, Chaturthi, Ashtami, Purnima, Amavasya) carry the
+exact instant the tithi begins and the civil day it is observed on: the day whose
+sunrise, at the person's place, falls inside the tithi (the udaya rule; convention:
+no Vaishnava/Smarta split applied). Lunations are the exact Sun–Moon conjunction or
+opposition. Sankranti is the Sun's exact entry into a sidereal sign.
+
+## Jaimini
+
+Chara karakas use the seven-planet scheme (Sun through Saturn, Rahu excluded), ranked by
+degree within the sign; the eight-karaka scheme with Rahu is a known alternative and is
+not used. Arudha padas follow the standard exception (the pada falling in the house or
+its 7th moves to the 10th from there).
+
+## Naming
+
+The 27 × 4 syllable table (namakshara) is the one printed in Indian almanacs; regional
+variants exist and the app shows the nakshatra and pada beside the syllable so a family
+can consult its own.
+
+## The ledger and calibration
+
+| Id | Rule | Source |
+|---|---|---|
+| (fit) | For a logged event, fit = 0.5 × dasha support + 0.3 × Parashari period quality + 0.2 × transit support, each in [0, 1]. Dasha support is the share of the five Vimshottari levels, from the mahadasha down, whose lords signify the area's houses (for a Loss or Crisis, its negating houses); period quality is the mean for the maha and antar lords (inverted for an adverse event); transit support is Jupiter's and Saturn's standing from the natal Moon by the classical table, shifted by a running Sade Sati | KP timing funnel, BPHS dasha phala, Phaladeepika 26 |
+| (baseline) | Every logged event is matched by instants nobody logged, evenly spread over the life in the same area and orientation; lift = mean fit of events − mean fit of the baseline. Zero lift is chance. Brier = mean of (fit − 1)² over events and fit² over the baseline; five reliability bins | Brier (1950); forecasting practice |
+| (net KP support) | A dasha lord's net support for an area = fulfilling significations weighted by level ÷ group size − 0.8 × negating significations ÷ negating size + 0.2 if the primary cusp's house is signified, clamped to [0, 1]; the funnel's strength blends the levels 0.35 / 0.30 / 0.20 / 0.10 / 0.05 | KP Readers III and VI (the lord must signify the matter's houses and not the houses that deny it) |
+
+## Honest measurement
+
+| Id | Rule | Source |
+|---|---|---|
+| (coverage) | The chance baseline for an area is exact on the dasha cells: the span is cut at every maha, antar and pratyantar boundary, the sookshma and prana shares are computed analytically inside each cell (f = Σ years of supporting lords ÷ 120, both levels f²), the transit factor is sampled once per cell at its midpoint; coverage = the fraction of the span with fit ≥ 0.5. The number of logged events chance alone would explain follows the Poisson-binomial of the per-event coverages; an area covered more than 70 % of the time "cannot fail" and is shown but kept out of the headline | the KP timing funnel; Poisson-binomial tail by polynomial product |
+| (specificity) | A hit in an area also counts for every other area that shares its tested houses; the weight 1 ÷ (1 + expected equivalent areas) discounts it. A weight, not a probability | the forking-paths discount for a fixed taxonomy |
+| (time-shift) | Surrogate test: every logged event is moved together by T·j ÷ (k+1), j = 1..k, wrapped into the span; p = (1 + the number of shifts whose mean fit ≥ the real mean) ÷ (1 + k) | Phipson and Smyth (2010); circular shift surrogates |
+| (metrics) | Brier, the climatological reference ō(1−ō), skill = 1 − BS ÷ BS_ref, Murphy's reliability, resolution and uncertainty with the within-bin terms so the identity is exact, ECE, Wilson intervals. No percentage from fewer than ten resolutions; a bin shown at five; the curve at twenty | Brier (1950); Murphy (1973); Stephenson, Coelho and Jolliffe (2008); Wilson (1927) |
+| (sealed) | A forecast counts only if sealed before its window opens; its id is the SHA-256 of everything except the resolution, so any later edit shows; Brier is taken over resolved forecasts only | forecasting practice; FIPS 180-4 |
+| (decoy) | Asked-first retrodiction: the strongest antardashas of the lived span are the signals, decoys of the closest log-length come from the weakest half, the order is shuffled by a seed committed as a hash before the question is shown; the grade is the exact binomial tail against 1 ÷ (decoys + 1) | the asked-first design; binomial test |
+| (posterior) | The birth-time posterior over the stated window: one chart per candidate (at most 400, the step widened to fit), log L = Σ ln(max(fit, 0.05) ÷ max(mean fit over the lived span, 0.05)), uniform prior; MAP, mean, HPD50 and HPD90 as hulls with the number of separate runs | likelihood ratio of support to coverage; Rodden's C rating for the words |
+
+## Gochara scoring
+
+| Id | Rule | Source |
+|---|---|---|
+| (vedha) | Favourable houses from the Moon and their obstruction houses per graha: Sun 3→9, 6→12, 10→4, 11→5; Moon 1→5, 3→9, 6→12, 7→2, 10→4, 11→8; Mars and Saturn 3→12, 6→9, 11→5; Mercury 2→5, 4→3, 6→9, 8→1, 10→8, 11→12; Jupiter 2→12, 5→4, 7→3, 9→10, 11→8; Venus 1→8, 2→7, 3→1, 4→10, 5→9, 8→5, 9→11, 11→6, 12→3; Rahu and Ketu as Saturn by convention. Sun–Saturn and Moon–Mercury do not obstruct each other | Phaladeepika 26.3–26.9; B. V. Raman, Hindu Predictive Astrology ch. 34 |
+| (Moorthi) | At a graha's ingress, the transit Moon's house from the natal Moon: 1, 6, 11 gold; 2, 5, 9 silver; 3, 7, 10 copper; 4, 8, 12 iron | Common usage |
+| (kakshya) | Each sign in eight parts of 3°45′ lorded by Saturn, Jupiter, Mars, Sun, Venus, Mercury, Moon, Lagna; a transit through a kakshya is favourable when that lord gave the graha a bindu in the sign | BPHS Ashtakavarga; Jagannatha Hora |
+| (score) | verdict 0.40, BAV 0.25 (over 8), SAV 0.15 (28 at the middle), Moorthi 0.10, kakshya 0.10, absent terms renormalised | Convention, stated |
+
+## Further dashas
+
+Every dasha balance is taken from the geocentric Moon with a 365.25-day year; the
+topocentric toggle changes placements only. Both are stated in the provenance.
+
+Yogini (36-year cycle, starting yogini = (nakshatra number + 3) mod 8, antardashas proportional from the running yogini; BPHS), Ashtottari (108 years; Sun 6, Moon 15, Mars 8, Mercury 17, Saturn 10, Jupiter 19, Rahu 12, Venus 21; nakshatra groups alternating 4/3 from Ardra; applies when Rahu is in a kendra or trikona from the lagna lord and not in the lagna; BPHS 47), Kalachakra (the 108-row BPHS table, paramayus 100/85/83/86, deha and jeeva signs, pada-fraction balance; BPHS 46), Chara (K. N. Rao: direction by the ninth house's oddness; years = count to the lord's sign minus one, own sign 12, exalted +1, debilitated −1; antardashas start from the sign after the dasha sign). Every boundary is integer arithmetic from the birth instant.
+
+## Western timing
+
+Secondary progressions (day-for-a-year on the mean tropical year of 365.2422 d, progressed MC by solar arc, progressed Asc from it at the natal latitude), solar arc (progressed Sun − natal Sun), annual profections turning at the exact solar return with twelve equal months, firdaria (75-year cycle, day sequence Sun 10 … South Node 2, night from the Moon, sevenfold sub-periods in Chaldean order), zodiacal releasing (360-day year, Aries 15 … Pisces 12, levels to 5-hour units, loosing of the bond once per parent, peaks at the 1st, 4th, 7th and 10th from the lot), lunar and demi returns, transit hits to every natal point with the Ptolemaic aspects. Sources are cited in the crate's doc comments.
+
+## Remedies, cause and karma
+
+| Id | Rule | Source |
+|---|---|---|
+| KS-R-KARMA-01 | The karma class of an affliction: the Moon-versus-Sun test (sign first, else the hora of the sign) and the concurrence of natal affliction, running period and transit decide dridha (endured with discipline), dridha-adridha (softened by remedy) or adridha (changed by action); the kind in play is prarabdha when the planet runs a period, sanchita when natally afflicted but not running, kriyamana otherwise. Every remedy carries the sentence its class may claim | Prasna Marga ch. 1 st. 101 and ch. 15; BPHS ch. 7 |
+| KS-R-SHAPA-01 … 08 | Curse yogas: pitru, sarpa, matru, bhratru, matula, brahma, patni, preta, by the karaka's affliction in the 5th and its companions | BPHS ch. 85 (Santhanam vol. 2; verify marks kept in the source strings) |
+| KS-R-BADH-01 | Badhaka: the 11th for movable, 9th for fixed, 7th for dual lagnas; the offended being by the badhakesh's companions; the remedy kind by the tattva of its dispositor | Prasna Marga ch. 15 |
+| KS-R-DASHA-* | The dasha-lord formulae: japa, daana and conduct per period lord when it runs with severity ≥ 0.5 | BPHS chs. 51–60 |
+| KS-R-DUTY-nn | House duties: the domain, karaka, conduct, seva and daana of each house, giving the Karma and Seva rows for an area | Classical house significations |
+| KS-R-GEM-01 | Gems are listed, never recommended: allowed text only when the lord owns 1, 5 or 9 free of 6, 8 and 12 and is weak | Phaladeepika |
+| (timing) | A remedy's windows are exact: the planet's weekday from the true sunrise, its horas on that day, its tithis and nakshatras, with Rahu kala excluded and Brahma muhurta offered | Muhurta Chintamani; the solved sunrise |
+| (ledger) | Each commitment plans exact cue instants and records done instants on the device clock; kept/planned over 7 and 40 days, no streaks | Habit research as cited in the engine docs |
+
+Tables: `GRAHA_SHANTI` (Yajnavalkya 1.295–309, Matsya Purana 93), `MANTRA_DOSES` with the
+Kali multiplier marked as practice, `VRATAS` (Rahu and Ketu by the Lal Kitab 43-day
+convention), `GEMS`, `HOUSE_DUTIES`.
+
+## The day's clocks
+
+Ghati readouts under three named conventions (fixed 24 minutes; 30 per day and 30 per
+night; 60 per sunrise-to-sunrise). The thirty muhurtas and their qualities follow
+Muhurta Chintamani as tabulated; choghadiya day and night sequences follow Drik
+Panchang and the JHora tables (the night sequence is its own cycle, not the day's
+restarted). Upagraha kalas per BPHS 3.66–67 with the start/middle/end conventions
+named and JHora's defaults. Special lagnas per BPHS ch. 3 and 5; Sree lagna = lagna +
+360° × the Moon's nakshatra fraction. Gandanta ±3°20′ of the water–fire junctions;
+Panchaka from 0° Aquarius to the end of Revati; Bhadra = Vishti karana; nine
+inauspicious yogas. The Pancha Pakshi activity matrix is decoded from the JHora
+database and could not be verified against a primary text: the engine marks those
+functions and the app says so.
+
+The sunrise every clock hangs on follows the chosen convention: Hindu (the Sun's
+centre on the true horizon) by default, or Western (the refracted upper limb), set
+once in Settings and applied to every ghati, hora, choghadiya and muhurta.
+
+## Eclipses
+
+Lunar: apparent Moon against the apparent anti-Sun, Danjon's shadow enlargement by
+default (Chauvenet and none selectable), contacts P1 U1 U2 U3 U4 P4 as roots to 1 µs,
+magnitudes and gamma in NASA's convention. Solar: the fundamental-plane geometry with
+exact cones and the projected ellipsoid, kinds per Meeus ch. 54, local contacts from
+topocentric directions. Saros by Kluepfel's reduction, anchored and tested on seven
+eclipses. Measured against NASA: every tested contact within 5 s.
+
+## Prasna Marga and Jaimini extras
+
+| Id | Rule | Source |
+|---|---|---|
+| (sphutas) | Trisphuta = lagna + Moon + Gulika; Chatussphuta adds the Sun; Panchasphuta adds Rahu; Prana = 5 × lagna + Gulika; Deha = 8 × Moon + Gulika; Mrityu = 7 × Gulika + Sun; Sookshma Trisphuta = 9 × Trisphuta; Beeja = Sun + Venus + Jupiter; Kshetra = Moon + Mars + Jupiter; Yogi point = Sun + Moon + 93°20′ (Yogi its star lord, Sahayogi its sign lord, Avayogi the star lord at +186°40′); Bhrigu Bindu = the shorter-arc midpoint of Moon and Rahu. Gulika from the start of Saturn's part of the day (JHora), the Kerala Mandi table as the alternative | Prasna Marga VIII; Jataka Parijata |
+| (ayurdaya) | Pindayu, Nisargayu and Amsayu per BPHS 43 with the four haranas, the bharanas, the lagna's share and the 120-year Paramayu; the method chosen by the Shadbala of Sun, Moon and lagna. Every result opens with the caveat that this is a classical exercise of the text and never a prediction of death | BPHS 43; Jataka Parijata V |
+| (ashtamangala) | Digits to planets (1 Sun, 2 Mars, 3 Jupiter, 4 Mercury, 5 Venus, 6 Saturn, 7 Moon, 8 Rahu), odd good; the number's sign and nakshatra as Kerala practice takes them (marked practice); Veethi and Chatra rasis from the Sun and the Arudha | Prasna Marga IV and XV; Raman's Chatra section |
+| (jaimini extras) | Rasi drishti (movable to fixed except the adjacent, and so on), argala and virodhargala by the 2/12, 4/10, 11/3 pairs with 5/9 secondary, malefics in the 3rd as unobstructed, Ketu reversed; karakamsa from the atmakaraka's navamsa with the sutra one-liners; Pada lagna and Upapada by the double count | Jaimini Sutras 1.1 to 1.4; Rath |
+| (sandhi) | Dasha sandhi as the last and first sub-period on each side of an exact boundary (or a stated fraction); chidra lords from the marakas, the 22nd drekkana from the lagna, the 64th navamsa from the Moon, and the 2nd, 7th and 12th from the dasha lord | BPHS 44; the classical chhidra list |
+| (vimshopaka) | Shadvarga, Saptavarga, Dashavarga and Shodashavarga weights per BPHS 8; own 20, friend 18 … great enemy 5; no exaltation bonus | BPHS 8 |
+
+## The lexicon
+
+Every regional name (Malayalam, Tamil, Hindi, Telugu, Kannada) is stored with the
+source it was read from; a cell the sources did not confirm is left empty and the
+screen shows a dash rather than a guess. Kshana is a Drik panchangam: its tithi and
+nakshatra endings can differ from a Vakya almanac by up to a few ghatis, and the
+lexicon says so.
+
+## Strength
+
+Shadbala in virupas per BPHS ch. 27 with Raman's and JHora's conventions where the
+text is silent (Saptavargaja points 45/30/22.5/15/7.5/3.75/1.875; Drekkana by
+Sun-Mars-Jupiter first, Mercury-Saturn second, Moon-Venus third; Chesta by the
+eight motional states from the speed ratio; Drik by sputa drishti); required
+virupas Sun 390, Moon 360, Mars 300, Mercury 420, Jupiter 390, Venus 330, Saturn
+300; Bhava bala; Ishta and Kashta; avasthas per BPHS ch. 45.

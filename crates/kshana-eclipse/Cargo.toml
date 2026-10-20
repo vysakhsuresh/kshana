@@ -1,0 +1,27 @@
+[package]
+name = "kshana-eclipse"
+description = "Eclipses from the kernel: solar and lunar contacts, magnitudes, Saros numbering, local circumstances"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+kshana-time = { workspace = true }
+kshana-solver = { workspace = true }
+kshana-ephem = { workspace = true }
+kshana-sky = { workspace = true }
+kshana-events = { workspace = true }
+kshana-vedic = { workspace = true }
+kshana-western = { workspace = true }
+kshana-chart = { workspace = true }
+kshana-rules = { workspace = true }
+kshana-forecast = { workspace = true }
+kshana-trace = { workspace = true }
+kshana-houses = { workspace = true }
+kshana-frames = { workspace = true }
+
+[lints]
+workspace = true

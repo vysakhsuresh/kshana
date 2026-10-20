@@ -29,8 +29,10 @@ cargo ndk "${TARGETS[@]}" -o "$OUT" build --release -p kshana-ffi
 # Bindings are generated from the host build of the library (library mode reads the
 # UniFFI metadata embedded in the binary; the host artifact name differs per OS).
 cargo build --release -p kshana-ffi
-HOST_LIB=$(ls target/release/libkshana_ffi.so target/release/libkshana_ffi.dylib \
-              target/release/kshana_ffi.dll 2>/dev/null | head -1)
+HOST_LIB=""
+for f in target/release/libkshana_ffi.so target/release/libkshana_ffi.dylib target/release/kshana_ffi.dll; do
+  [ -f "$f" ] && { HOST_LIB=$f; break; }
+done
 [ -n "$HOST_LIB" ] || { echo "host library not found in target/release" >&2; exit 1; }
 cargo run --release -p kshana-ffi --bin uniffi-bindgen -- \
   generate --library "$HOST_LIB" --language kotlin --no-format \

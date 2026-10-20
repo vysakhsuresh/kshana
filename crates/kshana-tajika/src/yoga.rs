@@ -1,0 +1,677 @@
+//! Tajika aspects, the applying/separating links between planets, and the yogas built
+//! on them.
+//!
+//! Sources: K. S. Charak, *A Textbook of Varshaphala*, ch. X (Table X-1 orbs, Table X-3
+//! the Ithasala kinds and the Ishrafa threshold), following the *Tajika Neelakanthi*;
+//! the implementation choices are those recorded in the teistro-sdk Tajika design notes
+//! and cross-checked with PyJHora's `tajaka.py`/`tajaka_yoga.py`.
+//!
+//! * **Aspects are by sign.** Counting from a planet's sign, the 5th and 9th are
+//!   friendly aspects, the 3rd and 11th secretly friendly, the 1st (same sign) and 7th
+//!   inimical, the 4th and 10th secretly inimical; the 2nd, 6th, 8th and 12th carry no
+//!   aspect. All eight aspecting positions count for the yogas.
+//! * **Orbs.** The deeptamsa of each planet is in [`deeptamsa`]; a pair's orb is the mean
+//!   of the two (Charak, Table X-1: "for the Ithasala the deeptamsa range means a mean").
+//! * **Applying and separating** are judged by degrees within the sign, because the
+//!   aspect is by sign: the faster planet (fixed ranking Moon, Mercury, Venus, Sun, Mars,
+//!   Jupiter, Saturn) applies while it stands at fewer degrees than the slower.
+//! * **Ithasala**: mutual aspect, within orb, faster behind: *Vartamana* when a degree or
+//!   more behind, *Poorna* when within a degree either side; *Bhavishyat* when the faster
+//!   is in the last degree of its sign (29°+) and the slower within the orb of the start
+//!   of its own sign, provided the two signs will aspect once the faster moves on.
+//! * **Ishrafa**: mutual aspect, within orb, the faster a degree or more past the slower.
+//! * **Nakta**: two planets with no mutual aspect, and a third faster than both applying
+//!   to each (it carries the light between them).
+//! * **Yamaya**: two planets with no mutual aspect, both applying to a third slower than
+//!   both.
+//! * **Manau**: an Ithasala spoiled by Mars or Saturn standing in an inimical aspect
+//!   (same sign, 4th, 7th or 10th) to the faster planet within that planet's own orb.
+//! * **Kamboola**: an Ithasala between two planets with the Moon applying to either of
+//!   them. The words report the Moon's and the planet's *adhikara* (the office that
+//!   grades the Kamboola: Uttama in own sign or exaltation; Madhyama in own Hadda,
+//!   drekkana or navamsa; Adhama debilitated or in an enemy's sign; Sama otherwise), from
+//!   the *Neelakanthi*, Samjna Tantra vv. 36–46.
+//! * **Ikkavala**: all seven planets in kendras or panapharas from the lagna sign;
+//!   **Induvara**: all in apoklimas.
+//!
+//! Not implemented: Gairi-Kamboola, Khallasara, Radda, Duhphali-kuttha,
+//! Dutthottha-davira, Tambira, Kuttha and Durapha, which grade an Ithasala by the state
+//! (combustion, retrogression, strength) of its planets.
+
+use crate::bala::{relation, Relation};
+use crate::sky::AnnualSky;
+use crate::tables::{
+    deeptamsa, drekkana_lord, graha_name, hadda_lord, navamsa_lord, sign_index, speed_rank,
+    within_sign, SEVEN, SIGN_NAMES,
+};
+use kshana_rules::{dignity, Dignity};
+use kshana_vedic::{sign_lord, DashaLord};
+
+/// A Tajika aspect, by the sign distance between two planets.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Drishti {
+    /// 5th or 9th sign: open friendship.
+    Friendly,
+    /// 3rd or 11th sign: secret friendship.
+    SecretFriend,
+    /// Same sign or 7th: open enmity.
+    Inimical,
+    /// 4th or 10th sign: secret enmity.
+    SecretEnemy,
+}
+
+impl Drishti {
+    /// Word for the aspect.
+    pub fn name(self) -> &'static str {
+        match self {
+            Drishti::Friendly => "friendly (5/9)",
+            Drishti::SecretFriend => "secretly friendly (3/11)",
+            Drishti::Inimical => "inimical (1/7)",
+            Drishti::SecretEnemy => "secretly inimical (4/10)",
+        }
+    }
+
+    /// True for the two friendly kinds.
+    pub fn is_friendly(self) -> bool {
+        matches!(self, Drishti::Friendly | Drishti::SecretFriend)
+    }
+}
+
+/// The aspect from one sign to another, `None` for the 2nd, 6th, 8th and 12th.
+pub fn drishti(from_sign: usize, to_sign: usize) -> Option<Drishti> {
+    match (to_sign % 12 + 12 - from_sign % 12) % 12 + 1 {
+        5 | 9 => Some(Drishti::Friendly),
+        3 | 11 => Some(Drishti::SecretFriend),
+        1 | 7 => Some(Drishti::Inimical),
+        4 | 10 => Some(Drishti::SecretEnemy),
+        _ => None,
+    }
+}
+
+/// Whether two signs aspect each other in the Tajika sense.
+pub fn aspects_by_sign(a: usize, b: usize) -> bool {
+    drishti(a, b).is_some()
+}
+
+/// The orb for a pair: the mean of the two deeptamsas; `None` if either is a node.
+pub fn pair_orb(a: DashaLord, b: DashaLord) -> Option<f64> {
+    Some((deeptamsa(a)? + deeptamsa(b)?) / 2.0)
+}
+
+/// How two planets are joined.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LinkKind {
+    /// Applying, a degree or more to go.
+    Vartamana,
+    /// Applying or just past, within one degree.
+    Poorna,
+    /// Will apply after the faster planet changes sign.
+    Bhavishyat,
+    /// Separating by a degree or more.
+    Ishrafa,
+}
+
+impl LinkKind {
+    /// True for the three Ithasala kinds.
+    pub fn is_applying(self) -> bool {
+        !matches!(self, LinkKind::Ishrafa)
+    }
+
+    /// Word for the kind.
+    pub fn name(self) -> &'static str {
+        match self {
+            LinkKind::Vartamana => "Vartamana Ithasala",
+            LinkKind::Poorna => "Poorna Ithasala",
+            LinkKind::Bhavishyat => "Bhavishyat Ithasala",
+            LinkKind::Ishrafa => "Ishrafa",
+        }
+    }
+}
+
+/// A link between two planets within orb.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Link {
+    /// The faster planet (by the fixed ranking).
+    pub fast: DashaLord,
+    /// The slower planet.
+    pub slow: DashaLord,
+    /// What kind of link.
+    pub kind: LinkKind,
+    /// Degrees the slower stands ahead of the faster, within the sign (negative when the
+    /// faster has passed; for Bhavishyat, after the faster's sign change).
+    pub apart: f64,
+    /// The pair's orb.
+    pub orb: f64,
+    /// The aspect between the two signs (for Bhavishyat, after the sign change).
+    pub drishti: Drishti,
+}
+
+/// The link between two of the seven, if they aspect within orb.
+pub fn link(sky: &AnnualSky, a: DashaLord, b: DashaLord) -> Option<Link> {
+    if a == b {
+        return None;
+    }
+    let (ra, rb) = (speed_rank(a)?, speed_rank(b)?);
+    let (fast, slow) = if ra < rb { (a, b) } else { (b, a) };
+    let lf = sky.longitude(fast)?;
+    let ls = sky.longitude(slow)?;
+    let (sf, ss) = (sign_index(lf), sign_index(ls));
+    let orb = pair_orb(fast, slow)?;
+    let apart = within_sign(ls) - within_sign(lf);
+    if let Some(d) = drishti(sf, ss) {
+        if apart.abs() <= orb {
+            let kind = if apart >= 1.0 {
+                LinkKind::Vartamana
+            } else if apart > -1.0 {
+                LinkKind::Poorna
+            } else {
+                LinkKind::Ishrafa
+            };
+            return Some(Link {
+                fast,
+                slow,
+                kind,
+                apart,
+                orb,
+                drishti: d,
+            });
+        }
+    }
+    if within_sign(lf) >= 29.0 && within_sign(ls) <= orb {
+        if let Some(d) = drishti((sf + 1) % 12, ss) {
+            return Some(Link {
+                fast,
+                slow,
+                kind: LinkKind::Bhavishyat,
+                apart: apart + 30.0,
+                orb,
+                drishti: d,
+            });
+        }
+    }
+    None
+}
+
+/// The yogas this crate detects.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum YogaKind {
+    /// All planets in kendras or panapharas.
+    Ikkavala,
+    /// All planets in apoklimas.
+    Induvara,
+    /// An applying aspect within orb.
+    Ithasala,
+    /// A separating aspect within orb.
+    Ishrafa,
+    /// Light carried between two unaspecting planets by a faster third.
+    Nakta,
+    /// Two unaspecting planets both applying to a slower third.
+    Yamaya,
+    /// An Ithasala spoiled by a malefic on the faster planet.
+    Manau,
+    /// An Ithasala the Moon joins.
+    Kamboola,
+}
+
+impl YogaKind {
+    /// Name of the yoga.
+    pub fn name(self) -> &'static str {
+        match self {
+            YogaKind::Ikkavala => "Ikkavala",
+            YogaKind::Induvara => "Induvara",
+            YogaKind::Ithasala => "Ithasala",
+            YogaKind::Ishrafa => "Ishrafa",
+            YogaKind::Nakta => "Nakta",
+            YogaKind::Yamaya => "Yamaya",
+            YogaKind::Manau => "Manau",
+            YogaKind::Kamboola => "Kamboola",
+        }
+    }
+}
+
+/// One detected yoga.
+#[derive(Clone, Debug, PartialEq)]
+pub struct TajikaYoga {
+    /// Which yoga.
+    pub kind: YogaKind,
+    /// Its name.
+    pub name: &'static str,
+    /// The planets concerned: the pair first, then any third planet.
+    pub planets: Vec<DashaLord>,
+    /// True when the decisive link is within one degree (Poorna).
+    pub exact: bool,
+    /// The configuration in words.
+    pub words: String,
+}
+
+/// The office of a planet that grades a Kamboola.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Adhikara {
+    /// In its own sign or exaltation.
+    Uttama,
+    /// In its own Hadda, drekkana or navamsa.
+    Madhyama,
+    /// None of the others.
+    Sama,
+    /// Debilitated, or in an enemy's sign.
+    Adhama,
+}
+
+impl Adhikara {
+    /// Word for the office.
+    pub fn name(self) -> &'static str {
+        match self {
+            Adhikara::Uttama => "Uttama",
+            Adhikara::Madhyama => "Madhyama",
+            Adhikara::Sama => "Sama",
+            Adhikara::Adhama => "Adhama",
+        }
+    }
+}
+
+/// Office of one of the seven in the annual sky, `None` for a node. Debilitation is
+/// read first, then own sign or exaltation, then an owned division, then an enemy's sign
+/// (Tajika relation to the sign lord).
+pub fn adhikara(sky: &AnnualSky, g: DashaLord) -> Option<Adhikara> {
+    let lon = sky.longitude(g)?;
+    let d = dignity(g, lon);
+    if d == Dignity::Debilitated {
+        return Some(Adhikara::Adhama);
+    }
+    if matches!(d, Dignity::Exalted | Dignity::Own | Dignity::Moolatrikona) {
+        return Some(Adhikara::Uttama);
+    }
+    if hadda_lord(lon) == g || drekkana_lord(lon) == g || navamsa_lord(lon) == g {
+        return Some(Adhikara::Madhyama);
+    }
+    if relation(sky, g, sign_lord(sign_index(lon))) == Relation::Enemy {
+        return Some(Adhikara::Adhama);
+    }
+    Some(Adhikara::Sama)
+}
+
+fn place(sky: &AnnualSky, g: DashaLord) -> String {
+    let l = sky.longitude(g).unwrap_or(0.0);
+    format!(
+        "{} ({} {:.2}°)",
+        graha_name(g),
+        SIGN_NAMES[sign_index(l)],
+        within_sign(l)
+    )
+}
+
+fn link_words(sky: &AnnualSky, l: &Link) -> String {
+    match l.kind {
+        LinkKind::Ishrafa => format!(
+            "{} has passed {} by {:.2}° within the {:.1}° orb, {} aspect: {}",
+            place(sky, l.fast),
+            place(sky, l.slow),
+            -l.apart,
+            l.orb,
+            l.drishti.name(),
+            l.kind.name()
+        ),
+        LinkKind::Bhavishyat => format!(
+            "{} at the end of its sign will apply to {} {:.2}° on entering the next, {} aspect: {}",
+            place(sky, l.fast),
+            place(sky, l.slow),
+            l.apart,
+            l.orb,
+            l.kind.name()
+        ),
+        LinkKind::Poorna => format!(
+            "{} and {} are within a degree ({:+.2}° from the faster to the slower) within the {:.1}° orb, {} aspect: {}",
+            place(sky, l.fast),
+            place(sky, l.slow),
+            l.apart,
+            l.orb,
+            l.drishti.name(),
+            l.kind.name()
+        ),
+        LinkKind::Vartamana => format!(
+            "{} applies to {} {:.2}° behind within the {:.1}° orb, {} aspect: {}",
+            place(sky, l.fast),
+            place(sky, l.slow),
+            l.apart,
+            l.orb,
+            l.drishti.name(),
+            l.kind.name()
+        ),
+    }
+}
+
+fn yoga(kind: YogaKind, planets: Vec<DashaLord>, exact: bool, words: String) -> TajikaYoga {
+    TajikaYoga {
+        kind,
+        name: kind.name(),
+        planets,
+        exact,
+        words,
+    }
+}
+
+/// Every yoga in the annual sky, chart-wide ones first, then pair by pair.
+pub fn tajika_yogas(sky: &AnnualSky) -> Vec<TajikaYoga> {
+    let mut out = Vec::new();
+    let houses: Vec<u8> = SEVEN
+        .iter()
+        .filter_map(|g| sky.sign(*g))
+        .map(|s| sky.sign_house(s))
+        .collect();
+    if houses.len() == 7 {
+        if houses.iter().all(|h| !matches!(h, 3 | 6 | 9 | 12)) {
+            out.push(yoga(
+                YogaKind::Ikkavala,
+                SEVEN.to_vec(),
+                true,
+                "all seven planets stand in kendras or panapharas from the lagna".into(),
+            ));
+        } else if houses.iter().all(|h| matches!(h, 3 | 6 | 9 | 12)) {
+            out.push(yoga(
+                YogaKind::Induvara,
+                SEVEN.to_vec(),
+                true,
+                "all seven planets stand in apoklimas from the lagna".into(),
+            ));
+        }
+    }
+
+    let mut links = Vec::new();
+    for (i, &a) in SEVEN.iter().enumerate() {
+        for &b in &SEVEN[i + 1..] {
+            if let Some(l) = link(sky, a, b) {
+                links.push(l);
+            }
+        }
+    }
+    for l in &links {
+        let kind = if l.kind.is_applying() {
+            YogaKind::Ithasala
+        } else {
+            YogaKind::Ishrafa
+        };
+        out.push(yoga(
+            kind,
+            vec![l.fast, l.slow],
+            l.kind == LinkKind::Poorna,
+            link_words(sky, l),
+        ));
+    }
+
+    // Nakta and Yamaya: pairs without a mutual aspect, joined through a third planet.
+    for (i, &a) in SEVEN.iter().enumerate() {
+        for &b in &SEVEN[i + 1..] {
+            let (Some(sa), Some(sb)) = (sky.sign(a), sky.sign(b)) else {
+                continue;
+            };
+            if aspects_by_sign(sa, sb) {
+                continue;
+            }
+            for &c in &SEVEN {
+                if c == a || c == b {
+                    continue;
+                }
+                let (Some(x), Some(y)) = (link(sky, c, a), link(sky, c, b)) else {
+                    continue;
+                };
+                if !(x.kind.is_applying() && y.kind.is_applying()) {
+                    continue;
+                }
+                let exact = x.kind == LinkKind::Poorna && y.kind == LinkKind::Poorna;
+                if x.fast == c && y.fast == c {
+                    out.push(yoga(
+                        YogaKind::Nakta,
+                        vec![a, b, c],
+                        exact,
+                        format!(
+                            "{} and {} do not aspect each other; the faster {} applies to both ({:.2}° and {:.2}° behind) and carries the light",
+                            place(sky, a),
+                            place(sky, b),
+                            graha_name(c),
+                            x.apart,
+                            y.apart
+                        ),
+                    ));
+                } else if x.slow == c && y.slow == c {
+                    out.push(yoga(
+                        YogaKind::Yamaya,
+                        vec![a, b, c],
+                        exact,
+                        format!(
+                            "{} and {} do not aspect each other; both apply to the slower {} ({:.2}° and {:.2}° behind)",
+                            place(sky, a),
+                            place(sky, b),
+                            graha_name(c),
+                            x.apart,
+                            y.apart
+                        ),
+                    ));
+                }
+            }
+        }
+    }
+
+    // Manau: a malefic on the faster planet of an Ithasala.
+    for l in links.iter().filter(|l| l.kind.is_applying()) {
+        for m in [DashaLord::Mars, DashaLord::Saturn] {
+            if m == l.fast || m == l.slow {
+                continue;
+            }
+            let (Some(lm), Some(lf)) = (sky.longitude(m), sky.longitude(l.fast)) else {
+                continue;
+            };
+            let Some(d) = drishti(sign_index(lf), sign_index(lm)) else {
+                continue;
+            };
+            if d.is_friendly() {
+                continue;
+            }
+            let gap = (within_sign(lm) - within_sign(lf)).abs();
+            let orb = deeptamsa(l.fast).unwrap_or(0.0);
+            if gap <= orb {
+                out.push(yoga(
+                    YogaKind::Manau,
+                    vec![l.fast, l.slow, m],
+                    gap <= 1.0,
+                    format!(
+                        "the Ithasala of {} and {} is spoiled: {} stands in {} aspect to {} {:.2}° off, within its {:.0}° orb",
+                        graha_name(l.fast),
+                        graha_name(l.slow),
+                        place(sky, m),
+                        d.name(),
+                        graha_name(l.fast),
+                        gap,
+                        orb
+                    ),
+                ));
+            }
+        }
+    }
+
+    // Kamboola: the Moon applying to either planet of an Ithasala.
+    for l in links
+        .iter()
+        .filter(|l| l.kind.is_applying() && l.fast != DashaLord::Moon && l.slow != DashaLord::Moon)
+    {
+        for p in [l.fast, l.slow] {
+            let Some(ml) = link(sky, DashaLord::Moon, p) else {
+                continue;
+            };
+            if !ml.kind.is_applying() {
+                continue;
+            }
+            let moon_office = adhikara(sky, DashaLord::Moon).map_or("-", Adhikara::name);
+            let p_office = adhikara(sky, p).map_or("-", Adhikara::name);
+            out.push(yoga(
+                YogaKind::Kamboola,
+                vec![l.fast, l.slow, DashaLord::Moon],
+                ml.kind == LinkKind::Poorna,
+                format!(
+                    "the Moon ({}) applies to {} ({}) {:.2}° behind and joins the Ithasala of {} and {}; Moon {}, {} {}",
+                    SIGN_NAMES[sky.sign(DashaLord::Moon).unwrap_or(0)],
+                    graha_name(p),
+                    SIGN_NAMES[sky.sign(p).unwrap_or(0)],
+                    ml.apart,
+                    graha_name(l.fast),
+                    graha_name(l.slow),
+                    moon_office,
+                    graha_name(p),
+                    p_office
+                ),
+            ));
+            break;
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // SEVEN order: Moon, Mercury, Venus, Sun, Mars, Jupiter, Saturn
+    fn sky(longitudes: [f64; 7]) -> AnnualSky {
+        AnnualSky {
+            lagna: 0.0,
+            cusps: std::array::from_fn(|i| 30.0 * i as f64),
+            longitudes,
+            speeds: [0.0; 7],
+        }
+    }
+
+    fn find<'a>(
+        ys: &'a [TajikaYoga],
+        kind: YogaKind,
+        planets: &[DashaLord],
+    ) -> Option<&'a TajikaYoga> {
+        ys.iter().find(|y| y.kind == kind && y.planets == planets)
+    }
+
+    #[test]
+    fn aspects_by_sign_distance() {
+        assert_eq!(drishti(0, 4), Some(Drishti::Friendly));
+        assert_eq!(drishti(0, 8), Some(Drishti::Friendly));
+        assert_eq!(drishti(0, 2), Some(Drishti::SecretFriend));
+        assert_eq!(drishti(0, 10), Some(Drishti::SecretFriend));
+        assert_eq!(drishti(0, 0), Some(Drishti::Inimical));
+        assert_eq!(drishti(0, 6), Some(Drishti::Inimical));
+        assert_eq!(drishti(0, 3), Some(Drishti::SecretEnemy));
+        assert_eq!(drishti(0, 9), Some(Drishti::SecretEnemy));
+        for d in [1, 5, 7, 11] {
+            assert_eq!(drishti(0, d), None);
+        }
+        assert_eq!(pair_orb(DashaLord::Sun, DashaLord::Moon), Some(13.5));
+        assert_eq!(pair_orb(DashaLord::Sun, DashaLord::Rahu), None);
+    }
+
+    #[test]
+    fn ithasala_kinds_and_ishrafa() {
+        // Moon Aries 5°, Jupiter Leo 8°: trine, Moon 3° behind → Vartamana
+        let s = sky([5.0, 200.0, 230.0, 260.0, 290.0, 128.0, 320.0]);
+        let l = link(&s, DashaLord::Jupiter, DashaLord::Moon).unwrap();
+        assert_eq!(
+            (l.fast, l.slow, l.kind),
+            (DashaLord::Moon, DashaLord::Jupiter, LinkKind::Vartamana)
+        );
+        assert_eq!(l.apart, 3.0);
+        assert_eq!(l.orb, 10.5);
+        let ys = tajika_yogas(&s);
+        let y = find(
+            &ys,
+            YogaKind::Ithasala,
+            &[DashaLord::Moon, DashaLord::Jupiter],
+        )
+        .unwrap();
+        assert!(!y.exact);
+        // Moon Aries 5.5°, Jupiter Leo 5°: within a degree → Poorna, exact
+        let s = sky([5.5, 200.0, 230.0, 260.0, 290.0, 125.0, 320.0]);
+        assert_eq!(
+            link(&s, DashaLord::Moon, DashaLord::Jupiter).unwrap().kind,
+            LinkKind::Poorna
+        );
+        assert!(
+            find(
+                &tajika_yogas(&s),
+                YogaKind::Ithasala,
+                &[DashaLord::Moon, DashaLord::Jupiter]
+            )
+            .unwrap()
+            .exact
+        );
+        // Moon Aries 10°, Jupiter Leo 5°: Moon 5° past → Ishrafa
+        let s = sky([10.0, 200.0, 230.0, 260.0, 290.0, 125.0, 320.0]);
+        assert_eq!(
+            link(&s, DashaLord::Moon, DashaLord::Jupiter).unwrap().kind,
+            LinkKind::Ishrafa
+        );
+        assert!(find(
+            &tajika_yogas(&s),
+            YogaKind::Ishrafa,
+            &[DashaLord::Moon, DashaLord::Jupiter]
+        )
+        .is_some());
+        // Moon Aries 29.5°, Jupiter Virgo 3°: no aspect now (6th), trine after the Moon enters
+        // Taurus → Bhavishyat
+        let s = sky([29.5, 200.0, 230.0, 260.0, 290.0, 153.0, 320.0]);
+        let l = link(&s, DashaLord::Moon, DashaLord::Jupiter).unwrap();
+        assert_eq!(l.kind, LinkKind::Bhavishyat);
+        assert!((l.apart - 3.5).abs() < 1e-9);
+        // Moon Aries 10°, Jupiter Leo 25°: beyond the 10.5° orb → nothing
+        let s = sky([10.0, 200.0, 230.0, 260.0, 290.0, 145.0, 320.0]);
+        assert!(link(&s, DashaLord::Moon, DashaLord::Jupiter).is_none());
+        // Moon Aries 5°, Jupiter Virgo 8°: 6th, no aspect
+        let s = sky([5.0, 200.0, 230.0, 260.0, 290.0, 158.0, 320.0]);
+        assert!(link(&s, DashaLord::Moon, DashaLord::Jupiter).is_none());
+    }
+
+    #[test]
+    fn nakta_yamaya_manau_kamboola() {
+        // Nakta: Sun Aries 10°, Saturn Virgo 12° (no aspect); Moon Gemini 4° applies to both
+        let s = sky([64.0, 200.0, 230.0, 10.0, 290.0, 320.0, 162.0]);
+        let ys = tajika_yogas(&s);
+        assert!(find(
+            &ys,
+            YogaKind::Nakta,
+            &[DashaLord::Sun, DashaLord::Saturn, DashaLord::Moon]
+        )
+        .is_some());
+        // Yamaya: Moon Aries 3°, Mercury Virgo 5° (no aspect); both apply to Saturn Sagittarius 9°
+        let s = sky([3.0, 155.0, 230.0, 200.0, 290.0, 320.0, 249.0]);
+        let ys = tajika_yogas(&s);
+        assert!(find(
+            &ys,
+            YogaKind::Yamaya,
+            &[DashaLord::Moon, DashaLord::Mercury, DashaLord::Saturn]
+        )
+        .is_some());
+        // Manau: Moon Aries 5° → Jupiter Leo 8° Ithasala; Mars Libra 7° opposes the Moon
+        let s = sky([5.0, 200.0, 230.0, 260.0, 187.0, 128.0, 320.0]);
+        let ys = tajika_yogas(&s);
+        assert!(find(
+            &ys,
+            YogaKind::Manau,
+            &[DashaLord::Moon, DashaLord::Jupiter, DashaLord::Mars]
+        )
+        .is_some());
+        // Kamboola: Mercury Aries 5° → Jupiter Leo 8°; Moon Sagittarius 2° applies to Mercury
+        let s = sky([242.0, 5.0, 230.0, 260.0, 290.0, 128.0, 320.0]);
+        let ys = tajika_yogas(&s);
+        let k = find(
+            &ys,
+            YogaKind::Kamboola,
+            &[DashaLord::Mercury, DashaLord::Jupiter, DashaLord::Moon],
+        )
+        .unwrap();
+        assert!(k.words.contains("Moon"));
+    }
+
+    #[test]
+    fn ikkavala_and_induvara() {
+        // all in kendras/panapharas from Aries lagna: signs 0,1,3,4,6,7,9,10
+        let s = sky([5.0, 35.0, 95.0, 125.0, 185.0, 215.0, 275.0]);
+        assert!(find(&tajika_yogas(&s), YogaKind::Ikkavala, &SEVEN).is_some());
+        // all in apoklimas: signs 2,5,8,11
+        let s = sky([65.0, 155.0, 245.0, 335.0, 65.0, 155.0, 245.0]);
+        assert!(find(&tajika_yogas(&s), YogaKind::Induvara, &SEVEN).is_some());
+    }
+}

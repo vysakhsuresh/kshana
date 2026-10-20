@@ -1,0 +1,26 @@
+[package]
+name = "kshana-marga"
+description = "The Kerala suite and the Jaimini extras: Prasna Marga sphutas and ayurdaya, Ashtamangala, argala and rasi drishti, dasha sandhi and chidra, Bhrigu Bindu, Vimshopaka"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+kshana-time = { workspace = true }
+kshana-solver = { workspace = true }
+kshana-ephem = { workspace = true }
+kshana-sky = { workspace = true }
+kshana-events = { workspace = true }
+kshana-vedic = { workspace = true }
+kshana-chart = { workspace = true }
+kshana-rules = { workspace = true }
+kshana-day = { workspace = true }
+kshana-bala = { workspace = true }
+kshana-houses = { workspace = true }
+kshana-frames = { workspace = true }
+
+[lints]
+workspace = true

@@ -28,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kshana.app.data.BirthProfile
@@ -43,6 +42,7 @@ import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.AreaReading
 import uniffi.kshana_ffi.ExactInstant
 import uniffi.kshana_ffi.TimingRecord
+import com.kshana.app.ui.sky.KshanaFonts
 
 private const val FUNNEL_LEVELS = 5
 
@@ -109,18 +109,18 @@ fun ReadingScreen(profile: BirthProfile, settings: EngineSettings, onAreas: () -
                 SectionLabel("Timing")
                 DashaTimeline(maha, antar, at)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(localText(maha.start, DATE_ONLY), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+                    Text(localText(maha.start, DATE_ONLY), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
                     Text("${maha.lord} mahadasha${antar?.let { " · ${it.lord} antar" } ?: ""}", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
-                    Text(localText(maha.end, DATE_ONLY), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+                    Text(localText(maha.end, DATE_ONLY), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
                 }
                 antar?.let {
-                    Text("antar ${localText(it.start, DATE_TIME)} → ${localText(it.end, DATE_TIME)}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
+                    Text("antar ${localText(it.start, DATE_TIME)} → ${localText(it.end, DATE_TIME)}", fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky)
                 }
             }
 
             if (p.factors.isNotEmpty()) {
                 SectionLabel("In short")
-                Text(p.factors.take(3).joinToString(" ") { sentence(it) }, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)
+                Text(p.factors.take(3).joinToString(" ") { sentence(it) }, fontFamily = KshanaFonts.serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)
             }
 
             SectionLabel("Why")
@@ -128,7 +128,7 @@ fun ReadingScreen(profile: BirthProfile, settings: EngineSettings, onAreas: () -
             for ((i, f) in p.factors.withIndex()) FactorRow(i, f, p.ruleId, p.source, null)
             Text(
                 "cusp ${p.primaryCusp} · sub lord ${p.subLord} · ${kpNetText(p)}",
-                fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted, modifier = Modifier.padding(top = 4.dp),
+                fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted, modifier = Modifier.padding(top = 4.dp),
             )
             val ruleIds = remember(r) { (listOf(p.ruleId) + r.parashariHits.map { it.ruleId }).distinct() }
             val calibration = remember(ruleIds, answersVersion) { ruleIds.map { it to CalibrationStore.stats(context, it) } }
@@ -136,13 +136,13 @@ fun ReadingScreen(profile: BirthProfile, settings: EngineSettings, onAreas: () -
                 if (st.second > 0) {
                     Text(
                         "rule $id · right ${st.first} of ${st.second} ${if (st.second == 1) "time" else "times"} for you",
-                        fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Sky, modifier = Modifier.padding(top = 2.dp),
+                        fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Sky, modifier = Modifier.padding(top = 2.dp),
                     )
                 }
             }
 
             SectionLabel("Parashari")
-            Text("Parashari assessment ${"%.2f".format(r.parashariScore)}, lord ${r.parashariLord}", fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text)
+            Text("Parashari assessment ${"%.2f".format(r.parashariScore)}, lord ${r.parashariLord}", fontFamily = KshanaFonts.serif, fontSize = 18.sp, color = KshanaColors.Text)
             for ((i, h) in r.parashariHits.withIndex()) {
                 for ((j, f) in h.factors.withIndex()) FactorRow(1000 + i * 100 + j, f, h.ruleId, h.source, h.weight)
             }
@@ -154,7 +154,7 @@ fun ReadingScreen(profile: BirthProfile, settings: EngineSettings, onAreas: () -
                 QuietButton("LIFE AREAS", onClick = onAreas, modifier = Modifier.weight(1f))
                 QuietButton("PARIHARA", onClick = onParihara, modifier = Modifier.weight(1f))
             }
-            Text("judged at ${localText(at, DATE_TIME_S)}${microText(at)}", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
+            Text("judged at ${localText(at, DATE_TIME_S)}${microText(at)}", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
         }
     }
 }
@@ -184,12 +184,12 @@ private fun FactorRow(key: Int, factor: String, ruleId: String, source: String, 
     Column(Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable { open = !open }.padding(vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(factor, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1f))
-            Text(if (open) "−" else "+", fontFamily = FontFamily.Monospace, fontSize = 14.sp, color = KshanaColors.Gold, modifier = Modifier.padding(start = 12.dp))
+            Text(if (open) "−" else "+", fontFamily = KshanaFonts.mono, fontSize = 14.sp, color = KshanaColors.Gold, modifier = Modifier.padding(start = 12.dp))
         }
         if (open) {
             Text(
                 "rule $ruleId · $source${weight?.let { " · weight ${"%.2f".format(it)}" } ?: ""}",
-                fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Sky, modifier = Modifier.padding(top = 4.dp),
+                fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Sky, modifier = Modifier.padding(top = 4.dp),
             )
         }
     }

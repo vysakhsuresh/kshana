@@ -80,6 +80,23 @@ with sunrise, hora and Rahu kala), Moments (exact instants), Reading (prediction
 rule trace, both traditions, feedback), Areas (promise and timing funnel), Muhurta,
 Settings (ayanamsa, house system, provenance) and Trust.
 
+Behind the five doors More also holds the screens added for the instrument (the
+astrology-heavy ones only when Settings › "Show the chart pages" is on): Today and
+Right time (the good-hours bar, Muhurta for an activity, the observance calendar of
+Ekadashi, Pradosha, lunations and Sankranti with exact instants and observed days,
+each row with a "Remind me" that schedules an exact alarm), My life (the plain-words
+reading with "why" evidence and confidence per sentence, the 100-year life map with a
+timeline per area), Family (any number of people on the phone), Compatibility (the
+thirty-six-point match, both sides' dosha, synastry, in words), Baby name syllable,
+Glossary, Lexicon, Narration, Diary, Ledger, Day, Transits, Marga, the sealed
+predictions, Rectification and Trust (self-test, error budget, export).
+
+Online is off by default and the app is complete without it. When switched on in
+Settings: place search for any place on Earth (OpenStreetMap Nominatim), a refresh of
+the IERS Earth-rotation file, and an optional narration of the computed reading from a
+Claude model with the person's own key, grounded in the engine's sentences and told
+not to add claims. Nothing else leaves the phone.
+
 The sources type-check with `scripts/kotlin-check.sh` (Maven artifacts only, no SDK) and
 the debug APK builds and runs on a device (moto g84, Android 15) with the steps below.
 The code targets AGP 8.7, Kotlin 2.1, Compose BOM 2024.12; Gradle 8.11 needs a JDK 17–21

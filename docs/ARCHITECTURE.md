@@ -10,6 +10,13 @@
           │                    kshana-ffi                          │
           └───────────────▲───────────────────────────────────────┘
                           │
+          ┌───────────────┴───────────────────────────────────────┐
+          │   kshana-speak (words) · kshana-forecast (transits,    │
+          │   daily, life map, calendar) · kshana-rules (KP,       │
+          │   Parashari, Prashna, Muhurta, Parihara, matching)     │
+          │                   over kshana-chart                    │
+          └───────────────▲───────────────────────────────────────┘
+                          │
    ┌──────────────┬───────┴────────┬──────────────┬──────────────┐
    │ kshana-vedic │ kshana-western │ kshana-houses│ kshana-solver│
    └──────▲───────┴───────▲────────┴──────▲───────┴──────▲───────┘

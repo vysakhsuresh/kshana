@@ -31,6 +31,7 @@ import com.kshana.app.ui.theme.halo
 import uniffi.kshana_ffi.ExactInstant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.kshana.app.ui.sky.KshanaFonts
 
 /* Shared, package-private helpers for the screens. `signName` and `dms` live in NowScreen.kt. */
 
@@ -220,7 +221,7 @@ internal fun GoldButton(label: String, enabled: Boolean = true, onClick: () -> U
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, fontFamily = FontFamily.Serif, fontSize = 16.sp, letterSpacing = 4.sp, color = if (enabled) KshanaColors.Night else KshanaColors.Muted)
+        Text(label, fontFamily = KshanaFonts.serif, fontSize = 16.sp, letterSpacing = 4.sp, color = if (enabled) KshanaColors.Night else KshanaColors.Muted)
     }
 }
 
@@ -249,7 +250,7 @@ internal fun QuietButton(label: String, onClick: () -> Unit, modifier: Modifier 
 internal fun MonoRow(label: String, value: String, valueColor: androidx.compose.ui.graphics.Color = KshanaColors.Sky) {
     Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted, modifier = Modifier.weight(1f))
-        Text(value, fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = valueColor)
+        Text(value, fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = valueColor)
     }
 }
 

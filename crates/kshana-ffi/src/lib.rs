@@ -10,6 +10,31 @@ use kshana_time::{Instant, Utc, NS_PER_SEC};
 
 uniffi::setup_scaffolding!();
 
+pub mod bala;
+pub mod dashas;
+pub mod day;
+pub mod directions;
+pub mod eclipse;
+pub mod ledger;
+pub mod lexicon;
+pub mod life;
+pub mod marga;
+pub mod science;
+pub mod tajika;
+pub mod trace;
+pub use bala::*;
+pub use dashas::*;
+pub use day::*;
+pub use directions::*;
+pub use eclipse::*;
+pub use ledger::*;
+pub use lexicon::*;
+pub use life::*;
+pub use marga::*;
+pub use science::*;
+pub use tajika::*;
+pub use trace::*;
+
 /// Engine version string, from the workspace version.
 #[uniffi::export]
 pub fn engine_version() -> String {
@@ -826,11 +851,40 @@ impl Engine {
     }
 }
 
+/// One exact window a remedy is timed to.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct RemedyWindowRecord {
+    pub start: ExactInstant,
+    pub end: ExactInstant,
+    /// "weekday hora", "tithi", "nakshatra", "Rahu kala to avoid" or "Brahma muhurta".
+    pub kind: String,
+    pub words: String,
+    /// Hora ordinal in the solar day (1 = first after sunrise, 13 = first after sunset); 0 otherwise.
+    pub hora_index: u8,
+}
+
+/// One dosha family, present or not.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct DoshaRecord {
+    pub name: String,
+    pub rule_id: String,
+    pub planet: String,
+    pub present: bool,
+    pub severity: f64,
+    pub factors: Vec<String>,
+    pub source: String,
+    pub remedy_family: String,
+    pub offended: String,
+}
+
 /// One remedy.
 #[derive(Clone, Debug, uniffi::Record)]
 #[allow(missing_docs)]
 pub struct RemedyRecord {
-    /// "Karma", "Seva", "Discipline", "Daana", "Vrata", "Mantra", "Pooja", "Anna" (food), "Jeeva" (creatures), "Prakriti" (water and trees) or "Vastra" (colour).
+    /// "Karma", "Seva", "Discipline", "Daana", "Vrata", "Mantra", "Pooja", "Anna" (food),
+    /// "Jeeva" (creatures), "Prakriti" (water and trees), "Vastra" (colour) or "Gem".
     pub kind: String,
     pub title: String,
     pub why: String,
@@ -841,6 +895,20 @@ pub struct RemedyRecord {
     /// Where it comes from.
     pub source: String,
     pub optional: bool,
+    /// Rung on the ladder, 1 karma … 7 gem.
+    pub rung: u8,
+    pub rule_id: String,
+    /// What the texts let this rung claim for the cause's karma class.
+    pub may_claim: String,
+    /// "daily", "weekly on <day>", "once", "40 days", "43 days", or a tithi cadence.
+    pub cadence: String,
+    /// Mantra count, weeks of a vrata or days of a vow.
+    pub count: Option<u32>,
+    pub duration_days: Option<u32>,
+    /// The next three exact windows.
+    pub windows: Vec<RemedyWindowRecord>,
+    /// What the app records: "did it at <instant>" and the count.
+    pub measurable: String,
 }
 
 /// The remedy plan.
@@ -848,17 +916,80 @@ pub struct RemedyRecord {
 #[allow(missing_docs)]
 pub struct PariharaRecord {
     pub planet: String,
+    /// The cause in plain words, for the person: what the period brings, never naming
+    /// the astrology.
     pub cause: String,
+    /// The located cause in the texts' own terms (graha, house, karma), expert pages only.
+    pub cause_expert: String,
     pub severity: f64,
     pub remedies: Vec<RemedyRecord>,
     /// Deity, day, metal, grain and colour of the graha, one line.
     pub signature: String,
+    /// House whose duty the remedy concerns.
+    pub cause_house: u8,
+    /// Rasi house the cause planet occupies.
+    pub placed_in: u8,
+    pub dignity: String,
+    /// "mahadasha", "antardasha" or "pratyantar" when the planet runs a period now.
+    pub running_level: Option<String>,
+    pub running_since: Option<ExactInstant>,
+    pub running_until: Option<ExactInstant>,
+    /// "dridha", "dridha-adridha" or "adridha".
+    pub karma_class: String,
+    /// "sanchita", "prarabdha" or "kriyamana".
+    pub karma_kind: String,
+    pub karma_basis: Vec<String>,
+    pub may_claim: String,
+    pub karma_source: String,
+    /// Dosha families present, most severe first.
+    pub doshas: Vec<DoshaRecord>,
+    pub ledger_hint: String,
+}
+
+fn window_record(w: &kshana_rules::RemedyWindow) -> RemedyWindowRecord {
+    RemedyWindowRecord {
+        start: w.start.into(),
+        end: w.end.into(),
+        kind: w.kind.to_string(),
+        words: w.words.clone(),
+        hora_index: w.hora_index,
+    }
+}
+
+/// The cause in plain words: which part of the running period presses, what it brings
+/// and to which part of life, and how heavily.
+fn plain_cause(c: &kshana_rules::parihara::Cause, matter: Option<&str>, severity: f64) -> String {
+    let to = matter.map(|m| format!(" to your {m}")).unwrap_or_default();
+    let level = match c.running_level {
+        Some("mahadasha") => Some(0),
+        Some("antardasha") => Some(1),
+        Some("pratyantar") => Some(2),
+        _ => None,
+    };
+    let head = match (level, matter) {
+        (Some(i), _) => format!(
+            "The {} you are in brings {}{to}",
+            kshana_rules::plain::level_noun(i),
+            kshana_rules::plain::pressure(c.lord)
+        ),
+        (None, Some(m)) => format!(
+            "From birth your {m} is open to {}",
+            kshana_rules::plain::pressure(c.lord)
+        ),
+        (None, None) => "Nothing particular weighs on you".to_string(),
+    };
+    if severity < 0.25 {
+        format!("{head}, but only lightly. Nothing serious is against you: your own effort is the remedy, and the list below is extra help.")
+    } else {
+        format!("{head}. The remedies below are chosen to ease exactly that.")
+    }
 }
 
 #[uniffi::export]
 impl Engine {
-    /// Remedy plan for the running period at `at` (maha and antar lords), optionally
-    /// narrowed to a life area.
+    /// Remedy plan for the running period at `at` (maha, antar and pratyantar lords),
+    /// optionally narrowed to a life area, with the karma class, the dosha families and
+    /// each remedy's next exact windows at the given place.
     #[allow(clippy::too_many_arguments)]
     pub fn parihara(
         &self,
@@ -869,28 +1000,20 @@ impl Engine {
         at: ExactInstant,
         area: Option<String>,
     ) -> Result<PariharaRecord, KshanaError> {
+        let observer = Observer {
+            latitude_deg,
+            longitude_deg,
+            height_m: 0.0,
+        };
         let input = ChartInput {
             instant: birth.into(),
-            observer: Observer {
-                latitude_deg,
-                longitude_deg,
-                height_m: 0.0,
-            },
+            observer,
             system: kshana_houses::HouseSystem::Placidus,
             ayanamsa: ayanamsa.into(),
             topocentric_moon: false,
         };
         let ch = compute(&self.spk, self.eop.as_ref(), &input)
             .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
-        let facts = kshana_rules::Facts::from_chart(&ch);
-        let chain = kshana_vedic::vimshottari_levels(
-            ch.bodies[1].sidereal,
-            birth.into(),
-            kshana_vedic::dasha::YEAR_365_25_NS,
-            at.into(),
-            2,
-        );
-        let lords: Vec<DashaLord> = chain.iter().map(|p| p.lord).collect();
         // A life name (Love, Money…) or an area name (Marriage, Wealth…) both work.
         let a = match area {
             Some(name) => Some(
@@ -901,10 +1024,22 @@ impl Engine {
             ),
             None => None,
         };
-        let p = kshana_rules::parihara(&facts, a, &lords);
+        let matter = a.as_ref().map(|x| x.name.to_ascii_lowercase());
+        let p = kshana_rules::parihara(
+            &self.spk,
+            self.eop.as_ref(),
+            &observer,
+            &ch,
+            ayanamsa.into(),
+            at.into(),
+            a,
+        )
+        .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        let c = &p.cause;
         Ok(PariharaRecord {
             planet: lord_name(p.planet),
-            cause: p.cause,
+            cause: plain_cause(c, matter.as_deref(), p.severity),
+            cause_expert: c.words.clone(),
             severity: p.severity,
             remedies: p
                 .remedies
@@ -918,9 +1053,44 @@ impl Engine {
                     day: r.day.to_string(),
                     source: r.source.to_string(),
                     optional: r.optional,
+                    rung: r.rung,
+                    rule_id: r.rule_id.clone(),
+                    may_claim: r.may_claim.to_string(),
+                    cadence: r.schedule.cadence.clone(),
+                    count: r.schedule.count,
+                    duration_days: r.schedule.duration_days,
+                    windows: r.schedule.windows.iter().map(window_record).collect(),
+                    measurable: r.measurable.clone(),
                 })
                 .collect(),
-            signature: p.signature,
+            signature: p.signature.clone(),
+            cause_house: c.house,
+            placed_in: c.placed_in,
+            dignity: format!("{:?}", c.dignity),
+            running_level: c.running_level.map(|l| l.to_string()),
+            running_since: c.running_since.map(Into::into),
+            running_until: c.running_until.map(Into::into),
+            karma_class: c.karma.class.name().to_string(),
+            karma_kind: c.karma.kind_in_play.name().to_string(),
+            karma_basis: c.karma.basis.clone(),
+            may_claim: c.karma.may_claim.to_string(),
+            karma_source: c.karma.source.to_string(),
+            doshas: c
+                .doshas
+                .iter()
+                .map(|d| DoshaRecord {
+                    name: d.name.to_string(),
+                    rule_id: d.rule_id.to_string(),
+                    planet: lord_name(d.planet),
+                    present: d.present,
+                    severity: d.severity,
+                    factors: d.factors.clone(),
+                    source: d.source.to_string(),
+                    remedy_family: d.remedy_family.to_string(),
+                    offended: d.offended.clone(),
+                })
+                .collect(),
+            ledger_hint: p.ledger_hint.clone(),
         })
     }
 }
@@ -1602,6 +1772,99 @@ impl Engine {
     }
 }
 
+/// A dated life event for the expert (KP sub-lord) rectification, by area name. The
+/// plain rectification by life uses `LifeEventRecord`.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct KpLifeEventRecord {
+    pub area: String,
+    pub at: ExactInstant,
+    pub label: String,
+}
+
+/// How a candidate explains one event.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct EventScoreRecord {
+    pub label: String,
+    pub score: f64,
+    pub factors: Vec<String>,
+}
+
+/// One candidate birth time from the expert rectification.
+#[derive(Clone, Debug, uniffi::Record)]
+#[allow(missing_docs)]
+pub struct KpCandidateRecord {
+    pub birth: ExactInstant,
+    pub score: f64,
+    pub asc_sidereal: f64,
+    pub asc_sub_lord: String,
+    pub per_event: Vec<EventScoreRecord>,
+}
+
+#[uniffi::export]
+impl Engine {
+    /// Rank candidate birth instants in `center ± half_window_seconds`, every
+    /// `step_seconds`, by how well each explains the life events (dasha lords and the
+    /// ascendant's sub-lord). Sorted best first. Expert pages only; the plain
+    /// rectification is `rectify`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn rectify_kp(
+        &self,
+        center: ExactInstant,
+        half_window_seconds: u64,
+        step_seconds: u64,
+        latitude_deg: f64,
+        longitude_deg: f64,
+        ayanamsa: AyanamsaChoice,
+        events: Vec<KpLifeEventRecord>,
+    ) -> Result<Vec<KpCandidateRecord>, KshanaError> {
+        let obs = Observer {
+            latitude_deg,
+            longitude_deg,
+            height_m: 0.0,
+        };
+        let mut evs = Vec::with_capacity(events.len());
+        for e in events {
+            let area = kshana_rules::areas::area(&e.area)
+                .ok_or_else(|| KshanaError::Engine(format!("unknown area {}", e.area)))?;
+            evs.push(kshana_rules::rectify::AreaEvent {
+                area,
+                at: e.at.into(),
+                label: e.label,
+            });
+        }
+        let c = kshana_rules::rectify::rectify_by_areas(
+            &self.spk,
+            self.eop.as_ref(),
+            &obs,
+            ayanamsa.into(),
+            center.into(),
+            half_window_seconds as i128 * NS_PER_SEC,
+            step_seconds.max(1) as i128 * NS_PER_SEC,
+            &evs,
+        )
+        .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        Ok(c.into_iter()
+            .map(|x| KpCandidateRecord {
+                birth: x.birth.into(),
+                score: x.score,
+                asc_sidereal: x.asc_sidereal,
+                asc_sub_lord: lord_name(x.asc_sub_lord),
+                per_event: x
+                    .per_event
+                    .into_iter()
+                    .map(|e| EventScoreRecord {
+                        label: e.label,
+                        score: e.score,
+                        factors: e.factors,
+                    })
+                    .collect(),
+            })
+            .collect())
+    }
+}
+
 /// Vimshottari chain containing `at`, from mahadasha down `depth` levels (max 5),
 /// for a birth with the Moon at `moon_sidereal` degrees.
 #[uniffi::export]
@@ -1720,6 +1983,75 @@ mod tests {
             .unwrap();
         assert!(p.remedies.len() >= 20 && !p.signature.is_empty());
         assert_eq!(horary_lagna(1).unwrap(), 0.0);
+    }
+
+    #[test]
+    fn parihara_crosses_the_boundary_with_cause_karma_and_windows() {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/de421.bsp");
+        if !p.exists() {
+            return;
+        }
+        let engine = Engine::open(p.to_string_lossy().into_owned(), None).unwrap();
+        let birth = instant_from_utc(UtcFields {
+            year: 1990,
+            month: 10,
+            day: 29,
+            hour: 23,
+            minute: 6,
+            second: 0,
+            nanos: 0,
+        })
+        .unwrap();
+        let at = instant_from_utc(UtcFields {
+            year: 2026,
+            month: 10,
+            day: 15,
+            hour: 9,
+            minute: 2,
+            second: 7,
+            nanos: 0,
+        })
+        .unwrap();
+        let rec = engine
+            .parihara(
+                birth,
+                9.9312,
+                76.2673,
+                AyanamsaChoice::Lahiri,
+                at,
+                Some("Career".into()),
+            )
+            .unwrap();
+        assert!(!rec.remedies.is_empty());
+        assert_eq!(rec.remedies[0].kind, "Karma");
+        assert_eq!(rec.remedies.last().unwrap().kind, "Gem");
+        assert!(rec.cause_expert.contains(&rec.planet));
+        assert!(!rec.cause.contains(&rec.planet));
+        assert!(["dridha", "dridha-adridha", "adridha"].contains(&rec.karma_class.as_str()));
+        assert!(!rec.karma_basis.is_empty() && !rec.may_claim.is_empty());
+        assert_eq!(rec.cause_house, 10);
+        assert!(rec
+            .doshas
+            .iter()
+            .all(|d| d.present && !d.factors.is_empty()));
+        for r in &rec.remedies {
+            assert!(r.windows.len() >= 3, "{}", r.title);
+            assert!(!r.source.is_empty() && !r.measurable.is_empty());
+            for w in &r.windows {
+                assert!((w.start.tai_seconds, w.start.nanos) < (w.end.tai_seconds, w.end.nanos));
+                assert!(w.start.tai_seconds >= at.tai_seconds - 86_400 * 2);
+            }
+        }
+        assert!(engine
+            .parihara(
+                birth,
+                9.9312,
+                76.2673,
+                AyanamsaChoice::Lahiri,
+                at,
+                Some("Nowhere".into())
+            )
+            .is_err());
     }
 
     #[test]
@@ -4020,7 +4352,23 @@ mod plain_audit {
         "provenance_engine", "provenance_kernel", "provenance_models", "body", "body_a", "body_b", "aspect", "unit",
         "signature", "tithi", "nakshatra", "yoga", "hora", "factors", "cautions", "sub_lord", "agents", "ruling_planets",
         "moon_sub_lord", "question", "effort", "day", "mantra",
+        // Expert-only remedy fields (the parihara expert page behind "Show the chart
+        // pages"): the located cause in the texts' terms, karma class, dosha families,
+        // the rung's claim, cadence, the ledger line and the hora/tithi windows.
+        "cause_expert", "dignity", "running_level", "karma_class", "karma_kind", "karma_basis", "karma_source",
+        "may_claim", "remedy_family", "offended", "ledger_hint", "cadence", "measurable",
     ];
+
+    /// A remedy plan as the common screens show it: the nested expert lists (dosha
+    /// families, exact hora/tithi windows) are dropped, since their `name` and `words`
+    /// fields share names with plain fields elsewhere.
+    fn parihara_shown(mut p: PariharaRecord) -> PariharaRecord {
+        p.doshas.clear();
+        for r in p.remedies.iter_mut() {
+            r.windows.clear();
+        }
+        p
+    }
 
     /// `(field, value)` for every string in a Debug rendering.
     fn strings(debug: &str) -> Vec<(String, String)> {
@@ -4185,11 +4533,11 @@ mod plain_audit {
                 audit(&tag("countdowns"), format!("{:?}", engine.countdowns(b, la, lo, la, lo, hs, ay, t).unwrap()), &mut hits);
                 audit(&tag("festivals"), format!("{:?}", engine.festivals(b, la, lo, hs, ay, t, 35).unwrap()), &mut hits);
                 audit(&tag("year"), format!("{:?}", engine.year_chapter(b, la, lo, la, lo, hs, ay, t).unwrap()), &mut hits);
-                audit(&tag("parihara"), format!("{:?}", engine.parihara(b, la, lo, ay, t, None).unwrap()), &mut hits);
+                audit(&tag("parihara"), format!("{:?}", parihara_shown(engine.parihara(b, la, lo, ay, t, None).unwrap())), &mut hits);
                 for life in life_names() {
                     if ti == 0 || full {
                         audit(&tag(&format!("explain_{life}")), format!("{:?}", engine.explain(b, la, lo, la, lo, hs, ay, life.clone(), t).unwrap()), &mut hits);
-                        audit(&tag(&format!("parihara_{life}")), format!("{:?}", engine.parihara(b, la, lo, ay, t, Some(life.clone())).unwrap()), &mut hits);
+                        audit(&tag(&format!("parihara_{life}")), format!("{:?}", parihara_shown(engine.parihara(b, la, lo, ay, t, Some(life.clone())).unwrap())), &mut hits);
                     }
                     for q in questions() {
                         if ti == 0 || full {
@@ -4361,7 +4709,9 @@ pub struct PastCheckRecord {
     /// The life's key ("Love").
     pub life: String,
     /// The yes-or-no question, in the reader's language.
-    pub question: String,    pub statement: String,
+    pub question: String,
+    /// The same stretch said as a plain statement.
+    pub statement: String,
     /// True for a good stretch.
     pub good: bool,
     /// How far it stood from the life's average, in points.

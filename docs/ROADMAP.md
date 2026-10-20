@@ -24,26 +24,52 @@ releasing, firdaria; fixed stars from Gaia DR3; Kemadruma cancellations.
 
 **M4 · Exact moments (mostly done).** Done: ingresses, stations, aspects, lunations,
 tithi and nakshatra boundaries, sunrise and sunset, horas, Rahu kala, stability under
-a birth-time window. Muhurta search done. Remaining: lunar returns, eclipse contacts, the
-rectification workbench.
+a birth-time window. Muhurta search and the rectification workbench done. Remaining: lunar returns,
+eclipse contacts.
 
 **M5 · Android (built, runs on device).** Compose shell over every screen on the
 design canvas, offline kernel in assets, provenance in Settings. The first Android
 Studio build is the verification step; then bundled fonts, a differential self-test on
 first launch, and the Play listing.
 
-**M6 · The common app (first pass done).** The Loop: nine plain lives scored at every
+**M6 · The whole life (done).** Forecast layer (sign transits with exact ingresses,
+Sade Sati, the day's hours, the life map, the observance calendar), plain-words reading
+with evidence per sentence, compatibility (Ashtakoota, Mangal dosha, synastry), Jaimini
+karakas, naming syllables, glossary; the five-door Android front (Today, My life, Ask,
+Right time, Me) with family profiles, reminders for exact moments, and the optional
+online features (place search, IERS refresh, grounded narration). Remaining: consults
+with a human astrologer and pooled calibration across users (both need a backend and an
+account system, deliberately left out of the offline app); bundled fonts; Play listing.
+
+**M7 · The trace (done).** Every astrological state transition of a life as an exact
+instant (`docs/TRACE.md`), thirty-fold faster apparent positions, the ledger with
+calibration, gochara scoring, four further dasha systems, Western directions, Tajika
+varshaphala, the River and Transits screens, the living sky. Remaining from the
+research round: the revamped remedies (karma mapping), the mystical onboarding and
+voice, and whatever the completeness critic adds.
+
+**M8 · Honest to the second (done).** The sunrise convention as a setting, the
+leap-second floor on civil labels, ΔT in every rotation-bound error bar, kernel
+clipping; the honest-measurement layer in the ledger (exact chance baselines, the
+specificity discount, time-shift surrogates, sealed forecasts, asked-first decoy
+quizzes, a birth-time posterior); the day's clocks and eclipses on screen; remedies as
+commitments with a kept/planned ledger; Shadbala on screen; the real sky with the
+catalogue stars, haptic phrases, the bell and the drone; bundled type; the Prasna
+Marga suite and the regional lexicon. Remaining: the Play listing, and the first
+on-device build as the verification step.
+
+**M9 · The common app (first pass done).** The Loop: nine plain lives scored at every
 instant from running periods, Moon-relative transits with vedha and Ashtakavarga, Tara
 bala, the planetary hour and the limbs of the day; a countdown to the next shift; per-life
 pages for today, week, month, year with trend, best and lowest stretch and what changes;
-expert screens moved under More. Also done: Ask (a life × six questions, always
+expert screens moved under More, behind the "Show the chart pages" setting. Also done: Ask (a life × six questions, always
 answered), the remedy dictionary, time travel on the Loop; Explain on every life (each
 graha's pull, the exact instant it moves on, the solved gain of every coming change, the
 three-year slow line); Plan (a scheduled time read for a purpose, with better hours and
 days); Us (the thirty-six-point match, Kuja dosha, the pair this second and over
 thirty-six months, questions answered from both charts); the Book (chapters and pages,
 every sade sati and dhaiya to the second, Jupiter's passages, the returns). Remaining:
-calibration of weights against recorded outcomes, bundled fonts, notifications at
+calibration of weights against recorded outcomes, notifications at
 shifts the user chooses, widgets, Malayalam and Hindi copy, DE440s so the Book sees
 past 2053.
 

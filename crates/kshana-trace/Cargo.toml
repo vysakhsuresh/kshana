@@ -1,0 +1,23 @@
+[package]
+name = "kshana-trace"
+description = "The life trace: every astrological state transition of a life as an exact instant, from dasha levels to the Moon's sub-subs"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+kshana-time = { workspace = true }
+kshana-solver = { workspace = true }
+kshana-ephem = { workspace = true }
+kshana-sky = { workspace = true }
+kshana-events = { workspace = true }
+kshana-vedic = { workspace = true }
+kshana-chart = { workspace = true }
+kshana-houses = { workspace = true }
+kshana-frames = { workspace = true }
+
+[lints]
+workspace = true

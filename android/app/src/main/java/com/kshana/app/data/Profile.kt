@@ -71,6 +71,8 @@ data class EngineSettings(
     val ayanamsa: AyanamsaChoice = AyanamsaChoice.LAHIRI,
     val houseSystem: HouseSystem = HouseSystem.PLACIDUS,
     val topocentricMoon: Boolean = false,
+    /** "hindu" (Sun's centre on the true horizon) or "western" (refracted upper limb). */
+    val riseConvention: String = "hindu",
 )
 
 /** SharedPreferences-backed store for the profile, engine settings and small per-screen state. */
@@ -92,6 +94,7 @@ object ProfileStore {
     private const val K_AYANAMSA = "settings.ayanamsa"
     private const val K_HOUSES = "settings.houses"
     private const val K_TOPO = "settings.topocentricMoon"
+    private const val K_RISE = "settings.riseConvention"
     private const val K_CUR_NAME = "current.name"
     private const val K_CUR_LAT = "current.lat"
     private const val K_CUR_LON = "current.lon"
@@ -146,7 +149,8 @@ object ProfileStore {
             .getOrDefault(AyanamsaChoice.LAHIRI)
         val houses = runCatching { HouseSystem.valueOf(p.getString(K_HOUSES, null) ?: "") }
             .getOrDefault(HouseSystem.PLACIDUS)
-        return EngineSettings(ayanamsa, houses, p.getBoolean(K_TOPO, false))
+        val rise = p.getString(K_RISE, null)?.takeIf { it == "hindu" || it == "western" } ?: "hindu"
+        return EngineSettings(ayanamsa, houses, p.getBoolean(K_TOPO, false), rise)
     }
 
     fun saveSettings(context: Context, s: EngineSettings) {
@@ -154,6 +158,7 @@ object ProfileStore {
             .putString(K_AYANAMSA, s.ayanamsa.name)
             .putString(K_HOUSES, s.houseSystem.name)
             .putBoolean(K_TOPO, s.topocentricMoon)
+            .putString(K_RISE, s.riseConvention)
             .apply()
     }
 
@@ -311,4 +316,88 @@ object ProfileStore {
         Place("São Paulo", -23.5505, -46.6333, "America/Sao_Paulo"),
         Place("Buenos Aires", -34.6037, -58.3816, "America/Argentina/Buenos_Aires"),
     )
+}
+
+/* ------------------------------------------------------------------------------------
+ * Family profiles, the plain/astrologer mode, and online preferences. Everything stays
+ * in the same SharedPreferences file; profiles are a JSON array so any number fit.
+ * ---------------------------------------------------------------------------------- */
+
+/** JSON round trip for a profile (org.json ships with Android). */
+fun BirthProfile.toJson(): org.json.JSONObject = org.json.JSONObject()
+    .put("name", name).put("year", year).put("month", month).put("day", day)
+    .put("hour", hour).put("minute", minute).put("second", second)
+    .put("uncertainty", uncertaintyLevel).put("lat", latitude).put("lon", longitude)
+    .put("place", placeName).put("zone", zoneId)
+
+fun birthProfileFromJson(o: org.json.JSONObject): BirthProfile = BirthProfile(
+    name = o.optString("name", ""),
+    year = o.optInt("year", 2000), month = o.optInt("month", 1), day = o.optInt("day", 1),
+    hour = o.optInt("hour", 12), minute = o.optInt("minute", 0), second = o.optInt("second", 0),
+    uncertaintyLevel = o.optInt("uncertainty", 0),
+    latitude = o.optDouble("lat", ProfileStore.kochi.latitude),
+    longitude = o.optDouble("lon", ProfileStore.kochi.longitude),
+    placeName = o.optString("place", ProfileStore.kochi.name),
+    zoneId = o.optString("zone", ProfileStore.kochi.zoneId),
+)
+
+/** The people the app knows besides the active profile: partner, children, parents. */
+object FamilyStore {
+    private const val K_FAMILY = "family.json"
+    private const val K_MODE_SIMPLE = "ui.simple"
+    private const val K_ONLINE = "online.allowed"
+    private const val K_AI_KEY = "online.aiKey"
+    private const val K_EOP_STAMP = "online.eopFetchedAt"
+    private const val K_REMINDERS = "reminders.json"
+
+    fun family(context: Context): List<BirthProfile> {
+        val raw = ProfileStore.prefs(context).getString(K_FAMILY, null) ?: return emptyList()
+        return runCatching {
+            val arr = org.json.JSONArray(raw)
+            (0 until arr.length()).map { birthProfileFromJson(arr.getJSONObject(it)) }
+        }.getOrDefault(emptyList())
+    }
+
+    fun saveFamily(context: Context, list: List<BirthProfile>) {
+        val arr = org.json.JSONArray()
+        for (p in list) arr.put(p.toJson())
+        ProfileStore.prefs(context).edit().putString(K_FAMILY, arr.toString()).apply()
+    }
+
+    /** Add or replace by name. */
+    fun upsert(context: Context, p: BirthProfile) {
+        val list = family(context).filter { it.name != p.name } + p
+        saveFamily(context, list)
+    }
+
+    fun remove(context: Context, name: String) = saveFamily(context, family(context).filter { it.name != name })
+
+    /** Everyone: the active profile first, then the family. */
+    fun everyone(context: Context): List<BirthProfile> =
+        listOfNotNull(ProfileStore.load(context)) + family(context)
+
+    /** Plain words (true) or the full instrument (false). Default plain. */
+    fun simpleMode(context: Context): Boolean = ProfileStore.prefs(context).getBoolean(K_MODE_SIMPLE, true)
+    fun saveSimpleMode(context: Context, simple: Boolean) =
+        ProfileStore.prefs(context).edit().putBoolean(K_MODE_SIMPLE, simple).apply()
+
+    /** The user has allowed the app to use the network (place search, Earth-rotation data, narration). Default off. */
+    fun onlineAllowed(context: Context): Boolean = ProfileStore.prefs(context).getBoolean(K_ONLINE, false)
+    fun saveOnlineAllowed(context: Context, allowed: Boolean) =
+        ProfileStore.prefs(context).edit().putBoolean(K_ONLINE, allowed).apply()
+
+    /** A user-supplied Claude API key for optional narration. Stored only on the phone. */
+    fun aiKey(context: Context): String? = ProfileStore.prefs(context).getString(K_AI_KEY, null)?.takeIf { it.isNotBlank() }
+    fun saveAiKey(context: Context, key: String?) =
+        ProfileStore.prefs(context).edit().putString(K_AI_KEY, key?.trim().orEmpty()).apply()
+
+    /** Epoch millis of the last successful Earth-rotation (IERS finals) download, or 0. */
+    fun eopFetchedAt(context: Context): Long = ProfileStore.prefs(context).getLong(K_EOP_STAMP, 0L)
+    fun saveEopFetchedAt(context: Context, millis: Long) =
+        ProfileStore.prefs(context).edit().putLong(K_EOP_STAMP, millis).apply()
+
+    /** Scheduled reminders as JSON: [{"id":int,"atMillis":long,"title":str,"text":str}]. */
+    fun remindersJson(context: Context): String = ProfileStore.prefs(context).getString(K_REMINDERS, "[]") ?: "[]"
+    fun saveRemindersJson(context: Context, json: String) =
+        ProfileStore.prefs(context).edit().putString(K_REMINDERS, json).apply()
 }

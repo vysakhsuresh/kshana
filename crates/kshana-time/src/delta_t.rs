@@ -103,11 +103,12 @@ pub fn delta_t_for_year(year: f64) -> DeltaT {
     }
     if year > last.0 as f64 {
         // Short-range extrapolation: hold the recent trend (ΔT has been nearly flat
-        // since 2020). Sigma grows roughly 0.3 s per year of extrapolation.
+        // since 2020). Sigma follows the length-of-day trend's own uncertainty, about
+        // 1.2 ms per day of extrapolation: 4 s at ten years, 22 s at fifty.
         let dy = year - last.0 as f64;
         return DeltaT {
             seconds: last.1 + 0.05 * dy,
-            sigma: 0.05 + 0.3 * dy,
+            sigma: 0.01 + 1.2e-3 * 365.25 * dy,
         };
     }
     // Historical polynomials (Espenak & Meeus 2006), the −500 … 1973 span only.

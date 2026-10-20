@@ -52,6 +52,7 @@ import uniffi.kshana_ffi.StabilityRecord
 import java.time.format.DateTimeFormatter
 import kotlin.math.cos
 import kotlin.math.sin
+import com.kshana.app.ui.sky.KshanaFonts
 
 private val BIRTH_LINE = DateTimeFormatter.ofPattern("d MMMM uuuu · HH:mm:ss")
 private const val MAX_ORB_DEG = 8.0
@@ -114,7 +115,7 @@ fun ChartScreen(profile: BirthProfile, settings: EngineSettings) {
             val asc = if (sidereal) c.cuspsSidereal[0] else c.cuspsTropical[0]
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 Text("ASCENDANT", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
-                Text(dms(asc), fontFamily = FontFamily.Monospace, fontSize = 18.sp, color = KshanaColors.Text)
+                Text(dms(asc), fontFamily = KshanaFonts.mono, fontSize = 18.sp, color = KshanaColors.Text)
                 Text(signName(asc), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
                 stability?.let { s ->
                     Text(
@@ -157,8 +158,8 @@ private fun NatalWheel(chart: ChartRecord, aspects: List<AspectRecord>, sidereal
     val asc = cusps[0]
     val mc = cusps[9]
     val measurer = rememberTextMeasurer()
-    val glyphStyle = TextStyle(fontFamily = FontFamily.Serif, fontSize = 13.sp, color = KshanaColors.Text)
-    val signStyle = TextStyle(fontFamily = FontFamily.Serif, fontSize = 11.sp, color = KshanaColors.Gold.copy(alpha = 0.8f))
+    val glyphStyle = TextStyle(fontFamily = KshanaFonts.serif, fontSize = 13.sp, color = KshanaColors.Text)
+    val signStyle = TextStyle(fontFamily = KshanaFonts.serif, fontSize = 11.sp, color = KshanaColors.Gold.copy(alpha = 0.8f))
     val lonOf = { b: PlacementRecord -> if (sidereal) b.sidereal else b.tropical }
     Canvas(modifier = Modifier.size(320.dp)) {
         val c = Offset(size.width / 2, size.height / 2)
@@ -220,11 +221,11 @@ private fun PlacementRow(b: PlacementRecord, sidereal: Boolean, stability: Stabi
     val moves = st != null && ((if (sidereal) !st.signStableSidereal else !st.signStableTropical) || !st.houseStable)
     HorizontalDivider(color = KshanaColors.LineSoft)
     Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(PLANET_GLYPHS[b.name] ?: "·", fontFamily = FontFamily.Serif, fontSize = 18.sp, color = if (b.name == "Sun") KshanaColors.Gold else KshanaColors.Text, modifier = Modifier.width(28.dp))
-        Text(b.name, fontFamily = FontFamily.Serif, fontSize = 16.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
-        Text("${degMin(lon)} ${SIGN_SHORT[signIndex(lon)]}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky)
-        Text(if (b.speed < 0) "℞" else " ", fontFamily = FontFamily.Serif, fontSize = 12.sp, color = KshanaColors.Gold, modifier = Modifier.width(18.dp).padding(start = 4.dp))
-        Text("H${b.house}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Muted, modifier = Modifier.width(34.dp).padding(start = 6.dp))
+        Text(PLANET_GLYPHS[b.name] ?: "·", fontFamily = KshanaFonts.serif, fontSize = 18.sp, color = if (b.name == "Sun") KshanaColors.Gold else KshanaColors.Text, modifier = Modifier.width(28.dp))
+        Text(b.name, fontFamily = KshanaFonts.serif, fontSize = 16.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+        Text("${degMin(lon)} ${SIGN_SHORT[signIndex(lon)]}", fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky)
+        Text(if (b.speed < 0) "℞" else " ", fontFamily = KshanaFonts.serif, fontSize = 12.sp, color = KshanaColors.Gold, modifier = Modifier.width(18.dp).padding(start = 4.dp))
+        Text("H${b.house}", fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Muted, modifier = Modifier.width(34.dp).padding(start = 6.dp))
         Box(Modifier.size(8.dp).clip(CircleShape).background(if (moves) KshanaColors.Sky else KshanaColors.LineSoft))
     }
 }
@@ -235,11 +236,11 @@ private fun NodeRow(name: String, lon: Double, chart: ChartRecord, sidereal: Boo
     val house = houseOf(lon, cusps)
     HorizontalDivider(color = KshanaColors.LineSoft)
     Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(PLANET_GLYPHS[name] ?: "·", fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text, modifier = Modifier.width(28.dp))
-        Text(name, fontFamily = FontFamily.Serif, fontSize = 16.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
-        Text("${degMin(lon)} ${SIGN_SHORT[signIndex(lon)]}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky)
+        Text(PLANET_GLYPHS[name] ?: "·", fontFamily = KshanaFonts.serif, fontSize = 18.sp, color = KshanaColors.Text, modifier = Modifier.width(28.dp))
+        Text(name, fontFamily = KshanaFonts.serif, fontSize = 16.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+        Text("${degMin(lon)} ${SIGN_SHORT[signIndex(lon)]}", fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky)
         Spacer(Modifier.width(18.dp))
-        Text("H$house", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Muted, modifier = Modifier.width(34.dp).padding(start = 6.dp))
+        Text("H$house", fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Muted, modifier = Modifier.width(34.dp).padding(start = 6.dp))
         Box(Modifier.size(8.dp).clip(CircleShape).background(KshanaColors.LineSoft))
     }
 }
@@ -252,11 +253,11 @@ private fun AspectRow(a: AspectRecord) {
         else -> KshanaColors.Muted
     }
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text("${PLANET_GLYPHS[a.bodyA] ?: a.bodyA} ${PLANET_GLYPHS[a.bodyB] ?: a.bodyB}", fontFamily = FontFamily.Serif, fontSize = 16.sp, color = KshanaColors.Text, modifier = Modifier.width(48.dp))
+        Text("${PLANET_GLYPHS[a.bodyA] ?: a.bodyA} ${PLANET_GLYPHS[a.bodyB] ?: a.bodyB}", fontFamily = KshanaFonts.serif, fontSize = 16.sp, color = KshanaColors.Text, modifier = Modifier.width(48.dp))
         Text("${a.bodyA} ${a.aspect.lowercase()} ${a.bodyB}", style = MaterialTheme.typography.bodyMedium, color = colour, modifier = Modifier.weight(1f))
         Text(
             "%.2f° %s".format(a.orb, when (a.applying) { true -> "applying"; false -> "separating"; null -> "" }),
-            fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Muted,
+            fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Muted,
         )
     }
 }

@@ -68,6 +68,36 @@ fun MoreScreen(profile: BirthProfile?, onOpen: (String) -> Unit) {
         Entry("Exact moments", "ingresses, stations, lunations", "moments", onOpen)
         Entry("Muhurta", "the best windows for a purpose", "muhurta", onOpen)
         Entry("Prashna, horary", "the KP horary chart with a number, for the expert", "prashna_expert", onOpen)
+
+        SectionLabel("The sky, day by day")
+        Entry("Today under the sky", "the living sky, the good hours and what the day holds", "today", onOpen)
+        Entry("The right time", "good-hours bar, muhurta, observances, the day's clocks", "righttime", onOpen)
+        Entry("The day's clocks", "sunrise, hora, choghadiya and the day's divisions", "day", onOpen)
+        Entry("Observances and eclipses", "Ekadashi, Pradosha, lunations, Sankranti, eclipses", "skycalendar", onOpen)
+        Entry("Transits", "gochara over the natal chart, scored", "transits", onOpen)
+
+        SectionLabel("The life, traced")
+        Entry("My life, the reading", "the plain reading by sections, with the rules behind it", "mylife", onOpen)
+        Entry("The life map", "a hundred years of periods, area by area", "lifemap", onOpen)
+        Entry("The river", "the life trace: every exact instant", "trace", onOpen)
+        Entry("The ledger", "what the chart said, against what you logged", "ledger", onOpen)
+        Entry("The year", "Tajika varshaphala for the running year", "year", onOpen)
+        Entry("Time lords", "further dashas and Western directions", "timelords", onOpen)
+        Entry("Strength", "Shadbala and the planets' weights", "strength", onOpen)
+        Entry("Sealed predictions", "predictions sealed now, opened later", "sealed", onOpen)
+        Entry("The quiz", "test the reading against your past", "quiz", onOpen)
+        Entry("Prasna Marga", "the Kerala horary method", "marga", onOpen)
+        Entry("Diary", "the day's sky beside what you wrote", "diary", onOpen)
+
+        SectionLabel("People and words")
+        Entry("Me", "the overnight build's profile page and its doors", "me", onOpen)
+        Entry("Family", "the people you keep charts for", "family", onOpen)
+        Entry("Compatibility", "kuta matching between two charts", "compatibility", onOpen)
+        Entry("Baby name syllable", "the starting syllable from the birth star", "naming", onOpen)
+        Entry("Glossary", "the terms, explained", "glossary", onOpen)
+        Entry("Lexicon", "the names of stars, tithis and grahas in your script", "lexicon", onOpen)
+        Entry("Narration", "an optional reading in prose, with your own key", "narrate", onOpen)
+        Entry("The arrival", "the alternative first run, with the sky", "arrival", onOpen)
     }
 }
 

@@ -113,7 +113,21 @@ impl Utc {
     pub fn to_instant(&self) -> Result<Instant, UtcError> {
         let day = self.utc_day();
         if day < LEAP_SECONDS[0].0 {
-            return Err(UtcError::BeforeModernUtc);
+            // Before 1972 there is no modern UTC. The civil time is read as Universal
+            // Time, and TAI = UT + ΔT − 32.184 s with ΔT taken for the calendar year
+            // (so the conversion inverts exactly). Good to about a second, which is
+            // what a pre-1972 birth record can carry anyway.
+            if self.second == 60 {
+                return Err(UtcError::NoLeapSecondHere);
+            }
+            let ut_s = (day - TAI_EPOCH_DAYS_FROM_1970) as i128 * 86_400
+                + self.hour as i128 * 3_600
+                + self.minute as i128 * 60
+                + self.second as i128;
+            let ut_ns = ut_s * NS_PER_SEC + self.nanos as i128;
+            return Ok(Instant::from_tai_ns(
+                ut_ns + pre_1972_tai_minus_ut_ns(self.year),
+            ));
         }
         // Seconds since the TAI epoch counting every civil day as 86 400 s …
         let civil_s = (day - TAI_EPOCH_DAYS_FROM_1970) as i128 * 86_400
@@ -161,7 +175,14 @@ impl Utc {
                 return Self::from_civil_seconds(civil_s, nanos);
             }
         }
-        Self::from_civil_seconds(tai_s - 10, nanos)
+        // Before 1972: invert the Universal-Time reading above, with ΔT for the
+        // calendar year estimated from the instant itself.
+        let rough = Self::from_civil_seconds(tai_s - 10, nanos);
+        let ut_ns = i.tai_ns() - pre_1972_tai_minus_ut_ns(rough.year);
+        Self::from_civil_seconds(
+            ut_ns.div_euclid(NS_PER_SEC),
+            ut_ns.rem_euclid(NS_PER_SEC) as u32,
+        )
     }
 
     fn from_civil_seconds(civil_s: i128, nanos: u32) -> Self {
@@ -194,8 +215,91 @@ fn days_in_month(y: i64, m: u32) -> u32 {
     }
 }
 
+/// The last day on which a leap second has been ruled out: the IERS Bulletin C in
+/// force (July 2026) announces none at the end of December 2026, so the earliest
+/// possible insertion is 2027-06-30. Bump with each bulletin.
+const LEAP_RULED_OUT_BEFORE: (i64, u32, u32) = (2027, 6, 30);
+
+/// How well a civil (UTC) label of `i` can be printed today, in seconds: 0 within the
+/// leap-second table and up to the day the Bulletin C in force has ruled a leap second
+/// out to; one second from then on, since one insertion (or, with the Earth's recent
+/// acceleration, a deletion) remains possible until the CGPM's 2035 deadline and the
+/// rule after it is not yet written; one second before 1972, when UTC had no leap
+/// seconds and the label comes from ΔT. The instant itself is exact in TAI either way.
+pub fn civil_label_uncertainty_s(i: Instant) -> f64 {
+    let u = Utc::from_instant(i);
+    if u.utc_day() < LEAP_SECONDS[0].0 {
+        return 1.0;
+    }
+    let (y, m, d) = LEAP_RULED_OUT_BEFORE;
+    if u.utc_day() < days_from_civil(y, m, d) {
+        return 0.0;
+    }
+    1.0
+}
+
+/// TAI − UT in nanoseconds for a calendar year before 1972: ΔT − 32.184 s, rounded to
+/// the millisecond so the two directions of the conversion agree exactly.
+fn pre_1972_tai_minus_ut_ns(year: i64) -> i128 {
+    let dt = crate::delta_t::delta_t_for_year(year as f64).seconds;
+    (((dt - 32.184) * 1_000.0).round() as i128) * 1_000_000
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn civil_labels_far_ahead_carry_the_leap_second_floor() {
+        use super::*;
+        let now = Utc::new(2026, 10, 19, 0, 0, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        let far = Utc::new(2033, 1, 1, 0, 0, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        let beyond = Utc::new(2060, 1, 1, 0, 0, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        let old = Utc::new(1950, 1, 1, 0, 0, 0, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        assert_eq!(civil_label_uncertainty_s(now), 0.0);
+        assert_eq!(civil_label_uncertainty_s(far), 1.0);
+        assert_eq!(
+            civil_label_uncertainty_s(beyond),
+            civil_label_uncertainty_s(
+                Utc::new(2036, 1, 1, 0, 0, 0, 0)
+                    .unwrap()
+                    .to_instant()
+                    .unwrap()
+            )
+        );
+        assert_eq!(civil_label_uncertainty_s(old), 1.0);
+    }
+
+    #[test]
+    fn births_before_1972_round_trip_through_universal_time() {
+        use super::*;
+        let u = Utc::new(1950, 6, 15, 4, 30, 0, 123_456_789).unwrap();
+        let i = u.to_instant().unwrap();
+        let back = Utc::from_instant(i);
+        assert_eq!(back, u);
+        // 1950: ΔT ≈ 29 s, so TAI − UT ≈ −3 s: the instant lies a few seconds before
+        // the naive civil reading.
+        let naive = (u.utc_day() - TAI_EPOCH_DAYS_FROM_1970) as i128 * 86_400 * NS_PER_SEC
+            + (4 * 3_600 + 30 * 60) as i128 * NS_PER_SEC
+            + 123_456_789;
+        let diff_s = (i.tai_ns() - naive) as f64 / 1e9;
+        assert!(diff_s > -6.0 && diff_s < 0.0, "{diff_s}");
+        assert!(Utc::new(1900, 1, 1, 0, 0, 0, 0)
+            .unwrap()
+            .to_instant()
+            .is_ok());
+    }
+
     use super::*;
 
     #[test]

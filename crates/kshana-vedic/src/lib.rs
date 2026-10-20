@@ -6,14 +6,19 @@
 pub mod ashtakavarga;
 pub mod ayanamsa;
 pub mod dasha;
+pub mod dashas;
+pub mod jaimini;
 pub mod kp;
+pub mod naming;
 pub mod panchanga;
 pub mod varga;
 
 pub use ashtakavarga::{bhinna, sarva, Positions as AshtakavargaPositions, ROW_TOTALS};
 pub use ayanamsa::{ayanamsa_degrees, Ayanamsa};
 pub use dasha::{subdivide, vimshottari, vimshottari_levels, DashaLord, DashaPeriod};
+pub use jaimini::{arudha, chara_karakas, Karaka, KARAKA_MEANINGS, KARAKA_NAMES};
 pub use kp::{horary_longitude, kp_lords, sign_lord, sub_bounds, sub_of, sub_table, KpLords, Sub};
+pub use naming::{naming_for, syllable, SYLLABLES};
 pub use panchanga::{
     karana, nakshatra, tithi, yoga, Karana, Nakshatra, Tithi, Yoga, NAKSHATRA_SPAN,
 };

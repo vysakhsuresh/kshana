@@ -77,9 +77,15 @@ fn astrometric_direction(
     Ok(([u[0] / n, u[1] / n, u[2] / n], dist))
 }
 
-/// Apparent ecliptic longitude and latitude (degrees) of an ICRF direction at `t`.
-fn to_ecliptic_of_date(dir: [f64; 3], t_centuries: f64) -> (f64, f64) {
-    let (dpsi, deps) = nutation_iau2006a(t_centuries);
+/// Nutation through the frames crate's interpolating cache.
+fn nutation_cached(t_centuries: f64) -> (f64, f64) {
+    kshana_frames::nutation_cached(t_centuries)
+}
+
+/// Apparent ecliptic longitude and latitude (degrees) of an ICRF direction at `t`, with
+/// the nutation already in hand (the speed samples half an hour either side reuse the
+/// centre value: nutation moves 0.1 mas in that time, below anything the speed is used for).
+fn to_ecliptic_with(dir: [f64; 3], t_centuries: f64, (dpsi, deps): (f64, f64)) -> (f64, f64) {
     let m = bias_precession_nutation_matrix(t_centuries, dpsi, deps);
     let eq = apply(&m, dir);
     let eps_true = mean_obliquity_iau2006(t_centuries) + deps;
@@ -98,7 +104,7 @@ pub fn apparent_longitude(spk: &Spk, body: Body, t: Instant) -> Result<f64, SpkE
     let et = Spk::et_of(t);
     let tc = t.tt_centuries_since_j2000();
     let (dir, _) = astrometric_direction(spk, body, Body::Earth, et)?;
-    Ok(to_ecliptic_of_date(dir, tc).0)
+    Ok(to_ecliptic_with(dir, tc, nutation_cached(tc)).0)
 }
 
 /// Apparent geocentric ecliptic position of date for `body` at `t`.
@@ -106,13 +112,14 @@ pub fn apparent(spk: &Spk, body: Body, t: Instant) -> Result<Apparent, SpkError>
     let et = Spk::et_of(t);
     let tc = t.tt_centuries_since_j2000();
     let (dir, dist) = astrometric_direction(spk, body, Body::Earth, et)?;
-    let (lon, lat) = to_ecliptic_of_date(dir, tc);
+    let n = nutation_cached(tc);
+    let (lon, lat) = to_ecliptic_with(dir, tc, n);
     // daily motion from a symmetric 1-hour difference
     let h = 1_800.0;
     let (d1, _) = astrometric_direction(spk, body, Body::Earth, et - h)?;
     let (d2, _) = astrometric_direction(spk, body, Body::Earth, et + h)?;
-    let (l1, _) = to_ecliptic_of_date(d1, tc - h / 3_155_760_000.0);
-    let (l2, _) = to_ecliptic_of_date(d2, tc + h / 3_155_760_000.0);
+    let (l1, _) = to_ecliptic_with(d1, tc - h / 3_155_760_000.0, n);
+    let (l2, _) = to_ecliptic_with(d2, tc + h / 3_155_760_000.0, n);
     let mut dl = l2 - l1;
     if dl > 180.0 {
         dl -= 360.0;
@@ -303,12 +310,13 @@ pub fn apparent_topocentric(
         Ok(([u[0] / n, u[1] / n, u[2] / n], dist))
     };
     let (dir, dist) = dir_at(et)?;
-    let (lon, lat) = to_ecliptic_of_date(dir, tc);
+    let n = nutation_cached(tc);
+    let (lon, lat) = to_ecliptic_with(dir, tc, n);
     let h = 1_800.0;
     let (d1, _) = dir_at(et - h)?;
     let (d2, _) = dir_at(et + h)?;
-    let (l1, _) = to_ecliptic_of_date(d1, tc - h / 3_155_760_000.0);
-    let (l2, _) = to_ecliptic_of_date(d2, tc + h / 3_155_760_000.0);
+    let (l1, _) = to_ecliptic_with(d1, tc - h / 3_155_760_000.0, n);
+    let (l2, _) = to_ecliptic_with(d2, tc + h / 3_155_760_000.0, n);
     let mut dl = l2 - l1;
     if dl > 180.0 {
         dl -= 360.0;

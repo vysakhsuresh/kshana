@@ -22,7 +22,14 @@ use crate::topics::TOPICS;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Action {
     /// Answer a question about a matter or a part of life.
-    Ask { life: Life, topic: Option<&'static str>, question: &'static str },
+    Ask {
+        /// The part of life the question is about.
+        life: Life,
+        /// The matter within it, when one was recognised.
+        topic: Option<&'static str>,
+        /// The question as the app will put it.
+        question: &'static str,
+    },
     /// Show a part of life as it stands (its own page).
     Life(Life),
     /// The day, week, month or year.

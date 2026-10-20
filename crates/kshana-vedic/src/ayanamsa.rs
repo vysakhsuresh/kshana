@@ -39,6 +39,15 @@ pub enum Ayanamsa {
 const ANCHOR_T: f64 = 0.000_742_870_4 / 36_525.0;
 
 impl Ayanamsa {
+    /// Every variant.
+    pub const ALL: [Ayanamsa; 5] = [
+        Ayanamsa::Lahiri,
+        Ayanamsa::Raman,
+        Ayanamsa::Krishnamurti,
+        Ayanamsa::FaganBradley,
+        Ayanamsa::TrueChitra,
+    ];
+
     /// Tropical longitude of the sidereal zero point at the anchor instant, degrees,
     /// true equinox of date.
     fn anchor_deg(self) -> f64 {
@@ -64,11 +73,27 @@ fn zero_point_gcrs(lon_deg: f64, t: f64) -> [f64; 3] {
     apply_transpose(&m, eq)
 }
 
+/// The GCRS zero point of each ayanamsa, computed once per process.
+fn zero_point_cached(which: Ayanamsa) -> [f64; 3] {
+    use std::sync::OnceLock;
+    static POINTS: OnceLock<Vec<(Ayanamsa, [f64; 3])>> = OnceLock::new();
+    let all = POINTS.get_or_init(|| {
+        Ayanamsa::ALL
+            .iter()
+            .map(|a| (*a, zero_point_gcrs(a.anchor_deg(), ANCHOR_T)))
+            .collect()
+    });
+    all.iter()
+        .find(|(a, _)| *a == which)
+        .map(|(_, v)| *v)
+        .unwrap_or_else(|| zero_point_gcrs(which.anchor_deg(), ANCHOR_T))
+}
+
 /// Ayanamsa in degrees at `t` Julian centuries of TT since J2000.0, on the true
 /// equinox and ecliptic of date.
 pub fn ayanamsa_degrees(which: Ayanamsa, t: f64) -> f64 {
-    let v = zero_point_gcrs(which.anchor_deg(), ANCHOR_T);
-    let (dpsi, deps) = nutation_iau2006a(t);
+    let v = zero_point_cached(which);
+    let (dpsi, deps) = kshana_frames::nutation_cached(t);
     let eps = mean_obliquity_iau2006(t) + deps;
     let m = bias_precession_nutation_matrix(t, dpsi, deps);
     let eq = apply(&m, v);

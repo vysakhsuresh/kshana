@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,13 +36,17 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kshana.app.data.BirthProfile
+import com.kshana.app.data.FamilyStore
 import com.kshana.app.data.Place
 import com.kshana.app.data.ProfileStore
 import com.kshana.app.data.Uncertainty
+import com.kshana.app.net.searchPlaces
 import com.kshana.app.ui.theme.KshanaColors
+import kotlinx.coroutines.launch
 import java.time.DateTimeException
 import java.time.LocalDateTime
 import java.time.ZoneId
+import com.kshana.app.ui.sky.KshanaFonts
 
 private data class LevelCopy(val headline: String, val detail: String)
 
@@ -90,6 +95,14 @@ fun BirthScreen(
     var zoneId by remember { mutableStateOf(initialPlace.zoneId) }
     var problem by remember { mutableStateOf<String?>(null) }
 
+    // Online place search (any place on Earth). Off until the user allows online features.
+    val scope = rememberCoroutineScope()
+    var onlineOn by remember { mutableStateOf(FamilyStore.onlineAllowed(context)) }
+    var earthQuery by remember { mutableStateOf("") }
+    var earthResults by remember { mutableStateOf<List<Place>>(emptyList()) }
+    var earthError by remember { mutableStateOf<String?>(null) }
+    var searching by remember { mutableStateOf(false) }
+
     val matches = remember(query) {
         if (query.isBlank()) emptyList()
         else ProfileStore.places.filter { it.name.contains(query.trim(), ignoreCase = true) }.take(6)
@@ -101,6 +114,25 @@ fun BirthScreen(
         longitude = "%.4f".format(p.longitude)
         zoneId = p.zoneId
         query = ""
+        earthResults = emptyList()
+        earthError = null
+    }
+
+    fun searchEarth() {
+        val q = earthQuery.trim()
+        if (q.isEmpty() || searching) return
+        scope.launch {
+            searching = true
+            try {
+                val found = searchPlaces(context, q)
+                earthResults = found
+                earthError = if (found.isEmpty()) "No place found for \"$q\"." else null
+            } catch (e: Exception) {
+                earthResults = emptyList()
+                earthError = e.message ?: e.toString()
+            }
+            searching = false
+        }
     }
 
     fun build(): BirthProfile? {
@@ -160,14 +192,38 @@ fun BirthScreen(
                         Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable { choose(p) }.padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(p.name, fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+                        Text(p.name, fontFamily = KshanaFonts.serif, fontSize = 17.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
                         Text("%.2f° %.2f°".format(p.latitude, p.longitude), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
                     }
                 }
                 HorizontalDivider(color = KshanaColors.LineSoft)
             }
         }
-        Text(placeName, fontFamily = FontFamily.Serif, fontSize = 20.sp, color = KshanaColors.Text)
+
+        SectionLabel("Any place on Earth")
+        if (!onlineOn) {
+            Text("Online place search is off", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            QuietButton("ALLOW ONLINE FEATURES", onClick = {
+                FamilyStore.saveOnlineAllowed(context, true)
+                onlineOn = true
+            })
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Field(earthQuery, { earthQuery = it }, "Town, city or village", Modifier.weight(1f))
+                QuietButton(if (searching) "SEARCHING…" else "SEARCH", onClick = { searchEarth() })
+            }
+            Text("Looked up on OpenStreetMap; the time zone is derived from the country and longitude. Check it below.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            ErrorLine(earthError)
+            if (earthResults.isNotEmpty()) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (p in earthResults) {
+                        Chip("${p.name}  ·  ${"%.2f".format(p.latitude)}° ${"%.2f".format(p.longitude)}°", selected = false, onClick = { choose(p) })
+                    }
+                }
+            }
+        }
+
+        Text(placeName, fontFamily = KshanaFonts.serif, fontSize = 20.sp, color = KshanaColors.Text)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             NumberField(latitude, { latitude = it.filter { c -> c.isDigit() || c == '.' || c == '-' } }, "Latitude °N", Modifier.weight(1f), decimal = true)
             NumberField(longitude, { longitude = it.filter { c -> c.isDigit() || c == '.' || c == '-' } }, "Longitude °E", Modifier.weight(1f), decimal = true)
@@ -194,7 +250,7 @@ fun BirthScreen(
             for ((i, l) in Uncertainty.labels.withIndex()) {
                 Text(
                     l,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = KshanaFonts.mono,
                     fontSize = 9.sp,
                     color = if (i == level) KshanaColors.Gold else KshanaColors.Muted,
                     modifier = Modifier.clickable { level = i }.padding(vertical = 4.dp),
@@ -224,7 +280,7 @@ private fun Field(value: String, onChange: (String) -> Unit, label: String, modi
         onValueChange = onChange,
         label = { Text(label, style = MaterialTheme.typography.labelSmall) },
         singleLine = true,
-        textStyle = TextStyle(fontFamily = FontFamily.SansSerif, fontSize = 15.sp, color = KshanaColors.Text),
+        textStyle = TextStyle(fontFamily = KshanaFonts.sans, fontSize = 15.sp, color = KshanaColors.Text),
         colors = fieldColors(),
         modifier = modifier,
     )
@@ -238,7 +294,7 @@ private fun NumberField(value: String, onChange: (String) -> Unit, label: String
         label = { Text(label, style = MaterialTheme.typography.labelSmall) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Number),
-        textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 15.sp, color = KshanaColors.Text),
+        textStyle = TextStyle(fontFamily = KshanaFonts.mono, fontSize = 15.sp, color = KshanaColors.Text),
         colors = fieldColors(),
         modifier = modifier,
     )

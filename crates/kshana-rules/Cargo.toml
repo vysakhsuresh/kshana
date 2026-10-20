@@ -18,6 +18,7 @@ kshana-events = { workspace = true }
 kshana-solver = { workspace = true }
 kshana-frames = { workspace = true }
 kshana-houses = { workspace = true }
+kshana-western = { workspace = true }
 
 [dev-dependencies]
 

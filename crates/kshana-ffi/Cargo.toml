@@ -30,6 +30,16 @@ kshana-sky = { workspace = true }
 kshana-events = { workspace = true }
 kshana-chart = { workspace = true }
 kshana-rules = { workspace = true }
+kshana-forecast = { workspace = true }
+kshana-speak = { workspace = true }
+kshana-trace = { workspace = true }
+kshana-ledger = { workspace = true }
+kshana-directions = { workspace = true }
+kshana-tajika = { workspace = true }
+kshana-eclipse = { workspace = true }
+kshana-day = { workspace = true }
+kshana-bala = { workspace = true }
+kshana-marga = { workspace = true }
 
 [lints]
 workspace = true

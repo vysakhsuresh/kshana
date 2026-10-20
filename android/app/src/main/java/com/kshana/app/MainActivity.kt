@@ -36,6 +36,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.kshana.app.data.BirthProfile
+import com.kshana.app.data.FamilyStore
 import com.kshana.app.data.ProfileStore
 import com.kshana.app.ui.screens.AreasScreen
 import com.kshana.app.ui.screens.AheadScreen
@@ -43,28 +44,53 @@ import com.kshana.app.ui.screens.AskHub
 import com.kshana.app.ui.screens.AskScreen
 import com.kshana.app.ui.screens.BirthScreen
 import com.kshana.app.ui.screens.BookScreen
+import com.kshana.app.ui.screens.CalendarScreen
 import com.kshana.app.ui.screens.ChartScreen
+import com.kshana.app.ui.screens.CompatibilityScreen
+import com.kshana.app.ui.screens.DiaryScreen
+import com.kshana.app.ui.screens.FamilyScreen
+import com.kshana.app.ui.screens.GlossaryScreen
 import com.kshana.app.ui.screens.HindsightScreen
+import com.kshana.app.ui.screens.LedgerScreen
 import com.kshana.app.ui.screens.LetterScreen
-import com.kshana.app.ui.screens.RecordScreen
-import com.kshana.app.ui.screens.WallScreen
-import com.kshana.app.ui.screens.PlanScreen
-import com.kshana.app.ui.screens.RectifyScreen
-import com.kshana.app.ui.screens.TogetherScreen
+import com.kshana.app.ui.screens.LifeMapScreen
 import com.kshana.app.ui.screens.LifeScreen
 import com.kshana.app.ui.screens.LoopScreen
+import com.kshana.app.ui.screens.MeScreen
+import com.kshana.app.ui.screens.PlanScreen
+import com.kshana.app.ui.screens.RecordScreen
+import com.kshana.app.ui.screens.TogetherScreen
+import com.kshana.app.ui.screens.WallScreen
 import com.kshana.app.ui.screens.MomentsScreen
 import com.kshana.app.ui.screens.MoreScreen
 import com.kshana.app.ui.screens.MuhurtaScreen
+import com.kshana.app.ui.screens.NamingScreen
+import com.kshana.app.ui.screens.NarrateScreen
 import com.kshana.app.ui.screens.NowScreen
 import com.kshana.app.ui.screens.PariharaScreen
 import com.kshana.app.ui.screens.PrashnaScreen
 import com.kshana.app.ui.screens.ReadingScreen
+import com.kshana.app.ui.screens.RectifyScreen
+import com.kshana.app.ui.screens.RightTimeScreen
 import com.kshana.app.ui.screens.SettingsScreen
+import com.kshana.app.ui.screens.TimeLordsScreen
+import com.kshana.app.ui.screens.TodayScreen
+import com.kshana.app.ui.screens.TraceScreen
+import com.kshana.app.ui.screens.TransitsScreen
 import com.kshana.app.ui.screens.TrustScreen
 import com.kshana.app.ui.screens.VedicScreen
+import com.kshana.app.ui.screens.YearScreen
+import com.kshana.app.ui.onboarding.ArrivalScreen
+import com.kshana.app.ui.sky.LivingSky
 import com.kshana.app.ui.theme.KshanaColors
 import com.kshana.app.ui.theme.KshanaTheme
+import com.kshana.app.ui.screens.DayScreen
+import com.kshana.app.ui.screens.StrengthScreen
+import com.kshana.app.ui.sky.KshanaFonts
+import com.kshana.app.ui.screens.SealedScreen
+import com.kshana.app.ui.screens.QuizScreen
+import com.kshana.app.ui.screens.LexiconScreen
+import com.kshana.app.ui.screens.MargaScreen
 
 private data class Tab(val route: String, val label: String, val icon: ImageVector, val iconRes: Int? = null)
 
@@ -87,6 +113,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         IncomingLink.value = intent?.dataString
+        KshanaFonts.attach(this)
         setContent { KshanaTheme { App() } }
     }
 
@@ -118,7 +145,10 @@ private fun App() {
         true
     }
     var settings by remember { mutableStateOf(ProfileStore.settings(context)) }
-    // First launch with no profile lands on the birth form; afterwards on the loop.
+    // Plain/simple mode for the five-door screens kept under More.
+    var simple by remember { mutableStateOf(FamilyStore.simpleMode(context)) }
+    // First launch with no profile lands on the welcome (start or restore), then the birth
+    // form and the past check; afterwards on the loop. The arrival ritual stays registered.
     val start = remember { if (profile == null) "welcome" else "loop" }
     // A shared person opened from a kshana://person link: add them under Us and show them.
     androidx.compose.runtime.LaunchedEffect(IncomingLink.value, profile) {
@@ -151,13 +181,25 @@ private fun App() {
         }
     }
     fun open(route: String) = nav.navigate(route) { launchSingleTop = true }
+    val back: () -> Unit = { nav.popBackStack() }
 
     /** Screens that need a birth go to the form when there is none. */
     @Composable
     fun withProfile(content: @Composable (BirthProfile) -> Unit) {
         val p = profile
         if (p == null) {
-            BirthScreen(existing = null, onCast = { profile = it; open("loop") })
+            BirthScreen(
+                existing = null,
+                onCast = {
+                    profile = it
+                    here = ProfileStore.currentLocation(context)
+                    // The first birth entry replaces the form in the back stack.
+                    nav.navigate("loop") {
+                        launchSingleTop = true
+                        popUpTo(nav.graph.findStartDestination().id) { inclusive = true }
+                    }
+                },
+            )
         } else {
             content(p)
         }
@@ -336,6 +378,121 @@ private fun App() {
                 }
             }
             composable("more") { MoreScreen(profile = profile, onOpen = { open(it) }) }
+
+            // ---- the five-door screens from the overnight build, kept under More ----
+            // (reached from More behind the "Show the chart pages" setting; not tabs)
+            composable("today") {
+                withProfile {
+                    LivingSky(place = here, settings = settings, intensity = 0.7f) {
+                        TodayScreen(
+                            profile = it,
+                            here = here,
+                            settings = settings,
+                            simple = simple,
+                            onAsk = { open("prashna") },
+                            onRightTime = { open("righttime") },
+                            onLife = { open("mylife") },
+                            onRiver = { open("trace") },
+                            onSettings = { open("settings") },
+                        )
+                    }
+                }
+            }
+            composable("mylife") {
+                withProfile {
+                    LifeScreen(
+                        profile = it,
+                        settings = settings,
+                        simple = simple,
+                        onLifeMap = { open("lifemap") },
+                        onRiver = { open("trace") },
+                        onAreas = { open("areas") },
+                        onParihara = { open("parihara_classic") },
+                        onChart = { open("reading_expert") },
+                    )
+                }
+            }
+            composable("righttime") {
+                RightTimeScreen(
+                    profile = profile,
+                    here = here,
+                    settings = settings,
+                    onMuhurta = { open("muhurta") },
+                    onCalendar = { open("skycalendar") },
+                    onMoments = { open("moments") },
+                    onDay = { open("day") },
+                )
+            }
+            composable("me") {
+                MeScreen(
+                    profile = profile,
+                    settings = settings,
+                    simple = simple,
+                    onSimpleChanged = { simple = it; FamilyStore.saveSimpleMode(context, it) },
+                    onEditBirth = { open("birth") },
+                    onFamily = { open("family") },
+                    onCompatibility = { open("compatibility") },
+                    onNaming = { open("naming") },
+                    onGlossary = { open("glossary") },
+                    onLexicon = { open("lexicon") },
+                    onChart = { open("chart") },
+                    onVedic = { open("vedic") },
+                    onTrust = { open("trust") },
+                    onRectify = { open("rectify") },
+                    onSettings = { open("settings") },
+                    onNarrate = { open("narrate") },
+                    onTransits = { open("transits") },
+                    onRiver = { open("trace") },
+                    onLedger = { open("ledger") },
+                    onYear = { open("year") },
+                    onTimeLords = { open("timelords") },
+                    onDiary = { open("diary") },
+                    onStrength = { open("strength") },
+                    onSealed = { open("sealed") },
+                    onQuiz = { open("quiz") },
+                    onMarga = { open("marga") },
+                )
+            }
+
+            // ---- behind those doors ----
+            composable("lifemap") { withProfile { LifeMapScreen(it, settings, onBack = back) } }
+            composable("transits") { withProfile { TransitsScreen(it, settings, onBack = back) } }
+            composable("ledger") { withProfile { LedgerScreen(it, settings, onBack = back) } }
+            composable("year") { withProfile { YearScreen(it, here, settings, onBack = back) } }
+            composable("timelords") { withProfile { TimeLordsScreen(it, settings, onBack = back) } }
+            composable("trace") { withProfile { TraceScreen(it, here, settings, onBack = back) } }
+            composable("family") { FamilyScreen(onBack = back) }
+            composable("compatibility") {
+                CompatibilityScreen(settings = settings, onFamily = { open("family") }, onBack = back)
+            }
+            composable("naming") { NamingScreen(settings = settings, onBack = back) }
+            composable("glossary") { GlossaryScreen(onBack = back) }
+            // The observances-and-eclipses calendar; "calendar" is the person's own week check.
+            composable("skycalendar") { CalendarScreen(here = here, settings = settings, onBack = back) }
+            composable("narrate") {
+                withProfile { NarrateScreen(it, settings, onBack = back, onSettings = { open("settings") }) }
+            }
+            composable("strength") { withProfile { StrengthScreen(it, settings, onBack = back) } }
+            composable("lexicon") { LexiconScreen(onBack = back) }
+            composable("marga") { withProfile { MargaScreen(it, here, settings, onBack = back) } }
+            composable("sealed") { withProfile { SealedScreen(it, settings, onBack = back) } }
+            composable("quiz") { withProfile { QuizScreen(it, settings, onBack = back) } }
+            composable("day") { DayScreen(profile = profile, here = here, settings = settings, onBack = back) }
+            composable("diary") { withProfile { DiaryScreen(it, here, settings, onBack = back) } }
+            // The arrival ritual: an alternative first run. It saves the profile itself;
+            // a first birth then goes through the past check like the birth form.
+            composable("arrival") {
+                ArrivalScreen(onDone = { p ->
+                    profile = p
+                    here = ProfileStore.currentLocation(context)
+                    nav.navigate("pastcheck") {
+                        launchSingleTop = true
+                        popUpTo("arrival") { inclusive = true }
+                    }
+                })
+            }
+
+            // ---- the instrument ----
             composable("now") {
                 NowScreen(
                     place = here,
@@ -350,7 +507,7 @@ private fun App() {
                 MomentsScreen(ayanamsa = settings.ayanamsa, onMuhurta = { open("muhurta") })
             }
             composable("muhurta") {
-                MuhurtaScreen(place = here, settings = settings, profile = profile, onBack = { nav.popBackStack() })
+                MuhurtaScreen(place = here, settings = settings, profile = profile, onBack = back)
             }
             composable("reading_expert") {
                 withProfile {
@@ -417,13 +574,16 @@ private fun App() {
                     settings = settings,
                     onSettingsChanged = { settings = it },
                     onEditBirth = { open("birth") },
+                    onRectify = { open("rectify") },
                     onTrust = { open("trust") },
-                    onBack = { nav.popBackStack() },
+                    onNarrate = { open("narrate") },
+                    onLexicon = { open("lexicon") },
+                    onBack = back,
                     onPlaceChanged = { here = it },
                 )
             }
             composable("trust") {
-                TrustScreen(profile = profile, settings = settings, onBack = { nav.popBackStack() })
+                TrustScreen(profile = profile, settings = settings, onBack = back)
             }
         }
     }
