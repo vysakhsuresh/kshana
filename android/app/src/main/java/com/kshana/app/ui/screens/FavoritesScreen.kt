@@ -54,7 +54,7 @@ fun FavoritesScreen(onOpen: (String) -> Unit) {
             Column(Modifier.fillMaxWidth().glass(14.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("YOUR SHELF IS EMPTY", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
                 Text(
-                    "Tap the ☆ beside any page here or under More, and it stays on this tab, one tap away.",
+                    "Tap the ☆ beside any page here or under Explore, and it stays on this tab, one tap away.",
                     fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 24.sp, color = KshanaColors.Text,
                 )
             }
@@ -84,6 +84,6 @@ fun FavoritesScreen(onOpen: (String) -> Unit) {
             for (p in suggestions) PageRow(p.title, p.detail, p.route, open)
         }
 
-        QuietButton("SEE EVERY PAGE UNDER MORE", onClick = { onOpen("more") }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
+        QuietButton("SEE EVERY PAGE UNDER EXPLORE", onClick = { onOpen("more") }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
     }
 }

@@ -72,12 +72,13 @@ fun FutureHub(
     onBook: () -> Unit,
     onHindsight: () -> Unit,
     onSettings: () -> Unit,
+    onWall: () -> Unit = {},
 ) {
     var mode by rememberSaveable { mutableStateOf(FutureHubRequest.mode?.also { FutureHubRequest.mode = null } ?: "far") }
     Box(Modifier.fillMaxSize()) {
         when (mode) {
             "near" -> AheadScreen(profile = profile, place = place, settings = settings, onLife = onLife, onRemedy = onRemedy, onLetter = onLetter, onBook = onBook, onHindsight = onHindsight)
-            else -> FutureScreen(profile = profile, place = place, settings = settings, onRemedy = onRemedy, onSettings = onSettings)
+            else -> FutureScreen(profile = profile, place = place, settings = settings, onRemedy = onRemedy, onSettings = onSettings, onWall = onWall, onBook = onBook)
         }
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(top = 8.dp),

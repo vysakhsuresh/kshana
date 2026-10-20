@@ -70,7 +70,7 @@ private fun kindColour(kind: String): Color = when (kind) {
  * testing periods, each with its months, how strong it is and what to do.
  */
 @Composable
-fun FutureScreen(profile: BirthProfile, place: Place, settings: EngineSettings, onRemedy: (String?) -> Unit, onSettings: () -> Unit) {
+fun FutureScreen(profile: BirthProfile, place: Place, settings: EngineSettings, onRemedy: (String?) -> Unit, onSettings: () -> Unit, onWall: () -> Unit = {}, onBook: () -> Unit = {}) {
     val context = LocalContext.current
     var months by remember { mutableStateOf(36) }
     var filter by remember { mutableStateOf("all") }
@@ -133,7 +133,7 @@ fun FutureScreen(profile: BirthProfile, place: Place, settings: EngineSettings, 
         val openings = all.count { it.kind == "opening" }
         val hard = all.count { it.kind == "pressure" }
         Text(
-            "$openings openings and $hard hard stretches ahead in ${months / 12} year${if (months > 12) "s" else ""}.",
+            "$openings openings and $hard stretches to tend ahead in ${months / 12} year${if (months > 12) "s" else ""}.",
             fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text,
         )
         if (shown.isEmpty()) Text("Nothing of this kind in this span.", style = MaterialTheme.typography.bodyLarge, color = KshanaColors.TextSoft)
@@ -145,6 +145,11 @@ fun FutureScreen(profile: BirthProfile, place: Place, settings: EngineSettings, 
             "This is the weather of each season, not a fixed fate. A testing stretch eased by the right deeds is lighter; an opening not taken passes. Your choices count.",
             style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
         )
+        // The pages that carry this on: dates counting down, and the whole life as chapters.
+        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+            Text("COUNT DOWN TO WHAT MATTERS ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onWall).padding(vertical = 6.dp))
+            Text("THE BOOK OF YOUR LIFE ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onBook).padding(vertical = 6.dp))
+        }
     }
 }
 

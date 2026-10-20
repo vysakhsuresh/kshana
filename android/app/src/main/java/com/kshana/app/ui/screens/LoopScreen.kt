@@ -104,6 +104,7 @@ fun LoopScreen(
     onJournal: () -> Unit = {},
     onCalendar: () -> Unit = {},
     onReading: () -> Unit = {},
+    onOpen: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     var moment by remember { mutableStateOf<MomentRecord?>(null) }
@@ -293,6 +294,12 @@ fun LoopScreen(
             }
             item {
                 Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    WhatHelpsCard(testing = brief?.saturnActive == true, onRemedy = onRemedy)
+                    DiscoverCard(testing = brief?.saturnActive == true, onOpen = onOpen)
+                }
+            }
+            item {
+                Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OnYourMind(m, onReading)
                     ProofStrip(onRecord, onJournal, onCalendar)
                 }
@@ -320,9 +327,9 @@ fun LoopScreen(
                         Text(if (clockOpen) "−" else "+", fontSize = 20.sp, color = KshanaColors.Gold)
                     }
                     val caution = m.windows.filter { it.caution && it.end.toJava().isAfter(shownTick) }.minByOrNull { it.start.seconds() }
-                    if (!clockOpen && caution != null) WindowRow(caution, shownTick)
+                    if (!clockOpen && caution != null) WindowRow(caution, shownTick, onPlan)
                     if (clockOpen) {
-                        for (w in m.windows) WindowRow(w, shownTick)
+                        for (w in m.windows) WindowRow(w, shownTick, onPlan)
                         Spacer(Modifier.height(4.dp))
                         for (s in m.shifts.take(10)) ShiftRow(s, shownTick)
                     }
@@ -893,7 +900,7 @@ private fun HoursStrip(hours: List<HourRecord>, tick: Instant, lives: List<LifeS
 }
 
 @Composable
-private fun WindowRow(w: WindowRecord, tick: Instant) {
+private fun WindowRow(w: WindowRecord, tick: Instant, onPlan: () -> Unit = {}) {
     val active = !tick.isBefore(w.start.toJava()) && tick.isBefore(w.end.toJava())
     val past = !tick.isBefore(w.end.toJava())
     val alpha = if (past) 0.45f else 1f
@@ -911,6 +918,81 @@ private fun WindowRow(w: WindowRecord, tick: Instant) {
             if (w.caution) "Finish things, start nothing new. A good use of it: settle a small debt, or make the call you owe someone." else "The best minutes of the day to begin.",
             style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(start = 18.dp),
         )
+        if (w.caution) {
+            Text(
+                "SOMETHING TO DO TODAY? PLAN AROUND IT ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
+                modifier = Modifier.padding(start = 18.dp).clickable(onClick = onPlan).padding(vertical = 4.dp),
+            )
+        }
+    }
+}
+
+/**
+ * What helps, always within reach on Now: a hard stretch is never left without a way
+ * forward, and on an easy day the same door keeps good fortune flowing.
+ */
+@Composable
+private fun WhatHelpsCard(testing: Boolean, onRemedy: () -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().glass(16.dp).clickable(onClick = onRemedy).padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text("WHAT HELPS", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(
+            if (testing) "A testing time is running. There are deeds, gifts and prayers that ease it, and each one says why."
+            else "Small deeds, gifts and prayers for whatever weighs on you, and for keeping a good stretch good.",
+            fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 22.sp, color = KshanaColors.Text,
+        )
+        Text("SEE WHAT HELPS ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.padding(top = 2.dp))
+    }
+}
+
+/**
+ * One door at a time, so the pages under Explore get found: in the first week, a door a
+ * day; after it, one page the person has not opened yet. It retires each page once opened.
+ */
+@Composable
+private fun DiscoverCard(testing: Boolean, onOpen: (String) -> Unit) {
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { com.kshana.app.data.Discover.load(context) }
+    // Read the observable list so the card moves on as soon as a page is opened or skipped.
+    val seenCount = com.kshana.app.data.Discover.seen.size
+    var skippedNow by remember { mutableStateOf(0) }
+    val pick = remember(seenCount, skippedNow, testing) { com.kshana.app.data.Discover.pick(testing) } ?: return
+    val (door, day) = pick
+    Column(
+        Modifier.fillMaxWidth().glass(16.dp).padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            if (day != null) "YOUR FIRST WEEK · DAY $day OF 7" else "TRY THIS",
+            style = MaterialTheme.typography.labelSmall, color = KshanaColors.Sky,
+        )
+        if (day != null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
+                for (i in 1..7) {
+                    val done = com.kshana.app.data.Discover.WEEK[i - 1].route in com.kshana.app.data.Discover.seen
+                    Box(
+                        Modifier.size(if (i == day) 9.dp else 7.dp).clip(CircleShape)
+                            .background(if (done) KshanaColors.Gold else KshanaColors.Line),
+                    )
+                }
+            }
+        }
+        Text(door.title, fontFamily = FontFamily.Serif, fontSize = 19.sp, color = KshanaColors.Text)
+        Text(door.why, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+        Row(horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                door.go + " ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
+                modifier = Modifier.clickable { onOpen(door.route) }.padding(vertical = 6.dp),
+            )
+            if (day == null) {
+                Text(
+                    "NOT NOW", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted,
+                    modifier = Modifier.clickable { com.kshana.app.data.Discover.skip(context, door.route); skippedNow++ }.padding(vertical = 6.dp),
+                )
+            }
+        }
     }
 }
 

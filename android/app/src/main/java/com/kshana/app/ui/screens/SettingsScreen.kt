@@ -257,7 +257,7 @@ fun SettingsScreen(
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) {
                 Text("Show the chart pages", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
-                Text("Wheels, periods, houses and the technical settings, under More. Off, the app speaks only in plain predictions.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                Text("Wheels, periods, houses and the technical settings, under Explore. Off, the app speaks only in plain predictions.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             }
             Switch(
                 checked = expert,

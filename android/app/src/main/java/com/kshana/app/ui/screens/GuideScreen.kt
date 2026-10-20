@@ -35,8 +35,8 @@ private val TABS_GUIDE = listOf(
     GuideStop(TabGlyph.EYE, "Reading", "Your own consultation. Say what is on your mind in your own words, or pick a matter, and get an answer with dates: when it opens, when to wait, and what helps. If the app does not understand a question it says so and asks you to pick, rather than guess.", "reading"),
     GuideStop(TabGlyph.CRYSTAL, "Future", "What is coming, in order. DAY TO YEAR shows today, this week, this month and this year. YEARS AHEAD lists the openings and hard stretches over 1, 3 or 5 years, each with its months, how strong it is, and what to do. Tap CHANGE to choose which parts of life you care about.", "future"),
     GuideStop(TabGlyph.HEART, "Us", "Two people together: add someone close to you and see how your times fit, the good days to talk, and where to go gently with each other.", "together"),
-    GuideStop(TabGlyph.STAR, "Favorites", "Your own shelf. Tap the ☆ beside any page under More and it stays here, one tap away. Pages you open often show up here too.", "favorites"),
-    GuideStop(TabGlyph.MORE, "More", "Everything else: your birth details, settings, remedies, the month's letter, your journal, the countdowns, help, and (if you switch them on in Settings) the chart pages for people who read charts.", "more"),
+    GuideStop(TabGlyph.STAR, "Favorites", "Your own shelf. Tap the ☆ beside any page under Explore and it stays here, one tap away. Pages you open often show up here too.", "favorites"),
+    GuideStop(TabGlyph.MORE, "Explore", "Every other page, grouped by what you need: something weighs on me, a day to plan, waiting for something, my life so far, my family. A gold dot marks pages you have not opened yet. Your birth details, settings and help are here too, and (if you switch them on in Settings) the chart pages for people who read charts.", "more"),
 )
 
 private val TIPS = listOf(

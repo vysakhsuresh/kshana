@@ -27,6 +27,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -102,7 +104,7 @@ private val tabs = listOf(
     Tab("future", "FUTURE", com.kshana.app.ui.theme.TabGlyph.CRYSTAL),
     Tab("together", "US", com.kshana.app.ui.theme.TabGlyph.HEART),
     Tab("favorites", "FAVORITES", com.kshana.app.ui.theme.TabGlyph.STAR),
-    Tab("more", "MORE", com.kshana.app.ui.theme.TabGlyph.MORE),
+    Tab("more", "EXPLORE", com.kshana.app.ui.theme.TabGlyph.MORE),
 )
 
 /** A kshana:// link the app was opened with, waiting to be handled by the UI. */
@@ -165,6 +167,12 @@ private fun App() {
     val backStack by nav.currentBackStackEntryAsState()
     val current = backStack?.destination?.route ?: start
     val showBar = tabs.any { it.route == current }
+    // Which pages the person has opened: the Explore dot and the Now cards read it.
+    androidx.compose.runtime.LaunchedEffect(profile) { if (profile != null) com.kshana.app.data.Discover.reload(context) }
+    androidx.compose.runtime.LaunchedEffect(current, profile) { if (profile != null) com.kshana.app.data.Discover.visit(context, current) }
+    val exploreDot = profile != null && com.kshana.app.ui.screens.MORE_PAGES.any {
+        it.section in com.kshana.app.ui.screens.NEED_SECTIONS && com.kshana.app.data.Discover.isNew(it.route)
+    }
     // Where the person is now: a saved current place, else the birth place, else Kochi.
     var here by remember { mutableStateOf(ProfileStore.currentLocation(context)) }
 
@@ -218,7 +226,19 @@ private fun App() {
                         NavigationBarItem(
                             selected = current == t.route,
                             onClick = { goTab(t.route) },
-                            icon = { com.kshana.app.ui.theme.AnimatedTabIcon(t.glyph, selected = current == t.route, label = t.label) },
+                            icon = {
+                                androidx.compose.foundation.layout.Box {
+                                    com.kshana.app.ui.theme.AnimatedTabIcon(t.glyph, selected = current == t.route, label = t.label)
+                                    // A small gold dot while Explore holds pages not yet opened.
+                                    if (t.route == "more" && exploreDot) {
+                                        androidx.compose.foundation.layout.Box(
+                                            Modifier.align(androidx.compose.ui.Alignment.TopEnd)
+                                                .size(7.dp)
+                                                .background(KshanaColors.Gold, androidx.compose.foundation.shape.CircleShape),
+                                        )
+                                    }
+                                }
+                            },
                             label = { Text(com.kshana.app.data.Lang.t(t.label), fontSize = 10.sp, maxLines = 1, softWrap = false, letterSpacing = 0.6.sp) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = KshanaColors.Gold,
@@ -259,6 +279,7 @@ private fun App() {
                         onJournal = { open("journal") },
                         onCalendar = { open("calendar") },
                         onReading = { goTab("reading") },
+                        onOpen = { r -> if (tabs.any { t -> t.route == r }) goTab(r) else open(r) },
                     )
                 }
             }
@@ -290,6 +311,7 @@ private fun App() {
                         profile = it, place = here, settings = settings,
                         onLife = { life -> open("life/$life") }, onRemedy = { l -> open(l?.let { "parihara/$it" } ?: "parihara") },
                         onLetter = { open("letter") }, onBook = { open("book") }, onHindsight = { open("hindsight") }, onSettings = { open("settings") },
+                        onWall = { open("wall") },
                     )
                 }
             }

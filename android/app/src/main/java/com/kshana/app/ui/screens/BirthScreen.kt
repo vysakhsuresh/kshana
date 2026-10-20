@@ -57,7 +57,7 @@ private val LEVEL_COPY = listOf(
     LevelCopy("Some doubt.", "Daily and monthly readings hold; the exact hour of a few turns may move."),
     LevelCopy("Real doubt.", "Most readings hold; some dates may move by a few days."),
     LevelCopy("Large doubt.", "The broad picture holds; dates for some parts of life may be off by weeks."),
-    LevelCopy("Very large doubt.", "Only the broad picture holds. Use Find your exact birth time under More to sharpen it."),
+    LevelCopy("Very large doubt.", "Only the broad picture holds. Use Find your exact birth time under Explore to sharpen it."),
     LevelCopy("No time at all.", "The broad seasons and your daily luck hold. Dates for each part of life cannot be trusted."),
 )
 
