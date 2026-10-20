@@ -8,5 +8,7 @@ class KshanaApp : Application() {
     override fun onCreate() {
         super.onCreate()
         CrashLog.install(this)
+        // Keep the Downloads copy current: a few seconds after any change, not only on leaving.
+        com.kshana.app.data.Backup.watch(this)
     }
 }

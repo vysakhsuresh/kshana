@@ -20,6 +20,8 @@ object Backup {
     /** Keys that describe this install, not the person; never carried across. */
     private val SKIP = setOf("sunrise.next", "sunset.next", "alerts.json", "widget.line1", "widget.line2", "widget.line3", "widget.line4", "widget.score", "care.asks")
     const val FILE_NAME = "kshana-backup.json"
+    /** When the last restored file was saved; shown so the person can tell it was the newest. */
+    @Volatile var restoredSaved: Long = 0L
 
     fun toJson(context: Context): String {
         val root = JSONObject().put("app", "kshana").put("version", 1).put("saved", System.currentTimeMillis())
@@ -49,6 +51,7 @@ object Backup {
     fun fromJson(context: Context, text: String): String? {
         val root = runCatching { JSONObject(text) }.getOrNull() ?: return null
         if (root.optString("app") != "kshana") return null
+        restoredSaved = root.optLong("saved", 0L)
         for (name in STORES) {
             val o = root.optJSONObject(name) ?: continue
             val ed = context.applicationContext.getSharedPreferences(name, Context.MODE_PRIVATE).edit()
@@ -82,32 +85,78 @@ object Backup {
         fromJson(context, text)
     }.getOrNull()
 
-    /** Keep a copy in Downloads/Kshana, overwriting the last one. Quietly does nothing before Android 10. */
+    /**
+     * Keep a copy in Downloads/Kshana, overwriting this install's own copy. Quietly does
+     * nothing before Android 10.
+     *
+     * After a reinstall, Android counts the old file as another app's: it cannot be found
+     * or overwritten. So this install writes its own file, named for the day it was first
+     * made (kshana-backup-2026-10-20.json), and keeps overwriting that one. The newest
+     * backup is then always the file with the latest date, which is easy to pick.
+     */
+    @Synchronized
     fun autoSave(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
         if (!ProfileStore.prefs(context).getBoolean("profile.has", false)) return
         if (!ProfileStore.prefs(context).getBoolean(K_AUTO, true)) return
-        runCatching {
+        val ok = runCatching {
             val resolver = context.contentResolver
             val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
             val rel = "Download/Kshana/"
             var uri: Uri? = null
+            // This install's own file: only files this app made are visible to it.
             resolver.query(
                 collection, arrayOf(MediaStore.MediaColumns._ID),
-                "${MediaStore.MediaColumns.DISPLAY_NAME}=? AND ${MediaStore.MediaColumns.RELATIVE_PATH}=?",
-                arrayOf(FILE_NAME, rel), null,
+                "${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ? AND ${MediaStore.MediaColumns.RELATIVE_PATH}=?",
+                arrayOf("kshana-backup%", rel), "${MediaStore.MediaColumns.DATE_MODIFIED} DESC",
             )?.use { c -> if (c.moveToFirst()) uri = android.content.ContentUris.withAppendedId(collection, c.getLong(0)) }
             if (uri == null) {
                 val v = ContentValues().apply {
-                    put(MediaStore.MediaColumns.DISPLAY_NAME, FILE_NAME)
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, "kshana-backup-${java.time.LocalDate.now()}.json")
                     put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
                     put(MediaStore.MediaColumns.RELATIVE_PATH, rel)
                 }
                 uri = resolver.insert(collection, v)
             }
-            uri?.let { u -> resolver.openOutputStream(u, "wt")?.use { it.write(toJson(context).toByteArray()) } }
-            ProfileStore.prefs(context).edit().putLong(K_LAST, System.currentTimeMillis()).apply()
+            val u = uri ?: error("no backup file")
+            resolver.openOutputStream(u, "wt")?.use { it.write(toJson(context).toByteArray()) } ?: error("cannot write")
         }
+        if (ok.isSuccess) ProfileStore.prefs(context).edit().putLong(K_LAST, System.currentTimeMillis()).apply()
+        else android.util.Log.w("Kshana", "backup not saved", ok.exceptionOrNull())
+    }
+
+    /** When the backup file being restored was saved, so the person can tell if it is the newest. */
+    fun savedAt(text: String): Long = runCatching { JSONObject(text).optLong("saved", 0L) }.getOrDefault(0L)
+
+    /** "today at 8:02", "yesterday at 21:10", "12 Oct 2026 at 9:15". */
+    fun whenWords(millis: Long): String {
+        if (millis <= 0L) return "an unknown time"
+        val t = java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneId.systemDefault())
+        val days = java.time.temporal.ChronoUnit.DAYS.between(t.toLocalDate(), java.time.LocalDate.now())
+        val clock = t.format(java.time.format.DateTimeFormatter.ofPattern("H:mm"))
+        return when (days) {
+            0L -> "today at $clock"
+            1L -> "yesterday at $clock"
+            else -> t.format(java.time.format.DateTimeFormatter.ofPattern("d MMM uuuu")) + " at $clock"
+        }
+    }
+
+    // Save a few seconds after anything changes, so a crash, an uninstall or a phone
+    // switched off mid-visit never loses what was just entered.
+    private val handler by lazy { android.os.Handler(android.os.HandlerThread("kshana-backup").apply { start() }.looper) }
+    private var appContext: Context? = null
+    private val saveSoon = Runnable { appContext?.let { autoSave(it) } }
+    private val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == K_LAST) return@OnSharedPreferenceChangeListener
+        handler.removeCallbacks(saveSoon)
+        handler.postDelayed(saveSoon, 4_000L)
+    }
+
+    /** Start saving on every change. Called once when the app starts. */
+    fun watch(context: Context) {
+        if (appContext != null) return
+        appContext = context.applicationContext
+        for (name in STORES) context.applicationContext.getSharedPreferences(name, Context.MODE_PRIVATE).registerOnSharedPreferenceChangeListener(listener)
     }
 
     private const val K_AUTO = "backup.auto"

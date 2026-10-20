@@ -38,8 +38,14 @@ fun WelcomeScreen(onStart: () -> Unit, onRestored: () -> Unit) {
     val open = rememberLauncherForActivityResult(com.kshana.app.data.OpenBackup()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         val name = Backup.read(context, uri)
-        if (name == null) note = "That file is not a Kshana backup. It is called ${Backup.FILE_NAME} and is usually in Downloads › Kshana."
-        else onRestored()
+        if (name == null) note = "That file is not a Kshana backup. Its name starts with kshana-backup and it is usually in Downloads › Kshana."
+        else {
+            // Say how old it is, so a stale file is noticed at once, and start this install's own copy now.
+            android.widget.Toast.makeText(context, "Restored your backup from ${Backup.whenWords(Backup.restoredSaved)}.", android.widget.Toast.LENGTH_LONG).show()
+            val app = context.applicationContext
+            Thread { Backup.autoSave(app) }.start()
+            onRestored()
+        }
     }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 28.dp).padding(top = 72.dp, bottom = 40.dp),
@@ -59,7 +65,10 @@ fun WelcomeScreen(onStart: () -> Unit, onRestored: () -> Unit) {
         Spacer(Modifier.height(10.dp))
         GoldButton("BEGIN WITH MY BIRTH DETAILS", onClick = onStart, modifier = Modifier.fillMaxWidth())
         QuietButton("RESTORE FROM MY BACKUP FILE", onClick = { open.launch(Unit) }, modifier = Modifier.fillMaxWidth())
-        Text("Used Kshana before? Your backup is kept in Downloads › Kshana › ${Backup.FILE_NAME}.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        Text(
+            "Used Kshana before? Your backup is kept in Downloads › Kshana. Pick the newest file: the one with the latest date in its name, or the latest time beside it.",
+            style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+        )
         note?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Ember) }
     }
 }

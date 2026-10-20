@@ -52,7 +52,7 @@ internal fun DataSettings() {
         if (uri != null) note = if (Backup.write(context, uri)) "Saved. Keep the file somewhere safe: Drive, email to yourself, or a pen drive." else "Could not save the file."
     }
     val open = rememberLauncherForActivityResult(com.kshana.app.data.OpenBackup()) { uri ->
-        if (uri != null) note = Backup.read(context, uri)?.let { "Restored${if (it.isNotBlank()) " for $it" else ""}. Close and open the app to see everything." } ?: "That file is not a Kshana backup."
+        if (uri != null) note = Backup.read(context, uri)?.let { "Restored${if (it.isNotBlank()) " for $it" else ""}, from the backup saved ${Backup.whenWords(Backup.restoredSaved)}. Close and open the app to see everything." } ?: "That file is not a Kshana backup."
     }
     SectionLabel("Your data")
     Text(
