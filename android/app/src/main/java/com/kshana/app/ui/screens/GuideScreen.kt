@@ -130,12 +130,32 @@ fun AboutScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
         AboutCard("Why we made it", "Most astrology apps speak a language only astrologers understand, or say the same thing to everyone. Kshana works from your own birth and the real sky, and tells you in plain words what is coming, when, how strongly, and what to do. Guidance, never a guarantee, and it shows you openly how often it has been right.")
         AboutCard("What it stands on", "The positions of the sun, moon and planets come from NASA's planetary data and the international Earth-rotation service, worked out on this phone to a fraction of a second. The readings follow long-tested rules from the classic Indian texts, weighed together and checked against your own life.")
         AboutCard("Your privacy", "No account, no sign-in, no advertising, no tracking. Nothing you enter leaves this phone unless you send it yourself.")
-        AboutCard("Made by", "Vysakh Suresh, with care, in Kerala.")
+        AboutCard("Made by", "${com.kshana.app.data.BrandLinks.BRAND_LABEL}, with care.")
+
+        Column(Modifier.fillMaxWidth().glass(14.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("TALK TO US", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            Text(
+                "A question, something that went wrong, or a reading that did not fit? Tell us. We read every message.",
+                fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 24.sp, color = KshanaColors.Text,
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                GoldButton("EMAIL US", onClick = {
+                    com.kshana.app.data.BrandLinks.sendEmail(context, "Kshana $version - feedback")
+                }, modifier = Modifier.weight(1f))
+                QuietButton("WHATSAPP", onClick = {
+                    com.kshana.app.data.BrandLinks.openUrl(context, com.kshana.app.data.BrandLinks.WHATSAPP_URL)
+                }, modifier = Modifier.weight(1f))
+            }
+            Text(
+                "Either one opens your own mail or WhatsApp app. Nothing from your readings is sent with it.",
+                style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+            )
+        }
 
         Text(
-            if (version.isNotBlank()) "Version $version" else "",
+            "Made by ${com.kshana.app.data.BrandLinks.BRAND_LABEL} · layerbit.co.in" + if (version.isNotBlank()) "\nVersion $version" else "",
             style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
-            modifier = Modifier.padding(top = 4.dp),
+            modifier = Modifier.clickable { com.kshana.app.data.BrandLinks.openUrl(context, com.kshana.app.data.BrandLinks.WEBSITE_URL) }.padding(top = 4.dp, bottom = 4.dp),
         )
         QuietButton("GUIDE: HOW TO USE KSHANA", onClick = { onOpen("guide") }, modifier = Modifier.fillMaxWidth())
         QuietButton("HOW IT WORKS AND THE PRIVACY POLICY", onClick = { onOpen("how") }, modifier = Modifier.fillMaxWidth())

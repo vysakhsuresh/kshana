@@ -90,21 +90,52 @@ fun AnimatedTabIcon(glyph: TabGlyph, selected: Boolean, label: String) {
 private class FixedFloat(override val value: Float) : State<Float>
 private fun mutableFloat(v: Float): State<Float> = FixedFloat(v)
 
+/**
+ * A sun: a glowing disc ringed by pointed, flame-like rays (long and short in turn) that
+ * sit just off the disc. Chosen, it shines: the rays turn slowly and stretch in a wave,
+ * the glow breathes, and a ring of light ripples out from the disc.
+ */
 private fun DrawScope.sun(c: Color, spin: Float, pulse: Float, on: Float) {
     val r = size.minDimension / 2
-    val core = r * 0.38f
-    drawCircle(c, core)
-    rotate(spin * 360f) {
-        for (i in 0 until 8) {
-            val a = (i * 45f) * PI.toFloat() / 180f
-            // Rays breathe in turn while shining.
-            val wave = if (on > 0f) 0.5f + 0.5f * sin(2 * PI.toFloat() * (pulse + i / 8f)) else 0.5f
-            val inner = core + r * 0.12f
-            val outer = inner + r * (0.22f + 0.2f * wave * on)
-            drawLine(c, Offset(center.x + cos(a) * inner, center.y + sin(a) * inner), Offset(center.x + cos(a) * outer, center.y + sin(a) * outer),
-                strokeWidth = r * 0.12f, cap = StrokeCap.Round)
+    val core = r * 0.36f
+    val pi = PI.toFloat()
+
+    if (on > 0f) {
+        // Corona: a soft halo that breathes.
+        drawCircle(
+            Brush.radialGradient(listOf(c.copy(alpha = 0.55f * on), c.copy(alpha = 0.18f * on), Color.Transparent), center, r * (0.8f + 0.15f * pulse)),
+            radius = r * (0.8f + 0.15f * pulse),
+        )
+        // A ring of light leaving the disc, fading as it grows.
+        val ripple = (spin * 6f) % 1f
+        drawCircle(c.copy(alpha = (1f - ripple) * 0.45f * on), core + r * 0.55f * ripple, style = Stroke(width = r * 0.05f))
+    }
+
+    // Twelve tapered rays, long and short in turn.
+    rotate(spin * 120f) {
+        for (i in 0 until 12) {
+            val a = i * 30f * pi / 180f
+            val long = i % 2 == 0
+            val wave = if (on > 0f) 0.5f + 0.5f * sin(2 * pi * (pulse + i / 12f)) else 0.5f
+            val inner = core + r * 0.1f
+            val outer = inner + r * ((if (long) 0.42f else 0.26f) + 0.12f * wave * on)
+            val half = r * (if (long) 0.11f else 0.08f)
+            val perp = a + pi / 2
+            val p = Path().apply {
+                moveTo(center.x + cos(a) * inner + cos(perp) * half, center.y + sin(a) * inner + sin(perp) * half)
+                lineTo(center.x + cos(a) * outer, center.y + sin(a) * outer)
+                lineTo(center.x + cos(a) * inner - cos(perp) * half, center.y + sin(a) * inner - sin(perp) * half)
+                close()
+            }
+            drawPath(p, c.copy(alpha = if (long) 1f else 0.8f))
         }
     }
+
+    // The disc: bright at the heart, its own colour at the rim.
+    drawCircle(
+        Brush.radialGradient(listOf(Color.White.copy(alpha = 0.55f + 0.35f * on), c, c), center.copy(x = center.x - core * 0.25f, y = center.y - core * 0.25f), core * 1.4f),
+        radius = core,
+    )
 }
 
 private fun DrawScope.eye(c: Color, turn: Float, blink: Float, on: Float) {
