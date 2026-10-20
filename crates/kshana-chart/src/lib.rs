@@ -115,6 +115,18 @@ pub struct Chart {
     pub provenance: Provenance,
 }
 
+impl Chart {
+    /// Rahu (tropical, sidereal): the true or mean node by the engine-wide
+    /// [`kshana_sky::lunar_node`] choice, so natal Rahu and transit Rahu are always the
+    /// same point. Ketu is this plus 180°.
+    pub fn rahu(&self) -> (f64, f64) {
+        match kshana_sky::lunar_node() {
+            kshana_sky::LunarNode::True => self.true_node,
+            kshana_sky::LunarNode::Mean => self.mean_node,
+        }
+    }
+}
+
 /// Why a chart could not be computed.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ChartError {

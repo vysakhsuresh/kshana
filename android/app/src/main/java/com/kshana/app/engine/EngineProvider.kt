@@ -6,6 +6,7 @@ import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.Engine
 import java.io.File
 import uniffi.kshana_ffi.setRiseConvention
+import uniffi.kshana_ffi.setLunarNode
 import com.kshana.app.data.ProfileStore
 
 /**
@@ -33,6 +34,7 @@ object EngineProvider {
         val spk = ensureAsset(context, "de421.bsp")
         val eop = runCatching { ensureAsset(context, "finals2000A.all") }.getOrNull()
         runCatching { setRiseConvention(ProfileStore.settings(context).riseConvention) }
+        runCatching { setLunarNode(ProfileStore.settings(context).lunarNode) }
         return Engine.open(spk.absolutePath, eop?.absolutePath)
     }
 

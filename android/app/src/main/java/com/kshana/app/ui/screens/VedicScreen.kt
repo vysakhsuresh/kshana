@@ -132,7 +132,7 @@ fun VedicScreen(profile: BirthProfile, settings: EngineSettings) {
         val c = chart ?: return@LaunchedEffect
         try {
             val r = withContext(Dispatchers.Default) {
-                val rahu = norm360(c.trueNodeTropical - c.ayanamsaDeg)
+                val rahu = norm360(c.rahuTropical - c.ayanamsaDeg)
                 val bodies = c.bodies.filter { it.name in VEDIC_ORDER }.map { VargaPlacement(it.name, varga(it.sidereal, vargaN)) } +
                     listOf(VargaPlacement("Rahu", varga(rahu, vargaN)), VargaPlacement("Ketu", varga(norm360(rahu + 180.0), vargaN)))
                 Pair(varga(c.cuspsSidereal[0], vargaN), bodies)

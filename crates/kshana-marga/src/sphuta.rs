@@ -486,7 +486,7 @@ pub fn sphutas(chart: &Chart, gulika: f64) -> Result<Vec<Sphuta>, MargaError> {
     let mars = body_sidereal(chart, "Mars")?;
     let jupiter = body_sidereal(chart, "Jupiter")?;
     let venus = body_sidereal(chart, "Venus")?;
-    let rahu = chart.true_node.1;
+    let rahu = chart.rahu().1;
     Ok(vec![
         trisphuta(lagna, moon, gulika),
         chatussphuta(lagna, moon, gulika, sun),
@@ -531,7 +531,7 @@ pub fn sphuta_report(
     Ok(SphutaReport {
         gulika,
         yogi: yogi(sun, moon),
-        bhrigu_bindu: bhrigu_bindu(moon, chart.true_node.1),
+        bhrigu_bindu: bhrigu_bindu(moon, chart.rahu().1),
         sphutas: all,
     })
 }

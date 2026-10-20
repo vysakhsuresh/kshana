@@ -5,7 +5,7 @@
 //! Rahu and Ketu), not a mean-motion estimate.
 
 use kshana_ephem::{Body, Spk};
-use kshana_sky::{apparent_longitude, true_node_longitude};
+use kshana_sky::{apparent_longitude, rahu_longitude};
 use kshana_solver::{find_root, wrap180};
 use kshana_time::{Instant, NS_PER_DAY, NS_PER_SEC};
 use kshana_vedic::{ayanamsa_degrees, Ayanamsa, DashaLord};
@@ -58,7 +58,7 @@ pub fn sidereal_longitude(spk: &Spk, ayanamsa: Ayanamsa, g: DashaLord, t: Instan
     let trop = match body(g) {
         Some(b) => apparent_longitude(spk, b, t).ok()?,
         None => {
-            let n = true_node_longitude(spk, t).ok()?;
+            let n = rahu_longitude(spk, t).ok()?;
             if g == DashaLord::Ketu {
                 n + 180.0
             } else {

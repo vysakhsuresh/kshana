@@ -107,7 +107,7 @@ impl Facts {
             let b = find(name);
             add(graha, b.sidereal, b.speed < 0.0);
         }
-        let rahu = chart.true_node.1;
+        let rahu = chart.rahu().1;
         add(DashaLord::Rahu, rahu, true);
         add(DashaLord::Ketu, (rahu + 180.0).rem_euclid(360.0), true);
 

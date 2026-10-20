@@ -56,16 +56,27 @@ import com.kshana.app.ui.sky.Haptics
 import com.kshana.app.ui.sky.Motion
 import com.kshana.app.ui.sky.SkySound
 import uniffi.kshana_ffi.setRiseConvention
+import uniffi.kshana_ffi.setLunarNode
 import kotlinx.coroutines.delay
 import com.kshana.app.ui.sky.KshanaFonts
 import com.kshana.app.data.LanguageStore
 import uniffi.kshana_ffi.languageNames
 
+/** Ayanamsa choices: label, one plain line, the choice. Offsets from Lahiri are for 2026. */
 private val AYANAMSAS = listOf(
-    "Lahiri" to AyanamsaChoice.LAHIRI,
-    "Raman" to AyanamsaChoice.RAMAN,
-    "Krishnamurti" to AyanamsaChoice.KRISHNAMURTI,
-    "Fagan-Bradley" to AyanamsaChoice.FAGAN_BRADLEY,
+    Triple("Lahiri", "The Indian government standard; most panchangas use it.", AyanamsaChoice.LAHIRI),
+    Triple("Raman", "B. V. Raman's value, about 1°27′ less than Lahiri.", AyanamsaChoice.RAMAN),
+    Triple("Krishnamurti", "The KP system's value, about 6′ less than Lahiri.", AyanamsaChoice.KRISHNAMURTI),
+    Triple("KP 291", "Krishnamurti counted from the year 291, the newer KP value; about 5′ less than Lahiri.", AyanamsaChoice.KRISHNAMURTI_VP291),
+    Triple("True Chitra", "Keeps the star Spica exactly at 0° Libra, from where it really is; about 1′ less than Lahiri.", AyanamsaChoice.TRUE_CHITRA),
+    Triple("True Pushya", "Keeps the star delta Cancri at 16° Cancer; about 1°08′ less than Lahiri.", AyanamsaChoice.TRUE_PUSHYA),
+    Triple("True Revati", "Keeps the star zeta Piscium at 29°50′ Pisces; about 3°49′ less than Lahiri.", AyanamsaChoice.TRUE_REVATI),
+    Triple("Lahiri 1940", "Lahiri's first published value; about 1′ less than today's.", AyanamsaChoice.LAHIRI1940),
+    Triple("Lahiri 285", "Lahiri's later definition, the two zodiacs together in the year 285; 23″ more.", AyanamsaChoice.LAHIRI_VP285),
+    Triple("Lahiri 1955", "The Calendar Reform Committee value before its 1985 correction; 1″ less.", AyanamsaChoice.LAHIRI_ICRC),
+    Triple("Yukteshwar", "From Sri Yukteshwar's The Holy Science; about 1°23′ less than Lahiri.", AyanamsaChoice.YUKTESHWAR),
+    Triple("Surya Siddhanta", "The two zodiacs together in the year 499, as the old Surya Siddhanta has it; about 3° less.", AyanamsaChoice.SURYA_SIDDHANTA),
+    Triple("Fagan-Bradley", "The Western sidereal standard, about 53′ more than Lahiri.", AyanamsaChoice.FAGAN_BRADLEY),
 )
 
 private val HOUSES = listOf(
@@ -124,6 +135,7 @@ fun SettingsScreen(
     fun save(s: EngineSettings) {
         ProfileStore.saveSettings(context, s)
         runCatching { setRiseConvention(s.riseConvention) }
+        runCatching { setLunarNode(s.lunarNode) }
         onSettingsChanged(s)
     }
 
@@ -283,8 +295,27 @@ fun SettingsScreen(
         }
 
         SectionLabel("Ayanamsa")
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            for ((label, a) in AYANAMSAS) Chip(label.uppercase(), selected = settings.ayanamsa == a, onClick = { save(settings.copy(ayanamsa = a)) })
+        for ((label, line, a) in AYANAMSAS) {
+            val on = settings.ayanamsa == a
+            Column(
+                Modifier.fillMaxWidth().clickable { save(settings.copy(ayanamsa = a)) }.padding(vertical = 6.dp),
+            ) {
+                Text(
+                    (if (on) "● " else "○ ") + label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (on) KshanaColors.Gold else KshanaColors.Text,
+                )
+                Text(line, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            }
+        }
+        SectionLabel("Rahu and Ketu")
+        Text(
+            "The true node follows the Moon's orbit as it really turns, wobbling up to about 1.7° either side; the mean node moves smoothly and is what most printed panchangas use for Rahu's sign changes. Your chart, transits and timings all follow the choice.",
+            style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Chip("TRUE NODE", selected = settings.lunarNode == "true", onClick = { save(settings.copy(lunarNode = "true")) })
+            Chip("MEAN NODE", selected = settings.lunarNode == "mean", onClick = { save(settings.copy(lunarNode = "mean")) })
         }
         SectionLabel("House system")
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

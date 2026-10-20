@@ -105,7 +105,7 @@ pub fn avasthas(chart: &Chart) -> Vec<Avastha> {
         .filter_map(|g| find(*g).map(|b| (*g, sign_of(b.sidereal))))
         .collect();
     let sign_lookup = |g: DashaLord| signs.iter().find(|(p, _)| *p == g).map(|(_, s)| *s);
-    let rahu = sign_of(chart.true_node.1);
+    let rahu = sign_of(chart.rahu().1);
     let ketu = (rahu + 6) % 12;
     let sun = find(DashaLord::Sun).map(|b| b.sidereal);
     let malefic_signs: Vec<(DashaLord, u8)> = [DashaLord::Sun, DashaLord::Mars, DashaLord::Saturn]
