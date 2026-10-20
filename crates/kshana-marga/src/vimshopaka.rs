@@ -27,13 +27,13 @@
 //! D40 (Khavedamsa) counts from Aries for odd signs and Libra for even ones, D45
 //! (Akshavedamsa) from Aries, Leo and Sagittarius for movable, fixed and dual signs
 //! (BPHS ch. 6; indianastrologyarticles.blogspot.com "Divisional charts D40/D45";
-//! jagannathhora.com "Akshavedamsa chart"); the other vargas come from
-//! `kshana_vedic::varga`.
+//! jagannathhora.com "Akshavedamsa chart"); every varga, these two included, comes from
+//! the one canonical `kshana_vedic::varga`.
 
 use kshana_bala::tables::SEVEN;
 use kshana_bala::{compound_relation, Relation};
 use kshana_chart::Chart;
-use kshana_vedic::{sign_lord, varga, DashaLord};
+use kshana_vedic::{sign_lord, DashaLord};
 
 use crate::{graha_name, sign_of, MargaError, SIGN_NAMES};
 
@@ -83,29 +83,11 @@ pub const SHODASHAVARGA: [(u32, f64); 16] = [
     (60, 4.0),
 ];
 
-/// Sign index 0–11 of a longitude in the D-n chart, with D40 and D45 by their own
-/// rules and every other n by `kshana_vedic::varga`.
+/// Sign index 0–11 of a longitude in the D-n chart: the canonical
+/// `kshana_vedic::varga_sign` (one implementation, which carries the BPHS D40 and D45
+/// rules this module used to keep on its own).
 pub fn varga_sign(sidereal: f64, n: u32) -> u8 {
-    let l = sidereal.rem_euclid(360.0);
-    let sign = (l / 30.0).floor() as u32 % 12;
-    let in_sign = l.rem_euclid(30.0);
-    match n {
-        40 => {
-            let part = ((in_sign / 0.75).floor() as u32).min(39);
-            let start = if sign % 2 == 0 { 0 } else { 6 };
-            ((start + part) % 12) as u8
-        }
-        45 => {
-            let part = ((in_sign / (30.0 / 45.0)).floor() as u32).min(44);
-            let start = match sign % 3 {
-                0 => 0,
-                1 => 4,
-                _ => 8,
-            };
-            ((start + part) % 12) as u8
-        }
-        _ => sign_of(varga(l, n)),
-    }
+    kshana_vedic::varga_sign(sidereal, n)
 }
 
 /// Points out of twenty for a compound relationship with the varga sign's lord.
@@ -263,6 +245,7 @@ pub fn vimshopaka(chart: &Chart) -> Result<Vec<Vimshopaka>, MargaError> {
 mod tests {
     use super::*;
     use crate::fixture::{kernel, kochi_chart};
+    use kshana_vedic::varga;
     use kshana_vedic::DashaLord::*;
 
     #[test]

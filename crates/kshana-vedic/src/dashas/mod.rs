@@ -14,7 +14,13 @@ use crate::DashaLord;
 
 pub mod ashtottari;
 pub mod chara;
+pub mod conditional;
+pub mod drig;
 pub mod kalachakra;
+pub mod narayana;
+pub mod rasi_strength;
+pub mod shoola;
+pub mod sthira;
 pub mod yogini;
 
 pub use ashtottari::{
@@ -26,11 +32,23 @@ pub use chara::{
     chara, chara_direction, chara_lord, chara_sequence, chara_sub, chara_years, is_odd_footed,
     Direction, EXALTATION_SIGN,
 };
+pub use conditional::{
+    applies as conditional_applies, conditional, conditional_sub, AntarRule, ChartFacts,
+    Conditional,
+};
 pub use kalachakra::{
     deha_jeeva, kalachakra, kalachakra_detail, kalachakra_row, kalachakra_sub, paramayus, row,
     Group, KalachakraDasha, KalachakraRow, GROUP_OF_NAKSHATRA, KALACHAKRA_TABLE, KALACHAKRA_YEARS,
     PATTERN_PARAMAYUS, PATTERN_ROWS,
 };
+pub use drig::{drig, drig_antar_order, drig_sequence, drig_sub};
+pub use narayana::{
+    narayana, narayana_antar_order, narayana_seed, narayana_sequence, narayana_sub,
+    narayana_years,
+};
+pub use rasi_strength::{brahma, sign_lord as jaimini_sign_lord, stronger_rasi, RasiChart};
+pub use shoola::{shoola, shoola_seed, shoola_sub, SHOOLA_YEARS};
+pub use sthira::{sthira, sthira_seed, sthira_sub, sthira_years};
 pub use yogini::{yogini, yogini_sub, Yogini, YOGINI_CYCLE_YEARS};
 
 /// One period of any system at any level.

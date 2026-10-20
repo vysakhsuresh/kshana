@@ -31,7 +31,7 @@ pub use naming::{naming_for, syllable, SYLLABLES};
 pub use panchanga::{
     karana, nakshatra, tithi, yoga, Karana, Nakshatra, Tithi, Yoga, NAKSHATRA_SPAN,
 };
-pub use varga::varga;
+pub use varga::{nadiamsa_ordinal, varga, varga_sign, SUPPORTED_VARGAS};
 
 /// Normalise a longitude into `[0, 360)`.
 pub fn norm360(d: f64) -> f64 {
