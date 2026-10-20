@@ -68,7 +68,7 @@ private data class NatalMoon(val sidereal: Double, val nakshatra: String)
 fun MuhurtaScreen(place: Place, settings: EngineSettings, profile: BirthProfile?, onBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val zone = remember(place) { try { ZoneId.of(place.zoneId) } catch (e: DateTimeException) { ZoneId.systemDefault() } }
+    val zone = remember(place) { try { com.kshana.app.data.CityClocks.of(place.zoneId) } catch (e: DateTimeException) { ZoneId.systemDefault() } }
     var activity by remember { mutableStateOf<String?>(null) }
     var days by remember { mutableStateOf(7u) }
     var natal by remember { mutableStateOf<NatalMoon?>(null) }

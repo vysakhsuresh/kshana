@@ -107,13 +107,17 @@ object Gazetteer {
                 val k = keyOf(c)
                 if (!k.startsWith(q)) break
                 if (c.size >= 7) {
+                    val region = regions.getOrElse(c[5].toIntOrNull() ?: -1) { "" }
+                    val lat = c[2].toDouble()
+                    val lon = c[3].toDouble()
                     found.add(
                         k to Hit(
                             name = c[1],
-                            region = regions.getOrElse(c[5].toIntOrNull() ?: -1) { "" },
-                            latitude = c[2].toDouble(),
-                            longitude = c[3].toDouble(),
-                            zoneId = zones.getOrElse(c[6].ifEmpty { "0" }.toInt()) { "UTC" },
+                            region = region,
+                            latitude = lat,
+                            longitude = lon,
+                            // Greater Bombay and Calcutta get their old city clock (same as IST after the switch).
+                            zoneId = CityClocks.defaultZone(zones.getOrElse(c[6].ifEmpty { "0" }.toInt()) { "UTC" }, lat, lon, region),
                             population = c[4].toLongOrNull() ?: 0L,
                         ),
                     )

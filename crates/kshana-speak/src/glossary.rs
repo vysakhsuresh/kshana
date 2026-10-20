@@ -37,7 +37,7 @@ pub fn glossary() -> Vec<GlossaryEntry> {
         e("Delta T", "The difference between Earth-rotation time (UT1) and uniform atomic time (TT). The engine uses measured values, not a formula, where data exist.", "Engine"),
         e("Dosha", "A flaw in a chart or match, such as Mangal dosha (Mars in certain houses) or Nadi dosha. Most have stated cancellations.", "Vedic"),
         e("Ekadashi", "The eleventh tithi of each fortnight, a traditional fasting day. Observed on the day whose sunrise falls within it.", "Vedic"),
-        e("Ephemeris", "The table of planetary positions. Kshana uses NASA JPL's DE421 kernel directly, the same data used for spacecraft navigation.", "Engine"),
+        e("Ephemeris", "The table of planetary positions. Kshana uses NASA JPL's DE440s kernel (1849 to 2150) directly, the same data used for spacecraft navigation.", "Engine"),
         e("Exaltation", "The sign where a planet is strongest (for example the Sun in Aries, the Moon in Taurus, Jupiter in Cancer).", "Both"),
         e("Gochara", "Transits: where the planets are now relative to your birth Moon and chart. Sade Sati is a gochara of Saturn.", "Vedic"),
         e("Hora", "A planetary hour. Day and night are each divided into twelve; each hour belongs to a planet in a fixed sequence from the day's ruler.", "Both"),

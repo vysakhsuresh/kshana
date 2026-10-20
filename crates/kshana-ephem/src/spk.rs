@@ -239,6 +239,86 @@ mod tests {
         assert!(et.abs() < 0.002, "{et}");
     }
 
+    fn kernel(name: &str) -> Option<Spk> {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../data")
+            .join(name);
+        if !p.exists() {
+            eprintln!("skipped: data/{name} not present (scripts/fetch-ephemeris.sh)");
+            return None;
+        }
+        Some(Spk::open(&p).unwrap())
+    }
+
+    /// Angle in milliarcseconds between two position vectors.
+    fn mas_between(a: [f64; 3], b: [f64; 3]) -> f64 {
+        let cross = [
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0],
+        ];
+        let c = (cross[0].powi(2) + cross[1].powi(2) + cross[2].powi(2)).sqrt();
+        let d = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+        c.atan2(d).to_degrees() * 3_600_000.0
+    }
+
+    /// DE440s (the app's kernel, JPL `planets/bsp/de440s.bsp`, SHA-256 c1c7feea…6a49f2)
+    /// read through the same segment code as DE421 gives the same sky. Both kernels carry
+    /// one Type 2 segment per body (DE440s: 1849-12-26 … 2150-01-22, no 499 Mars body
+    /// segment, which Kshana does not use). Measured geocentric differences over 1990
+    /// (the two fits differ, not the reader; sampled every 5 days): Sun 0.28 mas, Moon
+    /// 0.49 mas, Mars 0.30 mas, Saturn 0.73 mas, Jupiter 18 mas (DE440 adds Juno ranging),
+    /// all far under the 0.1″ the charts print.
+    #[test]
+    fn de440s_matches_de421_and_spans_1849_to_2150() {
+        let (Some(old), Some(new)) = (kernel("de421.bsp"), kernel("de440s.bsp")) else {
+            return;
+        };
+        let year = 365.25 * 86_400.0;
+        let et0 = -10.0 * year; // 1990.0
+        let mut worst = [0.0f64; 5];
+        let bodies = [
+            Body::Sun,
+            Body::Moon,
+            Body::MarsBarycenter,
+            Body::JupiterBarycenter,
+            Body::SaturnBarycenter,
+        ];
+        for k in 0..73 {
+            let et = et0 + k as f64 * 5.0 * 86_400.0;
+            for (i, b) in bodies.iter().enumerate() {
+                let a = old.state(*b, Body::Earth, et).unwrap().position;
+                let n = new.state(*b, Body::Earth, et).unwrap().position;
+                worst[i] = worst[i].max(mas_between(a, n));
+            }
+        }
+        eprintln!("DE421 vs DE440s over 1990, mas: Sun {:.3} Moon {:.3} Mars {:.3} Jupiter {:.3} Saturn {:.3}",
+            worst[0], worst[1], worst[2], worst[3], worst[4]);
+        assert!(
+            worst[0] < 0.5 && worst[1] < 1.0 && worst[2] < 1.0,
+            "{worst:?}"
+        );
+        assert!(worst[3] < 25.0 && worst[4] < 2.0, "{worst:?}");
+
+        // The span DE421 lacks: an 1850 birth and a 2149 forecast evaluate in DE440s.
+        for y in [1850.0, 1899.0, 2060.0, 2149.0] {
+            let et = (y - 2000.0) * year;
+            assert!(
+                old.state(Body::Moon, Body::Earth, et).is_err() || (1900.0..2053.0).contains(&y)
+            );
+            let st = new.state(Body::Sun, Body::Earth, et).unwrap();
+            let r = (st.position.iter().map(|x| x * x).sum::<f64>()).sqrt() / 149_597_870.7;
+            assert!((0.98..1.02).contains(&r), "{y}: {r} au");
+        }
+        let (start, end) = new
+            .segments()
+            .iter()
+            .fold((f64::NEG_INFINITY, f64::INFINITY), |(s, e), g| {
+                (s.max(g.start_et), e.min(g.end_et))
+            });
+        assert_eq!((start, end), (-4_734_072_000.0, 4_735_368_000.0));
+    }
+
     /// Real-kernel smoke test: `KSHANA_SPK=data/de440s.bsp cargo test -- --ignored`.
     #[test]
     #[ignore]

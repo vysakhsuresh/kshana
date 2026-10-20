@@ -33,11 +33,25 @@ data class BirthProfile(
     val placeName: String,
     val zoneId: String,
 ) {
-    fun zone(): ZoneId = try { ZoneId.of(zoneId) } catch (e: DateTimeException) { ZoneId.systemDefault() }
+    /**
+     * The place's zone for the present day and for dates after birth (events, transits). A
+     * city-clock id ([CityClocks], e.g. "Kshana/Bombay") is Asia/Kolkata here.
+     */
+    fun zone(): ZoneId = try { CityClocks.of(zoneId) } catch (e: DateTimeException) { ZoneId.systemDefault() }
 
-    /** The stated civil time, resolved in the stated zone. */
+    /**
+     * The zone the birth clock was read in: for a city-clock id before the city's switch to
+     * IST, the city's own fixed offset (Bombay +04:51, Calcutta +05:53:20); otherwise [zone].
+     * Use it for the birth moment and for times around it (birth-time candidates).
+     */
+    fun birthZone(): ZoneId {
+        val local = runCatching { LocalDateTime.of(year, month, day, hour, minute, second) }.getOrNull()
+        return CityClocks.zone(zoneId, local) ?: ZoneId.systemDefault()
+    }
+
+    /** The stated civil time, resolved in the zone of the birth clock. */
     fun birthLocal(): ZonedDateTime =
-        ZonedDateTime.of(LocalDateTime.of(year, month, day, hour, minute, second), zone())
+        ZonedDateTime.of(LocalDateTime.of(year, month, day, hour, minute, second), birthZone())
 
     /** Local civil time in the profile's zone → UTC → exact instant. */
     fun birthInstant(): ExactInstant = Instants.fromInstant(birthLocal().toInstant())
@@ -292,10 +306,10 @@ object ProfileStore {
         Place("Chennai", 13.0827, 80.2707, "Asia/Kolkata"),
         Place("Bengaluru", 12.9716, 77.5946, "Asia/Kolkata"),
         Place("Hyderabad", 17.3850, 78.4867, "Asia/Kolkata"),
-        Place("Mumbai", 19.0760, 72.8777, "Asia/Kolkata"),
+        Place("Mumbai", 19.0760, 72.8777, CityClocks.BOMBAY),
         Place("Pune", 18.5204, 73.8567, "Asia/Kolkata"),
         Place("Delhi", 28.6139, 77.2090, "Asia/Kolkata"),
-        Place("Kolkata", 22.5726, 88.3639, "Asia/Kolkata"),
+        Place("Kolkata", 22.5726, 88.3639, CityClocks.CALCUTTA),
         Place("Ahmedabad", 23.0225, 72.5714, "Asia/Kolkata"),
         Place("Jaipur", 26.9124, 75.7873, "Asia/Kolkata"),
         Place("Lucknow", 26.8467, 80.9462, "Asia/Kolkata"),

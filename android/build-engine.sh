@@ -38,7 +38,11 @@ cargo run --release -p kshana-ffi --bin uniffi-bindgen -- \
   generate --library "$HOST_LIB" --language kotlin --no-format \
   --out-dir android/app/src/main/java
 
-for f in de421.bsp de440s.bsp finals2000A.all; do
+# The app ships DE440s (1849–2150; fetch with scripts/fetch-ephemeris.sh). DE421 (1900–2053)
+# stays in data/ for the Rust tests only and is taken out of the APK if an older build left it.
+[ -f data/de440s.bsp ] || { echo "data/de440s.bsp missing: run scripts/fetch-ephemeris.sh" >&2; exit 1; }
+rm -f android/app/src/main/assets/de421.bsp
+for f in de440s.bsp finals2000A.all; do
   [ -f "data/$f" ] && cp "data/$f" android/app/src/main/assets/
 done
 echo "engine built for: ${ABIS[*]}; assets: $(ls android/app/src/main/assets)"

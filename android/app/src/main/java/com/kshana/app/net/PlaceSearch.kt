@@ -65,7 +65,7 @@ object PlaceSearch {
                     }
                 }
             }
-            out.add(Place(name.ifEmpty { "%.2f, %.2f".format(lat, lon) }, lat, lon, zoneFor(cc, lon, lat, subdivisions)))
+            out.add(Place(name.ifEmpty { "%.2f, %.2f".format(lat, lon) }, lat, lon, com.kshana.app.data.CityClocks.defaultZone(zoneFor(cc, lon, lat, subdivisions), lat, lon)))
         }
         return out
     }

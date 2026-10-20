@@ -314,4 +314,24 @@ mod tests {
             .unwrap();
         assert!((first_years - 11.86).abs() < 1.2, "{first_years}");
     }
+
+    /// The app's kernel, JPL DE440s, carries every scan from 1849-12-27 to 2150-01-21: an
+    /// 1870 birth reads and a Saturn ingress in the 2140s is solved, both outside DE421.
+    #[test]
+    fn de440s_scans_run_from_1850_to_2150() {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/de440s.bsp");
+        let Ok(spk) = Spk::open(&p) else { return };
+        let end = Utc::from_instant(kernel_end(&spk));
+        let start = Utc::from_instant(kernel_start(&spk));
+        // Segment ends 2150-01-22 0h TDB and starts 1849-12-26 0h TDB, a day of margin each
+        // (the civil labels sit ΔT before the TT instants).
+        assert_eq!((end.year, end.month, end.day), (2150, 1, 20), "{end:?}");
+        assert_eq!((start.year, start.month, start.day), (1849, 12, 26), "{start:?}");
+        let old = Utc::new(1870, 3, 1, 6, 0, 0, 0).unwrap().to_instant().unwrap();
+        assert!(sidereal_longitude(&spk, Ayanamsa::Lahiri, DashaLord::Moon, old).is_some());
+        let from = Utc::new(2140, 1, 1, 0, 0, 0, 0).unwrap().to_instant().unwrap();
+        let to = Utc::new(2149, 1, 1, 0, 0, 0, 0).unwrap().to_instant().unwrap();
+        let v = sign_changes(&spk, Ayanamsa::Lahiri, DashaLord::Saturn, from, to);
+        assert!(v.len() >= 3, "{v:?}");
+    }
 }

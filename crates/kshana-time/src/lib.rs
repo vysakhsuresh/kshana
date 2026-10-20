@@ -23,8 +23,9 @@
 //! * TT = TAI + 32.184 s, exact by definition.
 //! * TDB − TT uses a truncated Fairhead & Bretagnon series (≈ 30 µs). The full series
 //!   or the ephemeris's own TT-TDB segment replaces it in a later milestone.
-//! * UT1 − UTC comes from IERS Bulletin A and must be supplied as data; the fallback
-//!   ΔT table here is for scaffolding and is marked as such.
+//! * UT1 − UTC comes from IERS Bulletin A and must be supplied as data; without it ΔT
+//!   comes from the published series in `delta_t` (monthly IERS values from 1973,
+//!   Morrison, Stephenson, Hohenkerk & Zawilski 2021 before).
 
 #![forbid(unsafe_code)]
 

@@ -520,7 +520,8 @@ mod tests {
         assert!(tl.saturn.windows(2).all(|w| w[0].end <= w[1].start));
         assert!(tl.jupiter.len() >= 12 && tl.jupiter.len() <= 48, "{}", tl.jupiter.len());
         assert_eq!(tl.jupiter.iter().filter(|p| p.current).count(), 1);
-        // DE421 sees to 2053: two Saturn returns, five Jupiter, three Rahu for a 1990 birth.
+        // The horizon is the kernel end (DE421 in tests: 2053; the app ships DE440s: 2150):
+        // to 2053, two Saturn returns, five Jupiter, three Rahu for a 1990 birth.
         let seen = years(birth, tl.horizon);
         assert!(seen > 60.0, "{seen}");
         assert!(tl.returns.iter().all(|r| r.at <= tl.horizon));

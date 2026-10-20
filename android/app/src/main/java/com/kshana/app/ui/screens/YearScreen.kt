@@ -120,7 +120,7 @@ private fun defaultReturnYear(profile: BirthProfile, zone: ZoneId): Int {
 @Composable
 fun YearScreen(profile: BirthProfile, here: Place, settings: EngineSettings, onBack: () -> Unit) {
     val context = LocalContext.current
-    val zone = remember(here) { runCatching { ZoneId.of(here.zoneId) }.getOrDefault(ZoneId.systemDefault()) }
+    val zone = remember(here) { runCatching { com.kshana.app.data.CityClocks.of(here.zoneId) }.getOrDefault(ZoneId.systemDefault()) }
     val now = remember(profile, here, settings) { Instants.now() }
     val thisYear = remember(zone) { LocalDate.now(zone).year }
     val years = remember(thisYear) { ((thisYear - 1)..(thisYear + 2)).map { it.toLong() } }

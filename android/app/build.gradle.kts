@@ -74,4 +74,6 @@ dependencies {
     implementation("${libs.jna.get()}@aar")
     // QR codes for sharing a person between phones (pure Java, no camera).
     implementation("com.google.zxing:core:3.5.3")
+    // Plain-JVM unit tests of pure logic (app/src/test): `./gradlew :app:testDebugUnitTest`.
+    testImplementation("junit:junit:4.13.2")
 }

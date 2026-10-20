@@ -180,7 +180,7 @@ fun PastCheckScreen(
             BirthTimeCard(
                 profile, refine, refining, timeNote, learnLine,
                 onUse = { fit ->
-                    val local = Instants.toLocal(fit.birth, profile.zone())
+                    val local = Instants.toLocal(fit.birth, profile.birthZone())
                     val p = profile.copy(year = local.year, month = local.monthValue, day = local.dayOfMonth, hour = local.hour, minute = local.minute, second = local.second)
                     ProfileStore.save(context, p)
                     timeNote = "Your birth time is now ${"%02d:%02d".format(p.hour, p.minute)}. Every reading in the app uses it from now on."
@@ -270,7 +270,7 @@ private fun BirthTimeCard(profile: BirthProfile, r: BirthRefineRecord?, working:
             r == null -> Text("Answer at least three stretches and I will check your recorded time, $recorded, against your life.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
             r.suggested != null -> {
                 val s = r.suggested!!
-                val t = Instants.toLocal(s.birth, profile.zone())
+                val t = Instants.toLocal(s.birth, profile.birthZone())
                 val mins = kotlin.math.abs(s.shiftMin).toInt()
                 Text(
                     "Your answers fit a birth time of ${"%02d:%02d".format(t.hour, t.minute)} better than $recorded: $mins minute${if (mins == 1) "" else "s"} ${if (s.shiftMin > 0) "later" else "earlier"}.",
@@ -289,7 +289,7 @@ private fun BirthTimeCard(profile: BirthProfile, r: BirthRefineRecord?, working:
                 val best = r.fits.firstOrNull()
                 Text(
                     if (best == null || kotlin.math.abs(best.shiftMin) < 2.0) "Your answers agree with your recorded time, $recorded."
-                    else "Your answers lean a little toward ${"%02d:%02d".format(Instants.toLocal(best.birth, profile.zone()).hour, Instants.toLocal(best.birth, profile.zone()).minute)}, but not clearly enough to change $recorded yet.",
+                    else "Your answers lean a little toward ${"%02d:%02d".format(Instants.toLocal(best.birth, profile.birthZone()).hour, Instants.toLocal(best.birth, profile.birthZone()).minute)}, but not clearly enough to change $recorded yet.",
                     fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text,
                 )
                 Text("More answers make this surer. $WRONG_HELPS", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)

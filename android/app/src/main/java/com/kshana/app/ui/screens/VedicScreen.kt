@@ -296,7 +296,7 @@ private fun ProgressBar(fraction: Float, antar: Pair<Float, Float>?) {
 
 @Composable
 private fun PanchangaTiles(d: PanchangaDetail, profile: BirthProfile) {
-    val zone = profile.zone()
+    val zone = profile.birthZone()
     fun t(e: ExactInstant?): String = e?.let { localText(it, TIME_ONLY, zone) } ?: "—"
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         VTile("Vara", d.vara, Modifier.weight(1f))

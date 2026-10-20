@@ -109,7 +109,7 @@ fun LexiconScreen(onBack: () -> Unit) {
                 if (rise == null) {
                     "Right now: the Sun does not rise today at ${here.name}, so there is no udayadi count."
                 } else {
-                    val zone = try { ZoneId.of(here.zoneId) } catch (e: DateTimeException) { ZoneId.systemDefault() }
+                    val zone = try { com.kshana.app.data.CityClocks.of(here.zoneId) } catch (e: DateTimeException) { ZoneId.systemDefault() }
                     val r = nazhika(rise, now)
                     "Right now: nazhika ${r.nazhika}, vinazhika ${r.vinazhika} since sunrise " +
                         "(${localText(rise, TIME_ONLY, zone)} at ${here.name})."
