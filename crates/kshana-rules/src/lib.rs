@@ -47,6 +47,7 @@ pub mod topics;
 pub mod transit;
 pub mod understand;
 pub mod varsha;
+pub mod yogas;
 
 pub use areas::{area, Area, AREAS};
 pub use appointment::{appointment, best_slots, best_slots_together, Appointment, DaySlot, GroupSlot, Purpose, Slot};

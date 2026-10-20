@@ -19,7 +19,10 @@ pub use ashtakavarga::{
 };
 pub use ayanamsa::{ayanamsa_degrees, Ayanamsa};
 pub use dasha::{subdivide, vimshottari, vimshottari_levels, DashaLord, DashaPeriod};
-pub use jaimini::{arudha, chara_karakas, Karaka, KARAKA_MEANINGS, KARAKA_NAMES};
+pub use jaimini::{
+    arudha, arudha_padas, chara_karakas, chara_karakas_8, sign_aspects, signs_aspect, Karaka,
+    KarakaScheme, KARAKA_MEANINGS, KARAKA_NAMES, KARAKA_NAMES_8,
+};
 pub use kp::{
     dms_in_sign, horary_longitude, kp_lords, lord_chain, sign_lord, sub_bounds, sub_of, sub_table,
     ChainLevel, KpLords, Sub,

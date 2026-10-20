@@ -24,6 +24,7 @@ pub mod nodes;
 pub mod science;
 pub mod tajika;
 pub mod trace;
+pub mod yogas;
 pub use bala::*;
 pub use dashas::*;
 pub use day::*;
@@ -4416,6 +4417,9 @@ mod plain_audit {
         // The chart reason behind a remedy, shown only when the person taps "How this
         // helps" (asked for by the owner on 2026-10-20): it names the planet on purpose.
         "how_it_helps",
+        // The yoga catalogue's expert layer (`yogas::ChartYogaRecord`): the condition in
+        // the texts' terms, the family key and the activating dasha lords.
+        "rule", "group", "lords",
     ];
 
     /// A remedy plan as the common screens show it: the nested expert lists (dosha
@@ -4617,6 +4621,7 @@ mod plain_audit {
                         audit(&tag(&format!("slots_{}", pu.key)), format!("{:?}", engine.best_slots(b, la, lo, la, lo, hs, ay, pu.key.clone(), t, 7, 5).unwrap()), &mut hits);
                     }
                     audit(&tag("timeline"), format!("{:?}", engine.timeline(b, la, lo, hs, ay, t).unwrap()), &mut hits);
+                    audit(&tag("chart_yogas"), format!("{:?}", engine.chart_yogas(b, la, lo, ay, t).unwrap()), &mut hits);
                     audit(&tag("kundali"), format!("{:?}", engine.kundali(b, la, lo, ob, ola, olo, hs, ay, true).unwrap()), &mut hits);
                     audit(&tag("talk"), format!("{:?}", engine.talk_window(b, la, lo, ob, ola, olo, la, lo, hs, ay, t, 14).unwrap()), &mut hits);
                     for life in std::iter::once(None).chain(life_names().into_iter().map(Some)) {
