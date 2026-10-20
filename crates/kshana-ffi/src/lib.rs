@@ -11,6 +11,7 @@ use kshana_time::{Instant, Utc, NS_PER_SEC};
 uniffi::setup_scaffolding!();
 
 pub mod bala;
+pub mod calendar;
 pub mod dashas;
 pub mod day;
 pub mod directions;

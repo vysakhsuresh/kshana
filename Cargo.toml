@@ -8,7 +8,7 @@ members = [
     "crates/kshana-houses",
     "crates/kshana-western",
     "crates/kshana-vedic",
-    "crates/kshana-ffi", "crates/kshana-sky", "crates/kshana-cli", "crates/kshana-events", "crates/kshana-verify", "crates/kshana-chart", "crates/kshana-rules", "crates/kshana-forecast", "crates/kshana-speak", "crates/kshana-trace", "crates/kshana-ledger", "crates/kshana-directions", "crates/kshana-tajika", "crates/kshana-day", "crates/kshana-eclipse", "crates/kshana-bala", "crates/kshana-marga",
+    "crates/kshana-ffi", "crates/kshana-sky", "crates/kshana-cli", "crates/kshana-events", "crates/kshana-verify", "crates/kshana-chart", "crates/kshana-rules", "crates/kshana-forecast", "crates/kshana-speak", "crates/kshana-trace", "crates/kshana-ledger", "crates/kshana-directions", "crates/kshana-tajika", "crates/kshana-day", "crates/kshana-eclipse", "crates/kshana-bala", "crates/kshana-marga", "crates/kshana-calendar",
 ]
 
 [workspace.package]
@@ -41,6 +41,7 @@ kshana-day = { path = "crates/kshana-day" }
 kshana-tajika = { path = "crates/kshana-tajika" }
 kshana-directions = { path = "crates/kshana-directions" }
 kshana-ledger = { path = "crates/kshana-ledger" }
+kshana-calendar = { path = "crates/kshana-calendar" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

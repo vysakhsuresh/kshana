@@ -1,0 +1,21 @@
+[package]
+name = "kshana-calendar"
+description = "The Hindu calendar: lunar months by both reckonings with adhika and kshaya, tithi and nakshatra at sunrise, eras and samvatsaras, regional solar calendars and a rule-driven festival calendar"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+kshana-time = { workspace = true }
+kshana-solver = { workspace = true }
+kshana-ephem = { workspace = true }
+kshana-frames = { workspace = true }
+kshana-sky = { workspace = true }
+kshana-events = { workspace = true }
+kshana-vedic = { workspace = true }
+
+[lints]
+workspace = true
