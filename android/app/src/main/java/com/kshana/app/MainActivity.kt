@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -92,15 +93,16 @@ import com.kshana.app.ui.screens.QuizScreen
 import com.kshana.app.ui.screens.LexiconScreen
 import com.kshana.app.ui.screens.MargaScreen
 
-private data class Tab(val route: String, val label: String, val icon: ImageVector, val iconRes: Int? = null)
+private data class Tab(val route: String, val label: String, val glyph: com.kshana.app.ui.theme.TabGlyph)
 
-/** The five doors: today, your reading (with Ask inside it), the future, the two of you, and everything else. */
+/** The six doors: today, your reading (with Ask inside it), the future, the two of you, your favorites, and everything else. */
 private val tabs = listOf(
-    Tab("loop", "NOW", Icons.Filled.Star),
-    Tab("reading", "READING", Icons.Filled.Info, com.kshana.app.R.drawable.ic_reading),
-    Tab("future", "FUTURE", Icons.AutoMirrored.Filled.ArrowForward, com.kshana.app.R.drawable.ic_future),
-    Tab("together", "US", Icons.Filled.Favorite),
-    Tab("more", "MORE", Icons.AutoMirrored.Filled.List),
+    Tab("loop", "NOW", com.kshana.app.ui.theme.TabGlyph.SUN),
+    Tab("reading", "READING", com.kshana.app.ui.theme.TabGlyph.EYE),
+    Tab("future", "FUTURE", com.kshana.app.ui.theme.TabGlyph.CRYSTAL),
+    Tab("together", "US", com.kshana.app.ui.theme.TabGlyph.HEART),
+    Tab("favorites", "FAVORITES", com.kshana.app.ui.theme.TabGlyph.STAR),
+    Tab("more", "MORE", com.kshana.app.ui.theme.TabGlyph.MORE),
 )
 
 /** A kshana:// link the app was opened with, waiting to be handled by the UI. */
@@ -216,8 +218,8 @@ private fun App() {
                         NavigationBarItem(
                             selected = current == t.route,
                             onClick = { goTab(t.route) },
-                            icon = { val r = t.iconRes; if (r != null) Icon(androidx.compose.ui.res.painterResource(r), contentDescription = t.label) else Icon(t.icon, contentDescription = t.label) },
-                            label = { Text(com.kshana.app.data.Lang.t(t.label)) },
+                            icon = { com.kshana.app.ui.theme.AnimatedTabIcon(t.glyph, selected = current == t.route, label = t.label) },
+                            label = { Text(com.kshana.app.data.Lang.t(t.label), fontSize = 10.sp, maxLines = 1, softWrap = false, letterSpacing = 0.6.sp) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = KshanaColors.Gold,
                                 selectedTextColor = KshanaColors.Gold,
@@ -378,6 +380,9 @@ private fun App() {
                 }
             }
             composable("more") { MoreScreen(profile = profile, onOpen = { open(it) }) }
+            composable("favorites") { com.kshana.app.ui.screens.FavoritesScreen(onOpen = { r -> if (tabs.any { it.route == r }) goTab(r) else open(r) }) }
+            composable("guide") { com.kshana.app.ui.screens.GuideScreen(onBack = back, onOpen = { r -> if (tabs.any { it.route == r }) goTab(r) else open(r) }) }
+            composable("about") { com.kshana.app.ui.screens.AboutScreen(onBack = back, onOpen = { open(it) }) }
 
             // ---- the five-door screens from the overnight build, kept under More ----
             // (reached from More behind the "Show the chart pages" setting; not tabs)
