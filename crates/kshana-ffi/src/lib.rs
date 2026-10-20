@@ -20,6 +20,7 @@ pub mod ledger;
 pub mod lexicon;
 pub mod life;
 pub mod marga;
+pub mod nodes;
 pub mod science;
 pub mod tajika;
 pub mod trace;
@@ -235,6 +236,17 @@ pub enum AyanamsaChoice {
     Raman,
     Krishnamurti,
     FaganBradley,
+    // New variants go after the first four so stored names keep their meaning; each
+    // reproduces the Swiss Ephemeris SE_SIDM_* mode named on `kshana_vedic::Ayanamsa`.
+    TrueChitra,
+    TrueRevati,
+    TruePushya,
+    Yukteshwar,
+    SuryaSiddhanta,
+    Lahiri1940,
+    LahiriVp285,
+    LahiriIcrc,
+    KrishnamurtiVp291,
 }
 
 impl From<AyanamsaChoice> for Ayanamsa {
@@ -244,6 +256,15 @@ impl From<AyanamsaChoice> for Ayanamsa {
             AyanamsaChoice::Raman => Ayanamsa::Raman,
             AyanamsaChoice::Krishnamurti => Ayanamsa::Krishnamurti,
             AyanamsaChoice::FaganBradley => Ayanamsa::FaganBradley,
+            AyanamsaChoice::TrueChitra => Ayanamsa::TrueChitra,
+            AyanamsaChoice::TrueRevati => Ayanamsa::TrueRevati,
+            AyanamsaChoice::TruePushya => Ayanamsa::TruePushya,
+            AyanamsaChoice::Yukteshwar => Ayanamsa::Yukteshwar,
+            AyanamsaChoice::SuryaSiddhanta => Ayanamsa::SuryaSiddhanta,
+            AyanamsaChoice::Lahiri1940 => Ayanamsa::Lahiri1940,
+            AyanamsaChoice::LahiriVp285 => Ayanamsa::LahiriVp285,
+            AyanamsaChoice::LahiriIcrc => Ayanamsa::LahiriIcrc,
+            AyanamsaChoice::KrishnamurtiVp291 => Ayanamsa::KrishnamurtiVp291,
         }
     }
 }

@@ -73,6 +73,8 @@ data class EngineSettings(
     val topocentricMoon: Boolean = false,
     /** "hindu" (Sun's centre on the true horizon) or "western" (refracted upper limb). */
     val riseConvention: String = "hindu",
+    /** "true" (the osculating node, as the natal chart reckons it) or "mean": the point Rahu and Ketu stand at everywhere. */
+    val lunarNode: String = "true",
 )
 
 /** SharedPreferences-backed store for the profile, engine settings and small per-screen state. */
@@ -95,6 +97,7 @@ object ProfileStore {
     private const val K_HOUSES = "settings.houses"
     private const val K_TOPO = "settings.topocentricMoon"
     private const val K_RISE = "settings.riseConvention"
+    private const val K_NODE = "settings.lunarNode"
     private const val K_CUR_NAME = "current.name"
     private const val K_CUR_LAT = "current.lat"
     private const val K_CUR_LON = "current.lon"
@@ -150,7 +153,8 @@ object ProfileStore {
         val houses = runCatching { HouseSystem.valueOf(p.getString(K_HOUSES, null) ?: "") }
             .getOrDefault(HouseSystem.PLACIDUS)
         val rise = p.getString(K_RISE, null)?.takeIf { it == "hindu" || it == "western" } ?: "hindu"
-        return EngineSettings(ayanamsa, houses, p.getBoolean(K_TOPO, false), rise)
+        val node = p.getString(K_NODE, null)?.takeIf { it == "true" || it == "mean" } ?: "true"
+        return EngineSettings(ayanamsa, houses, p.getBoolean(K_TOPO, false), rise, node)
     }
 
     fun saveSettings(context: Context, s: EngineSettings) {
@@ -159,6 +163,7 @@ object ProfileStore {
             .putString(K_HOUSES, s.houseSystem.name)
             .putBoolean(K_TOPO, s.topocentricMoon)
             .putString(K_RISE, s.riseConvention)
+            .putString(K_NODE, s.lunarNode)
             .apply()
     }
 

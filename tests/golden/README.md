@@ -230,3 +230,18 @@ refraction and semi-diameter values, i.e. a few seconds), `*_no_refraction`
 (`| BIT_DISC_CENTER`: centre with refraction). Each event has `rsmi`,
 `result_code` (0 = found), `jd_ut`, `utc` from `swe.jdut1_to_utc` and
 `revjul` = `[y, m, d, decimal_hour]` from `swe.revjul`.
+
+## swisseph_ayanamsa.json (Swiss Ephemeris 2.10.03, file ephemeris)
+
+Made by `scripts/golden/swisseph_oracle.c` (the C library itself, built with any C
+compiler; build and run lines are at the top of the file), run as
+`oracle aya <ephe> swi` with `semo_18.se1`, `sepl_18.se1` and `sefstars.txt` from
+the library's `ephe/` directory. 17 UTC epochs 1900-2050; each record holds
+`swe_utc_to_jd` -> `jd_tt`, `jd_ut` and `swe_get_ayanamsa_ex_ut(jd_ut, SEFLG_SWIEPH)`
+(true equinox of date, degrees) under the `SE_SIDM_*` number of each mode: 0, 1, 3,
+5, 7, 21, 22, 25, 26, 27 (True Citra), 28 (True Revati), 29 (True Pushya), 43
+(Lahiri 1940), 44 (Lahiri VP285), 45 (Krishnamurti VP291), 46 (Lahiri ICRC). The
+star-based modes depend on the Earth's velocity, so the file ephemeris is used (with
+Moshier they shift by up to 0.01″). `oracle node <ephe> swi` prints Rahu's sidereal
+sign ingresses 2023-2026 for the true and the mean node (pinned in the
+kshana-forecast gochara tests).

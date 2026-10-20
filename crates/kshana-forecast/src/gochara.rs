@@ -24,7 +24,7 @@
 use kshana_chart::Chart;
 use kshana_ephem::{Body, Spk, SpkError};
 use kshana_rules::{bhinna_for, sarva_for, Facts};
-use kshana_sky::{apparent, mean_node_longitude};
+use kshana_sky::{apparent, lunar_node, node_longitude, LunarNode};
 use kshana_solver::{find_root, wrap180};
 use kshana_time::{Instant, NS_PER_DAY, NS_PER_SEC};
 use kshana_vedic::{ayanamsa_degrees, sidereal, Ayanamsa, DashaLord};
@@ -131,20 +131,32 @@ fn natal_moon_sidereal(natal: &Chart) -> f64 {
         .expect("a chart has a Moon")
 }
 
-/// Sidereal longitude of a gochara graha at `t`, degrees in `[0, 360)`; Rahu is the mean
-/// node ([`mean_node_longitude`]) and Ketu its opposite.
+/// Sidereal longitude of a gochara graha at `t`, degrees in `[0, 360)`; Rahu is the lunar
+/// node of the engine-wide [`kshana_sky::lunar_node`] choice (the true node by default,
+/// the same point the natal chart calls Rahu) and Ketu its opposite.
 pub fn gochara_longitude(
     spk: &Spk,
     planet: DashaLord,
     ayanamsa: Ayanamsa,
     t: Instant,
 ) -> Result<f64, SpkError> {
+    gochara_longitude_with(spk, planet, ayanamsa, lunar_node(), t)
+}
+
+/// [`gochara_longitude`] with the node named explicitly.
+pub fn gochara_longitude_with(
+    spk: &Spk,
+    planet: DashaLord,
+    ayanamsa: Ayanamsa,
+    node: LunarNode,
+    t: Instant,
+) -> Result<f64, SpkError> {
     let tc = t.tt_centuries_since_j2000();
     let ay = ayanamsa_degrees(ayanamsa, tc);
     let tropical = match body_of(planet) {
         Some(body) => apparent(spk, body, t)?.longitude,
-        None if planet == DashaLord::Rahu => mean_node_longitude(tc),
-        None => mean_node_longitude(tc) + 180.0,
+        None if planet == DashaLord::Rahu => node_longitude(spk, node, t)?,
+        None => node_longitude(spk, node, t)? + 180.0,
     };
     Ok(sidereal(tropical, ay).rem_euclid(360.0))
 }
@@ -889,11 +901,34 @@ fn back_span_days(planet: DashaLord) -> i128 {
 
 /// Sidereal sign ingresses of a graha in `[from, to]`, as `(instant, sign entered)`.
 /// The six planets use [`sidereal_ingresses`]; the Moon (which can cross a boundary
-/// twice inside that function's ten-day step) and the mean node use the local finder.
+/// twice inside that function's ten-day step) and the nodes use the local finder.
 fn ingresses(
     spk: &Spk,
     planet: DashaLord,
     ayanamsa: Ayanamsa,
+    from: Instant,
+    to: Instant,
+) -> Result<Vec<(Instant, u8)>, SpkError> {
+    ingresses_with(spk, planet, ayanamsa, lunar_node(), from, to)
+}
+
+/// Scan step for the true node. It is not monotonic: Meeus (*Astronomical Algorithms*
+/// 2nd ed., ch. 47) gives true − mean = −1.4979° sin 2(D−F) − 0.1500° sin M
+/// − 0.1226° sin 2D + 0.1176° sin 2F − 0.0801° sin 2(F−M′), whose fortnightly terms
+/// make it run direct for a few days at a time, so it can cross one boundary three
+/// times. Summing amplitude × ω² over those terms bounds its acceleration by
+/// ≈ 0.049°/day². Between two samples 6 h apart, a back-and-forth pair of crossings
+/// that leaves both samples on the same side reaches at most ½·0.049·(0.125 d)² ≈ 1.4″
+/// past the boundary (a sliver of under six hours): every crossing that matters lands
+/// in a step of its own, where it is bisected and solved.
+const TRUE_NODE_STEP_NS: i128 = 6 * 3_600 * NS_PER_SEC;
+
+/// [`ingresses`] with the node named explicitly.
+fn ingresses_with(
+    spk: &Spk,
+    planet: DashaLord,
+    ayanamsa: Ayanamsa,
+    node: LunarNode,
     from: Instant,
     to: Instant,
 ) -> Result<Vec<(Instant, u8)>, SpkError> {
@@ -902,10 +937,13 @@ fn ingresses(
             sidereal_ingresses(spk, body, ayanamsa, from, to)
         }
         _ => {
-            let f = |t: Instant| gochara_longitude(spk, planet, ayanamsa, t);
+            let f = |t: Instant| gochara_longitude_with(spk, planet, ayanamsa, node, t);
             let step = if planet == DashaLord::Moon {
                 6 * 3_600 * NS_PER_SEC
+            } else if node == LunarNode::True {
+                TRUE_NODE_STEP_NS
             } else {
+                // the mean node is monotonic (−0.053°/day): one crossing per 10 days at most
                 10 * NS_PER_DAY
             };
             Ok(uniform_crossings(&f, 12, from, to, step, TOL_NS)?
@@ -919,7 +957,7 @@ fn ingresses(
 /// Every sign transit of the nine grahas over `[from, to]`, grouped by graha in
 /// [`GOCHARA_PLANETS`] order and contiguous within each graha: the first window starts at
 /// `from` with the sign in force then, each later one at an exact ingress, the last ends
-/// at `to`. Rahu and Ketu move by the mean node. Each window carries the classical verdict
+/// at `to`. Rahu and Ketu move by the engine-wide node. Each window carries the classical verdict
 /// (vedha judged on the other grahas' places at the window's start), the Ashtakavarga
 /// bindus, the Moorthi of its ingress (searched back a little beyond one stay for the
 /// window in progress) and the blended score of [`score_blend`].
@@ -1358,6 +1396,122 @@ mod tests {
         for (a, b) in r.iter().zip(k.iter()) {
             assert_eq!((a.sign + 6) % 12, b.sign);
             assert_eq!(a.start, b.start);
+        }
+    }
+
+    fn utc_s(y: i64, m: u32, d: u32, h: u32, mi: u32, s: u32) -> Instant {
+        Utc::new(y, m, d, h, mi, s, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap()
+    }
+
+    /// Rahu's sidereal (Lahiri) sign ingresses 2023–2026, both nodes, against Swiss
+    /// Ephemeris 2.10.03 (`swe_calc_ut(SE_TRUE_NODE | SE_MEAN_NODE, SEFLG_SWIEPH |
+    /// SEFLG_SIDEREAL)` with `SE_SIDM_LAHIRI` and the semo_18/sepl_18 files, scanned
+    /// hourly and bisected to 1 ms). The true node is sensitive to the Moon's velocity
+    /// (≈ 1/sin 5° amplification): with the Moshier ephemeris instead, SE's true-node
+    /// ingresses come 18 to 89 minutes later, so the files matter. Kshana (DE421) lands
+    /// within seconds of SE's file ephemeris. The mean-node dates are the ones printed
+    /// panchangas give: Rahu into Meena on 30 October 2023 and into Kumbha on
+    /// 18 May 2025. The true node reaches each boundary 10 to 30 days apart from the mean.
+    #[test]
+    fn rahu_sign_ingresses_match_swiss_ephemeris_for_both_nodes() {
+        let Some((spk, _)) = fixture() else {
+            return;
+        };
+        let from = utc(2023, 1, 1, 0);
+        let to = utc(2027, 1, 1, 0);
+        let cases = [
+            (
+                LunarNode::True,
+                [
+                    (utc_s(2023, 11, 28, 20, 58, 36), 11u8),
+                    (utc_s(2025, 5, 29, 18, 47, 37), 10),
+                    (utc_s(2026, 11, 25, 12, 16, 7), 9),
+                ],
+                60.0,
+            ),
+            (
+                LunarNode::Mean,
+                [
+                    (utc_s(2023, 10, 30, 11, 6, 58), 11u8),
+                    (utc_s(2025, 5, 18, 14, 4, 33), 10),
+                    (utc_s(2026, 12, 5, 17, 2, 10), 9),
+                ],
+                60.0,
+            ),
+        ];
+        for (node, want, tol_s) in cases {
+            let got = ingresses_with(&spk, Rahu, Ayanamsa::Lahiri, node, from, to).unwrap();
+            assert_eq!(got.len(), want.len(), "{node:?}: {got:?}");
+            for ((t, sign), (wt, wsign)) in got.iter().zip(want.iter()) {
+                assert_eq!(sign, wsign, "{node:?}");
+                let off = t.ns_since(*wt) as f64 / 1e9;
+                eprintln!("{node:?} Rahu into sign {sign}: {off:+.0} s from Swiss Ephemeris");
+                assert!(off.abs() < tol_s, "{node:?} sign {sign}: off by {off:.0} s");
+            }
+        }
+    }
+
+    /// The true node is not monotonic, so a scan over a whole year must find every
+    /// nakshatra boundary it crosses, in either direction, with the longitude on the
+    /// right side of each solved instant.
+    #[test]
+    fn true_node_nakshatra_crossings_are_all_found_both_ways() {
+        let Some((spk, _)) = fixture() else {
+            return;
+        };
+        let from = utc(2025, 1, 1, 0);
+        let to = utc(2026, 1, 1, 0);
+        let f =
+            |t: Instant| gochara_longitude_with(&spk, Rahu, Ayanamsa::Lahiri, LunarNode::True, t);
+        let got = uniform_crossings(&f, 27, from, to, TRUE_NODE_STEP_NS, TOL_NS).unwrap();
+        // brute force: hourly samples, every change of nakshatra
+        let cell = |l: f64| (l / (360.0 / 27.0)).floor() as usize;
+        let mut brute = Vec::new();
+        let mut t = from;
+        let mut c = cell(f(t).unwrap());
+        while t < to {
+            let n = t.add_ns(3_600 * NS_PER_SEC);
+            let cn = cell(f(n).unwrap());
+            if cn != c {
+                brute.push((n, cn));
+            }
+            t = n;
+            c = cn;
+        }
+        assert_eq!(got.len(), brute.len(), "{got:?} vs {brute:?}");
+        for ((t, c), (bt, bc)) in got.iter().zip(brute.iter()) {
+            assert_eq!(c, bc);
+            assert!(bt.ns_since(*t) >= 0 && bt.ns_since(*t) <= 3_600 * NS_PER_SEC);
+            let before = cell(f(t.add_ns(-1_000_000)).unwrap());
+            let after = cell(f(t.add_ns(1_000_000)).unwrap());
+            assert_ne!(before, after);
+            assert_eq!(after, *c);
+        }
+    }
+
+    /// Natal Rahu and transit Rahu are the same point at the same instant, for either node.
+    #[test]
+    fn natal_and_transit_rahu_agree() {
+        let Some((spk, ch)) = fixture() else {
+            return;
+        };
+        let natal = ch.rahu().1;
+        let transit = gochara_longitude(&spk, Rahu, Ayanamsa::Lahiri, ch.instant).unwrap();
+        assert!(
+            wrap180(natal - transit).abs() < 1e-9,
+            "{natal} vs {transit}"
+        );
+        let ketu = gochara_longitude(&spk, Ketu, Ayanamsa::Lahiri, ch.instant).unwrap();
+        assert!(wrap180(natal + 180.0 - ketu).abs() < 1e-9);
+        for (node, natal) in [
+            (LunarNode::True, ch.true_node.1),
+            (LunarNode::Mean, ch.mean_node.1),
+        ] {
+            let t = gochara_longitude_with(&spk, Rahu, Ayanamsa::Lahiri, node, ch.instant).unwrap();
+            assert!(wrap180(natal - t).abs() < 1e-9, "{node:?}: {natal} vs {t}");
         }
     }
 

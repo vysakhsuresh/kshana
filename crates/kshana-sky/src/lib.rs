@@ -358,6 +358,59 @@ pub fn true_node_longitude(spk: &Spk, t: Instant) -> Result<f64, SpkError> {
     Ok((h[0]).atan2(-h[1]).to_degrees().rem_euclid(360.0))
 }
 
+/// Which lunar node stands for Rahu (Ketu is always its opposite point).
+///
+/// * `True`: the osculating node ([`true_node_longitude`]), Swiss Ephemeris
+///   `SE_TRUE_NODE`. It wobbles about the mean node by up to about 1.7° (main term
+///   −1.4979° sin 2(D−F), 173-day period; Meeus, *Astronomical Algorithms* 2nd ed.,
+///   ch. 47) and runs direct for short spells.
+/// * `Mean`: the Chapront mean node ([`mean_node_longitude`]), `SE_MEAN_NODE`, which
+///   moves smoothly retrograde (−0.0529539° per day) and is what most printed
+///   panchangas use for Rahu's sign changes.
+///
+/// One process-wide choice ([`set_lunar_node`]) used by every Rahu and Ketu in the
+/// engine: the natal chart, transits, gochara, trace and parihara.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum LunarNode {
+    /// The osculating (true) node: the default, as in the natal chart.
+    #[default]
+    True,
+    /// The mean node.
+    Mean,
+}
+
+static LUNAR_NODE: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+
+/// The node the engine uses for Rahu and Ketu (default [`LunarNode::True`]).
+pub fn lunar_node() -> LunarNode {
+    match LUNAR_NODE.load(std::sync::atomic::Ordering::Relaxed) {
+        1 => LunarNode::Mean,
+        _ => LunarNode::True,
+    }
+}
+
+/// Choose the node the whole engine uses for Rahu and Ketu.
+pub fn set_lunar_node(node: LunarNode) {
+    let v = match node {
+        LunarNode::True => 0,
+        LunarNode::Mean => 1,
+    };
+    LUNAR_NODE.store(v, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Tropical longitude of date (true equinox) of the given lunar node, degrees.
+pub fn node_longitude(spk: &Spk, node: LunarNode, t: Instant) -> Result<f64, SpkError> {
+    match node {
+        LunarNode::True => true_node_longitude(spk, t),
+        LunarNode::Mean => Ok(mean_node_longitude(t.tt_centuries_since_j2000())),
+    }
+}
+
+/// Rahu's tropical longitude of date, degrees, by the engine-wide [`lunar_node`] choice.
+pub fn rahu_longitude(spk: &Spk, t: Instant) -> Result<f64, SpkError> {
+    node_longitude(spk, lunar_node(), t)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

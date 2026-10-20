@@ -18,7 +18,7 @@ pub mod zodiac;
 
 use kshana_ephem::{Body, Spk};
 use kshana_events::{hora_at, solar_day, sun_rise_set, EventError, SolarDay};
-use kshana_sky::{apparent, true_node_longitude, Observer};
+use kshana_sky::{apparent, rahu_longitude, Observer};
 use kshana_time::{EopTable, Instant, NS_PER_DAY, NS_PER_SEC};
 use kshana_vedic::panchanga::{NAKSHATRA_NAMES, TITHI_NAMES, YOGA_NAMES};
 use kshana_vedic::{ayanamsa_degrees, karana, sidereal, sub_table, Ayanamsa, DashaLord};
@@ -363,13 +363,13 @@ pub fn trace(
         }
     }
     if let Some(finest) = opts.planet_finest {
-        // The true (osculating) node, as the chart's facts use it: it wobbles about the
-        // mean node by up to 1.7° with a 173-day period and runs direct for short
-        // spells, so it crosses subs both ways. Scanned daily.
+        // Rahu by the engine-wide node choice (default the true node, as the chart uses): the
+        // true node wobbles about the mean node by up to 1.7° with a 173-day period and runs
+        // direct for short spells, so it crosses subs both ways. Scanned daily.
         for (name, offset) in [("Rahu", 0.0), ("Ketu", 180.0)] {
             let f = |t: Instant| {
                 let tc = t.tt_centuries_since_j2000();
-                true_node_longitude(spk, t).map(|n| sidereal(n + offset, ayanamsa_degrees(ay, tc)))
+                rahu_longitude(spk, t).map(|n| sidereal(n + offset, ayanamsa_degrees(ay, tc)))
             };
             for div in divisions_up_to(finest) {
                 for c in crossings(f, div, from, to, 86_400 * NS_PER_SEC, tol)? {
@@ -600,8 +600,8 @@ pub fn snapshot(
         }
         push(name, lon, ap.speed >= 0.0);
     }
-    let node = sidereal(true_node_longitude(spk, at)?, a);
-    let node_later = sidereal(true_node_longitude(spk, at.add_ns(3_600 * NS_PER_SEC))?, a);
+    let node = sidereal(rahu_longitude(spk, at)?, a);
+    let node_later = sidereal(rahu_longitude(spk, at.add_ns(3_600 * NS_PER_SEC))?, a);
     let node_direct = kshana_solver::wrap180(node_later - node) > 0.0;
     push("Rahu", node, node_direct);
     push("Ketu", (node + 180.0).rem_euclid(360.0), node_direct);

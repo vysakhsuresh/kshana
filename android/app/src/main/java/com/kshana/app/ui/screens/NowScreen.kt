@@ -169,7 +169,7 @@ private fun Wheel(chart: ChartRecord) {
             drawLine(KshanaColors.Gold.copy(alpha = 0.8f), at(b.tropical, rSign), at(b.tropical, rSign - 6.dp.toPx()), 1.5f)
             drawCircle(col, 4.dp.toPx(), at(b.tropical, rPlanet))
         }
-        drawCircle(KshanaColors.Sky, 3.dp.toPx(), at(chart.trueNodeTropical, rPlanet), style = Stroke(1.5f))
+        drawCircle(KshanaColors.Sky, 3.dp.toPx(), at(chart.rahuTropical, rPlanet), style = Stroke(1.5f))
     }
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         Text("ASCENDANT", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)

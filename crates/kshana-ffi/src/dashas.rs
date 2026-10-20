@@ -76,8 +76,8 @@ fn sign_of(lon: f64) -> usize {
 /// opposite it.
 fn graha_sidereal(natal: &Chart, g: DashaLord) -> Result<f64, KshanaError> {
     match g {
-        DashaLord::Rahu => Ok(natal.true_node.1),
-        DashaLord::Ketu => Ok((natal.true_node.1 + 180.0).rem_euclid(360.0)),
+        DashaLord::Rahu => Ok(natal.rahu().1),
+        DashaLord::Ketu => Ok((natal.rahu().1 + 180.0).rem_euclid(360.0)),
         other => {
             let name = graha_name(other);
             natal
@@ -167,7 +167,7 @@ fn system_record(natal: &Chart, name: &str, at: Instant) -> Result<DashaSystemRe
             sub = Box::new(|_, p: &Period| ashtottari_sub(p));
             let lagna = sign_of(lagna_sidereal);
             let lord_sign = sign_of(graha_sidereal(natal, sign_lord(lagna))?);
-            applies = ashtottari_applies(lagna, lord_sign, sign_of(natal.true_node.1));
+            applies = ashtottari_applies(lagna, lord_sign, sign_of(natal.rahu().1));
             notes = vec![
                 "Ashtottari: Sun 6, Moon 15, Mars 8, Mercury 17, Saturn 10, Jupiter 19, Rahu 12, Venus 21 (108 years); Ketu has no period.",
                 "Nakshatra groups of 4 and 3 from Ardra (27-nakshatra scheme); balance from the Moon's place within its lord's whole group.",

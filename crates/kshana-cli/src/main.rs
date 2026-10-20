@@ -418,8 +418,8 @@ fn main() {
         let sign_of = |lon: f64| ((lon.rem_euclid(360.0) / 30.0).floor() as usize).min(11);
         let sidereal = |g: L| -> f64 {
             match g {
-                L::Rahu => ch.true_node.1,
-                L::Ketu => (ch.true_node.1 + 180.0).rem_euclid(360.0),
+                L::Rahu => ch.rahu().1,
+                L::Ketu => (ch.rahu().1 + 180.0).rem_euclid(360.0),
                 other => {
                     let name = ds::graha_name(other);
                     ch.bodies
@@ -446,7 +446,7 @@ fn main() {
         let applies = ds::ashtottari_applies(
             sign_of(lagna),
             sign_of(sidereal(kshana_vedic::sign_lord(sign_of(lagna)))),
-            sign_of(ch.true_node.1),
+            sign_of(ch.rahu().1),
         );
         let vim_period = |p: kshana_vedic::DashaPeriod, level: u8| Period {
             label: ds::graha_name(p.lord).to_string(),

@@ -42,7 +42,7 @@ use crate::remedy_timing::{fmt_utc, weekday_of, RemedyWindow, TimingTable, WEEKD
 use kshana_chart::Chart;
 use kshana_ephem::{Body, Spk};
 use kshana_events::EventError;
-use kshana_sky::{apparent, true_node_longitude, Observer};
+use kshana_sky::{apparent, rahu_longitude, Observer};
 use kshana_time::{EopTable, Instant, NS_PER_DAY};
 use kshana_vedic::{
     ayanamsa_degrees, dasha::YEAR_365_25_NS, nakshatra, sidereal, vimshottari_levels, Ayanamsa,
@@ -1945,7 +1945,7 @@ fn transits_at(spk: &Spk, at: Instant, ayanamsa: Ayanamsa) -> Result<TransitSign
     let jup = apparent(spk, Body::JupiterBarycenter, at)
         .map_err(EventError::Spk)?
         .longitude;
-    let rahu = true_node_longitude(spk, at).map_err(EventError::Spk)?;
+    let rahu = rahu_longitude(spk, at).map_err(EventError::Spk)?;
     Ok(TransitSigns {
         saturn: sign(sat),
         jupiter: sign(jup),

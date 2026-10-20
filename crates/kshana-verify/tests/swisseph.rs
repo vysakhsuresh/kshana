@@ -222,3 +222,40 @@ fn ayanamsa_matches_swisseph_true_equinox() {
     }
     eprintln!("worst ayanamsa difference {:.4}″ at {}", worst.0, worst.1);
 }
+
+/// Every ayanamsa Kshana offers against Swiss Ephemeris 2.10.03 with its own ephemeris
+/// files (`tests/golden/swisseph_ayanamsa.json`, made by `scripts/golden/swisseph_oracle.c`),
+/// 17 epochs 1900–2050, true equinox of date. Fixed zero points are carried from their
+/// J2000 anchors by IAU 2006/2000A precession-nutation; the star-based ones (True
+/// Chitra, True Revati, True Pushya) are computed from the star's apparent place.
+#[test]
+fn every_ayanamsa_matches_swisseph_1900_to_2050() {
+    let p = root().join("tests/golden/swisseph_ayanamsa.json");
+    let g: Value = serde_json::from_str(&std::fs::read_to_string(&p).expect("json")).unwrap();
+    let mut worst = vec![(0.0f64, String::new()); Ayanamsa::ALL.len()];
+    for r in g["ayanamsa"].as_array().unwrap() {
+        let jd_tt = f(&r["jd_tt"]);
+        let jd = TwoPartJd {
+            jd1: jd_tt.floor() + 0.5,
+            jd2: jd_tt - (jd_tt.floor() + 0.5),
+        };
+        let t = jd.centuries_since_j2000();
+        let label = r["utc"].as_str().unwrap();
+        for (i, mode) in Ayanamsa::ALL.into_iter().enumerate() {
+            let key = mode.swiss_ephemeris_mode().to_string();
+            let want = f(&r[key.as_str()]);
+            let got = ayanamsa_degrees(mode, t);
+            let d = wrap(got - want).abs() * 3_600.0;
+            if d > worst[i].0 {
+                worst[i] = (d, label.to_string());
+            }
+            // measured worst: 0.0014″ (Lahiri), 0.016″ (the three stars, Meeus Earth
+            // velocity), 0.021″ (VP285 / VP291: SE measures precession on the ecliptic of
+            // a t0 seventeen centuries back)
+            assert!(d < 0.05, "{label} {mode:?}: {got} vs {want} ({d:.4}″)");
+        }
+    }
+    for (mode, (d, at)) in Ayanamsa::ALL.iter().zip(worst) {
+        eprintln!("{mode:?}: worst {d:.4}″ at {at}");
+    }
+}

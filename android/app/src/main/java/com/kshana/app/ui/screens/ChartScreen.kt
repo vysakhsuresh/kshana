@@ -127,8 +127,8 @@ fun ChartScreen(profile: BirthProfile, settings: EngineSettings) {
             SectionLabel("Placements")
             Column {
                 for (b in c.bodies) PlacementRow(b, sidereal, stability)
-                NodeRow("Rahu", if (sidereal) norm360(c.trueNodeTropical - c.ayanamsaDeg) else c.trueNodeTropical, c, sidereal)
-                NodeRow("Ketu", if (sidereal) norm360(c.trueNodeTropical - c.ayanamsaDeg + 180.0) else norm360(c.trueNodeTropical + 180.0), c, sidereal)
+                NodeRow("Rahu", if (sidereal) norm360(c.rahuTropical - c.ayanamsaDeg) else c.rahuTropical, c, sidereal)
+                NodeRow("Ketu", if (sidereal) norm360(c.rahuTropical - c.ayanamsaDeg + 180.0) else norm360(c.rahuTropical + 180.0), c, sidereal)
             }
             if (stability != null) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
@@ -209,7 +209,7 @@ private fun NatalWheel(chart: ChartRecord, aspects: List<AspectRecord>, sidereal
             val p = at(lon, rPlanet)
             drawText(lay, topLeft = Offset(p.x - lay.size.width / 2, p.y - lay.size.height / 2))
         }
-        val node = if (sidereal) norm360(chart.trueNodeTropical - chart.ayanamsaDeg) else chart.trueNodeTropical
+        val node = if (sidereal) norm360(chart.rahuTropical - chart.ayanamsaDeg) else chart.rahuTropical
         drawCircle(KshanaColors.Sky, 3.dp.toPx(), at(node, rPlanet), style = Stroke(1.5f))
     }
 }
