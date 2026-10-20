@@ -40,6 +40,7 @@ kshana-eclipse = { workspace = true }
 kshana-day = { workspace = true }
 kshana-bala = { workspace = true }
 kshana-marga = { workspace = true }
+kshana-calendar = { workspace = true }
 
 [lints]
 workspace = true
