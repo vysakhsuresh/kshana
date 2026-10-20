@@ -62,10 +62,17 @@ import uniffi.kshana_ffi.dashaTable
 import uniffi.kshana_ffi.varga
 import com.kshana.app.ui.sky.KshanaFonts
 
-private val VARGAS = listOf(1u, 2u, 3u, 4u, 7u, 9u, 10u, 12u, 30u, 60u)
+private val VARGAS = listOf(
+    1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 16u, 20u, 24u, 27u, 30u, 40u, 45u, 60u,
+    81u, 108u, 144u, 150u,
+)
 private val VARGA_NAMES = mapOf(
-    1u to "Rasi", 2u to "Hora", 3u to "Drekkana", 4u to "Chaturthamsa", 7u to "Saptamsa",
-    9u to "Navamsa", 10u to "Dasamsa", 12u to "Dwadasamsa", 30u to "Trimsamsa", 60u to "Shashtiamsa",
+    1u to "Rasi", 2u to "Hora", 3u to "Drekkana", 4u to "Chaturthamsa", 5u to "Panchamsa",
+    6u to "Shashthamsa", 7u to "Saptamsa", 8u to "Ashtamsa", 9u to "Navamsa", 10u to "Dasamsa",
+    11u to "Rudramsa", 12u to "Dwadasamsa", 16u to "Shodasamsa", 20u to "Vimsamsa",
+    24u to "Chaturvimsamsa", 27u to "Bhamsa", 30u to "Trimsamsa", 40u to "Khavedamsa",
+    45u to "Akshavedamsa", 60u to "Shashtiamsa", 81u to "Navanavamsa", 108u to "Ashtottaramsa",
+    144u to "Dwadas-dwadasamsa", 150u to "Nadiamsa",
 )
 private val VEDIC_ORDER = listOf("Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn")
 private val LEVEL_NAMES = listOf("Maha", "Antar", "Pratyantar", "Sookshma", "Prana")

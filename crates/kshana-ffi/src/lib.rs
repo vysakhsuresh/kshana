@@ -12,6 +12,7 @@ uniffi::setup_scaffolding!();
 
 pub mod bala;
 pub mod dashas;
+pub mod dashas_more;
 pub mod day;
 pub mod directions;
 pub mod eclipse;

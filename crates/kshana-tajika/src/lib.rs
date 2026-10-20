@@ -33,6 +33,7 @@
 
 mod bala;
 mod mudda;
+mod patyayini;
 mod saham;
 mod sky;
 mod tables;
@@ -40,6 +41,7 @@ mod yoga;
 
 pub use bala::{grade, panchavargeeya, relation, Panchavargeeya, Relation};
 pub use mudda::{mudda, mudda_start_lord, MuddaPeriod};
+pub use patyayini::{patyamsas, patyayini, PatyayiniLord, PatyayiniPeriod, PatyayiniSub};
 pub use saham::{between, combine, sahams, Saham, SahamFormula, Term, PUNYA, SAHAMS, SASTRA};
 pub use sky::{house_of, AnnualSky};
 pub use tables::{
