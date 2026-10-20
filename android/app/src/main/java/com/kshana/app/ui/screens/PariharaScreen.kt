@@ -104,8 +104,8 @@ private fun planetDay(planet: String): java.time.DayOfWeek? = when (planet) {
 private val AREAS = listOf("Career", "Marriage", "Children", "Wealth", "Health", "Property", "Education", "Foreign")
 private const val ALL = "All"
 
-private val DAY_WORDS = DateTimeFormatter.ofPattern("EEEE d MMM")
-private val WHEN_WORDS = DateTimeFormatter.ofPattern("EEEE d MMM HH:mm:ss")
+private val DAY_WORDS = DateTimeFormatter.ofPattern("EEEE d MMM uuuu")
+private val WHEN_WORDS = DateTimeFormatter.ofPattern("EEEE d MMM uuuu, HH:mm:ss")
 
 /** The ladder's rungs, as the engine numbers them. */
 private fun rungLabel(rung: Int): String = when (rung) {

@@ -77,7 +77,7 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 private val CLOCK: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
-private val LONG_DATE: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM")
+private val LONG_DATE: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM uuuu")
 
 /**
  * The time loop: what this moment holds, a countdown to the next shift, nine lives,

@@ -139,7 +139,7 @@ fun AboutScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
                 fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 24.sp, color = KshanaColors.Text,
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                GoldButton("EMAIL US", onClick = {
+                QuietButton("EMAIL US", onClick = {
                     com.kshana.app.data.BrandLinks.sendEmail(context, "Kshana $version - feedback")
                 }, modifier = Modifier.weight(1f))
                 QuietButton("WHATSAPP", onClick = {
