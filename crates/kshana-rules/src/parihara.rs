@@ -822,9 +822,9 @@ pub const HOUSE_DUTIES: [HouseDuty; 12] = [
     },
     HouseDuty {
         house: 8,
-        domain: "longevity, the hidden and inheritance",
+        domain: "health to guard, the hidden and inheritance",
         karaka: "Saturn",
-        conduct: "complete the rites of the dead; visit a grave",
+        conduct: "complete the rites for the departed; visit a grave",
         seva: "the old",
         daana: "a blanket or sesame",
     },
@@ -921,11 +921,11 @@ pub fn table(g: DashaLord) -> Vec<Row> {
             (Karma, "End one quarrel on your own initiative", "Anger and conflict ease when courage is used for peace.", "this week", "Tuesday", DHARMA),
             (Karma, "Stand up, once, for someone weaker than you", "Turns restless energy into protection; quarrels around you drop.", "this week", "any day", DHARMA),
             (Karma, "Repay a brother or a sibling what you owe, in money or in time", "Debts between siblings feed disputes over money and property.", "this month", "Tuesday", DHARMA),
-            (Seva, "Donate blood, or serve those who protect others", "Lowers the risk of injuries, accidents and fights.", "once", "any day", DHARMA),
+            (Seva, "Donate blood, or serve those who protect others", "Brings safety on the road and at work, and cools fights.", "once", "any day", DHARMA),
             (Seva, "Cook and serve a hot meal to labourers or soldiers", "Cools heat and haste, and eases property and land troubles.", "once", "Tuesday", TEMPLE),
             (Discipline, "No anger spoken aloud for 40 days", "Restraint is the surest remedy for quarrels and their costs.", "40 days", "start Tuesday", DHARMA),
             (Discipline, "Hard physical work or sport, 30 minutes, until you sweat", "Energy not spent in effort comes out as temper.", "30 min · daily", "any day", DHARMA),
-            (Daana, "Give red lentils on a Tuesday", "Cools anger, quarrels and accidents; helps property matters.", "once", "Tuesday", PURANA),
+            (Daana, "Give red lentils on a Tuesday", "Cools anger and quarrels, brings safety on the road; helps property matters.", "once", "Tuesday", PURANA),
             (Daana, "Give red cloth, copper or red sweets to a young man who serves", "Eases disputes, debts and land troubles.", "once", "Tuesday", PURANA),
             (Vrata, "Tuesday fast with one meal of plain food; Mangala Gauri for women", "Kept 21 Tuesdays, for courage and for a calmer marriage.", "21 Tuesdays", "Tuesday", MUHURTA),
             (Mantra, "Hanuman Chalisa on Tuesdays", "Optional support for courage and protection.", "if you wish", "Tuesday", TEMPLE),
@@ -1019,7 +1019,7 @@ pub fn table(g: DashaLord) -> Vec<Row> {
             (Karma, "Apologise for one thing you walked away from", "Mends the silent breaks that leave you feeling cut off.", "this week", "Tuesday", DHARMA),
             (Karma, "Give away ten things you do not use", "Letting go on purpose prevents losses that come uninvited.", "this week", "any day", DHARMA),
             (Seva, "Feed and care for stray dogs, or serve a renunciate", "Eases sudden losses and a sense of emptiness.", "weekly", "Tuesday", DHARMA),
-            (Seva, "Sit with the dying or the very ill, in silence", "Brings clarity and calm in a confusing time.", "once", "any day", DHARMA),
+            (Seva, "Sit with the very ill or those in hospice care, in silence", "Brings clarity and calm in a confusing time.", "once", "any day", DHARMA),
             (Discipline, "Live simply for 40 days: one meal plain, one hour of silence", "Simplicity turns restlessness into insight.", "40 days", "start Tuesday", DHARMA),
             (Discipline, "Ten minutes of meditation on the breath, daily", "Gives direction when you feel lost.", "10 min · daily", "any day", DHARMA),
             (Daana, "Give a blanket or sesame", "Eases losses, drift and lack of direction.", "once", "Tuesday", PURANA),
@@ -1802,7 +1802,7 @@ fn dosha_rows(d: &Dosha) -> Vec<PlanRow> {
     let day = weekday_name(g);
     let specs: Vec<Spec> = match d.rule_id {
         "KS-R-SHAPA-01" => vec![
-            (Karma, "Visit or call your father or elders on a fixed day; keep the death tithi of the departed".into(), "A duty to ancestors left undone is the karmic domain of this curse; the conduct is the remedy.".into(), "weekly", "weekly on Sunday".into(), None, None, Cue::FirstHora),
+            (Karma, "Visit or call your father or elders on a fixed day; keep the yearly remembrance day of the departed".into(), "A duty to ancestors left undone is the karmic domain of this curse; the conduct is the remedy.".into(), "weekly", "weekly on Sunday".into(), None, None, Cue::FirstHora),
             (Vrata, "Pitru tarpana on every Amavasya; Mahalaya shraddha in Pitru Paksha".into(), "Amavasya is the pitris' tithi; its exact span is below, and Pitru Paksha (Bhadrapada Krishna) is the fortnight for Mahalaya.".into(), "monthly", "monthly on Amavasya".into(), None, None, Cue::Tithis(&[30])),
             (Daana, "Wheat, jaggery or copper on Sunday in the Sun's hora; a cow (classical)".into(), "The Sun's daana (practice); the text's item is a cow, a modern equivalent is feeding animals.".into(), "once", "once".into(), None, None, Cue::DayHora),
             (Pooja, "Shraddha (at Gaya or anywhere), feeding Brahmins, kanyadana (BPHS)".into(), "The chapter's named propitiation: 'lineage continues afterwards'. Optional, ritual.".into(), "not required", "once".into(), None, None, Cue::Tithis(&[30])),
@@ -1838,7 +1838,7 @@ fn dosha_rows(d: &Dosha) -> Vec<PlanRow> {
             (Pooja, "Lakshmi-Narayana pratishtha, kanyadana, a cow (the text's pairing; verify)".into(), "As the brief recalls the chapter. Optional, ritual.".into(), "not required", "once".into(), None, None, Cue::PlanetTithi),
         ],
         "KS-R-SHAPA-08" => vec![
-            (Karma, "Complete the rites or the memory of a dead relative; visit a grave".into(), "Saturn and Ketu are the departed; the rite completed is the restitution.".into(), "this week", "once".into(), None, Some(7), Cue::FirstHora),
+            (Karma, "Complete the rites or the memory of a departed relative; visit a grave".into(), "Saturn and Ketu are the departed; the rite completed is the restitution.".into(), "this week", "once".into(), None, Some(7), Cue::FirstHora),
             (Vrata, "Tarpana for the departed on Amavasya".into(), "Amavasya is the pretas' tithi; the exact spans are below.".into(), "monthly", "monthly on Amavasya".into(), None, None, Cue::Tithis(&[30])),
             (Pooja, "Gaya shraddha, Rudra japa, gift of a cow or silver (BPHS)".into(), "The chapter's named remedies for the curse of the departed. Optional, ritual.".into(), "not required", "once".into(), None, None, Cue::Tithis(&[30])),
         ],

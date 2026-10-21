@@ -51,10 +51,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.ArgalaRecord
 import uniffi.kshana_ffi.AshtamangalaRecord
-import uniffi.kshana_ffi.AyurComponentRecord
-import uniffi.kshana_ffi.AyurContributionRecord
-import uniffi.kshana_ffi.AyurReductionRecord
-import uniffi.kshana_ffi.AyurdayaRecord
 import uniffi.kshana_ffi.ChidraRecord
 import uniffi.kshana_ffi.Engine
 import uniffi.kshana_ffi.ExactInstant
@@ -71,14 +67,13 @@ import uniffi.kshana_ffi.ashtamangalaNumber
 import java.time.ZoneId
 
 /* ------------------------------------------------------------------------------------
- * Prasna Marga: the Kerala instrument. Six parts, one open at a time, each computed
+ * Prasna Marga: the Kerala instrument. Five parts, one open at a time, each computed
  * only when opened and kept for the life of the screen. Every number comes from the
  * engine; every sentence under a number is the text's, shown as the text's.
  * ---------------------------------------------------------------------------------- */
 
 private enum class MargaPart(val chip: String) {
     SPHUTAS("SPHUTAS"),
-    AYURDAYA("AYURDAYA"),
     ASHTAMANGALA("ASHTAMANGALA"),
     JAIMINI("JAIMINI"),
     SANDHI("SANDHI"),
@@ -96,7 +91,6 @@ private class ArudhaCast(val at: ExactInstant, val record: PrasnaSphutaRecord)
 private class MargaCache {
     /** Sphuta reports by "birth" or "now:<tai seconds>". */
     val sphutas = mutableStateMapOf<String, SphutaReportRecord>()
-    var ayur by mutableStateOf<AyurdayaRecord?>(null)
     /** Prasna sphutas by Arudha sign (0 = Aries), each cast for the instant it was first asked. */
     val arudha = mutableStateMapOf<Int, ArudhaCast>()
     var jaimini by mutableStateOf<JaiminiRecord?>(null)
@@ -118,7 +112,6 @@ private fun mgSignOf(lon: Double): String = MG_SIGN_NAMES[signIndex(lon)]
 
 private fun mgSignName(i: Int): String = MG_SIGN_NAMES[((i % 12) + 12) % 12]
 
-private fun mgYears(x: Double): String = "%.2f".format(x)
 
 private fun mgSigned(n: Int): String = when {
     n > 0 -> "+$n"
@@ -169,7 +162,7 @@ private fun <T : Any> mgLoad(key: Any?, cached: T?, onLoaded: (T) -> Unit, compu
 }
 
 /**
- * The Kerala instrument: the Prasna Marga sphutas, the classical ayurdaya, the
+ * The Kerala instrument: the Prasna Marga sphutas (the longevity reckoning is never shown), the
  * Ashtamangala number with the prasna Arudha, the Jaimini extras, the Vimshottari
  * sandhi with the chidra lords, and the Vimshopaka bala. One part open at a time.
  */
@@ -202,7 +195,6 @@ fun MargaScreen(profile: BirthProfile, here: Place, settings: EngineSettings, on
 
         when (part) {
             MargaPart.SPHUTAS -> SphutaPart(profile, here, settings, zone, cache)
-            MargaPart.AYURDAYA -> AyurPart(profile, settings, cache)
             MargaPart.ASHTAMANGALA -> AshtamangalaPart(here, settings, zone, cache)
             MargaPart.JAIMINI -> JaiminiPart(profile, settings, cache)
             MargaPart.SANDHI -> SandhiPart(profile, settings, zone, cache)
@@ -386,133 +378,7 @@ private fun YogiCard(y: YogiRecord, key: String) {
 }
 
 /* ------------------------------------------------------------------------------------
- * 2. Ayurdaya.
- * ---------------------------------------------------------------------------------- */
-
-@Composable
-private fun AyurPart(profile: BirthProfile, settings: EngineSettings, cache: MargaCache) {
-    var shown by remember(profile, settings) { mutableStateOf(false) }
-
-    SectionLabel("Ayurdaya")
-    MgSentence(
-        "The text's three longevity arithmetics, Pindayu, Nisargayu and Amsayu, with their haranas and bharanas, the method chosen by the Shadbala of the lagna, the Sun and the Moon.",
-    )
-    Text(
-        "A classical exercise of Brihat Parashara Hora Shastra chapter 43, shown as the text's method.",
-        style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
-    )
-    if (!shown) {
-        QuietButton("SHOW THE ARITHMETIC", onClick = { shown = true })
-    } else {
-        val error = mgLoad("ayur", cache.ayur, { cache.ayur = it }) { engine ->
-            engine.ayurdayaClassical(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa)
-        }
-        ErrorLine(error)
-        val rec = cache.ayur
-        if (rec == null) {
-            if (error == null) MgLoading("Working the three arithmetics and the Shadbala that chooses between them…")
-        } else {
-            AyurBody(rec)
-        }
-    }
-    MgFooter(
-        "Exact: the planetary years, the exaltation proportion, the haranas, the bharanas and the selection are BPHS 43 arithmetic on the chart, clamped at the text's 120; the text's words: each reason and sentence, which name their conventions (Chakrapata houses by 30° arcs, the lagna's share by rasi count).",
-    )
-}
-
-@Composable
-private fun AyurBody(rec: AyurdayaRecord) {
-    // The caveat first, verbatim, before any number.
-    MgSentence(rec.caveat, KshanaColors.TextSoft)
-
-    MgCard {
-        MgCardTitle(rec.method, "METHOD")
-        MonoRow("Years", mgYears(rec.years), KshanaColors.TextSoft)
-        MonoRow("Raw years, before the clamp", mgYears(rec.rawYears), KshanaColors.TextSoft)
-        Text(sentence(rec.selection), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
-    }
-
-    SectionLabel("Contributions")
-    for (c in rec.contributions) ContributionRow(c, "main")
-    val k = rec.krurodaya
-    if (k != null) {
-        SectionLabel("Krurodaya")
-        ReductionRow(k)
-    }
-
-    if (rec.components.isNotEmpty()) {
-        SectionLabel("The methods averaged")
-        for (comp in rec.components) ComponentCard(comp)
-    }
-
-    val rest = rec.words.filter { it != rec.caveat }
-    MgWords(rest, "ayur:words", "THE ARITHMETIC IN WORDS")
-
-    Text(
-        "This is a classical exercise of the text, worked as the text works it, and never a prediction of death.",
-        style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(top = 6.dp),
-    )
-}
-
-/** One graha's (or the lagna's) share: base years to years, the reductions beneath. */
-@Composable
-private fun ContributionRow(c: AyurContributionRecord, scope: String) {
-    HorizontalDivider(color = KshanaColors.LineSoft)
-    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("${mgGlyph(c.graha)} ${c.graha}".trim(), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1f))
-            Text("${mgYears(c.baseYears)} → ${mgYears(c.years)}", fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.TextSoft)
-        }
-        for (r in c.reductions) ReductionRow(r)
-        MgWords(c.words, "$scope:${c.graha}")
-    }
-}
-
-/** One harana or bharana: name, factor, years taken (negative when added), the reason. */
-@Composable
-private fun ReductionRow(r: AyurReductionRecord) {
-    Column(Modifier.fillMaxWidth().padding(start = 16.dp, top = 2.dp, bottom = 2.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(r.name, fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Muted, modifier = Modifier.weight(1f))
-            Text(
-                "×${"%.3f".format(r.factor)} · ${if (r.years >= 0.0) "−" else "+"}${mgYears(kotlin.math.abs(r.years))} y",
-                fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Muted,
-            )
-        }
-        Text(sentence(r.reason), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
-    }
-}
-
-/** One method inside an averaged result, its contributions on request. */
-@Composable
-private fun ComponentCard(comp: AyurComponentRecord) {
-    var open by remember(comp.method) { mutableStateOf(false) }
-    MgCard {
-        MgCardTitle(comp.method, "COMPONENT")
-        MonoRow("Years", mgYears(comp.years), KshanaColors.TextSoft)
-        MonoRow("Raw years", mgYears(comp.rawYears), KshanaColors.TextSoft)
-        Row(
-            Modifier.fillMaxWidth().height(32.dp).clickable { open = !open },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text("CONTRIBUTIONS", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-            Text(if (open) "hide" else "show", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
-        }
-        if (open) {
-            for (c in comp.contributions) ContributionRow(c, comp.method)
-            val k = comp.krurodaya
-            if (k != null) {
-                Text("KRURODAYA", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
-                ReductionRow(k)
-            }
-            MgWords(comp.words, "component:${comp.method}", "IN WORDS")
-        }
-    }
-}
-
-/* ------------------------------------------------------------------------------------
- * 3. Ashtamangala.
+ * 2. Ashtamangala.
  * ---------------------------------------------------------------------------------- */
 
 @Composable
@@ -628,7 +494,7 @@ private fun mgFieldColors() = OutlinedTextFieldDefaults.colors(
 )
 
 /* ------------------------------------------------------------------------------------
- * 4. Jaimini.
+ * 3. Jaimini.
  * ---------------------------------------------------------------------------------- */
 
 @Composable
@@ -750,7 +616,7 @@ private fun ArgalaRow(a: ArgalaRecord) {
 }
 
 /* ------------------------------------------------------------------------------------
- * 5. Sandhi.
+ * 4. Sandhi.
  * ---------------------------------------------------------------------------------- */
 
 @Composable
@@ -869,7 +735,7 @@ private fun ChidraRow(c: ChidraRecord) {
 }
 
 /* ------------------------------------------------------------------------------------
- * 6. Vimshopaka.
+ * 5. Vimshopaka.
  * ---------------------------------------------------------------------------------- */
 
 @Composable

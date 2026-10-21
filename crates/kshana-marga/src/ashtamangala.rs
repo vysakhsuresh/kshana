@@ -71,7 +71,7 @@ pub const DIGIT_SIGNALS: [(DashaLord, &str, &str); 8] = [
     (
         DashaLord::Saturn,
         "Sasta (Ayyappa) and the Kirata",
-        "the dead, pitru and preta dosha, servants, disease",
+        "the departed (pitru and preta dosha), servants, disease",
     ),
     (
         DashaLord::Moon,

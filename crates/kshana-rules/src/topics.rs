@@ -43,7 +43,7 @@ pub const TOPICS: &[Topic] = &[
     topic!("new_love", "A new relationship", Love, "Romance", 5, [5, 7, 11], [4, 6, 10], "D9"),
     topic!("reunion", "Getting back together", Love, "Reunion", 7, [2, 7, 11], [1, 6, 10], "D9"),
     topic!("second_marriage", "A second marriage", Love, "Second marriage", 9, [2, 9, 11], [1, 8, 10], "D9"),
-    topic!("separation", "A separation ending", Love, "Separation", 6, [1, 6, 10], [2, 7, 11], "D9"),
+    topic!("separation", "A marriage under strain", Love, "Marriage strain", 6, [1, 6, 10], [2, 7, 11], "D9"),
     topic!("in_laws", "Peace with in-laws", Love, "In-laws", 2, [2, 7, 11], [1, 6, 10], "D9"),
     // Career
     topic!("new_job", "A new job", Career, "Job", 10, [2, 6, 10], [1, 5, 9], "D10"),

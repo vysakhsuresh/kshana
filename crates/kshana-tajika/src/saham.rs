@@ -127,7 +127,7 @@ pub const SAHAMS: [SahamFormula; 35] = [
     swap("Kali", "strife, quarrel", [JU, MA, L]),
     swap("Sastra", "learning of the scriptures", [JU, SA, ME]),
     both("Bandhu", "relatives", [ME, MO, L]),
-    both("Mrityu", "death", [Term::Cusp(8), MO, SA]),
+    both("Mrityu", "health to guard", [Term::Cusp(8), MO, SA]),
     both(
         "Paradesa",
         "foreign residence, travel",
@@ -157,7 +157,7 @@ pub const SAHAMS: [SahamFormula; 35] = [
     swap("Bandhana", "imprisonment, bondage", [PU, SA, L]),
     both(
         "Apamrityu",
-        "accidents, unnatural death",
+        "safety on the road and in risky work",
         [Term::Cusp(8), MA, L],
     ),
     both("Labha", "gains", [Term::Cusp(11), Term::CuspLord(11), L]),

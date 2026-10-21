@@ -65,7 +65,7 @@ private val BALADI_WORDS = mapOf(
     "Kumara" to "youth, half its fruit",
     "Yuva" to "adult, its full fruit",
     "Vriddha" to "old, a trace of its fruit",
-    "Mrita" to "dead, no fruit",
+    "Mrita" to "spent, no fruit",
 )
 private val JAGRADADI_WORDS = mapOf(
     "Jagrat" to "awake, full results",
