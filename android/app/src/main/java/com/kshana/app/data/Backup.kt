@@ -73,6 +73,7 @@ object Backup {
             ed.commit()
         }
         Lang.load(context)
+        Heights.register(context)
         return ProfileStore.prefs(context).getString("profile.name", "") ?: ""
     }
 

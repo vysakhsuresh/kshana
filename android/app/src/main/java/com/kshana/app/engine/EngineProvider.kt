@@ -45,6 +45,7 @@ object EngineProvider {
         val eop = runCatching { ensureAsset(context, "finals2000A.all") }.getOrNull()
         runCatching { setRiseConvention(ProfileStore.settings(context).riseConvention) }
         runCatching { setLunarNode(ProfileStore.settings(context).lunarNode) }
+        com.kshana.app.data.Heights.register(context)
         return Engine.open(spk.absolutePath, eop?.absolutePath)
     }
 

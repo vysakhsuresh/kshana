@@ -11,8 +11,11 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 
-/** A place the user can pick: name, coordinates and the civil zone that applies there. */
-data class Place(val name: String, val latitude: Double, val longitude: Double, val zoneId: String)
+/**
+ * A place the user can pick: name, coordinates, the civil zone that applies there, and its
+ * height above sea level in metres (0 when unknown), which moves sunrise and sunset.
+ */
+data class Place(val name: String, val latitude: Double, val longitude: Double, val zoneId: String, val elevationM: Double = 0.0)
 
 /**
  * The birth as the user states it: local civil time in the place's zone, a stated
@@ -32,6 +35,10 @@ data class BirthProfile(
     val longitude: Double,
     val placeName: String,
     val zoneId: String,
+    /** Height of the birth place above sea level, metres (0 when unknown). */
+    val elevationM: Double = 0.0,
+    /** The nazhika count the time was worked out from, when the horoscope gave one. */
+    val nazhika: NazhikaEntry? = null,
 ) {
     /**
      * The place's zone for the present day and for dates after birth (events, transits). A
@@ -59,7 +66,47 @@ data class BirthProfile(
     /** Half-window in seconds for the stated uncertainty level. */
     fun uncertaintySeconds(): Long = Uncertainty.seconds(uncertaintyLevel)
 
-    fun place(): Place = Place(placeName, latitude, longitude, zoneId)
+    fun place(): Place = Place(placeName, latitude, longitude, zoneId, elevationM)
+}
+
+/**
+ * A birth time as a Kerala or Tamil horoscope writes it: nazhika (24 minutes) and
+ * vinazhika (24 seconds) counted from sunrise, or from six in the morning, on the date
+ * the person typed. [previousDay]: born after midnight and before sunrise, so the count
+ * starts at the previous morning's sunrise. [vinazhika] is null when the horoscope gives
+ * whole nazhika only. Kept so the entry can be shown again; the clock time in the profile
+ * is what every reading uses.
+ */
+data class NazhikaEntry(
+    val year: Int,
+    val month: Int,
+    val day: Int,
+    val nazhika: Int,
+    val vinazhika: Int?,
+    val fromSunrise: Boolean = true,
+    val previousDay: Boolean = false,
+) {
+    /** "1990-2-20|25|12|sunrise|day": stored in preferences and in backups. */
+    fun toText(): String =
+        "$year-$month-$day|$nazhika|${vinazhika ?: ""}|${if (fromSunrise) "sunrise" else "six"}|${if (previousDay) "prev" else "day"}"
+
+    /** "25 nazhika 12 vinazhika from sunrise". */
+    fun label(): String =
+        "$nazhika nazhika" + (vinazhika?.let { " $it vinazhika" } ?: "") + if (fromSunrise) " from sunrise" else " from 6 am"
+
+    companion object {
+        fun parse(s: String?): NazhikaEntry? {
+            if (s.isNullOrBlank()) return null
+            return runCatching {
+                val p = s.split('|')
+                val d = p[0].split('-').map { it.toInt() }
+                NazhikaEntry(d[0], d[1], d[2], p[1].toInt(), p[2].toIntOrNull(), p.getOrNull(3) != "six", p.getOrNull(4) == "prev")
+            }.getOrNull()
+        }
+
+        /** How sure a nazhika time is: within a minute with vinazhika, else within a quarter hour (a nazhika is 24 minutes). */
+        fun uncertaintyLevel(vinazhikaGiven: Boolean): Int = if (vinazhikaGiven) 1 else 3
+    }
 }
 
 /** The seven uncertainty levels with their labels and half-windows. */
@@ -107,6 +154,8 @@ object ProfileStore {
     private const val K_LON = "profile.lon"
     private const val K_PLACE = "profile.place"
     private const val K_ZONE = "profile.zone"
+    private const val K_ELEV = "profile.elevation"
+    private const val K_NAZHIKA = "profile.nazhika"
     private const val K_AYANAMSA = "settings.ayanamsa"
     private const val K_HOUSES = "settings.houses"
     private const val K_TOPO = "settings.topocentricMoon"
@@ -116,6 +165,7 @@ object ProfileStore {
     private const val K_CUR_LAT = "current.lat"
     private const val K_CUR_LON = "current.lon"
     private const val K_CUR_ZONE = "current.zone"
+    private const val K_CUR_ELEV = "current.elevation"
 
     val kochi = Place("Kochi", 9.9312, 76.2673, "Asia/Kolkata")
 
@@ -139,6 +189,8 @@ object ProfileStore {
             longitude = p.getFloat(K_LON, kochi.longitude.toFloat()).toDouble(),
             placeName = p.getString(K_PLACE, kochi.name) ?: kochi.name,
             zoneId = p.getString(K_ZONE, kochi.zoneId) ?: kochi.zoneId,
+            elevationM = p.getFloat(K_ELEV, 0f).toDouble(),
+            nazhika = NazhikaEntry.parse(p.getString(K_NAZHIKA, null)),
         )
     }
 
@@ -157,7 +209,10 @@ object ProfileStore {
             .putFloat(K_LON, profile.longitude.toFloat())
             .putString(K_PLACE, profile.placeName)
             .putString(K_ZONE, profile.zoneId)
+            .putFloat(K_ELEV, profile.elevationM.toFloat())
+            .apply { if (profile.nazhika != null) putString(K_NAZHIKA, profile.nazhika.toText()) else remove(K_NAZHIKA) }
             .apply()
+        Heights.register(context)
     }
 
     fun settings(context: Context): EngineSettings {
@@ -194,6 +249,7 @@ object ProfileStore {
                 p.getFloat(K_CUR_LAT, kochi.latitude.toFloat()).toDouble(),
                 p.getFloat(K_CUR_LON, kochi.longitude.toFloat()).toDouble(),
                 p.getString(K_CUR_ZONE, kochi.zoneId) ?: kochi.zoneId,
+                p.getFloat(K_CUR_ELEV, 0f).toDouble(),
             )
         }
         return load(context)?.place() ?: kochi
@@ -205,7 +261,9 @@ object ProfileStore {
             .putFloat(K_CUR_LAT, place.latitude.toFloat())
             .putFloat(K_CUR_LON, place.longitude.toFloat())
             .putString(K_CUR_ZONE, place.zoneId)
+            .putFloat(K_CUR_ELEV, place.elevationM.toFloat())
             .apply()
+        Heights.register(context)
     }
 
     // ----- Partners: other people's births, for Together. Stored as JSON on the phone. -----
@@ -258,6 +316,8 @@ object ProfileStore {
                     uncertaintyLevel = o.optInt("unc", 0),
                     latitude = o.getDouble("lat"), longitude = o.getDouble("lon"),
                     placeName = o.optString("place", ""), zoneId = o.optString("zone", "Asia/Kolkata"),
+                    elevationM = o.optDouble("elev", 0.0).takeIf { it.isFinite() } ?: 0.0,
+                    nazhika = NazhikaEntry.parse(o.optString("nazhika", "")),
                 )
             }
         }.getOrDefault(emptyList())
@@ -270,10 +330,12 @@ object ProfileStore {
                 org.json.JSONObject()
                     .put("name", p.name).put("year", p.year).put("month", p.month).put("day", p.day)
                     .put("hour", p.hour).put("minute", p.minute).put("second", p.second).put("unc", p.uncertaintyLevel)
-                    .put("lat", p.latitude).put("lon", p.longitude).put("place", p.placeName).put("zone", p.zoneId),
+                    .put("lat", p.latitude).put("lon", p.longitude).put("place", p.placeName).put("zone", p.zoneId)
+                    .put("elev", p.elevationM).apply { p.nazhika?.let { put("nazhika", it.toText()) } },
             )
         }
         prefs(context).edit().putString(K_PARTNERS, arr.toString()).apply()
+        Heights.register(context)
     }
 
     /** Adds or replaces (by name) a partner and selects it. */
@@ -364,7 +426,8 @@ fun BirthProfile.toJson(): org.json.JSONObject = org.json.JSONObject()
     .put("name", name).put("year", year).put("month", month).put("day", day)
     .put("hour", hour).put("minute", minute).put("second", second)
     .put("uncertainty", uncertaintyLevel).put("lat", latitude).put("lon", longitude)
-    .put("place", placeName).put("zone", zoneId)
+    .put("place", placeName).put("zone", zoneId).put("elev", elevationM)
+    .apply { nazhika?.let { put("nazhika", it.toText()) } }
 
 fun birthProfileFromJson(o: org.json.JSONObject): BirthProfile = BirthProfile(
     name = o.optString("name", ""),
@@ -375,6 +438,9 @@ fun birthProfileFromJson(o: org.json.JSONObject): BirthProfile = BirthProfile(
     longitude = o.optDouble("lon", ProfileStore.kochi.longitude),
     placeName = o.optString("place", ProfileStore.kochi.name),
     zoneId = o.optString("zone", ProfileStore.kochi.zoneId),
+    // Files written before heights and nazhika entries were kept have neither: sea level, a clock time.
+    elevationM = o.optDouble("elev", 0.0).takeIf { it.isFinite() } ?: 0.0,
+    nazhika = NazhikaEntry.parse(o.optString("nazhika", "")),
 )
 
 /** The people the app knows besides the active profile: partner, children, parents. */
@@ -398,6 +464,7 @@ object FamilyStore {
         val arr = org.json.JSONArray()
         for (p in list) arr.put(p.toJson())
         ProfileStore.prefs(context).edit().putString(K_FAMILY, arr.toString()).apply()
+        Heights.register(context)
     }
 
     /** Add or replace by name. */

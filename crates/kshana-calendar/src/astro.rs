@@ -122,11 +122,13 @@ pub fn rise_set(
     from: Instant,
     to: Instant,
 ) -> Result<(Vec<Instant>, Vec<Instant>), EventError> {
+    // From a height the horizon dips below the eye (kshana_events::horizon).
+    let dip = kshana_events::horizon::horizon_dip_deg(rise, obs);
     let f = |t: Instant| -> Result<f64, SpkError> {
         let (alt, p) = altitude(spk, eop, obs, body, t)?;
         Ok(match body {
-            Body::Moon => alt - moon_rise_altitude(rise, p),
-            _ => alt - rise.altitude_deg(),
+            Body::Moon => alt - moon_rise_altitude(rise, p) + dip,
+            _ => alt - rise.altitude_deg() + dip,
         })
     };
     if body == Body::Sun {

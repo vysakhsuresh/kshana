@@ -8,6 +8,8 @@
 
 #![forbid(unsafe_code)]
 
+pub mod horizon;
+
 use kshana_ephem::{Body, Spk, SpkError};
 use kshana_sky::apparent;
 use kshana_solver::{find_root, wrap180, Root, SolverError};
@@ -574,7 +576,21 @@ pub fn sun_rise_set(
     to: Instant,
     tol_ns: i128,
 ) -> Result<(Vec<Instant>, Vec<Instant>), EventError> {
-    let alt = rise_convention().altitude_deg();
+    sun_rise_set_with(spk, eop, obs, rise_convention(), from, to, tol_ns)
+}
+
+/// [`sun_rise_set`] under an explicit rising convention. The rising altitude is lowered
+/// by the dip of the horizon for the observer's height (see [`horizon`]).
+pub fn sun_rise_set_with(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    obs: &Observer,
+    rise: RiseConvention,
+    from: Instant,
+    to: Instant,
+    tol_ns: i128,
+) -> Result<(Vec<Instant>, Vec<Instant>), EventError> {
+    let alt = rise.altitude_deg() - horizon::horizon_dip_deg(rise, obs);
     let f = |t: Instant| sun_altitude(spk, eop, obs, t).map(|a| a - alt);
     let mut rises = Vec::new();
     let mut sets = Vec::new();

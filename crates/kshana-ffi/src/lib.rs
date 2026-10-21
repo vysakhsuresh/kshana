@@ -26,6 +26,7 @@ pub mod learn;
 pub mod lexicon;
 pub mod life;
 pub mod marga;
+pub mod nazhika;
 pub mod nodes;
 pub mod remedy_plan;
 pub mod science;

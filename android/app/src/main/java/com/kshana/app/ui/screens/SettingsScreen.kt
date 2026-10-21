@@ -177,7 +177,9 @@ fun SettingsScreen(
             Text(profile.name, fontFamily = KshanaFonts.serif, fontSize = 20.sp, color = KshanaColors.Text)
             Text(profile.birthLocal().format(DATE_TIME_S), fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky)
             Text(
-                "${profile.placeName} · ${"%.4f".format(profile.latitude)}° ${"%.4f".format(profile.longitude)}° · ${profile.zoneId} · time ${Uncertainty.label(profile.uncertaintyLevel)}",
+                "${profile.placeName} · ${"%.4f".format(profile.latitude)}° ${"%.4f".format(profile.longitude)}° · ${profile.zoneId} · time ${Uncertainty.label(profile.uncertaintyLevel)}" +
+                    (if (profile.elevationM > 0.0) " · ${"%.0f".format(profile.elevationM)} m above the sea" else "") +
+                    (profile.nazhika?.let { " · given as ${it.label()}" } ?: ""),
                 style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
             )
         }
@@ -190,24 +192,40 @@ fun SettingsScreen(
             "Your day is read for this place: sunrise, the good hours and the unlucky stretches. Your birth place stays as it is.",
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
         )
-        val here = ProfileStore.currentLocation(context)
+        var here by remember { mutableStateOf(ProfileStore.currentLocation(context)) }
+        var hereHeight by remember { mutableStateOf(com.kshana.app.data.Heights.fieldText(here.elevationM)) }
         val choices = remember(profile) {
             val birth = profile?.place()
             (listOfNotNull(birth) + ProfileStore.places).distinctBy { it.name }
         }
-        Text("Now: ${here.name}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
-        PlacePicker(label = "Search the town you are in", onPick = { p ->
+        fun moveTo(picked: com.kshana.app.data.Place) {
+            // A known hill town brings its height; any other place starts at sea level until one is entered.
+            val p = if (picked.elevationM > 0.0) picked else picked.copy(elevationM = com.kshana.app.data.Heights.guess(picked.latitude, picked.longitude))
             ProfileStore.saveCurrentLocation(context, p)
+            here = p
+            hereHeight = com.kshana.app.data.Heights.fieldText(p.elevationM)
             onPlaceChanged(p)
-        })
+        }
+        Text("Now: ${here.name}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
+        PlacePicker(label = "Search the town you are in", onPick = { p -> moveTo(p) })
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (p in choices) {
-                Chip(p.name.uppercase(), selected = here.name == p.name, onClick = {
+                Chip(p.name.uppercase(), selected = here.name == p.name, onClick = { moveTo(p) })
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Field(hereHeight, { hereHeight = it.filter { c -> c.isDigit() }.take(4) }, "Height above sea level, m (optional)", Modifier.weight(1f))
+            val typed = com.kshana.app.data.Heights.parse(hereHeight)
+            if (typed != here.elevationM) {
+                QuietButton("SAVE", onClick = {
+                    val p = here.copy(elevationM = typed)
                     ProfileStore.saveCurrentLocation(context, p)
+                    here = p
                     onPlaceChanged(p)
                 })
             }
         }
+        Text(com.kshana.app.data.Heights.HINT, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
 
         SectionLabel("Language")
         Text("The app's own words. Readings stay in English until they are translated.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
