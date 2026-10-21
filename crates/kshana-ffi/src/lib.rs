@@ -17,6 +17,7 @@ pub mod dashas_more;
 pub mod day;
 pub mod directions;
 pub mod eclipse;
+pub mod family;
 pub mod kp_full;
 pub mod ledger;
 pub mod learn;
