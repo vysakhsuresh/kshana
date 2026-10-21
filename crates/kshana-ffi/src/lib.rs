@@ -28,6 +28,7 @@ pub mod life;
 pub mod marga;
 pub mod nazhika;
 pub mod nodes;
+pub mod opentest;
 pub mod remedy_plan;
 pub mod science;
 pub mod sources;

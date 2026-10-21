@@ -3,12 +3,14 @@
 //! `kshana areas --spk data/de421.bsp --utc <birth UTC> --lat .. --lon ..`
 //! `kshana prashna --spk data/de421.bsp --utc <now UTC> --lat .. --lon .. --area Career [--number 1..249] [--tz +05:30]`
 //! `kshana rectify --spk data/de421.bsp --utc <birth center UTC> --lat .. --lon .. --window-min 15 --event Career=2013-07-01T04:00:00 --event Marriage=2018-11-22T05:00:00 [--tz +05:30]`
+//! `kshana open-test <contributed files or folders>...` (or `--protocol`)
 //! `kshana muhurta --spk data/de421.bsp --utc <start UTC> --days 7 --lat .. --lon .. --activity Marriage [--natal-moon <sidereal deg>] [--tz +05:30]`
 //!
 //! The verification harness. `chart` prints everything `kshana-chart` computes; `next`
 //! lists upcoming exact instants from `kshana-events`. Nothing here does astronomy.
 
 mod next;
+mod opentest;
 
 use kshana_chart::{compute, compute_horary, Chart, ChartInput};
 use kshana_ephem::Spk;
@@ -308,6 +310,10 @@ fn now_instant() -> kshana_time::Instant {
 
 fn main() {
     let sub = std::env::args().nth(1).unwrap_or_default();
+    if sub == "open-test" {
+        opentest::run(&std::env::args().skip(2).collect::<Vec<_>>());
+        return;
+    }
     let spk_path = arg("--spk").unwrap_or_else(|| "data/de421.bsp".into());
     let utc = arg("--utc").and_then(|s| parse_utc(&s)).unwrap_or_else(|| {
         eprintln!("usage: kshana chart --spk <file.bsp> --utc YYYY-MM-DDTHH:MM:SS.ffffff --lat <deg> --lon <deg east> [--system placidus|equal|whole|porphyry] [--topo]");
