@@ -70,6 +70,7 @@ fun JournalScreen(profile: BirthProfile, place: Place, settings: EngineSettings,
     var good by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf("") }
     var pick by remember { mutableStateOf(false) }
+    var matches by remember { mutableStateOf<List<uniffi.kshana_ffi.BlindMatchRecord>>(emptyList()) }
     var scores by remember { mutableStateOf<Map<Long, Double>>(emptyMap()) }
 
     LaunchedEffect(version, profile) {
@@ -145,11 +146,15 @@ fun JournalScreen(profile: BirthProfile, place: Place, settings: EngineSettings,
             modifier = Modifier.fillMaxWidth(),
         )
         GoldButton("WRITE IT DOWN", onClick = {
-            Journal.add(context, date, life, good, note)
+            // Saved first, blind; only then is anything sealed for that day shown.
+            matches = com.kshana.app.data.Integrity.logBlind(context, profile, date, life, good, note)
             note = ""
             version++
             com.kshana.app.data.Backup.autoSave(context)
         }, modifier = Modifier.fillMaxWidth())
+        for (m in matches) {
+            Text(m.words, style = MaterialTheme.typography.bodySmall, color = if (m.agrees) KshanaColors.Leaf else KshanaColors.Sky)
+        }
 
         if (events.size >= 3) {
             QuietButton("USE THESE TO FIND MY EXACT BIRTH TIME", onClick = onRectify, modifier = Modifier.fillMaxWidth())

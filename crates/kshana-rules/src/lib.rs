@@ -27,6 +27,7 @@ pub mod feed;
 pub mod forecast;
 pub mod future;
 pub mod gochara;
+pub mod integrity;
 pub mod hora;
 pub mod karma;
 pub mod kp;

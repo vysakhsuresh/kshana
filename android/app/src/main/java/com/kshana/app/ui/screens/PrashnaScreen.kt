@@ -130,6 +130,8 @@ fun PrashnaScreen(place: Place, settings: EngineSettings, onBack: () -> Unit) {
                 }
                 askedAt = at
                 answer = rec
+                // A Yes that names a time is a dated prediction: sealed before its time opens.
+                if (s != QuestionShape.CHOICE) com.kshana.app.data.Trust.sealPrashna(context, a, rec)
             } catch (e: Exception) {
                 error = e.message ?: e.toString()
             }

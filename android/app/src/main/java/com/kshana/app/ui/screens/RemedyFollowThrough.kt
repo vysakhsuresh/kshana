@@ -115,6 +115,7 @@ private fun CheckInBlock(profileName: String, version: Int, onChange: () -> Unit
 internal fun RemedyRecordCard(profileName: String, version: Int, onChange: () -> Unit) {
     val context = LocalContext.current
     CheckInBlock(profileName, version, onChange, onOpen = null)
+    KeptWeeksBlock(version)
     val all = remember(profileName, version) { FollowThrough.all(context, profileName) }
     val words = FollowThrough.recordWords(FollowThrough.record(all)) ?: return
     val open = all.count { it.answer == null }
@@ -124,6 +125,37 @@ internal fun RemedyRecordCard(profileName: String, version: Int, onChange: () ->
         if (open > 0) Text("$open still under way.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
         Text(
             "This is what you saw while keeping them, in your own words. It is not proof that a remedy caused it, and the record is only on your phone.",
+            style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+        )
+    }
+}
+
+/**
+ * For each remedy practised a full week or more: the weeks it was kept (ticked on at
+ * least half its days) beside the weeks it lapsed, by the person's own record of good
+ * and hard things (what they logged, and the sealed predictions they answered). Small
+ * numbers are said to be small; after eight weeks of no difference, a gentle word to
+ * try another from the list.
+ */
+@Composable
+private fun KeptWeeksBlock(version: Int) {
+    val context = LocalContext.current
+    val profile = remember { com.kshana.app.data.ProfileStore.load(context) } ?: return
+    val rows = remember(version) {
+        com.kshana.app.data.RemedyPlans.all(context)
+            .mapNotNull { p -> com.kshana.app.data.Integrity.remedyCompare(context, profile, p)?.takeIf { it.weeks > 0u }?.let { p to it } }
+            .sortedBy { (_, c) -> when (c.standing) { "helps" -> 0; "too_early" -> 1; else -> 2 } }
+    }
+    if (rows.isEmpty()) return
+    Column(Modifier.fillMaxWidth().glass(16.dp).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("WEEKS KEPT, WEEKS MISSED", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        for ((p, c) in rows) {
+            Text(p.title, fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 22.sp, color = KshanaColors.Text)
+            Text(c.words, style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
+            if (c.suggestion.isNotBlank()) Text(c.suggestion, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
+        }
+        Text(
+            "Set beside each other from your own ticks and your own record. It is not proof that a remedy caused anything; it only shows what you saw.",
             style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
         )
     }

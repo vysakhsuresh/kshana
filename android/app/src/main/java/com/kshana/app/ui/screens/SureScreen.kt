@@ -77,25 +77,18 @@ fun SureScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
         runCatching {
             val engine = EngineProvider.get(context)
             val got = withContext(Dispatchers.Default) {
-                engine.sureWindows(
+                // Each way of reading's say follows its own record for this person, once earned.
+                engine.sureWindowsTrusted(
                     profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa,
                     place.latitude, place.longitude, PlaceClock.offsetMinutes(place), Instants.now(), 24u, emptyList(), 30u, Lang.code,
+                    com.kshana.app.data.Integrity.systemVotes(context, profile),
                 )
             }
             SureCache.key = key
             SureCache.windows = got
             list = got
             // The firm ones are sealed before they come, so the score can count them.
-            runCatching {
-                val firm = got.filter { it.tier == "strong" || it.tier == "likely" }.map { w ->
-                    uniffi.kshana_ffi.ClaimInputRecord(
-                        source = "consensus", area = w.area, kind = w.kind, good = !w.isHard,
-                        windowStart = w.start, windowEnd = w.end, probability = if (w.tier == "strong") 0.8 else 0.65,
-                        statement = w.headline, question = "",
-                    )
-                }
-                com.kshana.app.data.Trust.sealFeed(context, profile, firm, 3)
-            }
+            runCatching { com.kshana.app.data.Trust.sealSureWindows(context, profile, got) }
         }.onFailure { error = it.message ?: it.toString() }
     }
     Column(
@@ -160,6 +153,11 @@ private fun SureCard(w: SureWindowRecord, profile: BirthProfile, place: Place, s
         Text(w.dateLine, fontFamily = FontFamily.Serif, fontSize = if (strong) 28.sp else 22.sp, lineHeight = if (strong) 34.sp else 28.sp, color = if (strong) KshanaColors.Gold else KshanaColors.Text)
         Text(w.headline, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)
         Text(w.sureLine, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
+        // How sure, as a number only once 20 like it have been checked; words before that.
+        if (strong || w.tier == "likely") {
+            val conf = remember(w.tier) { com.kshana.app.data.Integrity.confidence(context, profile, w.tier) }
+            conf?.let { Text(it.words, style = MaterialTheme.typography.bodySmall, color = if (it.numberShown) KshanaColors.Text else KshanaColors.Muted) }
+        }
         if (w.bestLine.isNotBlank()) Text(w.bestLine, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Gold)
         // A likely window can be narrowed further on request; the strong ones already are.
         val h = hours
