@@ -15,7 +15,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.State
+import androidx.compose.ui.text.style.TextOverflow
+import com.kshana.app.ui.theme.Ancient
+import com.kshana.app.ui.theme.AncientIcon
+import com.kshana.app.ui.theme.glass
+import com.kshana.app.ui.theme.rememberAncientClock
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -149,53 +159,103 @@ fun MoreScreen(profile: BirthProfile?, onOpen: (String) -> Unit) {
             style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
         )
 
-        var section = ""
-        for (p in MORE_PAGES) {
-            if (p.expert && !expert) continue
-            if (p.section != section) {
-                section = p.section
-                SectionLabel(section)
-                SECTION_LINES[section]?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft) }
-            }
-            PageRow(p.title, p.detail, p.route, open, fresh = p.section in NEED_SECTIONS && com.kshana.app.data.Discover.isNew(p.route))
+        val clock = rememberAncientClock()
+        val visible = MORE_PAGES.filter { !it.expert || expert }
+        for ((section, pages) in visible.groupBy { it.section }) {
+            SectionLabel(section)
+            SECTION_LINES[section]?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft) }
+            PageGrid(pages, clock, open) { p -> p.section in NEED_SECTIONS && com.kshana.app.data.Discover.isNew(p.route) }
         }
     }
 }
 
 private val MONTHS = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
-/** A page row: tap the words to open it, tap the star to keep it in Favorites. */
+/** The picture each page wears: something old that says what the page is for. */
+private val GLYPHS = mapOf(
+    "parihara" to Ancient.LAMP, "prashna" to Ancient.COWRIES, "plan" to Ancient.SUNDIAL, "calendar" to Ancient.BELL,
+    "letter" to Ancient.SCROLL, "almanac" to Ancient.WHEEL, "wall" to Ancient.HOURGLASS, "gifts" to Ancient.LOTUS,
+    "book" to Ancient.TREE, "hindsight" to Ancient.MOON, "pastcheck" to Ancient.EYE, "journal" to Ancient.LEAF,
+    "record" to Ancient.SCALES, "familydates" to Ancient.KALASHA, "birth" to Ancient.STAR, "rectify" to Ancient.YANTRA,
+    "settings" to Ancient.ORBIT, "guide" to Ancient.CONCH, "how" to Ancient.KOLAM, "about" to Ancient.SUN,
+    "trust" to Ancient.SCALES, "now" to Ancient.ORBIT, "parihara_classic" to Ancient.LAMP, "chart" to Ancient.WHEEL,
+    "vedic" to Ancient.YANTRA, "kpfull" to Ancient.YANTRA, "dashasmore" to Ancient.HOURGLASS, "areas" to Ancient.LOTUS,
+    "reading_expert" to Ancient.EYE, "moments" to Ancient.STAR, "muhurta" to Ancient.SUNDIAL, "prashna_expert" to Ancient.COWRIES,
+    "today" to Ancient.SUN, "righttime" to Ancient.SUNDIAL, "day" to Ancient.SUNDIAL, "skycalendar" to Ancient.MOON,
+    "transits" to Ancient.ORBIT, "mylife" to Ancient.SCROLL, "lifemap" to Ancient.TREE, "trace" to Ancient.KOLAM,
+    "ledger" to Ancient.LEAF, "year" to Ancient.WHEEL, "timelords" to Ancient.HOURGLASS, "strength" to Ancient.SCALES,
+    "sealed" to Ancient.SCROLL, "quiz" to Ancient.COWRIES, "marga" to Ancient.CONCH, "diary" to Ancient.LEAF,
+    "me" to Ancient.STAR, "family" to Ancient.KALASHA, "compatibility" to Ancient.SCALES, "naming" to Ancient.LOTUS,
+    "glossary" to Ancient.LEAF, "lexicon" to Ancient.SCROLL, "narrate" to Ancient.CONCH, "arrival" to Ancient.SUN,
+    "sure" to Ancient.BOW, "familyproof" to Ancient.TREE, "scoreboard" to Ancient.SCALES,
+)
+
+internal fun glyphFor(route: String): Ancient = GLYPHS[route] ?: Ancient.STAR
+
+/** Pages as cards, two to a row, the pair the same height. */
 @Composable
-internal fun PageRow(title: String, detail: String, route: String, onOpen: (String) -> Unit, fresh: Boolean = false) {
-    val context = LocalContext.current
-    val starred = Favorites.isPinned(route)
-    val pop by animateFloatAsState(if (starred) 1.15f else 1f, spring(dampingRatio = 0.35f, stiffness = 400f), label = "star")
-    HorizontalDivider(color = KshanaColors.LineSoft)
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f).clickable { onOpen(route) }.padding(vertical = 4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(title, fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text)
-                if (fresh) {
-                    Box(Modifier.padding(start = 8.dp).size(7.dp).background(KshanaColors.Gold, androidx.compose.foundation.shape.CircleShape))
-                    Text("  NEW TO YOU", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-                }
+internal fun PageGrid(
+    pages: List<MorePage>,
+    clock: State<Float>,
+    onOpen: (String) -> Unit,
+    fresh: (MorePage) -> Boolean = { false },
+    footer: (@Composable (MorePage) -> Unit)? = null,
+) {
+    for (pair in pages.chunked(2)) {
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            for (p in pair) {
+                PageCard(p, clock, onOpen, fresh(p), Modifier.weight(1f).fillMaxHeight(), footer?.let { f -> { f(p) } })
             }
-            Text(detail, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            if (pair.size == 1) Spacer(Modifier.weight(1f))
         }
-        Box(
-            Modifier.size(44.dp).clickable { Favorites.toggle(context, route) }
-                .semantics { contentDescription = if (starred) "Remove $title from favorites" else "Add $title to favorites" },
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                if (starred) "★" else "☆", fontSize = 22.sp,
-                color = if (starred) KshanaColors.Gold else KshanaColors.Muted,
-                modifier = Modifier.scale(pop),
-            )
+    }
+}
+
+/** A page card: its moving picture, its name and what it is for; the star keeps it in Favorites. */
+@Composable
+internal fun PageCard(
+    page: MorePage,
+    clock: State<Float>,
+    onOpen: (String) -> Unit,
+    fresh: Boolean,
+    modifier: Modifier = Modifier,
+    footer: (@Composable () -> Unit)? = null,
+) {
+    val context = LocalContext.current
+    val starred = Favorites.isPinned(page.route)
+    val pop by animateFloatAsState(if (starred) 1.15f else 1f, spring(dampingRatio = 0.35f, stiffness = 400f), label = "star")
+    Column(
+        modifier.glass(16.dp).clickable { onOpen(page.route) }.padding(start = 14.dp, end = 6.dp, top = 12.dp, bottom = 12.dp)
+            .semantics(mergeDescendants = true) {},
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(verticalAlignment = Alignment.Top) {
+            AncientIcon(glyphFor(page.route), clock, Modifier.size(46.dp), seed = page.route.hashCode() and 0xff)
+            Spacer(Modifier.weight(1f))
+            Box(
+                Modifier.size(40.dp).clickable { Favorites.toggle(context, page.route) }
+                    .semantics { contentDescription = if (starred) "Remove ${page.title} from favorites" else "Add ${page.title} to favorites" },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    if (starred) "★" else "☆", fontSize = 20.sp,
+                    color = if (starred) KshanaColors.Gold else KshanaColors.Muted,
+                    modifier = Modifier.scale(pop),
+                )
+            }
         }
-        Text("›", fontSize = 22.sp, color = KshanaColors.Gold, modifier = Modifier.clickable { onOpen(route) }.padding(start = 2.dp))
+        Text(page.title, fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 21.sp, color = KshanaColors.Text, modifier = Modifier.padding(end = 8.dp))
+        Text(
+            page.detail, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+            maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(end = 8.dp),
+        )
+        Spacer(Modifier.weight(1f))
+        if (fresh) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(7.dp).background(KshanaColors.Gold, CircleShape))
+                Text("  NEW TO YOU", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            }
+        }
+        footer?.invoke()
     }
 }
