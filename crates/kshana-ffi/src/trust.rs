@@ -81,7 +81,7 @@ pub struct ClaimRecord {
     pub line: String,
 }
 
-fn claim_record(c: &SealedClaim) -> ClaimRecord {
+pub(crate) fn claim_record(c: &SealedClaim) -> ClaimRecord {
     ClaimRecord {
         id: c.id.clone(),
         key: c.key.clone(),
@@ -176,6 +176,10 @@ pub struct ScoreItemInput {
     /// The chance a random guess would have been right: ½ for a yes/no stretch, one
     /// over the number of choices for a quiz question.
     pub chance: f64,
+    /// True if the answer helped fit the birth time or the person's weights before it
+    /// was scored (every "past" answer): it never counts toward the headline. False for
+    /// a sealed prediction answered first and only then used for fitting.
+    pub used_for_fitting: bool,
 }
 
 /// One source's own line on the scoreboard.
@@ -210,8 +214,20 @@ pub struct ScoreboardRecord {
     pub p_luck: f64,
     /// Enough answers, and guessing would rarely do as well.
     pub beats_chance: bool,
-    /// Sealed future first, then the past, then the quiz.
+    /// The headline's own line: sealed predictions about the future only.
     pub lines: Vec<ScoreLineRecord>,
+    /// Points over what is kept out of the headline (the past, the quiz, anything used
+    /// to tune the birth time before it was scored).
+    pub fit_right: f64,
+    /// How many such answers.
+    pub fit_total: u32,
+    /// "How well the reading fits your past (used to tune your birth time, so not
+    /// counted in the score): right 30 of 34; …"; empty when there are none.
+    pub fit_line: String,
+    /// One line per kept-out kind of answer.
+    pub fit_lines: Vec<ScoreLineRecord>,
+    /// How the score is kept: what counts, what does not, and why.
+    pub how_it_works: String,
     /// "For you, Kshana has been right 38 times out of 45."
     pub headline: String,
     /// What guessing would score, and what it means.
@@ -222,14 +238,30 @@ pub struct ScoreboardRecord {
     pub share_text: String,
 }
 
-/// One honest number over every answered item, with its chance line.
+pub(crate) fn score_items(items: &[ScoreItemInput]) -> Vec<ScoreItem> {
+    items
+        .iter()
+        .filter_map(|i| {
+            let source = ScoreSource::parse(&i.source)?;
+            // An answer about the past always tuned the birth time: never trusted to the flag.
+            let used_for_fitting = i.used_for_fitting || source == ScoreSource::Past;
+            Some(ScoreItem { source, points: Outcome::parse(&i.outcome)?.points(), chance: i.chance, used_for_fitting })
+        })
+        .collect()
+}
+
+fn line_record(l: &kshana_ledger::ScoreLine) -> ScoreLineRecord {
+    ScoreLineRecord { source: l.source.key().into(), right: l.right, total: l.total as u32, chance: l.chance, words: l.words.clone() }
+}
+
+/// One honest number over the sealed predictions answered after their dates (the
+/// hold-out rule: nothing used to tune the birth time counts), with its chance line,
+/// and the past on its own separate line.
 #[uniffi::export]
 pub fn scoreboard(items: Vec<ScoreItemInput>, lang: String) -> ScoreboardRecord {
-    let v: Vec<ScoreItem> = items
-        .iter()
-        .filter_map(|i| Some(ScoreItem { source: ScoreSource::parse(&i.source)?, points: Outcome::parse(&i.outcome)?.points(), chance: i.chance }))
-        .collect();
-    let b = kshana_ledger::scoreboard(&v, kshana_rules::Lang::parse(&lang));
+    let v = score_items(&items);
+    let lang = kshana_rules::Lang::parse(&lang);
+    let b = kshana_ledger::scoreboard(&v, lang);
     ScoreboardRecord {
         right: b.right,
         right_text: kshana_ledger::points_text(b.right),
@@ -238,7 +270,12 @@ pub fn scoreboard(items: Vec<ScoreItemInput>, lang: String) -> ScoreboardRecord 
         chance_sd: b.chance_sd,
         p_luck: b.p_luck,
         beats_chance: b.beats_chance,
-        lines: b.lines.iter().map(|l| ScoreLineRecord { source: l.source.key().into(), right: l.right, total: l.total as u32, chance: l.chance, words: l.words.clone() }).collect(),
+        lines: b.lines.iter().map(line_record).collect(),
+        fit_right: b.fit_right,
+        fit_total: b.fit_total as u32,
+        fit_line: b.fit_line,
+        fit_lines: b.fit_lines.iter().map(line_record).collect(),
+        how_it_works: kshana_ledger::how_it_works(lang).to_string(),
         headline: b.headline,
         chance_line: b.chance_line,
         note: b.note,
@@ -521,15 +558,18 @@ mod plain_audit {
             let items: Vec<ScoreItemInput> = ["yes", "yes", "no", "close", "unsure", "yes"]
                 .iter()
                 .enumerate()
-                .map(|(i, o)| ScoreItemInput { source: ["sealed", "past", "quiz"][i % 3].into(), outcome: (*o).into(), chance: if i % 3 == 2 { 0.25 } else { 0.5 } })
+                .map(|(i, o)| ScoreItemInput { source: ["sealed", "past", "quiz"][i % 3].into(), outcome: (*o).into(), chance: if i % 3 == 2 { 0.25 } else { 0.5 }, used_for_fitting: false })
                 .collect();
             let b = scoreboard(items, lang.into());
-            assert_eq!(b.total, 5);
-            assert_eq!(b.right_text, "3½");
-            for (f, v) in [("headline", &b.headline), ("chance_line", &b.chance_line), ("note", &b.note), ("share_text", &b.share_text)] {
+            // Only the sealed answers ("yes", "close") reach the headline; the past one is
+            // kept out even unflagged, and the quiz ones too.
+            assert_eq!(b.total, 2);
+            assert_eq!(b.right_text, "1½");
+            assert_eq!(b.fit_total, 3);
+            for (f, v) in [("headline", &b.headline), ("chance_line", &b.chance_line), ("note", &b.note), ("share_text", &b.share_text), ("fit_line", &b.fit_line), ("how_it_works", &b.how_it_works)] {
                 check(l, "scoreboard", f, v, &mut hits);
             }
-            for x in &b.lines {
+            for x in b.lines.iter().chain(&b.fit_lines) {
                 check(l, "scoreboard", "words", &x.words, &mut hits);
             }
             // The tilt, before and after enough answers.

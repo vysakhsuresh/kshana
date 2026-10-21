@@ -1,0 +1,24 @@
+# Kshana's shipped prior for each way of reading and each tier of firmness.
+#
+# The team updates this file from pooled, anonymised outcomes of sealed predictions
+# (never from answers about the past, which tune the birth time). Until then every way
+# of reading starts at an even chance with the strength of 20 answers, and no tier has
+# pooled outcomes, so no number is shown from the prior.
+#
+# system <key> <mean 0-1> <strength in pseudo-answers>
+# tier   <key> <points scored> <outcomes resolved>
+#
+# A key not listed falls back to "system * 0.5 20".
+system	*	0.5	20
+system	vimshottari	0.5	20
+system	yogini	0.5	20
+system	chara	0.5	20
+system	kalachakra	0.5	20
+system	kp	0.5	20
+system	varga	0.5	20
+system	gochara	0.5	20
+system	tajika	0.5	20
+system	nadi	0.5	20
+tier	strong	0	0
+tier	likely	0	0
+tier	possible	0	0

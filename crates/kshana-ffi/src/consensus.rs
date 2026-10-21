@@ -120,7 +120,7 @@ fn day_record(d: &BestDay) -> SureDayRecord {
     }
 }
 
-fn window_record(w: &SureWindow, lang: Lang) -> SureWindowRecord {
+pub(crate) fn window_record(w: &SureWindow, lang: Lang) -> SureWindowRecord {
     SureWindowRecord {
         area: w.life.name().to_string(),
         area_name: kshana_rules::lang::life_name(lang, w.life).to_string(),

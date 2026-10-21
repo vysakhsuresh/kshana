@@ -415,6 +415,9 @@ pub struct Consensus<'a> {
     years: Vec<Year>,
     nadi: NadiTable,
     hits: Vec<NadiHit>,
+    /// The person's own multiplier on each system's say, earned from their sealed
+    /// outcomes ([`crate::integrity::consensus_multipliers`]); all 1 by default.
+    mult: [f64; NS],
 }
 
 impl<'a> Consensus<'a> {
@@ -440,7 +443,7 @@ impl<'a> Consensus<'a> {
             })
             .collect();
         let hits = nadi::hits(spk, ayanamsa, natal, from.add_ns(-90 * NS_PER_DAY), to.add_ns(90 * NS_PER_DAY));
-        Consensus { spk, eop, natal, obs: *obs, here: *here, ayanamsa, reading: Reading::new(natal, asc), lord_tab, years, nadi: NadiTable::new(natal), hits }
+        Consensus { spk, eop, natal, obs: *obs, here: *here, ayanamsa, reading: Reading::new(natal, asc), lord_tab, years, nadi: NadiTable::new(natal), hits, mult: [1.0; NS] }
     }
 
     /// Every system's reading of every life at `t`, `[system][life]`; NaN where a system
@@ -485,7 +488,7 @@ impl<'a> Consensus<'a> {
     }
 
     fn weight(&self, s: System, life: Life) -> f64 {
-        s.weight() * if s == System::Kp { self.reading.conf(Witness::Kp.index(), life) } else { 1.0 }
+        self.mult[s.index()] * s.weight() * if s == System::Kp { self.reading.conf(Witness::Kp.index(), life) } else { 1.0 }
     }
 }
 
@@ -1213,10 +1216,33 @@ pub fn sure_windows(
     lives: &[Life],
     max: usize,
 ) -> Result<Vec<SureWindow>, ForecastError> {
+    sure_windows_trusted(spk, eop, natal, obs, here, ayanamsa, lang, utc_offset_min, from, months, lives, max, &[1.0; NS])
+}
+
+/// [`sure_windows`] with the person's own multiplier on each system's say, in
+/// [`SYSTEMS`] order ([`crate::integrity::consensus_multipliers`], earned only from
+/// their resolved sealed predictions); all ones reproduce [`sure_windows`] exactly.
+#[allow(clippy::too_many_arguments)]
+pub fn sure_windows_trusted(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    natal: &Natal,
+    obs: &Observer,
+    here: &Observer,
+    ayanamsa: Ayanamsa,
+    lang: Lang,
+    utc_offset_min: i32,
+    from: Instant,
+    months: u32,
+    lives: &[Life],
+    max: usize,
+    mult: &[f64; NS],
+) -> Result<Vec<SureWindow>, ForecastError> {
     let months = months.clamp(1, 60) as i128;
     let to = from.add_ns(months * MONTH_NS);
     let base_from = from.add_ns(-BASE_BACK_MONTHS * MONTH_NS).max(natal.birth.add_ns(NS_PER_DAY));
-    let c = Consensus::new(spk, eop, natal, obs, here, ayanamsa, base_from, to);
+    let mut c = Consensus::new(spk, eop, natal, obs, here, ayanamsa, base_from, to);
+    c.mult = mult.map(|m| if m.is_finite() { m.clamp(crate::integrity::MULT_RANGE.0, crate::integrity::MULT_RANGE.1) } else { 1.0 });
     let n = (to.ns_since(base_from) / GRID_NS) as usize + 1;
     let grid: Vec<Instant> = (0..n).map(|k| base_from.add_ns(k as i128 * GRID_NS)).collect();
     let vals: Vec<Option<Vals>> = par_map(&grid, |t| c.eval(*t));

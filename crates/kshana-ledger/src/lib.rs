@@ -44,6 +44,7 @@ mod coverage;
 mod decoy;
 mod event;
 mod hash;
+mod integrity;
 mod json;
 mod metrics;
 mod posterior;
@@ -81,7 +82,8 @@ pub use score::{
 };
 pub use sealed::{resolve, seal, sealed_brier, SealedForecast};
 pub use claim::{claim_key, resolve_claim, seal_claim, select_new, ClaimInput, Outcome, SealedClaim, MIN_LEAD_DAYS};
-pub use scoreboard::{points_text, scoreboard, ScoreItem, ScoreLine, ScoreSource, Scoreboard, BEATS_CHANCE_P, MIN_TO_JUDGE};
+pub use scoreboard::{how_it_works, points_text, scoreboard, ScoreItem, ScoreLine, ScoreSource, Scoreboard, BEATS_CHANCE_P, MIN_TO_JUDGE};
+pub use integrity::{match_logged, record_card, BlindMatch, RecordCard, BLIND_GRACE_DAYS};
 pub use specificity::{
     equivalent_areas, score_event_discounted, specificity_factor, tested_houses, DiscountedScore,
 };
