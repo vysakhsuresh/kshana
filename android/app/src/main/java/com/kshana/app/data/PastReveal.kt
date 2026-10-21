@@ -48,7 +48,60 @@ object PastReveal {
     }
 
     /** Forget the answers (after the birth time itself was changed by hand). */
-    fun clear(context: Context) = ProfileStore.prefs(context).edit().remove(K_ANSWERS).apply()
+    fun clear(context: Context) = ProfileStore.prefs(context).edit().remove(K_ANSWERS).remove(K_FACTS).apply()
+
+    private const val K_FACTS = "reveal.facts"
+
+    /** The note written to the journal when a stretch is confirmed here; such entries are already answers. */
+    const val CONFIRMED_NOTE = "Confirmed when Kshana read my past"
+
+    /**
+     * One fact read from the chart ("Your chart says you are the first-born… Is that
+     * right?") and what the person said: "yes", "no", "unsure", or "" not yet answered.
+     * [key] is the engine's claim key, passed back so every candidate birth time can be
+     * judged against the answer.
+     */
+    data class Fact(
+        val key: String,
+        val topic: String,
+        val statement: String,
+        val sensitive: Boolean,
+        val verdict: String,
+    )
+
+    fun facts(context: Context): List<Fact> = runCatching {
+        val a = JSONArray(ProfileStore.prefs(context).getString(K_FACTS, "[]"))
+        (0 until a.length()).map { i ->
+            val o = a.getJSONObject(i)
+            Fact(o.getString("k"), o.optString("topic"), o.optString("text"), o.optBoolean("s"), o.optString("v"))
+        }
+    }.getOrDefault(emptyList())
+
+    fun saveFacts(context: Context, facts: List<Fact>) {
+        val a = JSONArray()
+        for (f in facts) a.put(JSONObject().put("k", f.key).put("topic", f.topic).put("text", f.statement).put("s", f.sensitive).put("v", f.verdict))
+        ProfileStore.prefs(context).edit().putString(K_FACTS, a.toString()).apply()
+    }
+
+    /** The answered facts as the engine takes them ("not sure" is left out). */
+    fun factAnswers(facts: List<Fact>): List<uniffi.kshana_ffi.FactAnswerInput> =
+        facts.filter { it.verdict == "yes" || it.verdict == "no" }.map { uniffi.kshana_ffi.FactAnswerInput(it.key, it.verdict) }
+
+    /**
+     * Every dated event the person logged themselves, for the birth time: the journal's
+     * life events (except those written here when a stretch was confirmed, which are
+     * already answers) and the ledger's events. Each is placed at noon of its day.
+     */
+    fun logged(context: Context, profile: BirthProfile): List<uniffi.kshana_ffi.LoggedEventInput> {
+        val zone = profile.zone()
+        val fromJournal = Journal.all(context).filter { it.note != CONFIRMED_NOTE }.map { e ->
+            uniffi.kshana_ffi.LoggedEventInput(com.kshana.app.engine.Instants.fromInstant(e.date.atTime(12, 0).atZone(zone).toInstant()), e.life, e.good)
+        }
+        val fromLedger = LedgerStore.events(context, profile.name).map { e ->
+            uniffi.kshana_ffi.LoggedEventInput(e.at, e.area, e.kind !in setOf("Loss", "Crisis", "Ended"))
+        }
+        return fromJournal + fromLedger
+    }
 
     /**
      * A prediction written down and locked: what it says stays hidden until its window
