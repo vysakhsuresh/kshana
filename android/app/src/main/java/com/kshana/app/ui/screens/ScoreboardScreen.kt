@@ -242,7 +242,7 @@ private fun ClaimRow(c: ClaimRecord, nowTai: Long) {
             "yes" -> "It came as sealed."
             "close" -> "Close: counted half."
             "no" -> "It did not come: counted as a miss."
-            else -> if (c.windowStart.taiSeconds > nowTai) "Opens ${localText(c.windowStart, DATE_ONLY)}." else "Running until ${localText(c.windowEnd, DATE_ONLY)}."
+            else -> if (c.windowStart.taiSeconds > nowTai) "Sealed. Its dates are still to come." else "Running until ${localText(c.windowEnd, DATE_ONLY)}."
         }
         Text(
             result, style = MaterialTheme.typography.bodySmall,
