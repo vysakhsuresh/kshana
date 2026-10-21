@@ -123,7 +123,7 @@ internal fun ConsultScreen(profile: BirthProfile, place: Place, settings: Engine
         }
         runCatching {
             if (future == null) future = withContext(Dispatchers.Default) {
-                engine.future(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, now, 12u, Lang.code, Focus.lives)
+                engine.futurePersonal(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, now, 12u, Lang.code, Focus.lives, com.kshana.app.data.PersonalWeights.input(context, profile.name))
             }.also { ConsultCache.future = it }
         }
         runCatching {

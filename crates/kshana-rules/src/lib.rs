@@ -46,6 +46,7 @@ pub mod remedy_tree;
 pub mod timeline;
 pub mod topics;
 pub mod transit;
+pub mod trust;
 pub mod understand;
 pub mod varsha;
 pub mod yogas;

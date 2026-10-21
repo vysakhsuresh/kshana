@@ -178,10 +178,28 @@ pub fn future(
     focus: &[Life],
     lang: Lang,
 ) -> Result<Vec<FutureEvent>, ForecastError> {
-    let lon = obs.longitude_deg;
     let month = (30.4375 * NS_PER_DAY as f64) as i128;
     let months = months.clamp(3, 60);
     let slow = slow_series(spk, eop, natal, obs, ayanamsa, at, month, months + 1)?;
+    future_from_series(spk, natal, obs, ayanamsa, at, &slow, focus, lang)
+}
+
+/// [`future`] read from a monthly slow series already computed from `at` (one sample
+/// per month, as [`slow_series`] gives; a person's own pooled series from
+/// [`crate::trust::personal_slow_series`] reads the same way).
+#[allow(clippy::too_many_arguments)]
+pub fn future_from_series(
+    spk: &Spk,
+    natal: &Natal,
+    obs: &Observer,
+    ayanamsa: Ayanamsa,
+    at: Instant,
+    slow: &[(Instant, Vec<f64>)],
+    focus: &[Life],
+    lang: Lang,
+) -> Result<Vec<FutureEvent>, ForecastError> {
+    let lon = obs.longitude_deg;
+    let month = (30.4375 * NS_PER_DAY as f64) as i128;
     let end = slow.last().map(|s| s.0).unwrap_or(at);
     let mut out: Vec<FutureEvent> = Vec::new();
 

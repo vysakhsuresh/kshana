@@ -39,6 +39,7 @@
 #![forbid(unsafe_code)]
 
 mod calibrate;
+mod claim;
 mod coverage;
 mod decoy;
 mod event;
@@ -48,6 +49,7 @@ mod metrics;
 mod posterior;
 mod retrodict;
 mod score;
+mod scoreboard;
 mod sealed;
 mod specificity;
 mod surrogate;
@@ -78,6 +80,8 @@ pub use score::{
     SADE_SATI_SHIFT, SATURN_GOOD_FROM_MOON, WEIGHT_DASHA, WEIGHT_PARASHARI, WEIGHT_TRANSIT,
 };
 pub use sealed::{resolve, seal, sealed_brier, SealedForecast};
+pub use claim::{claim_key, resolve_claim, seal_claim, select_new, ClaimInput, Outcome, SealedClaim, MIN_LEAD_DAYS};
+pub use scoreboard::{points_text, scoreboard, ScoreItem, ScoreLine, ScoreSource, Scoreboard, BEATS_CHANCE_P, MIN_TO_JUDGE};
 pub use specificity::{
     equivalent_areas, score_event_discounted, specificity_factor, tested_houses, DiscountedScore,
 };

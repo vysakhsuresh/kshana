@@ -211,6 +211,16 @@ fun TrustScreen(profile: BirthProfile?, settings: EngineSettings, onBack: () -> 
         }
 
         SectionLabel("Your record")
+        if (profile != null) {
+            // The one honest number over everything answered: sealed predictions, the past, the quiz.
+            val board = remember(profile.name) {
+                runCatching { uniffi.kshana_ffi.scoreboard(com.kshana.app.data.Trust.scoreItems(context, profile), com.kshana.app.data.Lang.code) }.getOrNull()
+            }
+            board?.let {
+                Text(it.headline, fontFamily = KshanaFonts.serif, fontSize = 18.sp, color = KshanaColors.Text)
+                if (it.chanceLine.isNotEmpty()) Text(it.chanceLine, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            }
+        }
         val record = remember { uniffi.kshana_ffi.calibrate(com.kshana.app.data.PredictionStore.records(context)) }
         Text(record.words, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
         for (l in record.lives.filter { it.n > 0u }) {

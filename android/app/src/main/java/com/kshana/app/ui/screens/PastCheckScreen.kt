@@ -114,12 +114,15 @@ fun PastCheckScreen(
                     )
                 }
                 // Which way of reading fits this person's own past best, said plainly.
-                learnLine = withContext(Dispatchers.Default) {
+                val learned = withContext(Dispatchers.Default) {
                     engine.learnTechniques(
                         profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa,
                         answered.map { PastAnswerInput(it.from(), it.to(), it.life, it.good, it.verdict) }, Lang.code,
-                    ).plain
+                    )
                 }
+                learnLine = learned.plain
+                // Kept, so the forecast can lean on what fits this person once there are enough answers.
+                com.kshana.app.data.PersonalWeights.save(context, profile.name, learned)
             }
             refining = false
         }
