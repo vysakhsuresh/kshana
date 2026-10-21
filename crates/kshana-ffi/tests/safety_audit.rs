@@ -633,7 +633,8 @@ fn catalogues_and_questions() {
                 a.read(&format!("claim_q_{lang}_{area}"), format!("{:?}", claim_question(lang.into(), area.clone(), good, at(2026, 11, 1, 0, 0), at(2026, 11, 20, 0, 0), 76.27)));
             }
         }
-        let items: Vec<ScoreItemInput> = ["yes", "no", "close", "yes", "no"].iter().map(|o| ScoreItemInput { source: "sealed".into(), outcome: (*o).into(), chance: 0.5 }).collect();
+        let mut items: Vec<ScoreItemInput> = ["yes", "no", "close", "yes", "no"].iter().map(|o| ScoreItemInput { source: "sealed".into(), outcome: (*o).into(), chance: 0.5, used_for_fitting: false }).collect();
+        items.extend(["yes", "no"].iter().map(|o| ScoreItemInput { source: "past".into(), outcome: (*o).into(), chance: 0.5, used_for_fitting: true }));
         a.read(&format!("scoreboard_{lang}"), format!("{:?}", scoreboard(items, lang.into())));
         a.read(&format!("tilt_{lang}"), format!("{:?}", forecast_tilt(no_weights(), lang.into())));
     }
