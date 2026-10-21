@@ -83,6 +83,7 @@ internal val MORE_PAGES = listOf(
     MorePage(S_STORY, "Look back at a day", "any day of your life, read as it was", "hindsight"),
     MorePage(S_STORY, "Your past, read", "dated stretches of your life from your birth time alone; every answer sharpens your birth time", "pastcheck"),
     MorePage(S_STORY, "Your journal", "write down what happened; see how often the app was right", "journal"),
+    MorePage(S_STORY, "What happened?", "tell what happened first; only then see whether it was sealed in advance", "whathappened"),
     MorePage(S_STORY, "Your score", "every prediction sealed before it came, and how many came true, against plain chance", "scoreboard"),
     MorePage(S_STORY, "Did it happen?", "say whether the app was right; it keeps score", "record"),
 
@@ -191,7 +192,7 @@ private val GLYPHS = mapOf(
     "sealed" to Ancient.SCROLL, "quiz" to Ancient.COWRIES, "marga" to Ancient.CONCH, "diary" to Ancient.LEAF,
     "me" to Ancient.STAR, "family" to Ancient.KALASHA, "compatibility" to Ancient.SCALES, "naming" to Ancient.LOTUS,
     "glossary" to Ancient.LEAF, "lexicon" to Ancient.SCROLL, "narrate" to Ancient.CONCH, "arrival" to Ancient.SUN,
-    "opentest" to Ancient.EYE, "sure" to Ancient.BOW, "familyproof" to Ancient.TREE, "scoreboard" to Ancient.SCALES,
+    "opentest" to Ancient.EYE, "whathappened" to Ancient.LEAF, "sure" to Ancient.BOW, "familyproof" to Ancient.TREE, "scoreboard" to Ancient.SCALES,
 )
 
 internal fun glyphFor(route: String): Ancient = GLYPHS[route] ?: Ancient.STAR

@@ -137,7 +137,8 @@ object Trust {
      * agreed on each so each can earn its own record. Returns how many were sealed.
      */
     fun sealSureWindows(context: Context, profile: BirthProfile, windows: List<SureWindowRecord>, max: Int = MAX_SURE): Int {
-        val firm = windows.filter { it.tier == "strong" || it.tier == "likely" }.sortedBy { it.start.taiSeconds }
+        val off = OpenTest.silenced(context, profile).map { it.area }.toSet()
+        val firm = windows.filter { (it.tier == "strong" || it.tier == "likely") && it.area !in off }.sortedBy { it.start.taiSeconds }
         val candidates = firm.map { w ->
             ClaimInputRecord(
                 source = "consensus", area = w.area, kind = w.kind, good = !w.isHard,

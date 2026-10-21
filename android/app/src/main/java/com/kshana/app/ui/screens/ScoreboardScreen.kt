@@ -345,6 +345,12 @@ fun BlindSealCard(seal: com.kshana.app.data.PastReveal.Seal, lon: Double, onAnsw
             }
         } else {
             Text(s.reveal, fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 23.sp, color = KshanaColors.Text)
+            if (s.outcome == "no" || s.outcome == "close") {
+                Text(
+                    "A wrong guess still helps, because it narrows down the birth time.",
+                    style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft,
+                )
+            }
             if (!seal.good || saidKey == "hard" || saidKey == "mixed") {
                 Text("WHAT HELPS ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRemedy).padding(vertical = 4.dp))
             }

@@ -70,6 +70,9 @@ fun SureScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
     val key = SureCache.keyOf(profile, place, settings)
     var list by remember(key) { mutableStateOf(if (SureCache.key == key) SureCache.windows else null) }
     var error by remember { mutableStateOf<String?>(null) }
+    // Areas whose firm dates came true no more often than chance are held back, and say so.
+    val silenced = remember(key) { com.kshana.app.data.OpenTest.silenced(context, profile) }
+    val off = silenced.map { it.area }.toSet()
     var showFaint by remember { mutableStateOf(false) }
     val expert = com.kshana.app.data.Expert.on(context)
     LaunchedEffect(key) {
@@ -104,8 +107,9 @@ fun SureScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
         )
         ErrorLine(error)
         val l = list ?: run { if (error == null) Working(tr("laying the nine readings side by side…")); return@Column }
-        val strong = l.filter { it.tier == "strong" }.sortedBy { it.start.taiSeconds }
-        val likely = l.filter { it.tier == "likely" }.sortedBy { it.start.taiSeconds }
+        for (s in silenced) SilencedNote(s)
+        val strong = l.filter { it.tier == "strong" && it.area !in off }.sortedBy { it.start.taiSeconds }
+        val likely = l.filter { it.tier == "likely" && it.area !in off }.sortedBy { it.start.taiSeconds }
         val faint = l.filter { it.tier == "possible" }.sortedBy { it.start.taiSeconds }
         if (strong.isNotEmpty()) SectionLabel(tr("The signs agree strongly"))
         for (w in strong) SureCard(w, profile, place, settings, expert, onRemedy)
@@ -231,9 +235,9 @@ fun SureNextCard(profile: BirthProfile, onOpen: () -> Unit) {
                 )
             }
             SureCache.nextKey = key
-            SureCache.next = got
+            SureCache.next = got?.takeIf { w -> com.kshana.app.data.OpenTest.silenced(context, profile).none { it.area == w.area } }
             SureCache.nextRead = true
-            next = got
+            next = SureCache.next
             read = true
         }
     }
