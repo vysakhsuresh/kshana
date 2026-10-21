@@ -71,7 +71,7 @@ pub fn chapter_prediction(l: DashaLord) -> &'static str {
     match l {
         DashaLord::Sun => "You are seen more. Promotions, government work and dealings with seniors decide a lot; pride and quarrels with a father or a boss are the risk.",
         DashaLord::Moon => "Life turns towards home and the people you care for. A move, a change in the household or a new caring role is likely, and your moods run closer to the surface.",
-        DashaLord::Mars => "Energy is high and things move by force of will. Property, land, sport and competition come forward; anger, accidents and disputes are the risk.",
+        DashaLord::Mars => "Energy is high and things move by force of will. Property, land, sport and competition come forward; anger, haste on the road and disputes are the risk.",
         DashaLord::Mercury => "A season of learning, trade and talk. Studies, contracts, writing and small businesses do well; scattered effort and nervous worry are the risk.",
         DashaLord::Jupiter => "Things grow. Money, children, marriage, teachers and good advice arrive; over-trust and over-spending are the risk.",
         DashaLord::Venus => "Comfort and affection rise. Love, marriage, a vehicle, a nicer home and creative work come forward; indulgence and spending are the risk.",
@@ -86,7 +86,7 @@ pub fn pressure(l: DashaLord) -> &'static str {
     match l {
         DashaLord::Sun => "clashes with authority and hurt pride",
         DashaLord::Moon => "mood swings, worry and restless sleep",
-        DashaLord::Mars => "heat, quarrels, haste and injuries",
+        DashaLord::Mars => "heat, quarrels and haste",
         DashaLord::Mercury => "mix-ups in talk, paperwork and accounts",
         DashaLord::Jupiter => "over-promising, over-trust and too much spending",
         DashaLord::Venus => "indulgence, jealousy and spending on comfort",

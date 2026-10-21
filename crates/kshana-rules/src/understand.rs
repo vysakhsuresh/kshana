@@ -556,7 +556,7 @@ fn understand_with(text: &str, combos: bool) -> Understanding {
         return outside("gender", "Kshana does not foretell whether a baby will be a boy or a girl. No reading can say it truly, and in India asking it is against the law (the PCPNDT Act). It can tell you about the timing of a child.", vec![ask_alt("child_birth", "when"), ask_alt("child_health", "will_it_recover")]);
     }
     if any(&t, DEATH_CUES) && !has(&t, "die hard") {
-        return outside("death", "Kshana never predicts a death or the length of a life. No one can know it, and it should not be said. It can tell you how health stands and when a hard stretch eases.", vec![Alternative { label: "How is my health?".into(), action: Action::Life(Life::Health) }, ask_alt("recovery", "will_it_recover"), ask_alt("mother_health", "will_it_recover"), ask_alt("father_health", "will_it_recover")]);
+        return outside("death", "Kshana never says how long a life will last, for you or for anyone. No one can know it, and it should not be said. It can tell you how health stands and when a hard stretch eases.", vec![Alternative { label: "How is my health?".into(), action: Action::Life(Life::Health) }, ask_alt("recovery", "will_it_recover"), ask_alt("mother_health", "will_it_recover"), ask_alt("father_health", "will_it_recover")]);
     }
     if any(&t, GAMBLE_CUES) {
         return outside("gamble", "Kshana does not give lottery numbers, betting tips or which share to buy. The sky does not hold numbers, and no honest reading will claim to. It can tell you how money stands and when it improves.", vec![Alternative { label: "How is money for me?".into(), action: Action::Life(Life::Money) }, ask_alt("investment", "good_time_now"), ask_alt("debt_cleared", "when")]);

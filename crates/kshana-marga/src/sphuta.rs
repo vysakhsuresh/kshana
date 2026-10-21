@@ -114,8 +114,8 @@ pub const TRISPHUTA_TRINE_EVENTS: [Option<&str>; 9] = [
     None,
     None,
     None,
-    Some("the death of a quadruped"),
-    Some("a servant falling from a tree, a lamp put out by an insect, or news of a death"),
+    Some("the loss of a quadruped"),
+    Some("a servant falling from a tree, a lamp put out by an insect, or sad news"),
 ];
 
 /// The text's readings of a Trisphuta longitude (Prasna Marga VIII.26–30): the sign
@@ -604,7 +604,7 @@ mod tests {
         let w = trisphuta_words(359.0); // last navamsa of Pisces, Revati (group 8)
         assert!(w.iter().any(|s| s.contains("Pisces") && s.contains("most")));
         assert!(w.iter().any(|s| s.contains("a day")));
-        assert!(w.iter().any(|s| s.contains("news of a death")));
+        assert!(w.iter().any(|s| s.contains("or sad news")));
         let w = trisphuta_words(5.0); // Aries, Ashwini
         assert!(w.iter().any(|s| s.contains("not one of them")));
         assert!(w.iter().any(|s| s.contains("quarrel")));

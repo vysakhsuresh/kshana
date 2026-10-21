@@ -114,7 +114,7 @@ impl Activity {
             Activity::Eating => "Eating",
             Activity::Walking => "Walking",
             Activity::Sleeping => "Sleeping",
-            Activity::Dying => "Dying",
+            Activity::Dying => "Fading",
         }
     }
 
@@ -614,6 +614,6 @@ mod tests {
         let b = birth_bird_at(&spk, utc(1990, 10, 29, 17, 36, 0), Ayanamsa::Lahiri).unwrap();
         assert_eq!(b, Bird::Peacock);
         assert_eq!(b.name(), "Peacock");
-        assert_eq!(Activity::Dying.name(), "Dying");
+        assert_eq!(Activity::Dying.name(), "Fading");
     }
 }

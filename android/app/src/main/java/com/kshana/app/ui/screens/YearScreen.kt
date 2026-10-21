@@ -80,7 +80,7 @@ private fun sahamGroupOf(s: SahamRecord): SahamGroup {
         any("learning") -> SahamGroup.LEARNING
         any("mother", "father", "child", "brother", "marriage", "spouse") -> SahamGroup.FAMILY
         any("work", "profession", "trade", "wealth") -> SahamGroup.WORK
-        any("disease", "death", "danger") -> SahamGroup.HEALTH
+        any("disease", "illness", "health", "safety") -> SahamGroup.HEALTH
         else -> SahamGroup.OTHER
     }
 }

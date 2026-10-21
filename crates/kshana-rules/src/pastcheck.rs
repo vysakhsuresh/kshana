@@ -40,15 +40,15 @@ pub(crate) type T3 = [&'static str; 3];
 pub(crate) fn rest(life: Life, good: bool) -> T3 {
     use Life::*;
     match (life, good) {
-        (Love, false) => ["was there strain, distance or a break in love or marriage?", "പ്രണയത്തിലോ വിവാഹത്തിലോ ഉലച്ചിലോ അകൽച്ചയോ വേർപിരിയലോ ഉണ്ടായോ?", "क्या प्रेम या विवाह में तनाव, दूरी या टूटन आई?"],
+        (Love, false) => ["was there strain or distance in love or marriage?", "പ്രണയത്തിലോ വിവാഹത്തിലോ ഉലച്ചിലോ അകൽച്ചയോ ഉണ്ടായോ?", "क्या प्रेम या विवाह में तनाव या दूरी आई?"],
         (Love, true) => ["did love bring something good: a new bond, a marriage, or real closeness?", "പ്രണയം എന്തെങ്കിലും നല്ലത് കൊണ്ടുവന്നോ: പുതിയ ബന്ധം, വിവാഹം, അല്ലെങ്കിൽ യഥാർത്ഥ അടുപ്പം?", "क्या प्रेम कुछ अच्छा लाया: नया रिश्ता, विवाह, या सच्ची नज़दीकी?"],
         (Career, false) => ["was work hard: a setback, a bad boss, a lost job or effort that went unrewarded?", "ജോലി കഠിനമായിരുന്നോ: ഒരു തിരിച്ചടി, മോശം മേലധികാരി, ജോലി നഷ്ടം, അല്ലെങ്കിൽ ഫലം കിട്ടാത്ത അധ്വാനം?", "क्या काम कठिन रहा: कोई झटका, बुरा बॉस, नौकरी जाना या बिना फल की मेहनत?"],
         (Career, true) => ["did work move up: a new job, a promotion, or recognition?", "ജോലിയിൽ ഉയർച്ചയുണ്ടായോ: പുതിയ ജോലി, സ്ഥാനക്കയറ്റം, അല്ലെങ്കിൽ അംഗീകാരം?", "क्या काम में तरक्की हुई: नई नौकरी, पदोन्नति या पहचान?"],
         (Money, false) => ["was money tight: losses, debts or expenses bigger than income?", "പണം ഞെരുക്കത്തിലായിരുന്നോ: നഷ്ടം, കടം, അല്ലെങ്കിൽ വരുമാനത്തേക്കാൾ വലിയ ചെലവ്?", "क्या पैसा तंग रहा: नुकसान, कर्ज़ या आमदनी से बड़ा ख़र्च?"],
         (Money, true) => ["did money come in well: a raise, a gain or a good deal?", "പണം നന്നായി വന്നോ: ശമ്പളവർധന, ലാഭം, അല്ലെങ്കിൽ നല്ല ഇടപാട്?", "क्या पैसा अच्छा आया: वेतन वृद्धि, लाभ या अच्छा सौदा?"],
-        (Health, false) => ["was there an illness, an injury or a long spell of low energy?", "അസുഖമോ പരിക്കോ നീണ്ട ക്ഷീണകാലമോ ഉണ്ടായോ?", "क्या कोई बीमारी, चोट या लंबी कमज़ोरी रही?"],
+        (Health, false) => ["did health need extra care, or was there a long spell of low energy?", "ആരോഗ്യത്തിന് കൂടുതൽ ശ്രദ്ധ വേണ്ടിവന്നോ, അല്ലെങ്കിൽ നീണ്ട ക്ഷീണകാലം ഉണ്ടായോ?", "क्या सेहत को ज़्यादा देखभाल चाहिए थी, या लंबी कमज़ोरी रही?"],
         (Health, true) => ["were you unusually well and full of energy?", "പതിവിലും നല്ല ആരോഗ്യവും ഊർജവും ഉണ്ടായിരുന്നോ?", "क्या आप असामान्य रूप से स्वस्थ और ऊर्जा से भरे रहे?"],
-        (Family, false) => ["was there trouble at home: quarrels, an elder's illness, or someone moving away?", "വീട്ടിൽ പ്രശ്നമുണ്ടായോ: വഴക്ക്, മുതിർന്നവരുടെ അസുഖം, അല്ലെങ്കിൽ ആരെങ്കിലും അകന്നുപോകൽ?", "क्या घर में परेशानी रही: झगड़े, किसी बड़े की बीमारी, या किसी का दूर जाना?"],
+        (Family, false) => ["was there trouble at home: quarrels, an elder needing care, or someone moving away?", "വീട്ടിൽ പ്രശ്നമുണ്ടായോ: വഴക്ക്, മുതിർന്നവർക്ക് പരിചരണം വേണ്ടിവരൽ, അല്ലെങ്കിൽ ആരെങ്കിലും അകന്നുപോകൽ?", "क्या घर में परेशानी रही: झगड़े, किसी बड़े को देखभाल की ज़रूरत, या किसी का दूर जाना?"],
         (Family, true) => ["was home a happy place: a celebration, a reunion or a new member?", "വീട് സന്തോഷമുള്ള ഇടമായിരുന്നോ: ഒരു ആഘോഷം, ഒത്തുചേരൽ, അല്ലെങ്കിൽ പുതിയ അംഗം?", "क्या घर ख़ुशियों भरा रहा: कोई उत्सव, मिलन या नया सदस्य?"],
         (Study, false) => ["did studies or exams go badly, or did focus fall apart?", "പഠനമോ പരീക്ഷയോ മോശമായോ, ശ്രദ്ധ തകർന്നോ?", "क्या पढ़ाई या परीक्षा ख़राब गई, या ध्यान बिखर गया?"],
         (Study, true) => ["did you pass, qualify or learn something that changed your path?", "നിങ്ങൾ ജയിച്ചോ, യോഗ്യത നേടിയോ, അല്ലെങ്കിൽ വഴി മാറ്റിയ എന്തെങ്കിലും പഠിച്ചോ?", "क्या आप पास हुए, योग्यता पाई, या कुछ ऐसा सीखा जिसने राह बदली?"],
@@ -172,15 +172,15 @@ mod tests {
 pub(crate) fn said(life: Life, good: bool) -> T3 {
     use Life::*;
     match (life, good) {
-        (Love, false) => ["strain, distance or a break in love or marriage", "പ്രണയത്തിലോ വിവാഹത്തിലോ ഉലച്ചിൽ, അകൽച്ച, അല്ലെങ്കിൽ വേർപിരിയൽ", "प्रेम या विवाह में तनाव, दूरी या टूटन"],
+        (Love, false) => ["strain or distance in love or marriage", "പ്രണയത്തിലോ വിവാഹത്തിലോ ഉലച്ചിൽ അല്ലെങ്കിൽ അകൽച്ച", "प्रेम या विवाह में तनाव या दूरी"],
         (Love, true) => ["something good in love: a new bond, a marriage, or real closeness", "പ്രണയത്തിൽ നല്ലത്: പുതിയ ബന്ധം, വിവാഹം, അല്ലെങ്കിൽ യഥാർത്ഥ അടുപ്പം", "प्रेम में कुछ अच्छा: नया रिश्ता, विवाह या सच्ची नज़दीकी"],
         (Career, false) => ["hard times at work: a setback, a difficult boss, a lost job or unrewarded effort", "ജോലിയിൽ കഷ്ടകാലം: തിരിച്ചടി, പ്രയാസമുള്ള മേലധികാരി, ജോലി നഷ്ടം, അല്ലെങ്കിൽ ഫലമില്ലാത്ത അധ്വാനം", "काम में कठिन समय: झटका, मुश्किल बॉस, नौकरी जाना या बिना फल की मेहनत"],
         (Career, true) => ["a rise at work: a new job, a promotion or recognition", "ജോലിയിൽ ഉയർച്ച: പുതിയ ജോലി, സ്ഥാനക്കയറ്റം, അല്ലെങ്കിൽ അംഗീകാരം", "काम में तरक्की: नई नौकरी, पदोन्नति या पहचान"],
         (Money, false) => ["money troubles: losses, debts or spending beyond income", "പണപ്രശ്നം: നഷ്ടം, കടം, അല്ലെങ്കിൽ വരുമാനത്തിനപ്പുറം ചെലവ്", "पैसे की तंगी: नुकसान, कर्ज़ या आमदनी से ज़्यादा ख़र्च"],
         (Money, true) => ["money coming in well: a raise, a gain or a good deal", "പണം നന്നായി വന്ന സമയം: ശമ്പളവർധന, ലാഭം, അല്ലെങ്കിൽ നല്ല ഇടപാട്", "अच्छी आमदनी: वेतन वृद्धि, लाभ या अच्छा सौदा"],
-        (Health, false) => ["illness, injury or a long spell of low energy", "അസുഖം, പരിക്ക്, അല്ലെങ്കിൽ നീണ്ട ക്ഷീണകാലം", "बीमारी, चोट या लंबी कमज़ोरी"],
+        (Health, false) => ["a time when health needed extra care, or a long spell of low energy", "ആരോഗ്യത്തിന് കൂടുതൽ ശ്രദ്ധ വേണ്ടിവന്ന സമയം, അല്ലെങ്കിൽ നീണ്ട ക്ഷീണകാലം", "सेहत की ज़्यादा देखभाल का समय, या लंबी कमज़ोरी"],
         (Health, true) => ["unusually good health and energy", "പതിവിലും നല്ല ആരോഗ്യവും ഊർജവും", "असामान्य रूप से अच्छी सेहत और ऊर्जा"],
-        (Family, false) => ["trouble at home: quarrels, an elder's illness, or someone moving away", "വീട്ടിൽ പ്രശ്നം: വഴക്ക്, മുതിർന്നവരുടെ അസുഖം, അല്ലെങ്കിൽ ആരെങ്കിലും അകന്നുപോകൽ", "घर में परेशानी: झगड़े, किसी बड़े की बीमारी, या किसी का दूर जाना"],
+        (Family, false) => ["trouble at home: quarrels, an elder needing care, or someone moving away", "വീട്ടിൽ പ്രശ്നം: വഴക്ക്, മുതിർന്നവർക്ക് പരിചരണം വേണ്ടിവരൽ, അല്ലെങ്കിൽ ആരെങ്കിലും അകന്നുപോകൽ", "घर में परेशानी: झगड़े, किसी बड़े को देखभाल की ज़रूरत, या किसी का दूर जाना"],
         (Family, true) => ["happy times at home: a celebration, a reunion or a new member", "വീട്ടിൽ സന്തോഷകാലം: ആഘോഷം, ഒത്തുചേരൽ, അല്ലെങ്കിൽ പുതിയ അംഗം", "घर में ख़ुशियाँ: उत्सव, मिलन या नया सदस्य"],
         (Study, false) => ["studies or exams going badly, or focus falling apart", "പഠനമോ പരീക്ഷയോ മോശമാകൽ, അല്ലെങ്കിൽ ശ്രദ്ധ തകരൽ", "पढ़ाई या परीक्षा का बिगड़ना, या ध्यान बिखरना"],
         (Study, true) => ["a pass, a qualification or learning that changed your path", "വിജയം, യോഗ്യത, അല്ലെങ്കിൽ വഴി മാറ്റിയ പഠനം", "पास होना, योग्यता, या ऐसी पढ़ाई जिसने राह बदली"],
@@ -194,7 +194,7 @@ pub(crate) fn said(life: Life, good: bool) -> T3 {
 }
 
 /// The stretch said as a reading of the past, not a question: "From February 2025 to
-/// April 2025: strain, distance or a break in love or marriage."
+/// April 2025: strain or distance in love or marriage."
 pub fn statement(lang: Lang, life: Life, good: bool, from: Instant, to: Instant, lon: f64) -> String {
     let a = month_year(lang, from, lon);
     let b = month_year(lang, to, lon);

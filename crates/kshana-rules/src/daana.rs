@@ -39,9 +39,9 @@ pub fn alternatives(g: DashaLord) -> Vec<Row> {
         DashaLord::Mars => vec![
             (Anna, "Red lentil dal and rice to labourers or soldiers, served hot, by your own hand", "Cools anger and quarrels; helps land and property matters.", "once a week", "Tuesday", PURANA),
             (Anna, "Jaggery and roasted gram to boys who play or work hard", "Turns restless energy into strength that works for you.", "once", "Tuesday", TEMPLE),
-            (Jeeva, "Feed monkeys, or a red cow, with jaggery and gram on a Tuesday", "For courage and protection from accidents.", "weekly", "Tuesday", TEMPLE),
+            (Jeeva, "Feed monkeys, or a red cow, with jaggery and gram on a Tuesday", "For courage, and safety on the road.", "weekly", "Tuesday", TEMPLE),
             (Prakriti, "Plant a neem or a pomegranate and keep it alive", "Steadies property and land affairs.", "once", "Tuesday", DHARMA),
-            (Vastra, "Wear red or coral on Tuesdays; keep knives and tools clean and in their place", "Order among sharp things lowers the risk of cuts and accidents.", "weekly", "Tuesday", LAL),
+            (Vastra, "Wear red or coral on Tuesdays; keep knives and tools clean and in their place", "Order among sharp things keeps you safe from cuts and slips.", "weekly", "Tuesday", LAL),
             (Seva, "Carry something heavy for someone who cannot", "Strength spent for another is strength that does not turn into temper.", "weekly", "any day", DHARMA),
             (Anna, "Sweet pongal or red rice to a Subrahmanya or Hanuman temple, then shared", "For courage and calm.", "once", "Tuesday", TEMPLE),
         ],
@@ -74,7 +74,7 @@ pub fn alternatives(g: DashaLord) -> Vec<Row> {
         ],
         DashaLord::Saturn => vec![
             (Anna, "Sesame rice or black-gram dishes to labourers, sweepers and the old", "The people who do the hard work unseen. Eases delays, debts and tiredness at work.", "once a week", "Saturday", PURANA),
-            (Anna, "Feed the disabled, the imprisoned or the dying through those who serve them", "Feeding the forgotten is the direct remedy for a heavy, slow period.", "once", "Saturday", DHARMA),
+            (Anna, "Feed the disabled, the imprisoned or those in hospice care through those who serve them", "Feeding the forgotten is the direct remedy for a heavy, slow period.", "once", "Saturday", DHARMA),
             (Jeeva, "Feed crows cooked rice with sesame before your own breakfast", "Eases delays and the weight of old family debts.", "daily", "start Saturday", TEMPLE),
             (Jeeva, "Feed a black dog, or a stray, on Saturdays", "Eases delays, debts and tiredness at work.", "weekly", "Saturday", TEMPLE),
             (Prakriti, "Pour water at the root of a peepal at dusk on Saturday and walk round it seven times", "For patience and protection through a hard stretch.", "weekly", "Saturday", TEMPLE),

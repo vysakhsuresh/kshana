@@ -1433,7 +1433,7 @@ static BHAVA: [Row; 12] = [
     r(
         "Randhra",
         ("8th house", "Randhra, Ayu"),
-        ("ആയുസ്സ്", "Ayussu"),
+        ("രന്ധ്രം", "Randhram"),
         ("ஆயுள்", "Ayul"),
         ("रन्ध्र", "Randhra"),
         ("ఆయుష్షు", "Ayushu"),

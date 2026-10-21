@@ -218,7 +218,7 @@ pub fn pitru_dosha(facts: &Facts) -> Dosha {
         "KS-R-SHAPA-01",
         DashaLord::Sun,
         "BPHS ch. 85: the father's curse (Sun afflicting the 5th); Prasna Marga ch. 15: 6th lord in 9th, 9th lord in 12th, Sun in 6th; remedies named: shraddha at Gaya, feeding Brahmins, kanyadana, gift of a cow",
-        "Sun: a duty to ancestors left undone; conduct toward elders, the death tithis kept, tarpana on Amavasya, Mahalaya in Pitru Paksha, Sunday in the Sun's hora",
+        "Sun: a duty to ancestors left undone; conduct toward elders, the yearly remembrance days of the departed kept, tarpana on Amavasya, Mahalaya in Pitru Paksha, Sunday in the Sun's hora",
         "the father and the pitris".into(),
         f,
     )
@@ -485,7 +485,7 @@ pub fn preta_shapa(facts: &Facts) -> Dosha {
         "KS-R-SHAPA-08",
         Saturn,
         "BPHS ch. 85: the curse of departed spirits; remedies named: Gaya shraddha, Rudra japa, gift of a cow or silver",
-        "Saturn and Ketu: complete the rites or the memory of a dead relative, visit a grave; tarpana on Amavasya; Saturday in Saturn's hora",
+        "Saturn and Ketu: complete the rites or the memory of a departed relative, visit a grave; tarpana on Amavasya; Saturday in Saturn's hora",
         "the departed (pretas)".into(),
         f,
     )
