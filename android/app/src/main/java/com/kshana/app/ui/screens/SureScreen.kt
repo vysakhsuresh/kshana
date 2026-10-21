@@ -152,7 +152,7 @@ private fun SureCard(w: SureWindowRecord, profile: BirthProfile, place: Place, s
     Column(Modifier.fillMaxWidth().glass(if (strong) 18.dp else 16.dp).padding(if (strong) 18.dp else 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row {
             Text(
-                (listOf("${lifeGlyph(w.area)} ${w.areaName.uppercase()}") + w.alsoNames.map { it.uppercase() }).joinToString(" · "),
+                (listOf("${lifeGlyph(w.area)} ${w.areaName.uppercase()}") + w.alsoNames.take(2).map { it.uppercase() } + listOfNotNull((w.alsoNames.size - 2).takeIf { it > 0 }?.let { "+$it MORE" })).joinToString(" · "),
                 style = MaterialTheme.typography.labelSmall, color = tone, modifier = Modifier.weight(1f),
             )
             Text("●".repeat(w.agree.toInt().coerceIn(1, 9)) + "○".repeat((w.of.toInt() - w.agree.toInt()).coerceIn(0, 9)), fontSize = 9.sp, color = if (strong) KshanaColors.Gold else KshanaColors.Muted)
