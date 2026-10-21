@@ -1058,3 +1058,23 @@ pub fn how_it_helps(g: DashaLord, source: &str, life: Option<Life>) -> String {
         cap_name = cap(name),
     )
 }
+
+/// The language-free key of a tree remedy's effort, in any of the three languages:
+/// `week`, `once`, `weekly`, `daily`, `10min`, `40`, `30`, `month`, `wish`, `3w`,
+/// `monthly`; `once` for anything unknown. `remedy_timing::keep_for` reads it.
+pub fn effort_key(effort: &str) -> &'static str {
+    let table: [(&'static str, T3); 11] = [
+        ("week", E_WEEK),
+        ("once", E_ONCE),
+        ("weekly", E_WEEKLY),
+        ("daily", E_DAILY),
+        ("10min", E_10),
+        ("40", E_40),
+        ("30", E_30),
+        ("month", E_MONTH),
+        ("wish", E_WISH),
+        ("3w", E_3W),
+        ("monthly", E_MONTHLY),
+    ];
+    table.iter().find(|(_, t)| t.contains(&effort)).map(|(k, _)| *k).unwrap_or("once")
+}

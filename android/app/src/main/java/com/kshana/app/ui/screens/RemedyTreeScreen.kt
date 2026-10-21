@@ -46,12 +46,17 @@ import com.kshana.app.ui.theme.glass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.CauseNodeRecord
+import uniffi.kshana_ffi.RemedyScheduleRecord
 import uniffi.kshana_ffi.RemedyTreeRecord
 import uniffi.kshana_ffi.TreeRemedyRecord
 
 internal object TreeCache {
     val trees = HashMap<String, RemedyTreeRecord>()
+    val schedules = HashMap<String, List<RemedyScheduleRecord>>()
 }
+
+/** A schedule's place in the tree: cause index, branch key, item index. */
+private fun slot(cause: Int, branch: String, item: Int) = "$cause|$branch|$item"
 
 /**
  * What to do, as a tree: what is pressing on this part of your life, what it does to
@@ -83,6 +88,29 @@ fun RemedyTreeScreen(profile: BirthProfile, place: Place, settings: EngineSettin
             error = e.message ?: e.toString()
         }
     }
+    // When to begin each remedy, for how long and for which stretch: solved after the tree,
+    // for the same life, so the tree shows at once and the start times follow.
+    var schedules by remember { mutableStateOf<Map<String, RemedyScheduleRecord>>(emptyMap()) }
+    LaunchedEffect(key, tree) {
+        val t = tree ?: return@LaunchedEffect
+        val list = TreeCache.schedules[key] ?: try {
+            val engine = EngineProvider.get(context)
+            withContext(Dispatchers.Default) {
+                engine.remedySchedule(
+                    profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa,
+                    t.life, Instants.now(), lang, com.kshana.app.data.Focus.lives, com.kshana.app.data.PlaceClock.offsetMinutes(place),
+                )
+            }.also { TreeCache.schedules[key] = it }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            emptyList()
+        }
+        // Keep only schedules whose remedy is the one the tree shows in that place.
+        schedules = list.filter { s ->
+            t.causes.getOrNull(s.causeIndex.toInt())?.branches?.firstOrNull { it.key == s.branch }?.items?.getOrNull(s.itemIndex.toInt())?.title == s.title
+        }.associateBy { slot(it.causeIndex.toInt(), it.branch, it.itemIndex.toInt()) }
+    }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(top = 44.dp, bottom = 32.dp),
@@ -94,6 +122,7 @@ fun RemedyTreeScreen(profile: BirthProfile, place: Place, settings: EngineSettin
         }
         Text("What will help", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
 
+        RemedyRecordCard(profile.name, plansVersion) { plansVersion++ }
         PlansCard(plansVersion) { plansVersion++ }
 
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -110,7 +139,7 @@ fun RemedyTreeScreen(profile: BirthProfile, place: Place, settings: EngineSettin
         if (t.causes.isEmpty()) {
             Text("Nothing is pressing on this part of your life now. Keep doing what you do.", style = MaterialTheme.typography.bodyLarge, color = KshanaColors.TextSoft)
         }
-        for ((i, c) in t.causes.withIndex()) CauseCard(i, c, faith, onPlan = { plansVersion++ })
+        for ((i, c) in t.causes.withIndex()) CauseCard(i, c, faith, profile.name, schedules, onPlan = { plansVersion++ })
         Text(
             "Deeds come first because they work for everyone, of any faith or none. Choose which faith practices to see in Settings › Remedies for you. None is ever required, and no remedy replaces a doctor, a lawyer or a counsellor.",
             style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
@@ -120,7 +149,7 @@ fun RemedyTreeScreen(profile: BirthProfile, place: Place, settings: EngineSettin
 
 /** One cause: the trunk of the tree, with its branches of help. */
 @Composable
-private fun CauseCard(index: Int, c: CauseNodeRecord, faith: String, onPlan: () -> Unit) {
+private fun CauseCard(index: Int, c: CauseNodeRecord, faith: String, profileName: String, schedules: Map<String, RemedyScheduleRecord>, onPlan: () -> Unit) {
     var open by remember { mutableStateOf(index == 0) }
     Column(Modifier.fillMaxWidth().glass(18.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth().clickable { open = !open }, verticalAlignment = Alignment.CenterVertically) {
@@ -143,7 +172,7 @@ private fun CauseCard(index: Int, c: CauseNodeRecord, faith: String, onPlan: () 
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(b.title, style = MaterialTheme.typography.titleMedium, color = if (b.key == "tradition") KshanaColors.TextSoft else KshanaColors.Gold)
                     if (b.intro.isNotBlank()) Text(b.intro, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
-                    for (r in b.items) RemedyItem(r, c.title, onPlan)
+                    for ((ii, r) in b.items.withIndex()) RemedyItem(r, c.title, profileName, schedules[slot(index, b.key, ii)], onPlan)
                 }
             }
             Spacer(Modifier.height(4.dp))
@@ -173,7 +202,7 @@ internal fun HowThisHelps(text: String) {
 }
 
 @Composable
-private fun RemedyItem(r: TreeRemedyRecord, forWhat: String, onPlan: () -> Unit) {
+private fun RemedyItem(r: TreeRemedyRecord, forWhat: String, profileName: String, schedule: RemedyScheduleRecord?, onPlan: () -> Unit) {
     val context = LocalContext.current
     var open by remember { mutableStateOf(false) }
     var started by remember { mutableStateOf(false) }
@@ -187,12 +216,15 @@ private fun RemedyItem(r: TreeRemedyRecord, forWhat: String, onPlan: () -> Unit)
         if (open) {
             if (r.how.isNotBlank()) Text(r.how, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
             r.mantra?.takeIf { it.isNotBlank() }?.let { Text(it, fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Gold) }
+            if (schedule != null) RemedyStartBlock(profileName, schedule, onTaken = onPlan)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                QuietButton(if (started) "STARTED ✓" else "DO IT FOR 21 DAYS", onClick = {
-                    RemedyPlans.start(context, r.title, r.how, forWhat, 21, weekdayOf(r.day))
-                    started = true
-                    onPlan()
-                })
+                if (schedule == null) {
+                    QuietButton(if (started) "STARTED ✓" else "DO IT FOR 21 DAYS", onClick = {
+                        RemedyPlans.start(context, r.title, r.how, forWhat, 21, weekdayOf(r.day))
+                        started = true
+                        onPlan()
+                    })
+                }
                 if (r.kind in setOf("Anna", "Daana", "Jeeva", "Vastra", "giving")) {
                     QuietButton("GIVE NOW", onClick = { runCatching { context.startActivity(RemedyPlans.giveIntent(context, r.title)) } })
                 }

@@ -24,6 +24,7 @@ pub mod lexicon;
 pub mod life;
 pub mod marga;
 pub mod nodes;
+pub mod remedy_plan;
 pub mod science;
 pub mod tajika;
 pub mod trace;
