@@ -26,6 +26,13 @@ object PastReveal {
         val good: Boolean,
         val statement: String,
         val verdict: String,
+        /**
+         * The fingerprint of the sealed prediction this answer came from, or "" for an
+         * answer about the past. A sealed one was scored first, when it was answered, and
+         * only then joined the answers that tune the birth time; the score counts it once,
+         * as sealed, and never again here. Absent from older saved answers.
+         */
+        val sealedId: String = "",
     ) {
         fun from() = ExactInstant(fromSec, fromNs.toUInt())
         fun to() = ExactInstant(toSec, toNs.toUInt())
@@ -35,14 +42,14 @@ object PastReveal {
         val a = JSONArray(ProfileStore.prefs(context).getString(K_ANSWERS, "[]"))
         (0 until a.length()).map { i ->
             val o = a.getJSONObject(i)
-            Item(o.getLong("fs"), o.optInt("fn"), o.getLong("ts"), o.optInt("tn"), o.getString("life"), o.getBoolean("good"), o.optString("text"), o.optString("v"))
+            Item(o.getLong("fs"), o.optInt("fn"), o.getLong("ts"), o.optInt("tn"), o.getString("life"), o.getBoolean("good"), o.optString("text"), o.optString("v"), o.optString("sid"))
         }
     }.getOrDefault(emptyList())
 
     fun saveAnswers(context: Context, items: List<Item>) {
         val a = JSONArray()
         for (x in items) {
-            a.put(JSONObject().put("fs", x.fromSec).put("fn", x.fromNs).put("ts", x.toSec).put("tn", x.toNs).put("life", x.life).put("good", x.good).put("text", x.statement).put("v", x.verdict))
+            a.put(JSONObject().put("fs", x.fromSec).put("fn", x.fromNs).put("ts", x.toSec).put("tn", x.toNs).put("life", x.life).put("good", x.good).put("text", x.statement).put("v", x.verdict).also { if (x.sealedId.isNotEmpty()) it.put("sid", x.sealedId) })
         }
         ProfileStore.prefs(context).edit().putString(K_ANSWERS, a.toString()).apply()
     }
@@ -157,10 +164,17 @@ object PastReveal {
         return s
     }
 
-    /** The person says whether the sealed stretch happened; it also joins the answers about the past. */
+    /**
+     * The person says whether the sealed stretch happened. It is scored first (the seal's
+     * verdict is fixed here); only then does it join the answers that tune the birth
+     * time, marked with its fingerprint so the score never counts it a second time.
+     */
     fun resolve(context: Context, seal: Seal, verdict: String) {
         saveSeals(context, seals(context).map { if (it.fingerprint == seal.fingerprint) it.copy(verdict = verdict) else it })
-        saveAnswers(context, answers(context) + Item(seal.fromSec, 0, seal.toSec, 0, seal.life, seal.good, seal.statement, verdict))
+        if (verdict in setOf("yes", "close", "no") && answers(context).none { it.sealedId == seal.fingerprint }) {
+            saveAnswers(context, answers(context) + Item(seal.fromSec, 0, seal.toSec, 0, seal.life, seal.good, seal.statement, verdict, seal.fingerprint))
+            RefineUse.record(context, seal.fingerprint)
+        }
     }
 
     /** Right, close and asked, over the answered past stretches and sealed predictions. */

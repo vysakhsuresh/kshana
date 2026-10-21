@@ -10,7 +10,9 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import uniffi.kshana_ffi.ClaimInputRecord
+import uniffi.kshana_ffi.FamilyMemberInput
 import uniffi.kshana_ffi.PersonalWeightsInput
+import uniffi.kshana_ffi.SureWindowRecord
 import uniffi.kshana_ffi.ScoreItemInput
 import uniffi.kshana_ffi.TechniqueLearnRecord
 import uniffi.kshana_ffi.TechniqueWeightInput
@@ -101,18 +103,114 @@ object Trust {
             val waiting = ClaimStore.waiting(context, profile.name, now.taiSeconds).size
             val weekly = nowMs - ClaimStore.lastTopUp(context, profile.name) >= WEEK_MS
             val room = maxOf(KEEP_WAITING - waiting, if (weekly) 1 else 0)
-            val n = sealFeed(context, profile, firm, room)
+            var n = sealFeed(context, profile, firm, room)
+            // Every other firm dated feed is sealed here too, in the data layer, so it
+            // counts whether or not its page was ever opened: the windows the ways of
+            // reading agree on, and the family's agreed windows about the person.
+            n += runCatching { sealSureWindows(context, profile, sureWindows(context, profile, settings)) }.getOrDefault(0)
+            n += runCatching { sealFeed(context, profile, familyCandidates(context, profile, settings), MAX_FAMILY) }.getOrDefault(0)
             ClaimStore.markTopUp(context, profile.name, nowMs)
             n
         }.getOrDefault(0)
     }
 
+    /** Most agreed windows sealed in one top-up, and most family windows. */
+    private const val MAX_SURE = 4
+    private const val MAX_FAMILY = 2
+
+    /** The agreed windows of the next six months, read with the person's own earned weights. */
+    private suspend fun sureWindows(context: Context, profile: BirthProfile, settings: EngineSettings): List<SureWindowRecord> {
+        val engine = EngineProvider.get(context)
+        val place = ProfileStore.currentLocation(context)
+        return withContext(Dispatchers.Default) {
+            engine.sureWindowsTrusted(
+                profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa,
+                place.latitude, place.longitude, PlaceClock.offsetMinutes(place), Instants.now(), 6u, emptyList(), 30u, Lang.code,
+                Integrity.systemVotes(context, profile),
+            )
+        }
+    }
+
+    /**
+     * Seal the strong and likely windows of `windows` (from `sureWindows` or
+     * `sureWindowsTrusted`) that are not sealed yet, remembering which ways of reading
+     * agreed on each so each can earn its own record. Returns how many were sealed.
+     */
+    fun sealSureWindows(context: Context, profile: BirthProfile, windows: List<SureWindowRecord>, max: Int = MAX_SURE): Int {
+        val firm = windows.filter { it.tier == "strong" || it.tier == "likely" }.sortedBy { it.start.taiSeconds }
+        val candidates = firm.map { w ->
+            ClaimInputRecord(
+                source = "consensus", area = w.area, kind = w.kind, good = !w.isHard,
+                windowStart = w.start, windowEnd = w.end, probability = if (w.tier == "strong") 0.8 else 0.65,
+                statement = w.sealText.ifBlank { w.headline }, question = "",
+            )
+        }
+        return sealFeed(context, profile, candidates, max, firm.map { it.systemKeys })
+    }
+
+    /**
+     * The family's agreed windows about the person themself (not about the relatives),
+     * the firm ones only: three or more charts agreeing, or a clear reading at the peak.
+     */
+    private suspend fun familyCandidates(context: Context, profile: BirthProfile, settings: EngineSettings): List<ClaimInputRecord> {
+        val relations = runCatching { JSONObject(ProfileStore.prefs(context).getString("partners.relations.json", "{}") ?: "{}") }.getOrNull() ?: return emptyList()
+        val people = (ProfileStore.partners(context) + FamilyStore.family(context))
+            .filter { it.name != profile.name && relations.has(it.name) }
+            .distinctBy { it.name }
+        if (people.isEmpty()) return emptyList()
+        val engine = EngineProvider.get(context)
+        val place = ProfileStore.currentLocation(context)
+        val male = if (ProfileStore.prefs(context).contains("partners.selfIsGroom")) ProfileStore.selfIsGroom(context) else null
+        val r = withContext(Dispatchers.Default) {
+            engine.familyProof(
+                profile.birthInstant(), profile.latitude, profile.longitude, male,
+                people.map { FamilyMemberInput(it.name, relations.optString(it.name, "Other"), it.birthInstant(), it.latitude, it.longitude) },
+                place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), 6u,
+            )
+        }
+        return r.aboutYou
+            .filter { w -> w.confirmedBy.size >= 3 || (if (w.isHard) w.strength <= 30.0 else w.strength >= 70.0) }
+            .mapNotNull { w ->
+                val life = uniffi.kshana_ffi.lifeKeyOf(w.area) ?: return@mapNotNull null
+                ClaimInputRecord(
+                    source = "family", area = life, kind = w.area, good = !w.isHard,
+                    windowStart = w.start, windowEnd = w.end, probability = if (w.confirmedBy.size >= 3) 0.75 else 0.65,
+                    statement = w.headline, question = "",
+                )
+            }
+    }
+
+    /**
+     * Seal a prashna answer that names a time: a Yes, with its timing windows, as one
+     * claim from the first window that opens a day or more ahead to the last. A No, an
+     * unclear answer or one with no dated window is not a dated prediction and is not
+     * sealed. Returns whether it was sealed.
+     */
+    fun sealPrashna(context: Context, area: String, rec: uniffi.kshana_ffi.PrashnaRecord): Boolean = runCatching {
+        if (rec.verdict != "Yes") return@runCatching false
+        val profile = ProfileStore.load(context) ?: return@runCatching false
+        val life = uniffi.kshana_ffi.lifeKeyOf(area) ?: return@runCatching false
+        val lead = Instants.now().taiSeconds + 24 * 3600
+        val ahead = rec.windows.filter { it.start.taiSeconds >= lead }
+        val first = ahead.minByOrNull { it.start.taiSeconds } ?: return@runCatching false
+        val last = ahead.maxByOrNull { it.end.taiSeconds } ?: return@runCatching false
+        val name = com.kshana.app.ui.screens.lifeName(life).lowercase()
+        val candidate = ClaimInputRecord(
+            source = "prashna", area = life, kind = "question", good = true,
+            windowStart = first.start, windowEnd = last.end, probability = 0.6,
+            statement = "The question you asked about $name: it is likely to come, at the times found for it.", question = "",
+        )
+        sealFeed(context, profile, listOf(candidate), 1) > 0
+    }.getOrDefault(false)
+
     /**
      * Seal up to `max` of `candidates` (any dated prediction: area, direction, window,
      * probability, words) that are not already sealed, and store them. The same
      * prediction is never sealed twice, and nothing whose window has opened is sealed.
+     * `systems`, when given, runs beside `candidates`: the ways of reading that agreed
+     * on each, kept beside the claim (never inside its fingerprint).
      */
-    fun sealFeed(context: Context, profile: BirthProfile, candidates: List<ClaimInputRecord>, max: Int): Int {
+    fun sealFeed(context: Context, profile: BirthProfile, candidates: List<ClaimInputRecord>, max: Int, systems: List<List<String>> = emptyList()): Int {
         if (max <= 0 || candidates.isEmpty()) return 0
         // The stretch sealed on the past-check page is a sealed prediction too.
         val stretches = PastReveal.seals(context).filter { it.verdict.isEmpty() }
@@ -121,6 +219,13 @@ object Trust {
         }
         val sealed = sealNewClaims(ClaimStore.lines(context, profile.name), fresh, Instants.now(), max.toUInt(), Lang.code, profile.longitude)
         ClaimStore.addAll(context, profile.name, sealed.map { it.line })
+        if (systems.isNotEmpty()) {
+            val meta = sealed.mapNotNull { c ->
+                val i = candidates.indexOfFirst { it.area == c.area && it.good == c.good && it.windowStart.taiSeconds == c.windowStart.taiSeconds && it.windowEnd.taiSeconds == c.windowEnd.taiSeconds }
+                systems.getOrNull(i)?.takeIf { it.isNotEmpty() }?.let { c.key to it }
+            }.toMap()
+            ClaimMeta.put(context, profile.name, meta)
+        }
         return sealed.size
     }
 
@@ -136,22 +241,32 @@ object Trust {
     fun isUnsure(context: Context, profile: BirthProfile, id: String): Boolean =
         id in ProfileStore.prefs(context).getStringSet(UNSURE + profile.name, emptySet()).orEmpty()
 
-    /** Every answered item: sealed predictions (both kinds), the past, the quiz. */
+    /**
+     * Every answered item, each flagged by the hold-out rule. The headline counts only
+     * sealed predictions answered after their dates (`usedForFitting = false`: they were
+     * scored blind, and their score is frozen in the stored line; joining the birth-time
+     * narrowing afterwards never re-counts them). Answers about the past tuned the birth
+     * time and the person's weights before anything scored them, so they are flagged and
+     * kept on their own separate line; the quiz is about the past too and the engine keeps
+     * it there as well. Logged events (the journal, the ledger) tune the birth time and
+     * never enter the score at all.
+     */
     fun scoreItems(context: Context, profile: BirthProfile): List<ScoreItemInput> {
         val out = ArrayList<ScoreItemInput>()
         for (c in ClaimStore.entries(context, profile.name)) {
-            if (c.outcome.isNotEmpty()) out.add(ScoreItemInput("sealed", c.outcome, 0.5))
+            if (c.outcome.isNotEmpty()) out.add(ScoreItemInput("sealed", c.outcome, 0.5, false))
         }
         val stretches = PastReveal.seals(context).filter { it.verdict.isNotEmpty() }
-        for (s in stretches) out.add(ScoreItemInput("sealed", s.verdict, 0.5))
+        for (s in stretches) out.add(ScoreItemInput("sealed", s.verdict, 0.5, false))
         for (a in PastReveal.answers(context)) {
             if (a.verdict !in setOf("yes", "close", "no")) continue
-            // A sealed stretch, once answered, also joins the answers: count it once, as sealed.
+            // A sealed prediction, once answered, also joins the answers: it is counted once, as sealed.
+            if (a.sealedId.isNotEmpty()) continue
             if (stretches.any { it.fromSec == a.fromSec && it.toSec == a.toSec && it.life == a.life }) continue
-            out.add(ScoreItemInput("past", a.verdict, 0.5))
+            out.add(ScoreItemInput("past", a.verdict, 0.5, true))
         }
         for (g in QuizScores.all(context, profile.name)) {
-            repeat(g.total) { i -> out.add(ScoreItemInput("quiz", if (i < g.correct) "yes" else "no", g.chance)) }
+            repeat(g.total) { i -> out.add(ScoreItemInput("quiz", if (i < g.correct) "yes" else "no", g.chance, false)) }
         }
         return out
     }

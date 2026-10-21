@@ -44,6 +44,13 @@ pub fn blind_answers(lang: String) -> Vec<BlindAnswerRecord> {
     ig::BLIND_ANSWERS.iter().map(|a| BlindAnswerRecord { key: a.key().into(), label: a.label(lang).into() }).collect()
 }
 
+/// The part of life's key ("Money") for any feed's area word ("Wealth", "gains",
+/// "Marriage", "abroad", …); none when it names no part of life.
+#[uniffi::export]
+pub fn life_key_of(area: String) -> Option<String> {
+    ig::life_of_any(&area).map(|l| l.name().to_string())
+}
+
 /// The question asked before a sealed claim's words are shown: "Did anything happen
 /// around money between 14 Nov and 19 Nov? Good, hard, or nothing much?"; empty for an
 /// unknown part of life.
@@ -78,6 +85,17 @@ pub fn blind_resolve(line: String, answer: String, when: ExactInstant, lang: Str
         None => None,
     };
     Ok(BlindResolveRecord { claim, outcome: outcome.unwrap_or("unsure").into(), reveal })
+}
+
+/// What a blind answer makes of any sealed prediction said to be `good` or hard,
+/// sealed at `sealed_at` with `statement`: the outcome key ("yes", "close", "no" or
+/// "unsure") and the words shown once it is revealed. For seals that are not stored as
+/// claim lines (the stretch sealed on the past-check page).
+#[uniffi::export]
+pub fn blind_judge(good: bool, answer: String, sealed_at: ExactInstant, statement: String, lang: String, lon: f64) -> Result<BlindResolveRecord, KshanaError> {
+    let a = BlindAnswer::parse(&answer).ok_or_else(|| KshanaError::Engine(format!("unknown answer {answer}")))?;
+    let reveal = ig::blind_reveal(Lang::parse(&lang), sealed_at.into(), &statement, good, a, lon);
+    Ok(BlindResolveRecord { claim: None, outcome: ig::blind_outcome(good, a).unwrap_or("unsure").into(), reveal })
 }
 
 /// A sealed claim a logged event bears on.

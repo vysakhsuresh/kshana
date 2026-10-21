@@ -129,6 +129,7 @@ fun AboutScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
 
         AboutCard("The name", "Kshana is the Sanskrit word for a moment: the smallest piece of time that still matters. The app is built on one idea: that every moment of your life has its own weather, and that knowing it ahead helps you meet it well.")
         AboutCard("Why we made it", "Most astrology apps speak a language only astrologers understand, or say the same thing to everyone. Kshana works from your own birth and the real sky, and tells you in plain words what is coming, when, how strongly, and what to do. Guidance, never a guarantee, and it shows you openly how often it has been right.")
+        RecordForYouCard(onOpen)
         AboutCard("What it stands on", "The positions of the sun, moon and planets come from NASA's planetary data and the international Earth-rotation service, worked out on this phone to a fraction of a second. The readings follow long-tested rules from the classic Indian texts, weighed together and checked against your own life.")
         AboutCard("Places", "Every town and village in India and every town of 1,000 people or more worldwide, with their own coordinates and time zones, from GeoNames (geonames.org), used under the Creative Commons Attribution 4.0 licence.")
         AboutCard("Your privacy", "No account, no sign-in, no advertising, no tracking. Nothing you enter leaves this phone unless you send it yourself.")
@@ -161,6 +162,24 @@ fun AboutScreen(onBack: () -> Unit, onOpen: (String) -> Unit) {
         )
         QuietButton("GUIDE: HOW TO USE KSHANA", onClick = { onOpen("guide") }, modifier = Modifier.fillMaxWidth())
         QuietButton("HOW IT WORKS AND THE PRIVACY POLICY", onClick = { onOpen("how") }, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+/**
+ * Kshana's record for you: the headline score (sealed predictions only, answered after
+ * their dates) against guessing, how many are sealed and still to come, and a door to
+ * the scoreboard. Before five are answered it says only that it is too early to tell.
+ */
+@Composable
+private fun RecordForYouCard(onOpen: (String) -> Unit) {
+    val context = LocalContext.current
+    val profile = remember { com.kshana.app.data.ProfileStore.load(context) } ?: return
+    val card = remember(profile.name) { com.kshana.app.data.Integrity.record(context, profile) } ?: return
+    Column(Modifier.fillMaxWidth().glass(14.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("KSHANA'S RECORD FOR YOU", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(card.headline, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = if (card.early) KshanaColors.Text else KshanaColors.Gold)
+        Text(card.detail, style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
+        Text("THE WHOLE SCOREBOARD ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable { onOpen("scoreboard") }.padding(vertical = 4.dp))
     }
 }
 

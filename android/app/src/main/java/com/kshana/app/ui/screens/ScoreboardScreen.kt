@@ -22,6 +22,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,10 +50,14 @@ import com.kshana.app.ui.theme.glass
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.kshana.app.data.Integrity
+import uniffi.kshana_ffi.BlindResolveRecord
 import uniffi.kshana_ffi.ClaimRecord
 import uniffi.kshana_ffi.ScoreboardRecord
+import uniffi.kshana_ffi.blindAnswers
+import uniffi.kshana_ffi.blindJudge
+import uniffi.kshana_ffi.blindQuestion
 import uniffi.kshana_ffi.forecastTilt
-import uniffi.kshana_ffi.resolveClaim
 import uniffi.kshana_ffi.scoreboard
 
 /** The fingerprint as the person reads it: the first eight characters, in two fours. */
@@ -61,24 +67,13 @@ private fun ClaimRecord.code(): String = id.take(8).uppercase().chunked(4).joinT
 private fun scoreOf(context: android.content.Context, profile: BirthProfile): ScoreboardRecord =
     scoreboard(Trust.scoreItems(context, profile), Lang.code)
 
-/** Answer a claim; returns the new list of due claims. A "not sure" leaves the claim out of the score. */
-private fun answerClaim(context: android.content.Context, profile: BirthProfile, c: ClaimRecord, outcome: String) {
-    if (outcome == "unsure") {
-        Trust.markUnsure(context, profile, c.id)
-        return
-    }
-    runCatching { resolveClaim(c.line, outcome, Instants.now()) }.getOrNull()?.let { ClaimStore.replace(context, profile.name, c.line, it.line) }
-}
-
-/** What the app says back to an answer: misses as plainly as hits, never a hard word left alone. */
-private fun replyTo(c: ClaimRecord, outcome: String): String = when {
-    outcome == "unsure" -> "That is fine. This one is left out of the score."
-    outcome == "yes" && c.good -> "It came as sealed. That goes on your score."
-    outcome == "yes" -> "It came as sealed. That goes on your score. A hard stretch passes, and what helps can ease the next one."
-    outcome == "close" -> "Close counts half. That goes on your score."
-    c.good -> "It did not come. That goes on your score as plainly as a hit; each answer sharpens the reading for you."
-    else -> "It did not come, which is good news. It goes on your score honestly, as a miss."
-}
+/**
+ * The question asked before the sealed words are shown, written from the part of life
+ * and the dates alone, so it says nothing of which way the prediction leaned.
+ */
+private fun blindQuestionOf(c: ClaimRecord, lon: Double): String =
+    runCatching { blindQuestion(Lang.code, c.area, c.windowStart, c.windowEnd, lon) }.getOrNull()?.takeIf { it.isNotBlank() }
+        ?: "Did anything happen between ${localText(c.windowStart, DATE_ONLY)} and ${localText(c.windowEnd, DATE_ONLY)}? Good, hard, or nothing much?"
 
 /**
  * The plain scoreboard: one honest number ("For you, Kshana has been right 38 times out
@@ -99,6 +94,9 @@ fun ScoreboardScreen(profile: BirthProfile, settings: EngineSettings, onBack: ()
     val waiting = claims.filter { it.outcome.isEmpty() && it.windowEnd.taiSeconds > nowTai }
     val answered = claims.filter { it.outcome.isNotEmpty() }.sortedByDescending { it.resolvedAt?.taiSeconds ?: 0L }
     val tilt = remember { runCatching { forecastTilt(PersonalWeights.input(context, profile.name), Lang.code) }.getOrNull() }
+    val answeredHere = remember { mutableStateListOf<ClaimRecord>() }
+    val confidences = remember(version) { listOf("strong", "likely").mapNotNull { t -> Integrity.confidence(context, profile, t)?.let { t to it } } }
+    val rates = remember(version) { Integrity.systemRates(context, profile) }
 
     LaunchedEffect(profile) {
         if (Trust.topUp(context, profile, settings) > 0) version++
@@ -149,16 +147,25 @@ fun ScoreboardScreen(profile: BirthProfile, settings: EngineSettings, onBack: ()
                     )
                 }
             }
-            Text(
-                "Yes counts as right, Close as half, No as wrong; Not sure is left out. Guessing means a coin for each yes-or-no stretch, and one pick among the choices for each quiz question.",
-                style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
-            )
         }
 
-        if (due.isNotEmpty()) {
+        // The past, on its own line: it tuned the birth time, so it never counts.
+        if (board != null && board.fitTotal > 0u) {
+            SectionLabel("How well the reading fits your past")
+            Text(board.fitLine, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+            if (board.fitLines.size > 1) {
+                for (l in board.fitLines) Text("· ${l.words}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            }
+        }
+
+        // Cards answered here stay on screen, so the sealed words revealed after a blind answer can be read.
+        val dueShown = (answeredHere + due).distinctBy { it.id }.sortedBy { it.windowStart.taiSeconds }
+        if (dueShown.isNotEmpty()) {
             SectionLabel("Waiting for your answer")
-            for (c in due) {
-                ClaimAnswerCard(c, onAnswer = { o -> answerClaim(context, profile, c, o); version++ }, onRemedy = { onOpen("parihara") })
+            for (c in dueShown) {
+                key(c.id) {
+                    ClaimAnswerCard(c, profile, onAnswered = { if (answeredHere.none { it.id == c.id }) answeredHere.add(c); version++ }, onRemedy = { onOpen("parihara") })
+                }
             }
         }
 
@@ -188,6 +195,28 @@ fun ScoreboardScreen(profile: BirthProfile, settings: EngineSettings, onBack: ()
             SectionLabel("What your answers do")
             Text(it.plain, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
         }
+
+        if (confidences.isNotEmpty()) {
+            SectionLabel("How sure, in numbers only when earned")
+            for ((t, c) in confidences) {
+                Text(
+                    "${if (t == "strong") "The firmest predictions" else "The likely ones"}: ${c.words}",
+                    style = MaterialTheme.typography.bodyMedium, color = if (c.numberShown) KshanaColors.Text else KshanaColors.TextSoft,
+                )
+            }
+        }
+
+        if (rates.isNotEmpty()) {
+            SectionLabel("Each way of reading, for you")
+            for (r in rates) Text(r.words, style = MaterialTheme.typography.bodySmall, color = if (r.weighted) KshanaColors.Text else KshanaColors.Muted)
+            Text(
+                "Each one is checked only on sealed predictions it agreed with, after their dates. Below 10 checks it changes nothing; after that it counts a little more or less for you, and never so much that one way of reading outweighs the rest.",
+                style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+            )
+        }
+
+        SectionLabel("How this works")
+        board?.let { Text(it.howItWorks, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft) }
 
         SectionLabel("How sealing works")
         Text(
@@ -226,31 +255,98 @@ private fun ClaimRow(c: ClaimRecord, nowTai: Long) {
     }
 }
 
-/** The one gentle question for a closed window: Yes, Close, No or Not sure, then a kind word back. */
+/**
+ * The blind question for a closed window: first "did anything happen around money
+ * between these dates, good, hard, or nothing much?", asked without the sealed words;
+ * only after the answer is the sealed statement revealed, with how it turned out and a
+ * kind word back. Blind by design: the answer cannot lean on what was predicted.
+ */
 @Composable
-private fun ClaimAnswerCard(c: ClaimRecord, onAnswer: (String) -> Unit, onRemedy: () -> Unit, onScore: (() -> Unit)? = null) {
-    var said by remember(c.id) { mutableStateOf<String?>(null) }
+private fun ClaimAnswerCard(c: ClaimRecord, profile: BirthProfile, onAnswered: () -> Unit, onRemedy: () -> Unit, onScore: (() -> Unit)? = null) {
+    val context = LocalContext.current
+    var said by remember(c.id) { mutableStateOf<BlindResolveRecord?>(null) }
+    var saidKey by remember(c.id) { mutableStateOf("") }
+    val question = remember(c.id) { blindQuestionOf(c, profile.longitude) }
+    val buttons = remember { runCatching { blindAnswers(Lang.code) }.getOrDefault(emptyList()) }
     Column(Modifier.fillMaxWidth().glass(16.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("A SEALED PREDICTION HAS CLOSED", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-        Text(c.question, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 25.sp, color = KshanaColors.Text)
-        Text("Sealed ${localText(c.createdAt, DATE_ONLY)}, before it began · ${c.code()}", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
         val s = said
         if (s == null) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                for ((label, key) in listOf("Yes" to "yes", "Close" to "close", "No" to "no")) {
-                    OptionBox(label, selected = false, onClick = { said = key; onAnswer(key) }, modifier = Modifier.weight(1f))
+            Text(question, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 25.sp, color = KshanaColors.Text)
+            Text(
+                "Sealed ${localText(c.createdAt, DATE_ONLY)}, before it began · ${c.code()}. What it said stays hidden until you answer, so your answer is your own.",
+                fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted,
+            )
+            val main = buttons.filter { it.key != "unsure" }
+            for (row in main.chunked(2)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (b in row) {
+                        OptionBox(b.label, selected = false, onClick = {
+                            Integrity.answerBlind(context, profile, c, b.key)?.let { said = it; saidKey = b.key; onAnswered() }
+                        }, modifier = Modifier.weight(1f))
+                    }
+                    if (row.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
-            Text("NOT SURE", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable { said = "unsure"; onAnswer("unsure") }.padding(vertical = 4.dp))
+            buttons.firstOrNull { it.key == "unsure" }?.let { b ->
+                Text(b.label.uppercase(), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable {
+                    Integrity.answerBlind(context, profile, c, b.key)?.let { said = it; saidKey = b.key; onAnswered() }
+                }.padding(vertical = 4.dp))
+            }
         } else {
-            Text(replyTo(c, s), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+            Text(s.reveal, fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 23.sp, color = KshanaColors.Text)
+            Text("Sealed ${localText(c.createdAt, DATE_ONLY)} · ${c.code()} · ${if (c.verified) "fingerprint matches" else "FINGERPRINT DOES NOT MATCH"}", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = if (c.verified) KshanaColors.Muted else KshanaColors.Ember)
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                if (!c.good) {
+                if (!c.good || saidKey == "hard" || saidKey == "mixed") {
                     Text("WHAT HELPS ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRemedy).padding(vertical = 4.dp))
                 }
                 if (onScore != null) {
                     Text("YOUR SCORE ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onScore).padding(vertical = 4.dp))
                 }
+            }
+        }
+    }
+}
+
+/**
+ * The same blind question for the stretch sealed on the past-check page (a
+ * [com.kshana.app.data.PastReveal.Seal]): asked first, then the sealed words revealed.
+ * `onAnswered` gets the outcome key ("yes", "close", "no", or "unsure") for
+ * `PastReveal.resolve`. For the Now tab's sealed-prediction card.
+ */
+@Composable
+fun BlindSealCard(seal: com.kshana.app.data.PastReveal.Seal, lon: Double, onAnswered: (String) -> Unit, onRemedy: () -> Unit) {
+    var said by remember(seal.fingerprint) { mutableStateOf<BlindResolveRecord?>(null) }
+    var saidKey by remember(seal.fingerprint) { mutableStateOf("") }
+    val buttons = remember { runCatching { blindAnswers(Lang.code) }.getOrDefault(emptyList()) }
+    val question = remember(seal.fingerprint) {
+        runCatching { blindQuestion(Lang.code, seal.life, uniffi.kshana_ffi.ExactInstant(seal.fromSec, 0u), uniffi.kshana_ffi.ExactInstant(seal.toSec, 0u), lon) }.getOrNull()?.takeIf { it.isNotBlank() } ?: seal.question
+    }
+    val sealedAt = remember(seal.fingerprint) { Instants.fromInstant(java.time.Instant.ofEpochMilli(seal.sealedAt)) }
+    Column(Modifier.fillMaxWidth().glass(16.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("A SEALED PREDICTION HAS CLOSED", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        val s = said
+        if (s == null) {
+            Text(question, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 25.sp, color = KshanaColors.Text)
+            Text("Sealed before it began · ${seal.shortCode()}. What it said stays hidden until you answer.", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
+            for (row in buttons.chunked(2)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (b in row) {
+                        OptionBox(b.label, selected = false, onClick = {
+                            runCatching { blindJudge(seal.good, b.key, sealedAt, seal.statement, Lang.code, lon) }.getOrNull()?.let {
+                                said = it
+                                saidKey = b.key
+                                onAnswered(it.outcome)
+                            }
+                        }, modifier = Modifier.weight(1f))
+                    }
+                    if (row.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+        } else {
+            Text(s.reveal, fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 23.sp, color = KshanaColors.Text)
+            if (!seal.good || saidKey == "hard" || saidKey == "mixed") {
+                Text("WHAT HELPS ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRemedy).padding(vertical = 4.dp))
             }
         }
     }
@@ -279,7 +375,8 @@ fun ResolveDueCard(profile: BirthProfile, onOpen: (String) -> Unit) {
     val shown = current ?: next ?: return
     ClaimAnswerCard(
         shown,
-        onAnswer = { o -> current = shown; answerClaim(context, profile, shown, o) },
+        profile,
+        onAnswered = { current = shown },
         onRemedy = { onOpen("parihara") },
         onScore = { onOpen("scoreboard") },
     )
