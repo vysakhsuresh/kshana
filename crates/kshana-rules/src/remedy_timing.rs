@@ -525,6 +525,179 @@ impl TimingTable {
     }
 }
 
+/// The chosen first hour of a remedy: a daytime hora of the planet on its own weekday,
+/// clear of that day's Rahu kala, preferring a day whose tithi or the Moon's nakshatra
+/// belongs to the planet (Pushya counts for every planet) and the waxing fortnight, and
+/// never more than a fortnight later than the soonest such hora.
+///
+/// The preference, in points: the planet's tithi (table 4 or 5 above) 2; the Moon in the
+/// planet's star or in Pushya 2; Shukla paksha 1 (the texts begin japa and vows in the
+/// bright fortnight); the first hora after sunrise 1 (the day's cue); each week of delay
+/// costs 2, so a supportive day is waited for at most two weeks. Ties go to the earlier.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StartChoice {
+    /// The hora window the remedy begins in.
+    pub hora: RemedyWindow,
+    /// The solar day it falls in.
+    pub day: SolarDay,
+    /// Weekday, 0 = Sunday (always the planet's own).
+    pub weekday: u32,
+    /// That day's Rahu kala, which the hora keeps clear of.
+    pub rahu_kala: (Instant, Instant),
+    /// Tithi (1–30) at the middle of the hora.
+    pub tithi: Option<u8>,
+    /// True when that tithi is one of the planet's.
+    pub tithi_supports: bool,
+    /// The Moon's nakshatra (0 = Ashwini) at the middle of the hora.
+    pub star: Option<usize>,
+    /// True when that star is the planet's own or Pushya.
+    pub star_supports: bool,
+    /// True in Shukla paksha.
+    pub waxing: bool,
+    /// Weeks after the soonest candidate day (0 = the soonest of the planet's weekdays).
+    pub weeks_later: u32,
+    /// The preference score above.
+    pub score: i32,
+}
+
+/// Pushya, the universal start-star for vows and japa (index 7).
+pub const PUSHYA: usize = 7;
+
+impl TimingTable {
+    /// The tithi number (1–30) at `t`, if the table spans it.
+    pub fn tithi_at(&self, t: Instant) -> Option<u8> {
+        self.tithis.iter().find(|s| s.start <= t && t < s.end).map(|s| s.number)
+    }
+
+    /// The Moon's nakshatra index at `t`, if the table spans it.
+    pub fn nakshatra_at(&self, t: Instant) -> Option<usize> {
+        self.nakshatras.iter().find(|s| s.start <= t && t < s.end).map(|s| s.index)
+    }
+
+    /// The best first hour for a remedy of `planet` beginning after `after`, looking at
+    /// up to `weeks` of the planet's weekdays (see [`StartChoice`]). Only daytime horas
+    /// (sunrise to sunset) are offered: a remedy is begun by day. None when the table
+    /// holds none of the planet's weekdays after `after`.
+    pub fn best_start(&self, obs: &Observer, planet: DashaLord, after: Instant, weeks: usize) -> Option<StartChoice> {
+        let own = tithi_numbers(planet);
+        let mut best: Option<StartChoice> = None;
+        let mut first_day: Option<Instant> = None;
+        for w in self.windows(obs, planet, weeks + 1) {
+            if !w.is_daytime_hora() || w.start <= after {
+                continue;
+            }
+            let Some(f) = self.days.iter().find(|f| f.day.sunrise <= w.start && w.start < f.day.next_sunrise) else {
+                continue;
+            };
+            let first = *first_day.get_or_insert(f.day.sunrise);
+            let weeks_later = ((f.day.sunrise.ns_since(first) + 7 * NS_PER_DAY / 2) / (7 * NS_PER_DAY)) as u32;
+            if weeks_later as usize >= weeks {
+                break;
+            }
+            let rk = rahu_kala(&f.day, obs);
+            if w.start < rk.1 && w.end > rk.0 {
+                continue;
+            }
+            let mid = w.start.add_ns(w.end.ns_since(w.start) / 2);
+            let tithi = self.tithi_at(mid);
+            let star = self.nakshatra_at(mid);
+            let tithi_supports = tithi.is_some_and(|n| own.iter().any(|(k, _)| *k == n));
+            let star_supports = star.is_some_and(|i| i == PUSHYA || nakshatra_lord(i) == planet);
+            let waxing = tithi.is_some_and(|n| n <= 15);
+            let score = 2 * i32::from(tithi_supports) + 2 * i32::from(star_supports) + i32::from(waxing) + i32::from(w.hora_index == 1)
+                - 2 * weeks_later as i32;
+            let c = StartChoice {
+                hora: w,
+                day: f.day,
+                weekday: f.weekday,
+                rahu_kala: rk,
+                tithi,
+                tithi_supports,
+                star,
+                star_supports,
+                waxing,
+                weeks_later,
+                score,
+            };
+            if best.as_ref().map_or(true, |b| c.score > b.score) {
+                best = Some(c);
+            }
+        }
+        best
+    }
+}
+
+/// How long a remedy is kept, with the count's standing: a text, a temple or family
+/// custom, or the app's plain default where the tradition fixes no count.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Keep {
+    /// How many times it is done (days for a daily vow, weekdays for a weekly one).
+    pub times: u32,
+    /// Days from the first time to the end of the last, inclusive.
+    pub days: u32,
+    /// Days between two times: 1 daily, 7 weekly, 30 monthly, 0 for a single act.
+    pub every: u32,
+    /// `"text"`, `"custom"` or `"default"`.
+    pub basis: &'static str,
+    /// Where the count comes from.
+    pub source: &'static str,
+}
+
+/// The mandala: 48 days.
+pub const KEEP_SOURCE_MANDALA: &str = "A mandala of 48 days (41 in the Sabarimala vow) is the temple custom of South India for a daily vow or japa; custom, not a single verse";
+/// Lal Kitab's vow length.
+pub const KEEP_SOURCE_LAL_KITAB: &str = "Lal Kitab (1939–1952): a remedy is kept 40 to 43 days without a break";
+/// The 21-day vow.
+pub const KEEP_SOURCE_21: &str = "Twenty-one days is the common short vow of household practice; custom, no single verse";
+/// The one-month vow.
+pub const KEEP_SOURCE_MONTH: &str = "One lunar month, the span of a month-long vrata (as Chandrayana is kept, BPHS ch. 85); the length is the text's, the act is the app's";
+/// The weekday counts.
+pub const KEEP_SOURCE_WEEKDAYS: &str = "Weekday vratas as practised across India: 12 Sundays, 16 Mondays, 21 Tuesdays, 21 Wednesdays, 16 Thursdays, 16 Fridays, 7 Saturdays (19 in some families); practice, no single classical verse";
+/// No count in the tradition.
+pub const KEEP_SOURCE_DEFAULT: &str = "The tradition fixes no count for this; eight weeks (three months for a monthly act, one week or month for a single act) is the app's plain default";
+
+/// The weekday count the tradition gives for the planet's weekday vow, if any (the
+/// nodes have none).
+pub fn weekday_count(planet: DashaLord) -> Option<u32> {
+    match planet {
+        DashaLord::Sun => Some(12),
+        DashaLord::Moon => Some(16),
+        DashaLord::Mars | DashaLord::Mercury => Some(21),
+        DashaLord::Jupiter | DashaLord::Venus => Some(16),
+        DashaLord::Saturn => Some(7),
+        DashaLord::Rahu | DashaLord::Ketu => None,
+    }
+}
+
+/// How long to keep a remedy, from its effort key (`remedy_tree::effort_key`), its
+/// branch and whether it is tied to the planet's weekday: a daily act of faith a mandala
+/// of 48 days; a daily deed or habit 21 days; a "40 days" item the Lal Kitab's 40; a
+/// "30 days" item one lunar month; a weekly act the weekday count of the planet's vow
+/// (eight weeks for the nodes or when no day is set); a single act once, in its week or
+/// month.
+pub fn keep_for(effort_key: &str, branch: &str, planet: DashaLord, on_weekday: bool) -> Keep {
+    let faith = matches!(branch, "tradition" | "prayer");
+    let weekly = |n: Option<u32>| match n {
+        Some(n) if on_weekday => Keep { times: n, days: (n - 1) * 7 + 1, every: 7, basis: "custom", source: KEEP_SOURCE_WEEKDAYS },
+        _ => Keep { times: 8, days: 7 * 7 + 1, every: 7, basis: "default", source: KEEP_SOURCE_DEFAULT },
+    };
+    let daily = |n: u32, basis: &'static str, source: &'static str| Keep { times: n, days: n, every: 1, basis, source };
+    match effort_key {
+        "40" => daily(40, "text", KEEP_SOURCE_LAL_KITAB),
+        "30" => daily(30, "text", KEEP_SOURCE_MONTH),
+        "daily" | "10min" if faith => daily(48, "custom", KEEP_SOURCE_MANDALA),
+        "daily" | "10min" => daily(21, "custom", KEEP_SOURCE_21),
+        "weekly" => weekly(weekday_count(planet)),
+        "wish" if on_weekday => weekly(weekday_count(planet)),
+        "wish" => daily(48, "custom", KEEP_SOURCE_MANDALA),
+        "3w" => Keep { times: 24, days: 7 * 8, every: 2, basis: "default", source: KEEP_SOURCE_DEFAULT },
+        "monthly" => Keep { times: 3, days: 61, every: 30, basis: "default", source: KEEP_SOURCE_DEFAULT },
+        "week" => Keep { times: 1, days: 7, every: 0, basis: "default", source: KEEP_SOURCE_DEFAULT },
+        "month" => Keep { times: 1, days: 30, every: 0, basis: "default", source: KEEP_SOURCE_DEFAULT },
+        _ => Keep { times: 1, days: 1, every: 0, basis: "default", source: KEEP_SOURCE_DEFAULT },
+    }
+}
+
 /// The planet's next windows from `from`: `count` of its weekdays with every hora of
 /// the planet on each (the first after sunrise is the day's cue), the Rahu kala to
 /// avoid and the Brahma muhurta before that sunrise, plus up to `count` of its tithis
@@ -654,6 +827,62 @@ mod tests {
             let i = nakshatra_index_at(&spk, Ayanamsa::Lahiri, mid).unwrap();
             assert_eq!(nakshatra_lord(i), DashaLord::Saturn, "{}", x.words);
         }
+    }
+
+    #[test]
+    fn best_start_is_a_daytime_hora_on_the_weekday_outside_rahu_kala() {
+        let Some(spk) = kernel() else { return };
+        let obs = kochi();
+        let from = Utc::new(2026, 10, 21, 3, 0, 0, 0).unwrap().to_instant().unwrap();
+        let table = TimingTable::compute(&spk, None, &obs, Ayanamsa::Lahiri, from, 35).unwrap();
+        let tol = 10 * NS_PER_SEC / 1_000;
+        for g in DashaLord::ORDER {
+            let c = table.best_start(&obs, g, from, 3).unwrap_or_else(|| panic!("{g:?}"));
+            assert!(c.hora.start > from && c.hora.is_daytime_hora(), "{g:?} {}", c.hora.words);
+            assert!(c.weeks_later < 3);
+            let mid = c.hora.start.add_ns(c.hora.end.ns_since(c.hora.start) / 2);
+            let d = solar_day(&spk, None, &obs, mid).unwrap().unwrap();
+            assert_eq!(weekday_at(d.sunrise, &obs), weekday_of(g), "{g:?}");
+            assert_eq!(c.weekday, weekday_of(g));
+            let (lord, s, _) = hora_at(&d, &obs, mid);
+            assert_eq!(lord, hora_name(g), "{g:?}");
+            assert!(s.ns_since(c.hora.start).abs() < tol);
+            let (rs, re) = rahu_kala(&d, &obs);
+            assert!(c.hora.end <= rs || c.hora.start >= re, "{g:?} in Rahu kala");
+            assert!(c.hora.end <= d.sunset.add_ns(tol), "{g:?} by day");
+            // The support flags agree with the sky.
+            if let Some(n) = c.tithi {
+                assert_eq!(n, tithi_number_at(&spk, mid).unwrap());
+                assert_eq!(c.tithi_supports, tithi_numbers(g).iter().any(|(k, _)| *k == n));
+            }
+            if let Some(i) = c.star {
+                assert_eq!(i, nakshatra_index_at(&spk, Ayanamsa::Lahiri, mid).unwrap());
+            }
+            // Nothing else in reach scores higher.
+            for w in table.windows(&obs, g, 4) {
+                if w.is_daytime_hora() && w.start > from && w.start < c.hora.start {
+                    let m = w.start.add_ns(w.end.ns_since(w.start) / 2);
+                    let t = table.tithi_at(m).unwrap();
+                    let st = table.nakshatra_at(m).unwrap();
+                    let sc = 2 * i32::from(tithi_numbers(g).iter().any(|(k, _)| *k == t))
+                        + 2 * i32::from(st == PUSHYA || nakshatra_lord(st) == g)
+                        + i32::from(t <= 15)
+                        + i32::from(w.hora_index == 1);
+                    assert!(sc - 2 * ((w.start.ns_since(from) / (7 * NS_PER_DAY)) as i32) <= c.score + 2, "{g:?}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn keep_lengths() {
+        assert_eq!(keep_for("weekly", "deeds", DashaLord::Saturn, true).times, 7);
+        assert_eq!(keep_for("weekly", "deeds", DashaLord::Sun, true).times, 12);
+        assert_eq!(keep_for("weekly", "deeds", DashaLord::Sun, false).basis, "default");
+        assert_eq!(keep_for("daily", "mind", DashaLord::Moon, false).days, 21);
+        assert_eq!(keep_for("daily", "tradition", DashaLord::Moon, false).days, 48);
+        assert_eq!(keep_for("40", "deeds", DashaLord::Moon, false).basis, "text");
+        assert_eq!(keep_for("once", "giving", DashaLord::Moon, false).times, 1);
     }
 
     #[test]
