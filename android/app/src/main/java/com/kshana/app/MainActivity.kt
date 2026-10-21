@@ -489,6 +489,8 @@ private fun App() {
             composable("timelords") { withProfile { TimeLordsScreen(it, settings, onBack = back) } }
             composable("trace") { withProfile { TraceScreen(it, here, settings, onBack = back) } }
             composable("family") { FamilyScreen(onBack = back) }
+            composable("scoreboard") { withProfile { com.kshana.app.ui.screens.ScoreboardScreen(it, settings, onBack = back, onOpen = { r -> open(r) }) } }
+            composable("familyproof") { withProfile { com.kshana.app.ui.screens.FamilyProofScreen(it, here, settings, onBack = back, onAddFamily = { open("family") }, onRemedy = { open("parihara") }) } }
             composable("compatibility") {
                 CompatibilityScreen(settings = settings, onFamily = { open("family") }, onBack = back)
             }

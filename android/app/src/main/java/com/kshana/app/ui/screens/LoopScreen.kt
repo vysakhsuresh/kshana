@@ -208,7 +208,10 @@ fun LoopScreen(
                         Text("K S H A N A", fontFamily = FontFamily.Serif, fontSize = 20.sp, letterSpacing = 4.sp, color = KshanaColors.Gold)
                         Text("क्षण · the moment", fontFamily = FontFamily.Serif, fontSize = 11.sp, letterSpacing = 1.sp, color = KshanaColors.Gold.copy(alpha = 0.55f))
                     }
-                    Icon(Icons.Filled.Settings, contentDescription = "settings", tint = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onSettings).padding(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ScoreChip(profile, onClick = { onOpen("scoreboard") })
+                        Icon(Icons.Filled.Settings, contentDescription = "settings", tint = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onSettings).padding(8.dp))
+                    }
                 }
                 val local = ZonedDateTime.ofInstant(shownTick, java.time.ZoneId.systemDefault())
                 Text(
@@ -294,6 +297,8 @@ fun LoopScreen(
             }
             item {
                 Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ResolveDueCard(profile, onOpen = onOpen)
+                    RemedyCheckInCard(profile, onOpen = onRemedy)
                     SealOnNow(onRemedy = onRemedy, onOpen = onOpen)
                     WhatHelpsCard(testing = brief?.saturnActive == true, onRemedy = onRemedy)
                     DiscoverCard(testing = brief?.saturnActive == true, onOpen = onOpen)
