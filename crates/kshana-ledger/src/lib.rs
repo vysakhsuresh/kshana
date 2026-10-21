@@ -46,6 +46,7 @@ mod event;
 mod hash;
 mod json;
 mod metrics;
+mod opentest;
 mod posterior;
 mod retrodict;
 mod score;
@@ -71,6 +72,12 @@ pub use hash::{seed_of, sha256, sha256_hex, SplitMix};
 pub use metrics::{
     count_words, cube_root_bins, metrics, wilson_interval, CalibrationBin, Metrics, MIN_FOR_CURVE,
     MIN_FOR_PERCENT, MIN_PER_BIN, Z95,
+};
+pub use opentest::{
+    alpha_at_look, contribution, evaluate, evaluate_under, holm, install_code, no_better_than_chance, own_records,
+    own_words, protocol_hash, protocol_text, record_words, short_hash, silenced_areas, silenced_line, tail_p,
+    Contribution, Exclusions, GroupResult, LeftOut, OpenRecord, OpenReport, PooledArea, Silenced, SilencedBy,
+    TestClaim, Tier, ALPHA, LOOK_EVERY, MIN_SALT, POOLED_AREAS, PROTOCOL_HASH_V1, PROTOCOL_VERSION, SILENCE_MIN,
 };
 pub use posterior::{birth_posterior, hpd_interval, Posterior, LIKELIHOOD_FLOOR, MAX_CANDIDATES};
 pub use retrodict::{retrodict, PeriodReading};
