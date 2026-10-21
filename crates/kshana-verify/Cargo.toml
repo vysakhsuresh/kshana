@@ -1,6 +1,6 @@
 [package]
 name = "kshana-verify"
-description = "Golden-vector tests: Kshana against ERFA, jplephem and Skyfield (tests/golden/*.json)"
+description = "Golden-vector tests: Kshana against ERFA, jplephem, Skyfield, Swiss Ephemeris, Drik Panchang and the classical tables"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -20,6 +20,9 @@ kshana-sky = { workspace = true }
 kshana-events = { workspace = true }
 kshana-vedic = { workspace = true }
 kshana-houses = { workspace = true }
+kshana-chart = { workspace = true }
+kshana-rules = { workspace = true }
+kshana-calendar = { workspace = true }
 
 [lints]
 workspace = true
