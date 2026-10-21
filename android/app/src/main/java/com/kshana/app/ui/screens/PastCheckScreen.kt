@@ -325,6 +325,8 @@ private fun FactCard(fact: PastReveal.Fact, onAnswer: (String) -> Unit) {
             "no" -> Text("Not this one? That tells me your birth time is a little different. $WRONG_HELPS", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
             "unsure" -> Text("That is fine. This one is left out of the birth time.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         }
+        // The stored fact keeps only its topic; the registry's `fact.<topic>` alias names its books.
+        if (fact.topic.isNotBlank()) WhereFrom(listOf("fact.${fact.topic}"))
     }
 }
 

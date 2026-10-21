@@ -79,6 +79,9 @@ pub struct RemedyScheduleRecord {
     pub why_now: String,
     /// What the start reminder says.
     pub reminder_text: String,
+    /// Where the remedy, its length and its start come from: resolve with
+    /// `source_lines`. Never shown as is.
+    pub source_keys: Vec<String>,
 }
 
 /// Unix epoch milliseconds of an instant (a leap second reads as :59).
@@ -308,6 +311,13 @@ impl Engine {
                         why_now: why.clone(),
                         reminder_text: format!("Time to begin: {}. Keep it {kw}.", r.title.trim_end_matches('.')),
                         keep_words: kw,
+                        source_keys: r
+                            .source_keys
+                            .iter()
+                            .copied()
+                            .chain([kshana_rules::sources::of_keep(k.source), "kshana.timing"])
+                            .map(String::from)
+                            .collect(),
                     });
                 }
             }
@@ -323,7 +333,7 @@ mod plain_audit {
     use kshana_events::{hora_at, rahu_kala, solar_day};
 
     /// Fields of [`RemedyScheduleRecord`] the common screens never show.
-    const NOT_SHOWN: &[&str] = &["remedy_id", "branch", "keep_basis", "keep_source", "start_iso"];
+    const NOT_SHOWN: &[&str] = &["remedy_id", "branch", "keep_basis", "keep_source", "start_iso", "source_keys"];
 
     fn engine() -> std::sync::Arc<Engine> {
         let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/de421.bsp");
@@ -337,7 +347,11 @@ mod plain_audit {
         if let Some(w) = kshana_rules::plain::jargon_in(kshana_rules::Lang::En, v) {
             hits.push(format!("{field} [{w}]: {v}"));
         }
-        for bad in ["guarantee", "removes all", "change your destiny", "changes destiny", "rewrite", "will fix"] {
+        for bad in [
+            "guarantee", "removes all", "change your destiny", "changes destiny", "rewrite", "will fix",
+            // Nothing frightening either.
+            "if you don't", "if you do not", "or else", "destroy", "curse", "black magic", "evil eye", "punish",
+        ] {
             if v.to_lowercase().contains(bad) {
                 hits.push(format!("{field} promises too much [{bad}]: {v}"));
             }

@@ -163,8 +163,10 @@ private fun CauseCard(index: Int, c: CauseNodeRecord, faith: String, profileName
         if (c.untilWords.isNotBlank()) Text(c.untilWords.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Sky)
         if (!open) return@Column
         Text("WHAT HELPS", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.padding(top = 4.dp))
+        // Whatever costs money waits behind its own door, opened only by choice.
+        val paid = c.branches.filter { Faith.shows(faith, it.key) }.flatMap { b -> b.items.withIndex().filter { it.value.costsMoney }.map { Triple(b, it.index, it.value) } }
         for (b in c.branches) {
-            if (!Faith.shows(faith, b.key) || b.items.isEmpty()) continue
+            if (!Faith.shows(faith, b.key) || b.items.none { !it.costsMoney }) continue
             // A branch: a gold thread down the left, its title, its intro, its remedies.
             Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min)) {
                 Box(Modifier.width(2.dp).fillMaxHeight().background(if (b.key == "tradition") KshanaColors.Line else KshanaColors.Gold.copy(alpha = 0.5f)))
@@ -172,10 +174,33 @@ private fun CauseCard(index: Int, c: CauseNodeRecord, faith: String, profileName
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(b.title, style = MaterialTheme.typography.titleMedium, color = if (b.key == "tradition") KshanaColors.TextSoft else KshanaColors.Gold)
                     if (b.intro.isNotBlank()) Text(b.intro, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
-                    for ((ii, r) in b.items.withIndex()) RemedyItem(r, c.title, profileName, schedules[slot(index, b.key, ii)], onPlan)
+                    for ((ii, r) in b.items.withIndex()) if (!r.costsMoney) RemedyItem(r, c.title, profileName, schedules[slot(index, b.key, ii)], onPlan)
                 }
             }
             Spacer(Modifier.height(4.dp))
+        }
+        if (paid.isNotEmpty()) {
+            var showPaid by remember { mutableStateOf(false) }
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(KshanaColors.Night.copy(alpha = 0.3f)).padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    if (showPaid) "WAYS THAT COST MONEY −" else "WAYS THAT COST MONEY +  ·  only if you choose",
+                    style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted,
+                    modifier = Modifier.clickable { showPaid = !showPaid }.padding(vertical = 2.dp),
+                )
+                if (showPaid) {
+                    Text(
+                        "None of these is needed: the deeds above do the work. Spend only what you can spare, and never on anyone's insistence.",
+                        style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+                    )
+                    for ((b, ii, r) in paid) {
+                        Text(b.title, style = MaterialTheme.typography.labelSmall, color = KshanaColors.TextSoft)
+                        RemedyItem(r, c.title, profileName, schedules[slot(index, b.key, ii)], onPlan)
+                    }
+                }
+            }
         }
         HowThisHelps(c.howItHelps)
     }
@@ -233,6 +258,7 @@ private fun RemedyItem(r: TreeRemedyRecord, forWhat: String, profileName: String
                 }
                 QuietButton("READ ALOUD", onClick = { com.kshana.app.system.Speak.say(context, "${r.title}. ${r.why}. ${r.how}", Lang.code) })
             }
+            WhereFrom((r.sourceKeys + (schedule?.sourceKeys ?: emptyList())).distinct())
         } else {
             Text("HOW, AND START IT ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         }

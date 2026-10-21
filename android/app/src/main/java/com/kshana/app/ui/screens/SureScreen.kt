@@ -205,6 +205,7 @@ private fun SureCard(w: SureWindowRecord, profile: BirthProfile, place: Place, s
             w.remedyHint?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Leaf) }
             Text(tr("WHAT HELPS ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRemedy).padding(vertical = 4.dp))
         }
+        WhereFrom(w.sourceKeys)
     }
 }
 

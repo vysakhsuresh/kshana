@@ -96,6 +96,7 @@ private fun YogaCard(y: uniffi.kshana_ffi.ChartYogaRecord, expert: Boolean, onRe
         if (y.care.isNotBlank()) Text(y.care, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Leaf)
         if (onRemedy != null) Text("WHAT HELPS ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRemedy).padding(vertical = 4.dp))
         if (expert) Text("${y.yoga} · ${y.source}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        WhereFrom(y.sourceKeys)
     }
 }
 

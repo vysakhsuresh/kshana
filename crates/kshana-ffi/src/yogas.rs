@@ -61,6 +61,9 @@ pub struct ChartYogaRecord {
     pub lifelong: bool,
     /// The Vimshottari major periods of those lords in a 120-year cycle from birth.
     pub periods: Vec<YogaPeriodRecord>,
+    /// Where it comes from (the yoga's own text and chapter, and the periods that bring
+    /// it to life). Resolve with `source_lines`; never shown as is.
+    pub source_keys: Vec<String>,
 }
 
 /// One catalogue entry, for an index page.
@@ -143,6 +146,11 @@ fn record(y: &YogaFound, mahas: &[kshana_vedic::DashaPeriod], now: Instant) -> C
             .iter()
             .map(|(l, s, e)| YogaPeriodRecord { lord: format!("{l:?}"), start: (*s).into(), end: (*e).into() })
             .collect(),
+        source_keys: if y.lifelong {
+            vec![format!("yoga.{}", y.def.key)]
+        } else {
+            vec![format!("yoga.{}", y.def.key), "bphs.dashas".into()]
+        },
     }
 }
 
@@ -305,6 +313,8 @@ mod tests {
                     assert_eq!(kshana_rules::plain::jargon(t), None, "{}: {t}", y.key);
                 }
                 assert!(!y.when.is_empty());
+                assert!(y.source_keys.iter().all(|k| kshana_rules::sources::known(k)), "{:?}", y.source_keys);
+                assert_eq!(crate::sources::source_lines(y.source_keys.clone(), "en".into())[0].line, y.source);
                 // Lifelong yogas carry no periods; the others always have some.
                 assert_eq!(y.lifelong, y.periods.is_empty(), "{}", y.key);
             }

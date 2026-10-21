@@ -96,6 +96,9 @@ pub struct SureWindowRecord {
     pub expert: String,
     /// A self-contained statement with both dates, for sealing.
     pub seal_text: String,
+    /// Where this comes from: the agreeing ways of reading, the pooling and (when days
+    /// are named) the narrowing. Resolve with `source_lines`; never shown as is.
+    pub source_keys: Vec<String>,
 }
 
 /// A window narrowed to its days and hours.
@@ -149,7 +152,18 @@ fn window_record(w: &SureWindow, lang: Lang) -> SureWindowRecord {
         system_keys: w.systems.iter().map(|s| s.key().to_string()).collect(),
         expert: w.expert.clone(),
         seal_text: w.seal_text.clone(),
+        source_keys: window_source_keys(w),
     }
+}
+
+/// The ways of reading that agree, then the app's pooling, then its narrowing to days.
+fn window_source_keys(w: &SureWindow) -> Vec<String> {
+    let mut k: Vec<String> = w.systems.iter().map(|s| format!("system.{}", s.key())).collect();
+    k.push("kshana.consensus".into());
+    if !w.narrowing.days.is_empty() {
+        k.push("kshana.hours".into());
+    }
+    k
 }
 
 fn hours_record(n: &Narrowing) -> SureHoursRecord {
@@ -284,7 +298,7 @@ mod plain_audit {
     use crate::{instant_from_utc, UtcFields};
 
     /// Fields of these records the person never reads (expert view or stable keys).
-    const NOT_SHOWN: &[&str] = &["area", "also", "tier", "system_keys", "expert"];
+    const NOT_SHOWN: &[&str] = &["area", "also", "tier", "system_keys", "expert", "source_keys"];
 
     /// Words that promise what no reading can.
     const NEVER: &[&str] = &["guarantee", "certain", "definitely", "fate", "only god", "will surely", "doom"];
@@ -355,6 +369,11 @@ mod plain_audit {
                 }
                 assert!(["strong", "likely", "possible"].contains(&w.tier.as_str()));
                 assert!(w.agree <= w.of && w.systems.len() == w.agree as usize);
+                // Every agreeing way of reading has its book, and the pooling says it is the app's.
+                let src = crate::sources::source_lines(w.source_keys.clone(), lang.into());
+                assert!(src.len() >= w.agree as usize, "{:?}", w.source_keys);
+                assert!(src.iter().any(|s| s.kind == "kshana"));
+                assert!(w.source_keys.iter().all(|k| kshana_rules::sources::known(k)), "{:?}", w.source_keys);
                 if w.is_hard {
                     assert!(w.remedy_hint.is_some(), "{}", w.headline);
                 }

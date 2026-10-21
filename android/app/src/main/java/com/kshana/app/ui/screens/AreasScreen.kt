@@ -142,6 +142,7 @@ fun AreasScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> U
                     HorizontalDivider(color = KshanaColors.LineSoft)
                     Text(f, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.padding(vertical = 6.dp))
                 }
+                WhereFrom(listOf("kp.significators", "bphs.dashas", "bphs.bhava"))
 
                 SectionLabel("Timing funnel")
                 Text(timingText(r, 5), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)

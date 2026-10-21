@@ -48,6 +48,29 @@ pub struct TreeRemedy {
     pub kind: &'static str,
     /// A chant's text, in the reader's script, when the remedy is a chant.
     pub mantra: Option<String>,
+    /// True when it costs real money (school fees, a paid rite, a wedding): shown only
+    /// behind "Ways that cost money", never first.
+    pub costs_money: bool,
+    /// Where it comes from: keys of [`crate::sources`] (aliases such as `remedy.deeds`).
+    pub source_keys: Vec<&'static str>,
+}
+
+/// The source keys of a tree remedy: its branch, and for the tradition branch whether
+/// it is a fast, a chant or a temple visit (read from the English title).
+pub fn tree_source_keys(branch: &str, title_en: &str, chant: bool) -> Vec<&'static str> {
+    let t = title_en.to_lowercase();
+    let k = match branch {
+        "deeds" => "remedy.deeds",
+        "giving" => "remedy.giving",
+        "habits" => "remedy.habits",
+        "nature" => "remedy.nature",
+        "mind" => "remedy.mind",
+        "prayer" => "remedy.prayer",
+        _ if chant || ["chant", "chalisa", "stotram", "sahasranama", "hridayam", "ashtottaram", "panchakshari", "saptashati", "kavacham"].iter().any(|w| t.contains(w)) => "remedy.chant",
+        _ if t.contains("fast") => "remedy.fast",
+        _ => "remedy.temple",
+    };
+    vec![k]
 }
 
 /// One branch of remedies.
@@ -745,7 +768,7 @@ const BRANCHES: [(&str, T3, T3); 7] = [
      ["In a church, mosque, gurdwara, temple or at home: pray the way you already pray.", "പള്ളിയിലോ മസ്ജിദിലോ ക്ഷേത്രത്തിലോ മറ്റേതെങ്കിലും ആരാധനാലയത്തിലോ വീട്ടിലോ: നിങ്ങൾ ഇപ്പോൾ പ്രാർത്ഥിക്കുന്ന രീതിയിൽ തന്നെ.", "चर्च, मस्जिद, गुरुद्वारा, मंदिर या घर पर: जैसे आप पहले से प्रार्थना करते हैं वैसे ही।"]),
     ("tradition",
      ["Hindu tradition (optional)", "ഹിന്ദു പാരമ്പര്യം (ഐച്ഛികം)", "हिंदू परंपरा (वैकल्पिक)"],
-     ["For those who follow it. Never required, and never a substitute for the deeds above. Do not buy a gemstone on anyone's word; it is not needed.", "ഇത് പിന്തുടരുന്നവർക്ക്. ഒരിക്കലും നിർബന്ധമില്ല, മുകളിലെ പ്രവൃത്തികൾക്ക് പകരവുമല്ല. ആരുടെയെങ്കിലും വാക്ക് കേട്ട് രത്നം വാങ്ങരുത്; അത് ആവശ്യമില്ല.", "जो इसे मानते हैं उनके लिए। कभी ज़रूरी नहीं, और ऊपर के कामों का विकल्प भी नहीं। किसी के कहने पर रत्न न ख़रीदें; इसकी ज़रूरत नहीं है।"]),
+     ["For those who follow it. Never required, and never a substitute for the deeds above. A gemstone is never necessary; consider one only with a qualified astrologer's advice, never on anyone's word.", "ഇത് പിന്തുടരുന്നവർക്ക്. ഒരിക്കലും നിർബന്ധമില്ല, മുകളിലെ പ്രവൃത്തികൾക്ക് പകരവുമല്ല. രത്നം ഒരിക്കലും ആവശ്യമില്ല; യോഗ്യനായ ജ്യോതിഷിയുടെ ഉപദേശത്തോടെ മാത്രം ആലോചിക്കുക, ആരുടെയെങ്കിലും വാക്ക് കേട്ടല്ല.", "जो इसे मानते हैं उनके लिए। कभी ज़रूरी नहीं, और ऊपर के कामों का विकल्प भी नहीं। रत्न कभी ज़रूरी नहीं; सोचें तो सिर्फ़ योग्य ज्योतिषी की सलाह पर, किसी के कहने पर नहीं।"]),
 ];
 
 /// The prayer remedy for an influence: faith-neutral, the influence's day and people.
@@ -778,6 +801,8 @@ fn prayer_item(lang: Lang, l: DashaLord, inf: &Influence) -> TreeRemedy {
         effort: lang.pick(E_WEEKLY).to_string(),
         kind: "prayer",
         mantra: None,
+        costs_money: false,
+        source_keys: tree_source_keys("prayer", "", false),
     }
 }
 
@@ -800,8 +825,12 @@ pub fn branches(lang: Lang, l: DashaLord) -> Vec<Branch> {
                     effort: lang.pick(*e).to_string(),
                     kind: k,
                     mantra: m.map(|m| lang.pick(m).to_string()),
+                    costs_money: crate::parihara::costs_money_title(t[0]),
+                    source_keys: tree_source_keys(k, t[0], m.is_some()),
                 })
                 .collect();
+            // Free first within a branch; whatever costs money after.
+            items.sort_by_key(|it| it.costs_money);
             if *key == "prayer" {
                 items.push(prayer_item(lang, l, &inf));
             }

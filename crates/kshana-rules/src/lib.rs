@@ -47,6 +47,9 @@ pub mod rectify;
 pub mod reveal;
 pub mod remedy_timing;
 pub mod remedy_tree;
+#[cfg(test)]
+mod remedy_audit;
+pub mod sources;
 pub mod timeline;
 pub mod topics;
 pub mod transit;

@@ -156,6 +156,9 @@ fun LifeScreen(
                     }
                 }
             }
+            // Each part of the score has its book (the registry's `life.<part>` aliases),
+            // and the weighing of the parts is the app's own, said as such.
+            WhereFrom(now.components.map { "life.${it.key}" } + "life.score")
         } else if (error == null) {
             Working("reading your day…")
         }
@@ -562,6 +565,7 @@ private fun AreaDetail(section: SectionRecord) {
             Text("Nothing more to say for this area.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         }
         for ((i, s) in section.sentences.withIndex()) SentenceBlock(s, key = "${section.title}:$i")
+        WhereFrom(listOf("life"))
     }
 }
 
