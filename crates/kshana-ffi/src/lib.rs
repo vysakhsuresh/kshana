@@ -30,6 +30,7 @@ pub mod nazhika;
 pub mod nodes;
 pub mod remedy_plan;
 pub mod science;
+pub mod sources;
 pub mod tajika;
 pub mod trace;
 pub mod trust;
@@ -44,6 +45,7 @@ pub use lexicon::*;
 pub use life::*;
 pub use marga::*;
 pub use science::*;
+pub use sources::*;
 pub use tajika::*;
 pub use trace::*;
 
@@ -941,6 +943,10 @@ pub struct RemedyRecord {
     pub windows: Vec<RemedyWindowRecord>,
     /// What the app records: "did it at <instant>" and the count.
     pub measurable: String,
+    /// Costs real money (gem, paid rite, costly gift): show only behind "Ways that cost money".
+    pub costs_money: bool,
+    /// Where it comes from: resolve with `source_lines` (never shown as is).
+    pub source_keys: Vec<String>,
 }
 
 /// The remedy plan.
@@ -1093,6 +1099,8 @@ impl Engine {
                     duration_days: r.schedule.duration_days,
                     windows: r.schedule.windows.iter().map(window_record).collect(),
                     measurable: r.measurable.clone(),
+                    costs_money: r.costs_money,
+                    source_keys: keys(&r.source_keys),
                 })
                 .collect(),
             signature: p.signature.clone(),
@@ -4417,7 +4425,7 @@ mod plain_audit {
         "star", "dasha_at_birth", "moon_a", "moon_b", "why_expert", "season_why", "kp_star", "kp_sub", "kp_sub_sub",
         "provenance_engine", "provenance_kernel", "provenance_models", "body", "body_a", "body_b", "aspect", "unit",
         "signature", "tithi", "nakshatra", "yoga", "hora", "factors", "cautions", "sub_lord", "agents", "ruling_planets",
-        "moon_sub_lord", "question", "effort", "day", "mantra",
+        "moon_sub_lord", "question", "effort", "day", "mantra", "source_keys",
         // Expert-only remedy fields (the parihara expert page behind "Show the chart
         // pages"): the located cause in the texts' terms, karma class, dosha families,
         // the rung's claim, cadence, the ledger line and the hora/tithi windows.
@@ -4724,6 +4732,10 @@ pub struct TreeRemedyRecord {
     pub kind: String,
     /// A chant's text in the reader's script, for chant remedies.
     pub mantra: Option<String>,
+    /// Costs real money (school fees, a paid rite): show only behind "Ways that cost money".
+    pub costs_money: bool,
+    /// Where it comes from: resolve with `source_lines` (never shown as is).
+    pub source_keys: Vec<String>,
 }
 
 /// One branch of remedies.
@@ -4940,7 +4952,7 @@ impl Engine {
                             items: b
                                 .items
                                 .into_iter()
-                                .map(|r| TreeRemedyRecord { title: r.title, why: r.why, how: r.how, day: r.day, effort: r.effort, kind: r.kind.to_string(), mantra: r.mantra })
+                                .map(|r| TreeRemedyRecord { title: r.title, why: r.why, how: r.how, day: r.day, effort: r.effort, kind: r.kind.to_string(), mantra: r.mantra, costs_money: r.costs_money, source_keys: keys(&r.source_keys) })
                                 .collect(),
                         })
                         .collect(),

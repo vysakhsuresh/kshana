@@ -249,5 +249,6 @@ private fun ProofCard(w: FamilyProofRecord, nameOf: (String) -> String, zone: ja
             Text(w.remedyHint, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
         }
         if (expert) for (e in w.expert) Text(e, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        WhereFrom(w.sourceKeys)
     }
 }

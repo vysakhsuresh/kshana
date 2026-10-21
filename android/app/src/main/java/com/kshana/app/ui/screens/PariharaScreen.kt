@@ -204,7 +204,8 @@ private fun PariharaPlainScreen(profile: BirthProfile, settings: EngineSettings,
         if (rec == null) {
             if (error == null) Working("finding what will help…")
         } else {
-            val required = rec.remedies.filter { !it.optional }
+            // What costs money is never "required" and never counts against the effort.
+            val required = rec.remedies.filter { !it.optional && !it.costsMoney }
             val keptRequired = required.count { it.title in kept }
             val worthiness = if (required.isEmpty()) 0f else keptRequired.toFloat() / required.size
 
@@ -255,10 +256,28 @@ private fun PariharaPlainScreen(profile: BirthProfile, settings: EngineSettings,
                 for ((label, _) in GROUPS) Chip(label, selected = group == label, onClick = { group = label })
             }
             val set = GROUPS.firstOrNull { it.first == group }?.second
-            val shown = rec.remedies.withIndex().filter { set == null || it.value.kind in set }
+            val inGroup = rec.remedies.withIndex().filter { set == null || it.value.kind in set }
+            val shown = inGroup.filter { !it.value.costsMoney }
+            val paid = inGroup.filter { it.value.costsMoney }
             SectionLabel("What helps most, first · ${shown.size} of ${rec.remedies.size}")
             if (shown.isEmpty()) Text("None of this kind for you right now.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             for ((i, r) in shown) RemedyRow(i + 1, r, r.title in kept, rec.planet, streakVersion, { streakVersion++ }) { toggle(rec, r) }
+            // Whatever costs money (a stone, a paid rite, a costly gift) waits behind its own door.
+            if (paid.isNotEmpty()) {
+                var showPaid by remember { mutableStateOf(false) }
+                Text(
+                    if (showPaid) "WAYS THAT COST MONEY −" else "WAYS THAT COST MONEY +  ·  ${paid.size}, only if you choose",
+                    style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted,
+                    modifier = Modifier.clickable { showPaid = !showPaid }.padding(vertical = 10.dp),
+                )
+                if (showPaid) {
+                    Text(
+                        "None of these is needed: the steps above do the work. A gemstone only with a qualified astrologer's advice; never necessary. Spend only what you can spare, never on anyone's insistence.",
+                        style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+                    )
+                    for ((i, r) in paid) RemedyRow(i + 1, r, r.title in kept, rec.planet, streakVersion, { streakVersion++ }) { toggle(rec, r) }
+                }
+            }
             Text("Doing, serving and good habits do the real work. Giving and fasting support them. Chanting and prayer are optional, never required.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(top = 8.dp))
         }
     }
@@ -298,6 +317,7 @@ private fun RemedyRow(rank: Int, r: RemedyRecord, committed: Boolean, planet: St
             Text(r.title, fontFamily = FontFamily.Serif, fontSize = 18.sp, color = if (r.optional) KshanaColors.TextSoft else KshanaColors.Text)
             Text(r.why, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             Text("${r.effort} · ${r.day}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.padding(top = 2.dp))
+            WhereFrom(r.sourceKeys)
             if (committed) {
                 val ticked = remember(streakVersion) { com.kshana.app.data.StreakStore.tickedToday(context, planet, r.title) }
                 val streak = remember(streakVersion) { com.kshana.app.data.StreakStore.streak(context, planet, r.title) }
@@ -668,6 +688,7 @@ private fun RemedyCard(
 
         Text(r.measurable, fontFamily = KshanaFonts.mono, fontSize = 10.sp, lineHeight = 15.sp, color = KshanaColors.Muted)
         Text("${r.source} · ${r.ruleId}", fontFamily = KshanaFonts.mono, fontSize = 10.sp, lineHeight = 15.sp, color = KshanaColors.Muted)
+        WhereFrom(r.sourceKeys)
 
         if (gem) return@NightCard
         HorizontalDivider(color = KshanaColors.LineSoft)

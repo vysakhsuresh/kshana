@@ -159,6 +159,31 @@ pub struct Remedy {
     pub schedule: Schedule,
     /// What the app records: "did it at <instant>" and the count.
     pub measurable: String,
+    /// True when it costs real money (a gemstone, a paid rite, a large gift): such a
+    /// remedy is never offered first and sits behind "Ways that cost money".
+    pub costs_money: bool,
+    /// Where it comes from: keys of [`crate::sources`].
+    pub source_keys: Vec<&'static str>,
+}
+
+/// Words in a remedy's English title that mean it costs real money: a paid rite, a
+/// precious metal, a cow, school fees, a wedding. Food, a lamp, a blanket, a small
+/// vessel and footwear are small gifts and do not count.
+const PAID_WORDS: &[&str] = &[
+    "gold", "silver", "a cow (", "gift of a cow", "school fees", "schooling", "full rite", "homa", "pratishtha", "shraddha", "bali",
+    "kanyadana", "kumbha", "abhisheka", "pooja", "puja", "shanti", "brahmin feeding", "feeding brahmins", "a poor bride",
+    "setu snana", "gaya", "a rite the old texts name",
+];
+
+/// True when a remedy of `kind` titled `title_en` (its English title) costs real money.
+pub fn costs_money(kind: RemedyKind, title_en: &str) -> bool {
+    kind == RemedyKind::Gem || costs_money_title(title_en)
+}
+
+/// True when a remedy's English title names something that costs real money.
+pub fn costs_money_title(title_en: &str) -> bool {
+    let t = title_en.to_lowercase();
+    PAID_WORDS.iter().any(|w| t.contains(w))
 }
 
 /// The located cause.
@@ -1349,8 +1374,13 @@ impl<'a> Scheduler<'a> {
 
 /// `s` when it reads plainly, otherwise the plain fallback (the texts' wording then
 /// lives on in `why_expert`).
+/// Words that frighten: a remedy the person reads never carries them (the texts' own
+/// words stay in `why_expert`).
+const FRIGHTENING: &[&str] = &["curse", "spirit", "ghost", "demon", "black magic", "evil eye", "(v)", "(k)"];
+
 fn plain_or(s: String, fallback: &str) -> String {
-    if jargon(&s).is_none() {
+    let low = s.to_lowercase();
+    if jargon(&s).is_none() && !FRIGHTENING.iter().any(|w| low.contains(w)) {
         s
     } else {
         fallback.to_string()
@@ -1599,11 +1629,11 @@ fn planet_rows(
         title: format!("{} (information only)", gr.gem),
         why: if allowed {
             format!(
-                "The old texts allow this stone for you: {}, set in {}, worn on the {}. It is a purchase, optional and never required, and no claim is made for it; listed for information.",
+                "The old texts allow this stone for you: {}, set in {}, worn on the {}. Only with a qualified astrologer's advice; never necessary. It is a purchase, and no claim is made for it; listed for information.",
                 gr.gem, gr.metal, gr.finger
             )
         } else {
-            "No gem for you: by the old texts' own logic a stone here would strengthen what already presses on you. The steps above are the remedy. Listed only so nothing is hidden.".to_string()
+            "No gem for you: by the old texts' own logic a stone here would strengthen what already presses on you. A stone is never necessary; the steps above are the remedy. Listed only so nothing is hidden.".to_string()
         },
         why_expert: if allowed {
             format!(
@@ -2011,6 +2041,7 @@ fn into_remedy(
     karma: &KarmaVerdict,
     windows: Vec<RemedyWindow>,
 ) -> Remedy {
+    let paid = costs_money(r.kind, &r.title);
     let fit = if r.kind == RemedyKind::Gem {
         0.0
     } else {
@@ -2036,6 +2067,8 @@ fn into_remedy(
             windows,
         },
         measurable: r.measurable,
+        costs_money: paid,
+        source_keys: crate::sources::of_remedy(r.kind, r.source),
     }
 }
 
@@ -2178,9 +2211,11 @@ pub fn parihara(
             into_remedy(r, &karma, windows)
         })
         .collect();
+    // Free first: whatever costs money comes after every free remedy, gems last.
     remedies.sort_by(|a, b| {
-        a.rung
-            .cmp(&b.rung)
+        a.costs_money
+            .cmp(&b.costs_money)
+            .then(a.rung.cmp(&b.rung))
             .then(
                 b.fit
                     .partial_cmp(&a.fit)
@@ -2331,9 +2366,11 @@ pub fn parihara_from_facts(facts: &Facts, area: Option<Area>, period_lords: &[Da
         .map(|r| into_remedy(r, &karma, Vec::new()))
         .collect();
     remedies.sort_by(|a, b| {
-        b.fit
-            .partial_cmp(&a.fit)
-            .unwrap_or(std::cmp::Ordering::Equal)
+        a.costs_money.cmp(&b.costs_money).then(
+            b.fit
+                .partial_cmp(&a.fit)
+                .unwrap_or(std::cmp::Ordering::Equal),
+        )
     });
     let running_level = level_idx.and_then(|i| LEVELS.get(i).copied());
     let words = format!(
@@ -2497,7 +2534,14 @@ mod tests {
             assert!(!plan.remedies.is_empty());
             assert_eq!(plan.remedies[0].kind, RemedyKind::Karma);
             assert_eq!(plan.remedies.last().unwrap().kind, RemedyKind::Gem);
-            assert!(plan.remedies.windows(2).all(|w| w[0].rung <= w[1].rung));
+            // Free remedies first, by rung; then whatever costs money, by rung.
+            assert!(plan.remedies.windows(2).all(|w| (w[0].costs_money, w[0].rung) <= (w[1].costs_money, w[1].rung)));
+            assert!(!plan.remedies[0].costs_money);
+            for r in plan.remedies.iter().filter(|r| r.kind == RemedyKind::Gem) {
+                assert!(r.costs_money);
+                assert!(r.why.contains("never necessary"), "{}", r.why);
+            }
+            assert!(plan.remedies.iter().all(|r| !r.source_keys.is_empty()));
             for r in &plan.remedies {
                 assert!(!r.source.is_empty() && !r.rule_id.is_empty(), "{}", r.title);
                 assert!(!r.may_claim.is_empty() && !r.measurable.is_empty());
@@ -2588,7 +2632,8 @@ mod tests {
             // the facts-only plan agrees on the plain dictionary
             let quick = parihara_from_facts(&Facts::from_chart(&ch), area, &[]);
             assert!(quick.remedies.len() >= 20);
-            assert!(quick.remedies.windows(2).all(|w| w[0].fit >= w[1].fit));
+            assert!(quick.remedies.windows(2).all(|w| w[0].costs_money < w[1].costs_money || (w[0].costs_money == w[1].costs_money && w[0].fit >= w[1].fit)));
+            assert!(matches!(quick.remedies[0].kind, RemedyKind::Karma | RemedyKind::Seva | RemedyKind::Discipline));
             assert_eq!(jargon(&quick.plain), None, "{}", quick.plain);
             // the windows belong to the cause planet's weekday
             let wd = weekday_of(plan.planet);

@@ -95,7 +95,7 @@ const VIVAHA: &str = "Vivaha prakarana of Muhurta Chintamani and the Kerala and 
 const DHARMA_SINDHU: &str = "Dharma Sindhu, Nirnaya Sindhu (dosha parihara)";
 const LAL_KITAB: &str = "Lal Kitab";
 
-fn dosha_remedies(nadi: bool, bhakoot: bool, gana: bool, kuja_unbalanced: bool, maitri_low: bool, yoni_low: bool) -> Vec<DoshaRemedy> {
+pub(crate) fn dosha_remedies(nadi: bool, bhakoot: bool, gana: bool, kuja_unbalanced: bool, maitri_low: bool, yoni_low: bool) -> Vec<DoshaRemedy> {
     let mut v = Vec::new();
     if nadi {
         v.push(DoshaRemedy { dosha: "Nadi", title: "Chant the Mahamrityunjaya mantra together, 108 times a day for 40 days", why: "Protects health and the coming of children, the two things this warning touches.", source: DHARMA_SINDHU, optional: true });
@@ -176,7 +176,12 @@ fn bond_care(
     vd: u8,
 ) -> Vec<BondCare> {
     let pts = |key: &str| kootas.iter().find(|k| k.key == key).map(|k| k.points).unwrap_or(0.0);
-    let take = |key: &'static str| -> Vec<DoshaRemedy> { all.iter().filter(|r| r.dosha == key).cloned().collect() };
+    // Deeds and giving first; prayers and rites (optional) after them.
+    let take = |key: &'static str| -> Vec<DoshaRemedy> {
+        let mut v: Vec<DoshaRemedy> = all.iter().filter(|r| r.dosha == key).cloned().collect();
+        v.sort_by_key(|r| r.optional);
+        v
+    };
     let mut out = Vec::new();
 
     // Nadi: the heaviest.
@@ -793,7 +798,7 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
     );
 
     let points_of = |name: &str| kootas.iter().find(|k| k.key == name).map(|k| k.points).unwrap_or(0.0);
-    let remedies = dosha_remedies(
+    let mut remedies = dosha_remedies(
         points_of("Nadi") == 0.0,
         points_of("Bhakoot") == 0.0,
         points_of("Gana") <= 1.0,
@@ -801,6 +806,8 @@ pub fn kundali(a: &Natal, b: &Natal, a_is_groom: bool) -> Kundali {
         points_of("Graha Maitri") <= 1.0,
         points_of("Yoni") <= 1.0,
     );
+    // Deeds and giving first; prayers and rites (optional) after them.
+    remedies.sort_by_key(|r| r.optional);
 
     let care = bond_care(&kootas, &remedies, a, b, na, nb, d, la, lb, ka, kb, vd);
     let together_verdict = if total >= 28.0 {

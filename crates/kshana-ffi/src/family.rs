@@ -66,6 +66,9 @@ pub struct FamilyProofRecord {
     pub remedy_hint: String,
     /// Expert only: how each confirming chart reads it.
     pub expert: Vec<String>,
+    /// Where this comes from (the house of each relative, counting from it, the
+    /// periods, and the app's cross-check). Resolve with `source_lines`; never shown as is.
+    pub source_keys: Vec<String>,
 }
 
 /// The family proof for the main person.
@@ -136,6 +139,7 @@ impl Engine {
             is_hard: !w.good,
             remedy_hint: w.remedy_hint.clone(),
             expert: w.expert.clone(),
+            source_keys: vec!["family".into()],
         };
         let about_you: Vec<FamilyProofRecord> = p.about_you.iter().map(record).collect();
         let about_family: Vec<FamilyProofRecord> = p.about_family.iter().map(record).collect();
@@ -161,7 +165,7 @@ mod plain_audit {
 
     /// Fields of these records the person does not read as sentences: what the family
     /// typed, keys, and the expert reading.
-    const NOT_SHOWN: &[&str] = &["person", "confirmed_names", "not_read", "area", "expert"];
+    const NOT_SHOWN: &[&str] = &["person", "confirmed_names", "not_read", "area", "expert", "source_keys"];
 
     fn at(y: i64, mo: u32, d: u32, h: u32) -> ExactInstant {
         instant_from_utc(UtcFields { year: y, month: mo, day: d, hour: h, minute: 0, second: 0, nanos: 0 }).unwrap()

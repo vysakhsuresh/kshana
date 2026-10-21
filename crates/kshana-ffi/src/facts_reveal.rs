@@ -32,6 +32,9 @@ pub struct ChartFactRecord {
     pub why_expert: String,
     /// The text it rests on (expert view only).
     pub source: String,
+    /// Where this comes from, for "Where this comes from" (`fact.<topic>`). Resolve
+    /// with `source_lines`; never shown as is.
+    pub source_keys: Vec<String>,
 }
 
 /// One answered fact.
@@ -154,6 +157,7 @@ impl Engine {
         Ok(fs
             .into_iter()
             .map(|f| ChartFactRecord {
+                source_keys: vec![format!("fact.{}", f.claim.topic().key())],
                 key: f.claim.key(),
                 topic: f.claim.topic().key().to_string(),
                 statement: f.statement,
@@ -238,7 +242,7 @@ mod plain_audit {
 
     /// Fields never shown on the common screens: keys, the topic, the chart reason and
     /// its source.
-    const NOT_SHOWN: &[&str] = &["key", "topic", "why_expert", "source"];
+    const NOT_SHOWN: &[&str] = &["key", "topic", "why_expert", "source", "source_keys"];
 
     fn at(y: i64, mo: u32, d: u32, h: u32) -> ExactInstant {
         instant_from_utc(UtcFields { year: y, month: mo, day: d, hour: h, minute: 0, second: 0, nanos: 0 }).unwrap()
@@ -275,6 +279,7 @@ mod plain_audit {
                     check(lang, "statement", &f.statement, &mut hits);
                     check(lang, "why_expert", &f.why_expert, &mut hits);
                     assert!(Claim::parse(&f.key).is_some(), "{}", f.key);
+                    assert!(f.source_keys.iter().all(|k| kshana_rules::sources::known(k)), "{:?}", f.source_keys);
                 }
                 // Answer every fact No (a wrong guess still helps) and a few stretches.
                 let qs = engine.past_reveal(birth, la, lo, HouseSystem::Placidus, AyanamsaChoice::Lahiri, now, lang.into(), 30.0, vec![], vec![], 4, false).unwrap();
