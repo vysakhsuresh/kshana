@@ -66,6 +66,12 @@ pub struct DashaPeriod {
 /// Nanoseconds in a 365.25-day year.
 pub const YEAR_365_25_NS: i128 = NS_PER_DAY * 365 + NS_PER_DAY / 4;
 
+/// Nanoseconds in the sidereal year Jagannatha Hora uses by default for dashas,
+/// 365.256364 days (PyJHora `const.sidereal_year = 365.256364  # From JHora`,
+/// `DHASA_YEAR_DURATION.JHORA_DEFAULT = TRUE_SIDEREAL_YEAR`). Pass it as `year_ns` to
+/// reproduce JH's dasha dates; see docs/conventions.md.
+pub const YEAR_SIDEREAL_NS: i128 = 31_558_149_849_600_000;
+
 /// Mahadasha sequence for a whole 120-year cycle from the birth instant.
 ///
 /// `moon_sidereal_lon` in degrees selects the starting lord and the balance.

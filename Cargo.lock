@@ -578,10 +578,13 @@ dependencies = [
 name = "kshana-verify"
 version = "0.1.0"
 dependencies = [
+ "kshana-calendar",
+ "kshana-chart",
  "kshana-ephem",
  "kshana-events",
  "kshana-frames",
  "kshana-houses",
+ "kshana-rules",
  "kshana-sky",
  "kshana-time",
  "kshana-vedic",
