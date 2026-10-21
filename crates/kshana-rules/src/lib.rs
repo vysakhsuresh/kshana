@@ -21,6 +21,7 @@ pub mod doshas;
 pub mod explain;
 pub mod facts;
 pub mod family;
+pub mod facts_reveal;
 pub mod feed;
 pub mod forecast;
 pub mod future;

@@ -72,9 +72,34 @@ fun PastCheckScreen(
     var learnLine by remember { mutableStateOf<String?>(null) }
     var seal by remember { mutableStateOf(PastReveal.pending(context)) }
     var timeNote by remember { mutableStateOf<String?>(null) }
+    val facts = remember { mutableStateListOf<PastReveal.Fact>().apply { addAll(PastReveal.facts(context)) } }
+    var factsLoading by remember { mutableStateOf(false) }
+    var nowLine by remember { mutableStateOf<String?>(null) }
+    val logged = remember(profile) { PastReveal.logged(context, profile) }
     val windowMin = (profile.uncertaintySeconds() / 60.0).coerceIn(15.0, 180.0)
 
     fun store() = PastReveal.saveAnswers(context, items.toList())
+    fun storeFacts() = PastReveal.saveFacts(context, facts.toList())
+
+    // The facts the chart says clearly, asked once; answered ones are never asked again.
+    fun fetchFacts() {
+        if (factsLoading || facts.isNotEmpty()) return
+        factsLoading = true
+        scope.launch {
+            runCatching {
+                val engine = EngineProvider.get(context)
+                val got = withContext(Dispatchers.Default) {
+                    engine.chartFacts(
+                        profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa,
+                        Instants.now(), Lang.code, windowMin, facts.map { it.key },
+                    )
+                }
+                for (f in got) facts.add(PastReveal.Fact(f.key, f.topic, f.statement, f.sensitive, ""))
+                storeFacts()
+            }
+            factsLoading = false
+        }
+    }
 
     fun fetch(count: Int, sharpen: Boolean) {
         if (loading) return
@@ -100,20 +125,28 @@ fun PastCheckScreen(
         }
     }
 
+    // Every answer and every logged event, pooled: the stretches, the facts, the diary
+    // and the ledger. It only suggests; the person taps to accept.
     fun runRefine() {
         val answered = items.filter { it.verdict in setOf("yes", "close", "no") }
-        if (answered.size < 3) return
+        val factAnswers = PastReveal.factAnswers(facts.toList())
+        if (answered.size + factAnswers.size + logged.size < 3) return
         refining = true
         scope.launch {
             runCatching {
                 val engine = EngineProvider.get(context)
-                refine = withContext(Dispatchers.Default) {
-                    engine.refineBirthTime(
-                        profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa, windowMin,
+                val now = withContext(Dispatchers.Default) {
+                    engine.birthTimeNow(
+                        profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa,
+                        Instants.now(), windowMin,
                         answered.map { PastAnswerInput(it.from(), it.to(), it.life, it.good, it.verdict) },
+                        factAnswers, logged, profile.birthLocal().offset.totalSeconds / 60, Lang.code,
                     )
                 }
+                refine = now.refine
+                nowLine = now.plain
                 // Which way of reading fits this person's own past best, said plainly.
+                if (answered.isEmpty()) learnLine = null else {
                 val learned = withContext(Dispatchers.Default) {
                     engine.learnTechniques(
                         profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa,
@@ -123,12 +156,16 @@ fun PastCheckScreen(
                 learnLine = learned.plain
                 // Kept, so the forecast can lean on what fits this person once there are enough answers.
                 com.kshana.app.data.PersonalWeights.save(context, profile.name, learned)
+                }
             }
             refining = false
         }
     }
 
-    LaunchedEffect(profile) { if (items.isEmpty()) fetch(5, false) else runRefine() }
+    LaunchedEffect(profile) {
+        fetchFacts()
+        if (items.isEmpty()) fetch(5, false) else runRefine()
+    }
 
     val shown = run {
         // One stretch at a time: every answered one, then the next to answer.
@@ -160,7 +197,45 @@ fun PastCheckScreen(
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
         )
 
-        for ((i, item) in shown.withIndex()) {
+        // Things nobody told me: facts read from the chart alone, asked one at a time
+        // before the stretches.
+        val factsShown = run {
+            val firstOpen = facts.indexOfFirst { it.verdict.isEmpty() }
+            if (firstOpen < 0) facts.toList() else facts.take(firstOpen + 1)
+        }
+        val factOpen = facts.any { it.verdict.isEmpty() }
+        if (facts.isNotEmpty() || factsLoading) {
+            Text("THINGS NOBODY TOLD ME", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            Text(
+                "You never told me these. They come from your birth time alone. Yes or no? $WRONG_HELPS",
+                style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
+            )
+        }
+        for ((i, fact) in factsShown.withIndex()) {
+            AnimatedVisibility(visible = true, enter = fadeIn() + expandVertically()) {
+                FactCard(fact, onAnswer = { v ->
+                    facts[i] = fact.copy(verdict = v)
+                    storeFacts()
+                    if (v != "unsure") runRefine()
+                })
+            }
+        }
+        if (factsLoading) Working("reading what your birth time says about you…")
+        val counted = items.count { it.verdict in setOf("yes", "close", "no") } + facts.count { it.verdict == "yes" || it.verdict == "no" }
+        if (counted > 0 || logged.isNotEmpty()) {
+            Text(
+                buildString {
+                    append("$counted answer${if (counted == 1) "" else "s"} so far")
+                    if (logged.isNotEmpty()) append(", and ${logged.size} event${if (logged.size == 1) "" else "s"} you logged")
+                    append(". Every one sharpens your birth time.")
+                },
+                style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky,
+            )
+        }
+
+        // The stretches wait until the facts are answered, unless some are already answered.
+        val stretchesShown = if (factOpen && items.none { it.verdict.isNotEmpty() }) emptyList() else shown
+        for ((i, item) in stretchesShown.withIndex()) {
             AnimatedVisibility(visible = true, enter = fadeIn() + expandVertically()) {
                 StretchCard(item, onAnswer = { v ->
                     val first = items[i].verdict.isEmpty()
@@ -169,7 +244,7 @@ fun PastCheckScreen(
                     if (v == "yes" && first) {
                         val from = Instants.toLocal(item.from()).toLocalDate()
                         val to = Instants.toLocal(item.to()).toLocalDate()
-                        Journal.add(context, from.plusDays(java.time.temporal.ChronoUnit.DAYS.between(from, to) / 2), item.life, item.good, "Confirmed when Kshana read my past")
+                        Journal.add(context, from.plusDays(java.time.temporal.ChronoUnit.DAYS.between(from, to) / 2), item.life, item.good, PastReveal.CONFIRMED_NOTE)
                     }
                     if (items.none { it.verdict.isEmpty() }) runRefine()
                 })
@@ -181,13 +256,14 @@ fun PastCheckScreen(
         if (allAnswered) {
             ScoreCard(items.toList())
             BirthTimeCard(
-                profile, refine, refining, timeNote, learnLine,
+                profile, refine, refining, timeNote, learnLine, nowLine,
                 onUse = { fit ->
                     val local = Instants.toLocal(fit.birth, profile.birthZone())
                     val p = profile.copy(year = local.year, month = local.monthValue, day = local.dayOfMonth, hour = local.hour, minute = local.minute, second = local.second)
                     ProfileStore.save(context, p)
                     timeNote = "Your birth time is now ${"%02d:%02d".format(p.hour, p.minute)}. Every reading in the app uses it from now on."
                     refine = null
+                    nowLine = null
                     onProfile(p)
                 },
             )
@@ -229,6 +305,40 @@ private fun StretchCard(item: PastReveal.Item, onAnswer: (String) -> Unit) {
     }
 }
 
+/** One fact read from the chart: Yes, No, or Not sure. */
+@Composable
+private fun FactCard(fact: PastReveal.Fact, onAnswer: (String) -> Unit) {
+    Column(Modifier.fillMaxWidth().glass(16.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(factLabel(fact.topic), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(fact.statement, fontFamily = FontFamily.Serif, fontSize = 19.sp, lineHeight = 27.sp, color = KshanaColors.Text)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            OptionBox("Yes", selected = fact.verdict == "yes", onClick = { onAnswer("yes") }, modifier = Modifier.weight(1f))
+            OptionBox("No", selected = fact.verdict == "no", onClick = { onAnswer("no") }, modifier = Modifier.weight(1f))
+        }
+        Text(
+            if (fact.verdict == "unsure") "NOT SURE ✓" else "NOT SURE",
+            style = MaterialTheme.typography.labelSmall, color = if (fact.verdict == "unsure") KshanaColors.Gold else KshanaColors.Muted,
+            modifier = Modifier.clickable { onAnswer("unsure") }.padding(vertical = 4.dp),
+        )
+        when (fact.verdict) {
+            "yes" -> Text(if (fact.sensitive) "Good. This one depends on the exact minute you were born, so it helps place your birth time." else "Good. This one holds for every nearby birth time.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
+            "no" -> Text("Not this one? That tells me your birth time is a little different. $WRONG_HELPS", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
+            "unsure" -> Text("That is fine. This one is left out of the birth time.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        }
+    }
+}
+
+private fun factLabel(topic: String): String = when (topic) {
+    "birth_order", "siblings" -> "BROTHERS AND SISTERS"
+    "mother" -> "YOUR MOTHER"
+    "father" -> "YOUR FATHER"
+    "mark" -> "A MARK ON YOUR BODY"
+    "move" -> "A MOVE"
+    "marriage" -> "LOVE AND MARRIAGE"
+    "job" -> "WORK"
+    else -> "ABOUT YOU"
+}
+
 @Composable
 private fun ScoreCard(items: List<PastReveal.Item>) {
     val context = LocalContext.current
@@ -263,14 +373,14 @@ private fun ScoreCard(items: List<PastReveal.Item>) {
 }
 
 @Composable
-private fun BirthTimeCard(profile: BirthProfile, r: BirthRefineRecord?, working: Boolean, note: String?, learnLine: String?, onUse: (uniffi.kshana_ffi.BirthFitRecord) -> Unit) {
+private fun BirthTimeCard(profile: BirthProfile, r: BirthRefineRecord?, working: Boolean, note: String?, learnLine: String?, nowLine: String?, onUse: (uniffi.kshana_ffi.BirthFitRecord) -> Unit) {
     val recorded = "%02d:%02d".format(profile.hour, profile.minute)
     Column(Modifier.fillMaxWidth().glass(16.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("YOUR BIRTH TIME", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Sky)
         when {
             note != null -> Text(note, fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text)
             working -> Working("checking every minute around $recorded against your answers…")
-            r == null -> Text("Answer at least three stretches and I will check your recorded time, $recorded, against your life.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+            r == null -> Text("Answer at least three questions and I will check your recorded time, $recorded, against your life.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
             r.suggested != null -> {
                 val s = r.suggested!!
                 val t = Instants.toLocal(s.birth, profile.birthZone())
@@ -299,7 +409,10 @@ private fun BirthTimeCard(profile: BirthProfile, r: BirthRefineRecord?, working:
             }
         }
         // The stretch of birth times the answers point to, once they point anywhere firmly.
-        if (r != null && note == null && !working) {
+        if (r != null && note == null && !working && !nowLine.isNullOrBlank()) {
+            // Every answer, fact and logged event, pooled to the minute.
+            Text(nowLine, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
+        } else if (r != null && note == null && !working) {
             val a = r.bracketFrom
             val b = r.bracketTo
             if (a != null && b != null && r.log10Bayes >= 1.0) {

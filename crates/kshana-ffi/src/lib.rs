@@ -18,6 +18,7 @@ pub mod day;
 pub mod directions;
 pub mod eclipse;
 pub mod family;
+pub mod facts_reveal;
 pub mod kp_full;
 pub mod ledger;
 pub mod learn;
