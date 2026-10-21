@@ -95,6 +95,7 @@ internal val MORE_PAGES = listOf(
 
     MorePage("Help", "Guide", "how to use Kshana, screen by screen", "guide"),
     MorePage("Help", "How Kshana works", "what it reads, how sure it is, your data, privacy", "how"),
+    MorePage("Help", "The open test", "how Kshana's accuracy is tested, written down before any results; the rules it keeps; your record, if you choose to add it", "opentest"),
     MorePage("Help", "About Kshana", "who we are, what the name means, the version", "about"),
 
     MorePage("Chart pages", "Why trust this", "the engine, its data and its checks", "trust", true),
@@ -190,7 +191,7 @@ private val GLYPHS = mapOf(
     "sealed" to Ancient.SCROLL, "quiz" to Ancient.COWRIES, "marga" to Ancient.CONCH, "diary" to Ancient.LEAF,
     "me" to Ancient.STAR, "family" to Ancient.KALASHA, "compatibility" to Ancient.SCALES, "naming" to Ancient.LOTUS,
     "glossary" to Ancient.LEAF, "lexicon" to Ancient.SCROLL, "narrate" to Ancient.CONCH, "arrival" to Ancient.SUN,
-    "sure" to Ancient.BOW, "familyproof" to Ancient.TREE, "scoreboard" to Ancient.SCALES,
+    "opentest" to Ancient.EYE, "sure" to Ancient.BOW, "familyproof" to Ancient.TREE, "scoreboard" to Ancient.SCALES,
 )
 
 internal fun glyphFor(route: String): Ancient = GLYPHS[route] ?: Ancient.STAR
