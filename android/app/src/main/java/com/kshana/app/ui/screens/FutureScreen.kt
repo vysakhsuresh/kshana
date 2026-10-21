@@ -83,7 +83,7 @@ fun FutureScreen(profile: BirthProfile, place: Place, settings: EngineSettings, 
         try {
             val engine = EngineProvider.get(context)
             val l = withContext(Dispatchers.Default) {
-                engine.future(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), months.toUInt(), Lang.code, Focus.lives)
+                engine.futurePersonal(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), months.toUInt(), Lang.code, Focus.lives, com.kshana.app.data.PersonalWeights.input(context, profile.name))
             }
             FutureCache.lists[key] = l
             list = l

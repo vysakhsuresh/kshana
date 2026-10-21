@@ -66,7 +66,7 @@ private data class Asked(val area: String, val questions: List<QuizQuestionRecor
 /**
  * Asked-first retrodiction: the chart commits to dated questions before you tell it
  * anything, each window beside decoys, and you say where the thing happened. The
- * grade is the hit rate next to chance, never alone. Nothing is stored.
+ * grade is the hit rate next to chance, never alone. Only the counts are kept, for the scoreboard.
  */
 @Composable
 fun QuizScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> Unit) {
@@ -110,6 +110,12 @@ fun QuizScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> Un
         val set = asked ?: return
         val list = set.questions.indices.map { (answers[it] ?: NOT_SURE).toLong() }
         result = runCatching { gradeQuiz(set.questions, list) }.onFailure { error = it.message ?: it.toString() }.getOrNull()
+        // Only the counts are kept, for the scoreboard: grading the same set again replaces them.
+        result?.let { r ->
+            set.questions.firstOrNull()?.let { q ->
+                com.kshana.app.data.QuizScores.record(context, profile.name, q.commitment, r.correct.toInt(), r.total.toInt(), r.chanceRate)
+            }
+        }
     }
 
     Column(
@@ -122,7 +128,7 @@ fun QuizScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> Un
         }
         Text("The chart asks, you answer", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         Text(
-            "Before you tell it anything, the chart picks the stretches of your life it would call strongest for an area and hides each among ${DECOYS.toInt()} decoys of similar length. You say in which one the thing happened. Nothing is stored.",
+            "Before you tell it anything, the chart picks the stretches of your life it would call strongest for an area and hides each among ${DECOYS.toInt()} decoys of similar length. You say in which one the thing happened. Only the score is kept, on this phone, for your scoreboard.",
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft,
         )
 

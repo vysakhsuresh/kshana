@@ -28,6 +28,7 @@ pub mod remedy_plan;
 pub mod science;
 pub mod tajika;
 pub mod trace;
+pub mod trust;
 pub mod yogas;
 pub use bala::*;
 pub use dashas::*;
