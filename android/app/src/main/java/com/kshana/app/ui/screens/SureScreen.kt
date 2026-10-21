@@ -85,6 +85,17 @@ fun SureScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
             SureCache.key = key
             SureCache.windows = got
             list = got
+            // The firm ones are sealed before they come, so the score can count them.
+            runCatching {
+                val firm = got.filter { it.tier == "strong" || it.tier == "likely" }.map { w ->
+                    uniffi.kshana_ffi.ClaimInputRecord(
+                        source = "consensus", area = w.area, kind = w.kind, good = !w.isHard,
+                        windowStart = w.start, windowEnd = w.end, probability = if (w.tier == "strong") 0.8 else 0.65,
+                        statement = w.headline, question = "",
+                    )
+                }
+                com.kshana.app.data.Trust.sealFeed(context, profile, firm, 3)
+            }
         }.onFailure { error = it.message ?: it.toString() }
     }
     Column(

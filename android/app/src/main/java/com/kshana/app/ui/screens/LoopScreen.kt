@@ -297,6 +297,7 @@ fun LoopScreen(
             }
             item {
                 Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SureNextCard(profile, onOpen = { onOpen("sure") })
                     ResolveDueCard(profile, onOpen = onOpen)
                     RemedyCheckInCard(profile, onOpen = onRemedy)
                     SealOnNow(onRemedy = onRemedy, onOpen = onOpen)

@@ -75,6 +75,7 @@ internal val MORE_PAGES = listOf(
     MorePage(S_PLAN, "The month's letter", "one calm page for the thirty days ahead", "letter"),
     MorePage(S_PLAN, "Calendar and festivals", "today in the Malayalam, Tamil and lunar calendars, and the festivals ahead where you are", "almanac"),
 
+    MorePage(S_WAIT, "What's coming, in dates", "the months ahead where many ways of reading agree, narrowed to the days and hours", "sure"),
     MorePage(S_WAIT, "What you are waiting for", "every date that matters, counting down", "wall"),
 
     MorePage(S_STORY, "Your gifts", "the strengths and tender spots you were born with, and when each comes forward", "gifts"),

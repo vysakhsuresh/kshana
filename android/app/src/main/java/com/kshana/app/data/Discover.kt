@@ -30,6 +30,7 @@ object Discover {
 
     /** After the first week: pages offered one at a time, until each has been opened. */
     private val LATER = listOf(
+        Door("sure", "What's coming, in dates", "Where many ways of reading agree, it names the dates, and sometimes the hour.", "SHOW ME THE DATES"),
         Door("familyproof", "Family proof", "Add your family, and see where their charts and yours agree about the same months.", "READ US TOGETHER"),
         Door("scoreboard", "Your score", "Predictions are sealed before they come. Here is how many came true.", "SEE MY SCORE"),
         Door("journal", "Your journal", "Write down what happened. Over time it shows how often the app was right for you.", "WRITE THE FIRST LINE"),
