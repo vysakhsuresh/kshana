@@ -51,7 +51,7 @@ fun FamilyDatesScreen(profile: BirthProfile, place: Place, settings: EngineSetti
     val context = LocalContext.current
     val people = remember { listOf(profile) + ProfileStore.partners(context) }
     var picked by remember { mutableStateOf(people.indices.take(2).toSet()) }
-    val ps = remember { purposes() }
+    val ps = remember(Lang.code) { purposes(Lang.code) }
     var purpose by remember { mutableStateOf(ps.firstOrNull { it.key == "family" }?.key ?: ps.first().key) }
     var days by remember { mutableStateOf(60) }
     var result by remember { mutableStateOf<List<GroupSlotRecord>?>(null) }

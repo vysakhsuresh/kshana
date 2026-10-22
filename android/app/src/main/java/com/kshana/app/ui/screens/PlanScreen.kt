@@ -80,7 +80,7 @@ fun PlanScreen(
 ) {
     val context = LocalContext.current
     val zone: ZoneId = remember(place) { runCatching { com.kshana.app.data.CityClocks.of(place.zoneId) }.getOrDefault(ZoneId.systemDefault()) }
-    val ps: List<PurposeRecord> = remember { purposes() }
+    val ps: List<PurposeRecord> = remember(com.kshana.app.data.Lang.code) { purposes(com.kshana.app.data.Lang.code) }
     val startLocal = remember { ZonedDateTime.now(zone).plusHours(1).withMinute(0).withSecond(0).withNano(0) }
     var date by remember { mutableStateOf(startLocal.toLocalDate()) }
     var time by remember { mutableStateOf(startLocal.toLocalTime()) }

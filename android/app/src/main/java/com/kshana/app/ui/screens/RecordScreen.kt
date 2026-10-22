@@ -43,7 +43,7 @@ fun RecordScreen(onBack: () -> Unit, onLife: (String) -> Unit) {
     val context = LocalContext.current
     var version by remember { mutableStateOf(0) }
     val pending = remember(version) { PredictionStore.pending(context).reversed() }
-    val record = remember(version) { calibrate(PredictionStore.records(context)) }
+    val record = remember(version, com.kshana.app.data.Lang.code) { calibrate(PredictionStore.records(context), com.kshana.app.data.Lang.code) }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(top = 44.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),

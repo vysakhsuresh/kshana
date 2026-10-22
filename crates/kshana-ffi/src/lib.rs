@@ -1860,7 +1860,9 @@ impl Engine {
         longitude_deg: f64,
         ayanamsa: AyanamsaChoice,
         events: Vec<KpLifeEventRecord>,
+        lang: String,
     ) -> Result<Vec<KpCandidateRecord>, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let obs = Observer {
             latitude_deg,
             longitude_deg,
@@ -1876,7 +1878,7 @@ impl Engine {
                 label: e.label,
             });
         }
-        let c = kshana_rules::rectify::rectify_by_areas(
+        let c = kshana_rules::rectify::rectify_by_areas_in(
             &self.spk,
             self.eop.as_ref(),
             &obs,
@@ -1885,6 +1887,7 @@ impl Engine {
             half_window_seconds as i128 * NS_PER_SEC,
             step_seconds.max(1) as i128 * NS_PER_SEC,
             &evs,
+            lang,
         )
         .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         Ok(c.into_iter()
@@ -2017,7 +2020,7 @@ mod tests {
         assert!(m.lives.iter().all(|l| (0.0..=100.0).contains(&l.score) && !l.headline.is_empty()));
         assert!(!m.shifts.is_empty() && m.hours.len() == 24);
         let a = engine
-            .ask(birth, 9.9312, 76.2673, 9.9312, 76.2673, HouseSystem::Placidus, AyanamsaChoice::Lahiri, "Love".into(), "when".into(), at)
+            .ask(birth, 9.9312, 76.2673, 9.9312, 76.2673, HouseSystem::Placidus, AyanamsaChoice::Lahiri, "Love".into(), "when".into(), at, "en".into())
             .unwrap();
         assert!(!a.verdict.is_empty() && a.reasons.len() >= 4);
         let p = engine
@@ -2456,14 +2459,15 @@ pub struct QuestionRecord {
     pub words: String,
 }
 
-/// The questions, in display order.
+/// The questions, in display order, their words in `lang`.
 #[uniffi::export]
-pub fn questions() -> Vec<QuestionRecord> {
+pub fn questions(lang: String) -> Vec<QuestionRecord> {
+    let lang = kshana_rules::Lang::parse(&lang);
     kshana_rules::Question::ALL
         .iter()
         .map(|q| QuestionRecord {
             key: q.key().to_string(),
-            words: q.words().to_string(),
+            words: q.words_in(lang).to_string(),
         })
         .collect()
 }
@@ -2515,7 +2519,9 @@ impl Engine {
         life: String,
         question: String,
         at: ExactInstant,
+        lang: String,
     ) -> Result<AnswerRecord, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let life = kshana_rules::Life::parse(&life)
             .ok_or_else(|| KshanaError::Engine(format!("unknown life {life}")))?;
         let question = kshana_rules::Question::parse(&question)
@@ -2526,7 +2532,7 @@ impl Engine {
             longitude_deg: lon,
             height_m: 0.0,
         };
-        let a = kshana_rules::answer(
+        let a = kshana_rules::ask::answer_in(
             &self.spk,
             self.eop.as_ref(),
             &natal,
@@ -2536,28 +2542,10 @@ impl Engine {
             life,
             question,
             at.into(),
+            lang,
         )
         .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
-        Ok(AnswerRecord {
-            life: a.life.name().to_string(),
-            question: a.question.key().to_string(),
-            verdict: a.verdict.clone(),
-            score: a.score * 100.0,
-            confidence: a.confidence * 100.0,
-            sure_words: kshana_rules::lang::sure_words(kshana_rules::Lang::En, a.confidence * 100.0).to_string(),
-            headline: a.headline.clone(),
-            when_start: a.when_start.map(Into::into),
-            when_end: a.when_end.map(Into::into),
-            when_words: a.when_words.clone(),
-            first_opening_start: a.first_opening_start.map(Into::into),
-            first_opening_end: a.first_opening_end.map(Into::into),
-            reasons: a.reasons.clone(),
-            rule_ids: a.rule_ids.iter().map(|s| s.to_string()).collect(),
-            now: a.now * 100.0,
-            ahead_mean: a.ahead_mean * 100.0,
-            ahead_best: a.ahead_best * 100.0,
-            shifts: a.shifts.iter().map(shift_record).collect(),
-        })
+        Ok(answer_record(&a, lang))
     }
 }
 
@@ -2734,14 +2722,15 @@ pub struct PurposeRecord {
     pub words: String,
 }
 
-/// The purposes, in display order.
+/// The purposes, in display order, their words in `lang`.
 #[uniffi::export]
-pub fn purposes() -> Vec<PurposeRecord> {
+pub fn purposes(lang: String) -> Vec<PurposeRecord> {
+    let lang = kshana_rules::Lang::parse(&lang);
     kshana_rules::Purpose::ALL
         .iter()
         .map(|p| PurposeRecord {
             key: p.key().to_string(),
-            words: p.words().to_string(),
+            words: kshana_rules::lang::purpose_words(lang, p.key()).unwrap_or(p.words()).to_string(),
         })
         .collect()
 }
@@ -3047,14 +3036,14 @@ pub struct CoupleAnswerRecord {
     pub when_end: Option<ExactInstant>,
 }
 
-fn answer_record(a: &kshana_rules::Answer) -> AnswerRecord {
+fn answer_record(a: &kshana_rules::Answer, lang: kshana_rules::Lang) -> AnswerRecord {
     AnswerRecord {
         life: a.life.name().to_string(),
         question: a.question.key().to_string(),
         verdict: a.verdict.clone(),
         score: a.score * 100.0,
         confidence: a.confidence * 100.0,
-        sure_words: kshana_rules::lang::sure_words(kshana_rules::Lang::En, a.confidence * 100.0).to_string(),
+        sure_words: kshana_rules::lang::sure_words(lang, a.confidence * 100.0).to_string(),
         headline: a.headline.clone(),
         when_start: a.when_start.map(Into::into),
         when_end: a.when_end.map(Into::into),
@@ -3086,10 +3075,12 @@ impl Engine {
         system: HouseSystem,
         ayanamsa: AyanamsaChoice,
         a_is_groom: bool,
+        lang: String,
     ) -> Result<KundaliRecord, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let a = self.natal(a_birth, a_lat, a_lon, system, ayanamsa)?;
         let b = self.natal(b_birth, b_lat, b_lon, system, ayanamsa)?;
-        let k = kshana_rules::kundali(&a, &b, a_is_groom);
+        let k = kshana_rules::kundali::kundali_in(&a, &b, a_is_groom, lang);
         Ok(KundaliRecord {
             total: k.total,
             kootas: k
@@ -3159,7 +3150,9 @@ impl Engine {
         ayanamsa: AyanamsaChoice,
         a_is_groom: bool,
         at: ExactInstant,
+        lang: String,
     ) -> Result<CoupleRecord, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let a = self.natal(a_birth, a_lat, a_lon, system, ayanamsa)?;
         let b = self.natal(b_birth, b_lat, b_lon, system, ayanamsa)?;
         let k = kshana_rules::kundali(&a, &b, a_is_groom);
@@ -3168,7 +3161,7 @@ impl Engine {
             longitude_deg: lon,
             height_m: 0.0,
         };
-        let c = kshana_rules::couple(
+        let c = kshana_rules::kundali::couple_in(
             &self.spk,
             self.eop.as_ref(),
             &a,
@@ -3178,6 +3171,7 @@ impl Engine {
             ayanamsa.into(),
             k.total,
             at.into(),
+            lang,
         )
         .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         Ok(CoupleRecord {
@@ -3187,8 +3181,8 @@ impl Engine {
             together: c.together * 100.0,
             band: c.band.word().to_string(),
             headline: c.headline.clone(),
-            a_saturn: kshana_rules::plain::long_test(c.a_saturn).to_string(),
-            b_saturn: kshana_rules::plain::long_test(c.b_saturn).to_string(),
+            a_saturn: kshana_rules::lang::long_test(lang, c.a_saturn).to_string(),
+            b_saturn: kshana_rules::lang::long_test(lang, c.b_saturn).to_string(),
             a_saturn_active: c.a_saturn != kshana_rules::SaturnPhase::Clear,
             b_saturn_active: c.b_saturn != kshana_rules::SaturnPhase::Clear,
             notes: c.notes.clone(),
@@ -3212,8 +3206,32 @@ impl Engine {
             b_relief: c.b_relief.iter().map(relief_record).collect(),
             a_cause: c.a_cause.clone(),
             b_cause: c.b_cause.clone(),
-            a_briefing: briefing_record(&c.a_briefing),
-            b_briefing: briefing_record(&c.b_briefing),
+            a_briefing: {
+                let mut r = briefing_record(&c.a_briefing);
+                if lang != kshana_rules::Lang::En {
+                    // As `briefing` does: the season paragraph, the long test and the
+                    // moment in the reader's language.
+                    let (sw, _) = kshana_rules::saturn_sentence_in(lang, &self.spk, ayanamsa.into(), &a, c.a_briefing.saturn, at.into(), lon);
+                    if let Some(p) = r.paragraphs.first_mut() {
+                        *p = kshana_rules::season_paragraph_in(lang, &a, at.into(), lon, &sw);
+                    }
+                    r.saturn_words = sw;
+                    localise_moment(&mut r.moment, &c.a_briefing.moment, lang, lon);
+                }
+                r
+            },
+            b_briefing: {
+                let mut r = briefing_record(&c.b_briefing);
+                if lang != kshana_rules::Lang::En {
+                    let (sw, _) = kshana_rules::saturn_sentence_in(lang, &self.spk, ayanamsa.into(), &b, c.b_briefing.saturn, at.into(), lon);
+                    if let Some(p) = r.paragraphs.first_mut() {
+                        *p = kshana_rules::season_paragraph_in(lang, &b, at.into(), lon, &sw);
+                    }
+                    r.saturn_words = sw;
+                    localise_moment(&mut r.moment, &c.b_briefing.moment, lang, lon);
+                }
+                r
+            },
             together_words: c.together_words.clone(),
         })
     }
@@ -3234,7 +3252,9 @@ impl Engine {
         ayanamsa: AyanamsaChoice,
         question: String,
         at: ExactInstant,
+        lang: String,
     ) -> Result<CoupleAnswerRecord, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let question = kshana_rules::Question::parse(&question)
             .ok_or_else(|| KshanaError::Engine(format!("unknown question {question}")))?;
         let a = self.natal(a_birth, a_lat, a_lon, system, ayanamsa)?;
@@ -3244,7 +3264,7 @@ impl Engine {
             longitude_deg: lon,
             height_m: 0.0,
         };
-        let c = kshana_rules::couple_ask(
+        let c = kshana_rules::kundali::couple_ask_in(
             &self.spk,
             self.eop.as_ref(),
             &a,
@@ -3254,15 +3274,16 @@ impl Engine {
             ayanamsa.into(),
             question,
             at.into(),
+            lang,
         )
         .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         Ok(CoupleAnswerRecord {
-            a: answer_record(&c.a),
-            b: answer_record(&c.b),
+            a: answer_record(&c.a, lang),
+            b: answer_record(&c.b, lang),
             verdict: c.verdict.clone(),
             score: c.score * 100.0,
             confidence: c.confidence * 100.0,
-            sure_words: kshana_rules::lang::sure_words(kshana_rules::Lang::En, c.confidence * 100.0).to_string(),
+            sure_words: kshana_rules::lang::sure_words(lang, c.confidence * 100.0).to_string(),
             headline: c.headline.clone(),
             when_start: c.when_start.map(Into::into),
             when_end: c.when_end.map(Into::into),
@@ -3494,21 +3515,21 @@ mod layer_tests {
             .explain(birth, lat, lon, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, "Love".into(), at)
             .unwrap();
         assert!(!e.headline.is_empty() && !e.relief.is_empty() && e.slow.len() == 36);
-        assert!(purposes().len() == 11);
+        assert!(purposes("en".into()).len() == 11);
         let a = engine
             .appointment(birth, lat, lon, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, "interview".into(), at)
             .unwrap();
         assert!(!a.verdict.is_empty() && a.moment.lives.len() == 9);
         let k = engine
-            .kundali(birth, lat, lon, other, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, true)
+            .kundali(birth, lat, lon, other, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, true, "en".into())
             .unwrap();
         assert_eq!(k.kootas.len(), 8);
         let c = engine
-            .couple(birth, lat, lon, other, lat, lon, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, true, at)
+            .couple(birth, lat, lon, other, lat, lon, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, true, at, "en".into())
             .unwrap();
         assert_eq!(c.series.len(), 37);
         let q = engine
-            .couple_ask(birth, lat, lon, other, lat, lon, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, "will_it_return".into(), at)
+            .couple_ask(birth, lat, lon, other, lat, lon, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, "will_it_return".into(), at, "en".into())
             .unwrap();
         assert!(!q.verdict.is_empty());
         let t = engine
@@ -3770,20 +3791,17 @@ pub struct TopicRecord {
     pub houses: String,
 }
 
-/// Every topic, grouped by life in display order.
+/// Every topic, grouped by life in display order, its words in `lang`.
 #[uniffi::export]
-pub fn topics() -> Vec<TopicRecord> {
+pub fn topics(lang: String) -> Vec<TopicRecord> {
+    let lang = kshana_rules::Lang::parse(&lang);
     kshana_rules::TOPICS
         .iter()
         .map(|t| TopicRecord {
             key: t.key.to_string(),
-            words: t.words.to_string(),
+            words: t.words_in(lang).to_string(),
             life: t.life.name().to_string(),
-            houses: format!(
-                "houses {} · against {}",
-                t.area.group.iter().map(|h| h.to_string()).collect::<Vec<_>>().join(", "),
-                t.area.negating.iter().map(|h| h.to_string()).collect::<Vec<_>>().join(", ")
-            ),
+            houses: kshana_rules::topics::houses_words(t, lang),
         })
         .collect()
 }
@@ -3887,9 +3905,10 @@ pub struct CalibrationRecord {
     pub words: String,
 }
 
-/// Score the person's record of answered windows.
+/// Score the person's record of answered windows, its words in `lang`.
 #[uniffi::export]
-pub fn calibrate(records: Vec<RecordInput>) -> CalibrationRecord {
+pub fn calibrate(records: Vec<RecordInput>, lang: String) -> CalibrationRecord {
+    let lang = kshana_rules::Lang::parse(&lang);
     let rs: Vec<kshana_rules::Record> = records
         .iter()
         .filter_map(|r| {
@@ -3900,7 +3919,7 @@ pub fn calibrate(records: Vec<RecordInput>) -> CalibrationRecord {
             })
         })
         .collect();
-    let c = kshana_rules::calibrate(&rs);
+    let c = kshana_rules::calibrate::calibrate_in(&rs, lang);
     CalibrationRecord {
         lives: c
             .lives
@@ -3936,7 +3955,9 @@ impl Engine {
         topic: String,
         question: String,
         at: ExactInstant,
+        lang: String,
     ) -> Result<AnswerRecord, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let t = kshana_rules::topic(&topic).ok_or_else(|| KshanaError::Engine(format!("unknown topic {topic}")))?;
         let question = kshana_rules::Question::parse(&question)
             .ok_or_else(|| KshanaError::Engine(format!("unknown question {question}")))?;
@@ -3946,7 +3967,7 @@ impl Engine {
             longitude_deg: lon,
             height_m: 0.0,
         };
-        let a = kshana_rules::answer_topic(
+        let a = kshana_rules::ask::answer_topic_in(
             &self.spk,
             self.eop.as_ref(),
             &natal,
@@ -3956,9 +3977,10 @@ impl Engine {
             t,
             question,
             at.into(),
+            lang,
         )
         .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
-        Ok(answer_record(&a))
+        Ok(answer_record(&a, lang))
     }
 
     /// The year's chapter containing `at`: solar return to solar return.
@@ -4021,7 +4043,9 @@ impl Engine {
         window_end: ExactInstant,
         events: Vec<LifeEventRecord>,
         max_candidates: u32,
+        lang: String,
     ) -> RectifyRecord {
+        let lang = kshana_rules::Lang::parse(&lang);
         let obs = Observer {
             latitude_deg: lat,
             longitude_deg: lon,
@@ -4037,7 +4061,7 @@ impl Engine {
                 })
             })
             .collect();
-        let v = kshana_rules::rectify(
+        let v = kshana_rules::rectify::rectify_in(
             &self.spk,
             self.eop.as_ref(),
             &obs,
@@ -4047,6 +4071,7 @@ impl Engine {
             window_end.into(),
             &evs,
             max_candidates as usize,
+            lang,
         );
         RectifyRecord {
             by_sign: kshana_rules::by_rising_sign(&v).iter().map(candidate_record).collect(),
@@ -4624,27 +4649,27 @@ mod plain_audit {
                         audit(&tag(&format!("explain_{life}")), format!("{:?}", engine.explain(b, la, lo, la, lo, hs, ay, life.clone(), t).unwrap()), &mut hits);
                         audit(&tag(&format!("parihara_{life}")), format!("{:?}", parihara_shown(engine.parihara(b, la, lo, ay, t, Some(life.clone())).unwrap())), &mut hits);
                     }
-                    for q in questions() {
+                    for q in questions("en".into()) {
                         if ti == 0 || full {
-                            if let Ok(a) = engine.ask(b, la, lo, la, lo, hs, ay, life.clone(), q.key.clone(), t) {
+                            if let Ok(a) = engine.ask(b, la, lo, la, lo, hs, ay, life.clone(), q.key.clone(), t, "en".into()) {
                                 audit(&tag(&format!("ask_{life}_{}", q.key)), format!("{a:?}"), &mut hits);
                             }
                         }
                     }
                 }
                 if ti == 0 {
-                    for tp in topics().iter().take(if full { 200 } else { 12 }) {
-                        if let Ok(a) = engine.ask_topic(b, la, lo, la, lo, hs, ay, tp.key.clone(), "when".into(), t) {
+                    for tp in topics("en".into()).iter().take(if full { 200 } else { 12 }) {
+                        if let Ok(a) = engine.ask_topic(b, la, lo, la, lo, hs, ay, tp.key.clone(), "when".into(), t, "en".into()) {
                             audit(&tag(&format!("topic_{}", tp.key)), format!("{a:?}"), &mut hits);
                         }
                     }
-                    for pu in purposes() {
+                    for pu in purposes("en".into()) {
                         audit(&tag(&format!("appointment_{}", pu.key)), format!("{:?}", engine.appointment(b, la, lo, la, lo, hs, ay, pu.key.clone(), t).unwrap()), &mut hits);
                         audit(&tag(&format!("slots_{}", pu.key)), format!("{:?}", engine.best_slots(b, la, lo, la, lo, hs, ay, pu.key.clone(), t, 7, 5).unwrap()), &mut hits);
                     }
                     audit(&tag("timeline"), format!("{:?}", engine.timeline(b, la, lo, hs, ay, t).unwrap()), &mut hits);
-                    audit(&tag("chart_yogas"), format!("{:?}", engine.chart_yogas(b, la, lo, ay, t).unwrap()), &mut hits);
-                    audit(&tag("kundali"), format!("{:?}", engine.kundali(b, la, lo, ob, ola, olo, hs, ay, true).unwrap()), &mut hits);
+                    audit(&tag("chart_yogas"), format!("{:?}", engine.chart_yogas(b, la, lo, ay, t, "en".into()).unwrap()), &mut hits);
+                    audit(&tag("kundali"), format!("{:?}", engine.kundali(b, la, lo, ob, ola, olo, hs, ay, true, "en".into()).unwrap()), &mut hits);
                     audit(&tag("talk"), format!("{:?}", engine.talk_window(b, la, lo, ob, ola, olo, la, lo, hs, ay, t, 14).unwrap()), &mut hits);
                     for life in std::iter::once(None).chain(life_names().into_iter().map(Some)) {
                         audit(&tag(&format!("tree_{life:?}")), format!("{:?}", engine.remedy_tree(b, la, lo, la, lo, hs, ay, life.clone(), t, "en".into(), vec![]).unwrap()), &mut hits);
@@ -4665,21 +4690,40 @@ mod plain_audit {
                         audit_in(lang, &tg("tree_love"), format!("{:?}", engine.remedy_tree(b, la, lo, la, lo, hs, ay, Some("Love".into()), t, code.into(), vec![]).unwrap()), &mut hits);
                         audit_in(lang, &tg("past"), format!("{:?}", engine.past_checks(b, la, lo, hs, ay, t, code.into(), vec![]).unwrap()), &mut hits);
                         audit_in(lang, &tg("together"), format!("{:?}", engine.best_slots_together(group.clone(), la, lo, hs, ay, "family".into(), t, 7, 3, code.into()).unwrap()), &mut hits);
+                        for q in questions(code.into()) {
+                            if let Ok(a) = engine.ask(b, la, lo, la, lo, hs, ay, "Love".into(), q.key.clone(), t, code.into()) {
+                                audit_in(lang, &tg(&format!("ask_love_{}", q.key)), format!("{:?}", (&a.verdict, &a.headline, &a.when_words, &a.reasons, &a.sure_words)), &mut hits);
+                            }
+                            if let Ok(a) = engine.couple_ask(b, la, lo, ob, ola, olo, la, lo, hs, ay, q.key.clone(), t, code.into()) {
+                                audit_in(lang, &tg(&format!("couple_ask_{}", q.key)), format!("{:?}", (&a.verdict, &a.headline, &a.sure_words)), &mut hits);
+                            }
+                        }
+                        for tp in topics(code.into()).iter().take(if full { 200 } else { 8 }) {
+                            if let Ok(a) = engine.ask_topic(b, la, lo, la, lo, hs, ay, tp.key.clone(), "when".into(), t, code.into()) {
+                                audit_in(lang, &tg(&format!("topic_{}", tp.key)), format!("{:?}", (&a.verdict, &a.headline, &a.when_words, &a.reasons)), &mut hits);
+                            }
+                        }
                     }
                 }
-                audit(&tag("couple"), format!("{:?}", engine.couple(b, la, lo, ob, ola, olo, la, lo, hs, ay, true, t).unwrap()), &mut hits);
-                for q in questions() {
-                    if let Ok(a) = engine.couple_ask(b, la, lo, ob, ola, olo, la, lo, hs, ay, q.key.clone(), t) {
+                audit(&tag("couple"), format!("{:?}", engine.couple(b, la, lo, ob, ola, olo, la, lo, hs, ay, true, t, "en".into()).unwrap()), &mut hits);
+                for q in questions("en".into()) {
+                    if let Ok(a) = engine.couple_ask(b, la, lo, ob, ola, olo, la, lo, hs, ay, q.key.clone(), t, "en".into()) {
                         audit(&tag(&format!("couple_ask_{}", q.key)), format!("{a:?}"), &mut hits);
                     }
                 }
             }
         }
-        audit("questions", format!("{:?}", questions()), &mut hits);
-        audit("purposes", format!("{:?}", purposes()), &mut hits);
-        audit("topics", format!("{:?}", topics()), &mut hits);
+        audit("questions", format!("{:?}", questions("en".into())), &mut hits);
+        audit("purposes", format!("{:?}", purposes("en".into())), &mut hits);
+        audit("topics", format!("{:?}", topics("en".into())), &mut hits);
+        for code in ["ml", "hi"] {
+            let lang = kshana_rules::Lang::parse(code);
+            audit_in(lang, &format!("{code}.questions"), format!("{:?}", questions(code.into())), &mut hits);
+            audit_in(lang, &format!("{code}.purposes"), format!("{:?}", purposes(code.into()).iter().map(|p| p.words.clone()).collect::<Vec<_>>()), &mut hits);
+            audit_in(lang, &format!("{code}.topics"), format!("{:?}", topics(code.into()).iter().map(|p| p.words.clone()).collect::<Vec<_>>()), &mut hits);
+        }
         audit("hora_lore", format!("{:?}", hora_lore_all()), &mut hits);
-        let rec = engine.rectify(9.9312, 76.2673, HouseSystem::Placidus, AyanamsaChoice::Lahiri, at(1990, 2, 20, 4), at(1990, 2, 20, 6), vec![LifeEventRecord { at: at(2015, 5, 10, 6), life: "Love".into(), good: true }], 3);
+        let rec = engine.rectify(9.9312, 76.2673, HouseSystem::Placidus, AyanamsaChoice::Lahiri, at(1990, 2, 20, 4), at(1990, 2, 20, 6), vec![LifeEventRecord { at: at(2015, 5, 10, 6), life: "Love".into(), good: true }], 3, "en".into());
         audit("rectify", format!("{rec:?}"), &mut hits);
         hits.sort();
         hits.dedup();
@@ -5212,23 +5256,23 @@ mod distinct {
 
         // Ask: each question under a life.
         for life in life_names() {
-            let answers: Vec<(String, String)> = questions()
+            let answers: Vec<(String, String)> = questions("en".into())
                 .iter()
-                .filter_map(|q| engine.ask(b, la, lo, la, lo, hs, ay, life.clone(), q.key.clone(), t).ok().map(|a| (q.key.clone(), a.headline)))
+                .filter_map(|q| engine.ask(b, la, lo, la, lo, hs, ay, life.clone(), q.key.clone(), t, "en".into()).ok().map(|a| (q.key.clone(), a.headline)))
                 .collect();
             all_differ(&format!("ask {life}"), answers, &mut problems);
         }
         // Ask: each matter under a life, same question.
         for life in life_names() {
-            let answers: Vec<(String, String)> = topics()
+            let answers: Vec<(String, String)> = topics("en".into())
                 .iter()
                 .filter(|tp| tp.life == life)
-                .filter_map(|tp| engine.ask_topic(b, la, lo, la, lo, hs, ay, tp.key.clone(), "will_it_happen".into(), t).ok().map(|a| (tp.key.clone(), format!("{} {}", a.headline, a.when_words))))
+                .filter_map(|tp| engine.ask_topic(b, la, lo, la, lo, hs, ay, tp.key.clone(), "will_it_happen".into(), t, "en".into()).ok().map(|a| (tp.key.clone(), format!("{} {}", a.headline, a.when_words))))
                 .collect();
             all_differ(&format!("matters under {life}"), answers, &mut problems);
         }
         // Plan: each purpose at the same hour.
-        let plans: Vec<(String, String)> = purposes()
+        let plans: Vec<(String, String)> = purposes("en".into())
             .iter()
             .map(|pu| {
                 let a = engine.appointment(b, la, lo, la, lo, hs, ay, pu.key.clone(), t).unwrap();
@@ -5255,9 +5299,9 @@ mod distinct {
             .collect();
         all_differ("remedy tree per life", trees, &mut problems);
         // Us: each question about the two of you.
-        let couple: Vec<(String, String)> = questions()
+        let couple: Vec<(String, String)> = questions("en".into())
             .iter()
-            .filter_map(|q| engine.couple_ask(b, la, lo, ob, ola, olo, la, lo, hs, ay, q.key.clone(), t).ok().map(|a| (q.key.clone(), a.headline)))
+            .filter_map(|q| engine.couple_ask(b, la, lo, ob, ola, olo, la, lo, hs, ay, q.key.clone(), t, "en".into()).ok().map(|a| (q.key.clone(), a.headline)))
             .collect();
         all_differ("couple questions", couple, &mut problems);
         // First check: different lives, different stretches.
@@ -5394,8 +5438,8 @@ fn action_record(a: &kshana_rules::understand::Action) -> AskActionRecord {
 /// or Hindi, in their own scripts or in Latin letters). It answers only when it
 /// understood; otherwise it says so and offers the closest questions it can answer.
 #[uniffi::export]
-pub fn understand(text: String) -> UnderstandingRecord {
-    let u = kshana_rules::understand::understand(&text);
+pub fn understand(text: String, lang: String) -> UnderstandingRecord {
+    let u = kshana_rules::understand::understand_in(&text, kshana_rules::Lang::parse(&lang));
     UnderstandingRecord {
         status: u.status.into(),
         action: u.action.as_ref().map(action_record),

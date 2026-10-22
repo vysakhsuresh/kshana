@@ -20,7 +20,7 @@ use crate::metrics::{metrics, Metrics};
 use crate::score::{WEIGHT_DASHA, WEIGHT_PARASHARI, WEIGHT_TRANSIT};
 use kshana_chart::Chart;
 use kshana_ephem::Spk;
-use kshana_rules::{area, promise, Facts};
+use kshana_rules::{area, promise, Facts, Lang};
 use kshana_time::Instant;
 use kshana_vedic::dasha::YEAR_365_25_NS;
 use kshana_vedic::{vimshottari_levels, Ayanamsa};
@@ -162,6 +162,34 @@ pub fn seal(
     kind: EventKind,
     window: (Instant, Instant),
 ) -> Result<SealedForecast, LedgerError> {
+    seal_in(spk, natal, ayanamsa, at_creation, area_name, kind, window, Lang::En)
+}
+
+fn kind_phrase_in(lang: Lang, kind: EventKind) -> &'static str {
+    let t = match kind {
+        EventKind::Began => ["something begin", "ഒരു പുതിയ തുടക്കം ഉണ്ടായോ", "कुछ शुरू हुआ"],
+        EventKind::Ended => ["something end", "എന്തെങ്കിലും അവസാനിച്ചോ", "कुछ ख़त्म हुआ"],
+        EventKind::Gain => ["a gain come", "ഒരു നേട്ടം വന്നോ", "कोई लाभ आया"],
+        EventKind::Loss => ["a loss come", "ഒരു നഷ്ടം വന്നോ", "कोई नुकसान आया"],
+        EventKind::Milestone => ["a milestone come", "ഒരു നാഴികക്കല്ല് പിന്നിട്ടോ", "कोई अहम पड़ाव आया"],
+        EventKind::Crisis => ["a crisis come", "ഒരു പ്രതിസന്ധി വന്നോ", "कोई संकट आया"],
+    };
+    lang.pick(t)
+}
+
+/// [`seal`], with the basis and the question written in the reader's language: the
+/// words sealed are the words the person reads.
+#[allow(clippy::too_many_arguments)]
+pub fn seal_in(
+    spk: &Spk,
+    natal: &Chart,
+    ayanamsa: Ayanamsa,
+    at_creation: Instant,
+    area_name: &str,
+    kind: EventKind,
+    window: (Instant, Instant),
+    lang: Lang,
+) -> Result<SealedForecast, LedgerError> {
     let a = area(area_name).ok_or_else(|| LedgerError::UnknownArea(area_name.to_string()))?;
     let (start, end) = window;
     if end <= start {
@@ -193,7 +221,33 @@ pub fn seal(
     let coverage = profile
         .coverage_within(start, end, SUPPORT_THRESHOLD)
         .unwrap_or(0.0);
-    let basis = vec![
+    let basis = if lang != Lang::En {
+        let ml = lang == Lang::Ml;
+        let an = kshana_rules::lang::area_name(lang, a.name);
+        let sub = kshana_rules::lang::graha_name(lang, p.sub_lord);
+        let lord_names: Vec<&str> = vimshottari_levels(natal.bodies[1].sidereal, natal.instant, YEAR_365_25_NS, start, 3)
+            .iter()
+            .map(|x| kshana_rules::lang::graha_name(lang, x.lord))
+            .collect();
+        let ls = if lord_names.is_empty() { lang.pick(["none", "ഇല്ല", "कोई नहीं"]).to_string() } else { lord_names.join(" / ") };
+        let (rule, s, prim, n, c) = (p.hit.rule_id, p.strength, a.primary, profile.segments.len(), coverage * 100.0);
+        if ml {
+            vec![
+                format!("{rule} {an} വാഗ്ദാനം: ശക്തി {s:.2}, {prim}-ാം ഭാവാരംഭത്തിന്റെ ഉപനാഥൻ {sub}, {}", if p.promised { "വാഗ്ദാനമുണ്ട്" } else { "വാഗ്ദാനമില്ല" }),
+                format!("കാലം തുടങ്ങുമ്പോഴുള്ള വിംശോത്തരി നാഥന്മാർ: {ls} (മഹാദശ / അന്തർദശ / പ്രത്യന്തരം)"),
+                format!("{n} കൃത്യ പ്രത്യന്തര ഖണ്ഡങ്ങളിലെ ശരാശരി ചേർച്ച {probability:.3}; കാലത്തിന്റെ {c:.0}% സമയം ചേർച്ച {SUPPORT_THRESHOLD:.2} അല്ലെങ്കിൽ അതിലേറെ"),
+                format!("സാധ്യത = ശരാശരി ചേർച്ച = {WEIGHT_DASHA} × ദശ + {WEIGHT_PARASHARI} × പാരാശരി + {WEIGHT_TRANSIT} × ഗോചരം; ഗോചരം ഓരോ ഖണ്ഡത്തിലും ഒരിക്കൽ അളന്നു"),
+            ]
+        } else {
+            vec![
+                format!("{rule} {an} का वादा: बल {s:.2}, {prim}वें भाव-संधि का उप-स्वामी {sub}, {}", if p.promised { "वादा है" } else { "वादा नहीं" }),
+                format!("अवधि की शुरुआत में विंशोत्तरी स्वामी: {ls} (महादशा / अंतर्दशा / प्रत्यंतर)"),
+                format!("{n} सटीक प्रत्यंतर खंडों पर औसत मेल {probability:.3}; अवधि के {c:.0}% समय मेल {SUPPORT_THRESHOLD:.2} या उससे ऊपर"),
+                format!("संभावना = औसत मेल = {WEIGHT_DASHA} × दशा + {WEIGHT_PARASHARI} × पाराशरी + {WEIGHT_TRANSIT} × गोचर; गोचर हर खंड में एक बार मापा गया"),
+            ]
+        }
+    } else {
+        vec![
         format!(
             "{} promise for {}: strength {:.2}, {}th cusp sub-lord {:?}, {}",
             p.hit.rule_id,
@@ -219,15 +273,27 @@ pub fn seal(
         format!(
             "probability = mean fit = {WEIGHT_DASHA} × dasha + {WEIGHT_PARASHARI} × Parashari + {WEIGHT_TRANSIT} × transit; transit sampled once per cell"
         ),
-    ];
-    let question = format!(
+    ]
+    };
+    let question = if lang != Lang::En {
+        let an = kshana_rules::lang::area_name(lang, a.name);
+        let (s, e) = (kshana_rules::lang::month_year(lang, start, 0.0), kshana_rules::lang::month_year(lang, end, 0.0));
+        let k = kind_phrase_in(lang, kind);
+        if lang == Lang::Ml {
+            format!("{s} മുതൽ {e} വരെ നിങ്ങളുടെ {an} കാര്യത്തിൽ {k}? {e} ആകുമ്പോഴേക്ക് ഉണ്ട് എന്നോ ഇല്ല എന്നോ ഉത്തരം നൽകുക.")
+        } else {
+            format!("{s} से {e} के बीच क्या आपके {an} में {k}? {e} तक हाँ या नहीं में जवाब दें।")
+        }
+    } else {
+        format!(
         "Did {} in your {} between {} and {}? Answer yes or no by {}.",
         kind_phrase(kind),
         a.name,
         month_year(start),
         month_year(end),
         month_year(end)
-    );
+    )
+    };
     let mut f = SealedForecast {
         id: String::new(),
         created_at: at_creation,
@@ -299,6 +365,16 @@ mod tests {
         let back = SealedForecast::from_json_line(&line).unwrap();
         assert_eq!(back, f);
         assert!(back.verify());
+        // Sealed in the reader's language: the same numbers, the reader's words.
+        for lang in [Lang::Ml, Lang::Hi] {
+            let g = seal_in(&spk, &ch, Ayanamsa::Lahiri, created, "career", EventKind::Gain, (noon(2027, 1, 1), noon(2027, 7, 1)), lang).unwrap();
+            assert!(g.verify());
+            assert_eq!(g.probability, f.probability);
+            assert_eq!(g.basis.len(), 4);
+            assert!(g.basis[0].starts_with("KS-K-0001"));
+            assert!(!g.question.contains("Did") && !g.question.contains("Career"), "{}", g.question);
+            assert_eq!(SealedForecast::from_json_line(&g.to_json_line()).unwrap(), g);
+        }
         // Tampering with the claim after sealing shows.
         let mut tampered = back.clone();
         tampered.probability = 0.99;

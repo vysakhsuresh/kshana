@@ -84,7 +84,8 @@ fun TogetherScreen(
     var couple by remember { mutableStateOf<CoupleRecord?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var showKootas by remember { mutableStateOf(false) }
-    val qs: List<QuestionRecord> = remember { questions() }
+    val langCode = com.kshana.app.data.Lang.code
+    val qs: List<QuestionRecord> = remember(langCode) { questions(langCode) }
     var question by remember { mutableStateOf("will_it_return") }
     var asked by remember { mutableStateOf<String?>(null) }
     var asking by remember { mutableStateOf(false) }
@@ -93,7 +94,7 @@ fun TogetherScreen(
 
     val partner: BirthProfile? = partners.getOrNull(selected)
 
-    LaunchedEffect(partner, selfIsGroom, settings) {
+    LaunchedEffect(partner, selfIsGroom, settings, langCode) {
         kundali = null
         couple = null
         coupleAnswer = null
@@ -104,7 +105,7 @@ fun TogetherScreen(
                 engine.kundali(
                     profile.birthInstant(), profile.latitude, profile.longitude,
                     p.birthInstant(), p.latitude, p.longitude,
-                    settings.houseSystem, settings.ayanamsa, selfIsGroom,
+                    settings.houseSystem, settings.ayanamsa, selfIsGroom, langCode,
                 )
             }
             couple = withContext(Dispatchers.Default) {
@@ -112,7 +113,7 @@ fun TogetherScreen(
                     profile.birthInstant(), profile.latitude, profile.longitude,
                     p.birthInstant(), p.latitude, p.longitude,
                     place.latitude, place.longitude,
-                    settings.houseSystem, settings.ayanamsa, selfIsGroom, Instants.now(),
+                    settings.houseSystem, settings.ayanamsa, selfIsGroom, Instants.now(), langCode,
                 )
             }
             error = null
@@ -120,7 +121,7 @@ fun TogetherScreen(
             error = e.message ?: e.toString()
         }
     }
-    LaunchedEffect(asked) {
+    LaunchedEffect(asked, langCode) {
         val p = partner ?: return@LaunchedEffect
         if (asked == null) return@LaunchedEffect
         asking = true
@@ -131,7 +132,7 @@ fun TogetherScreen(
                     profile.birthInstant(), profile.latitude, profile.longitude,
                     p.birthInstant(), p.latitude, p.longitude,
                     place.latitude, place.longitude,
-                    settings.houseSystem, settings.ayanamsa, question, Instants.now(),
+                    settings.houseSystem, settings.ayanamsa, question, Instants.now(), langCode,
                 )
             }
             error = null
@@ -494,14 +495,15 @@ private fun MatchTwo(people: List<BirthProfile>, settings: EngineSettings, onRem
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         for ((i, p) in people.withIndex()) Chip(p.name.substringBefore(' ').uppercase(), selected = i == b, onClick = { b = i; k = null })
     }
-    LaunchedEffect(a, b, open) {
+    val langCode = com.kshana.app.data.Lang.code
+    LaunchedEffect(a, b, open, langCode) {
         if (a == b) { k = null; return@LaunchedEffect }
         runCatching {
             val engine = EngineProvider.get(context)
             val pa = people[a]
             val pb = people[b]
             k = withContext(Dispatchers.Default) {
-                engine.kundali(pa.birthInstant(), pa.latitude, pa.longitude, pb.birthInstant(), pb.latitude, pb.longitude, settings.houseSystem, settings.ayanamsa, true)
+                engine.kundali(pa.birthInstant(), pa.latitude, pa.longitude, pb.birthInstant(), pb.latitude, pb.longitude, settings.houseSystem, settings.ayanamsa, true, langCode)
             }
         }
     }
@@ -579,18 +581,24 @@ private fun RemedyLine(title: String, why: String, c: Color) {
 private fun byNames(s: String, aRaw: String, bRaw: String): String {
     val a = properName(aRaw)
     val b = properName(bRaw)
-    return s.replace("The first person's", "$a's").replace("the first person's", "$a's")
+    return localNames(s, a, b).replace("The first person's", "$a's").replace("the first person's", "$a's")
         .replace("The second person's", "$b's").replace("the second person's", "$b's")
         .replace("The first person", a).replace("the first person", a)
         .replace("The second person", b).replace("the second person", b)
         .replace("First person:", "$a:").replace("Second person:", "$b:")
 }
 
+/** The engine's Malayalam and Hindi "first person" / "second person" forms, by name. */
+private fun localNames(s: String, a: String, b: String): String =
+    s.replace("ഒന്നാമത്തെ ആളുടെ", "$a-ന്റെ").replace("രണ്ടാമത്തെ ആളുടെ", "$b-ന്റെ")
+        .replace("ഒന്നാമത്തെ ആൾ", a).replace("രണ്ടാമത്തെ ആൾ", b)
+        .replace("पहले व्यक्ति", a).replace("दूसरे व्यक्ति", b)
+
 /** The engine speaks of "the first chart" and "the second"; the screen uses names. */
 private fun personalise(s: String, meRaw: String, themRaw: String): String {
     val me = properName(meRaw)
     val them = properName(themRaw)
-    return s.replace("The first person's", "$me's")
+    return localNames(s, me, them).replace("The first person's", "$me's")
         .replace("The second person's", "$them's")
         .replace("The first person", me)
         .replace("The second person", them)

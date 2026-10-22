@@ -5,7 +5,7 @@
 
 use kshana_marga::SIGN_NAMES;
 use kshana_rules::yogas::{chart_yogas, YogaFound, CATALOG};
-use kshana_rules::Facts;
+use kshana_rules::{Facts, Lang};
 use kshana_time::{Instant, Utc};
 use kshana_vedic::dasha::YEAR_365_25_NS;
 use kshana_vedic::{
@@ -105,23 +105,48 @@ fn year(i: Instant) -> i64 {
 }
 
 /// The plain "when" sentence from the activating periods.
-fn when_words(y: &YogaFound, periods: &[(DashaLord, Instant, Instant)], now: Instant) -> String {
+fn when_words(y: &YogaFound, periods: &[(DashaLord, Instant, Instant)], now: Instant, lang: Lang) -> String {
     if y.lifelong {
-        return "This runs through your whole life.".into();
+        return lang
+            .pick(["This runs through your whole life.", "ഇത് ജീവിതത്തിലുടനീളം കൂടെയുണ്ട്.", "यह आपके पूरे जीवन में साथ चलता है।"])
+            .into();
     }
     if let Some((_, _, e)) = periods.iter().find(|(_, s, e)| *s <= now && now < *e) {
-        return format!("It is most active now, until {}.", year(*e));
+        let e = year(*e);
+        return match lang {
+            Lang::En => format!("It is most active now, until {e}."),
+            Lang::Ml => format!("ഇപ്പോഴാണ് ഇത് ഏറ്റവും സജീവം, {e} വരെ."),
+            Lang::Hi => format!("यह अभी सबसे ज़्यादा सक्रिय है, {e} तक।"),
+        };
     }
     if let Some((_, s, e)) = periods.iter().find(|(_, s, _)| *s > now) {
-        return format!("It comes alive from {} to {}.", year(*s), year(*e));
+        let (s, e) = (year(*s), year(*e));
+        return match lang {
+            Lang::En => format!("It comes alive from {s} to {e}."),
+            Lang::Ml => format!("{s} മുതൽ {e} വരെ ഇത് ഉണർന്നു പ്രവർത്തിക്കും."),
+            Lang::Hi => format!("यह {s} से {e} तक जागेगा।"),
+        };
     }
     match periods.last() {
-        Some((_, s, e)) => format!("Its strongest years were {} to {}; what it gave stays with you.", year(*s), year(*e)),
-        None => "It colours your life quietly rather than in one stretch of years.".into(),
+        Some((_, s, e)) => {
+            let (s, e) = (year(*s), year(*e));
+            match lang {
+                Lang::En => format!("Its strongest years were {s} to {e}; what it gave stays with you."),
+                Lang::Ml => format!("{s} മുതൽ {e} വരെയായിരുന്നു ഇതിന്റെ ഏറ്റവും ശക്തമായ വർഷങ്ങൾ; അത് തന്നത് നിങ്ങളോടൊപ്പം നിലനിൽക്കുന്നു."),
+                Lang::Hi => format!("इसके सबसे मज़बूत साल {s} से {e} थे; इसने जो दिया वह आपके साथ रहता है।"),
+            }
+        }
+        None => lang
+            .pick([
+                "It colours your life quietly rather than in one stretch of years.",
+                "ഏതെങ്കിലും ഒരു കാലത്തിൽ ഒതുങ്ങാതെ, ഇത് നിശ്ശബ്ദമായി ജീവിതത്തിന് നിറം നൽകുന്നു.",
+                "यह किसी एक दौर में नहीं, चुपचाप पूरे जीवन को रंग देता है।",
+            ])
+            .into(),
     }
 }
 
-fn record(y: &YogaFound, mahas: &[kshana_vedic::DashaPeriod], now: Instant) -> ChartYogaRecord {
+fn record(y: &YogaFound, mahas: &[kshana_vedic::DashaPeriod], now: Instant, lang: Lang) -> ChartYogaRecord {
     let periods: Vec<(DashaLord, Instant, Instant)> = if y.lifelong {
         Vec::new()
     } else {
@@ -139,7 +164,7 @@ fn record(y: &YogaFound, mahas: &[kshana_vedic::DashaPeriod], now: Instant) -> C
         title: y.def.title.into(),
         meaning: y.def.meaning.into(),
         care: y.def.care.into(),
-        when: when_words(y, &periods, now),
+        when: when_words(y, &periods, now, lang),
         lords: y.activators.iter().map(|g| format!("{g:?}")).collect(),
         lifelong: y.lifelong,
         periods: periods
@@ -205,12 +230,14 @@ impl Engine {
         longitude_deg: f64,
         ayanamsa: AyanamsaChoice,
         now: ExactInstant,
+        lang: String,
     ) -> Result<Vec<ChartYogaRecord>, KshanaError> {
+        let lang = Lang::parse(&lang);
         let ch = natal_chart(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let f = Facts::from_chart(&ch);
         let mahas = vimshottari(f.planet(DashaLord::Moon).sidereal, ch.instant, YEAR_365_25_NS);
         let now: Instant = now.into();
-        let mut v: Vec<ChartYogaRecord> = chart_yogas(&f).iter().map(|y| record(y, &mahas, now)).collect();
+        let mut v: Vec<ChartYogaRecord> = chart_yogas(&f).iter().map(|y| record(y, &mahas, now, lang)).collect();
         v.sort_by(|a, b| {
             (!a.good, -a.strength)
                 .partial_cmp(&(!b.good, -b.strength))
@@ -276,7 +303,7 @@ fn jaimini_of(f: &Facts, eight: bool, mahas: &[kshana_vedic::DashaPeriod], now: 
         padas,
         karakamsa,
         karakamsa_name: SIGN_NAMES[karakamsa as usize].into(),
-        yogas: chart_yogas(f).iter().filter(|y| y.def.group.key() == "jaimini").map(|y| record(y, mahas, now)).collect(),
+        yogas: chart_yogas(f).iter().filter(|y| y.def.group.key() == "jaimini").map(|y| record(y, mahas, now, Lang::En)).collect(),
     }
 }
 
@@ -302,7 +329,13 @@ mod tests {
         let Some(e) = engine() else { return };
         let now = at(2026, 10, 20, 6);
         for (b, la, lo) in [(at(1990, 2, 20, 5), 9.9312, 76.2673), (at(1997, 9, 22, 13), 9.9312, 76.2673), (at(1975, 6, 3, 23), 28.6139, 77.2090)] {
-            let ys = e.chart_yogas(b, la, lo, AyanamsaChoice::Lahiri, now).unwrap();
+            for code in ["ml", "hi"] {
+                let lang = Lang::parse(code);
+                for y in e.chart_yogas(b, la, lo, AyanamsaChoice::Lahiri, now, code.into()).unwrap() {
+                    assert_eq!(kshana_rules::plain::jargon_in(lang, &y.when), None, "{}: {}", y.key, y.when);
+                }
+            }
+            let ys = e.chart_yogas(b, la, lo, AyanamsaChoice::Lahiri, now, "en".into()).unwrap();
             assert!(!ys.is_empty());
             // Exactly one Nabhasa yoga family member at least: Sankhya always forms
             // when nothing else does.

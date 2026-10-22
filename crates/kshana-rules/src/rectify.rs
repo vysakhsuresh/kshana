@@ -26,7 +26,9 @@ use crate::areas::Area;
 use crate::facts::Facts;
 use crate::forecast::{sky, slow_scores, Life, Natal};
 use crate::kp::{agreeing_levels, promise, timing};
+use crate::lang;
 use crate::parashari::period_quality;
+use crate::plain::Lang;
 use kshana_chart::{compute, ChartError, ChartInput};
 use kshana_ephem::Spk;
 use kshana_houses::HouseSystem;
@@ -79,6 +81,23 @@ pub fn rectify(
     events: &[LifeEvent],
     max_candidates: usize,
 ) -> Vec<Candidate> {
+    rectify_in(spk, eop, obs, system, ayanamsa, window_start, window_end, events, max_candidates, Lang::En)
+}
+
+/// [`rectify`], its words in the reader's language.
+#[allow(clippy::too_many_arguments)]
+pub fn rectify_in(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    obs: &Observer,
+    system: HouseSystem,
+    ayanamsa: Ayanamsa,
+    window_start: Instant,
+    window_end: Instant,
+    events: &[LifeEvent],
+    max_candidates: usize,
+    lang: Lang,
+) -> Vec<Candidate> {
     let span = window_end.ns_since(window_start).max(0);
     let n = if span == 0 { 1 } else { max_candidates.clamp(3, 241) };
     let step = if n > 1 { span / (n as i128 - 1) } else { 0 };
@@ -124,12 +143,14 @@ pub fn rectify(
             moon_star,
             dasha_at_birth,
             explained,
-            words: format!(
-                "This birth time explains {} of the {} things you marked, a {:.0}% fit",
-                explained,
-                events.len(),
-                fit * 100.0
-            ),
+            words: {
+                let (e, n, p) = (explained, events.len(), fit * 100.0);
+                match lang {
+                    Lang::En => format!("This birth time explains {e} of the {n} things you marked, a {p:.0}% fit"),
+                    Lang::Ml => format!("നിങ്ങൾ അടയാളപ്പെടുത്തിയ {n} കാര്യങ്ങളിൽ {e} എണ്ണം ഈ ജനനസമയം വിശദീകരിക്കുന്നു, {p:.0}% ചേർച്ച"),
+                    Lang::Hi => format!("आपकी बताई {n} बातों में से {e} को यह जन्म-समय समझाता है, {p:.0}% मेल"),
+                }
+            },
         });
     }
     out.sort_by(|a, b| b.fit.partial_cmp(&a.fit).unwrap_or(std::cmp::Ordering::Equal));
@@ -193,7 +214,7 @@ pub struct AreaCandidate {
 }
 
 /// Score a chart against the events.
-fn score_chart(facts: &Facts, moon: f64, birth: Instant, events: &[AreaEvent]) -> Vec<EventScore> {
+fn score_chart(facts: &Facts, moon: f64, birth: Instant, events: &[AreaEvent], lang: Lang) -> Vec<EventScore> {
     events
         .iter()
         .map(|e| {
@@ -202,37 +223,48 @@ fn score_chart(facts: &Facts, moon: f64, birth: Instant, events: &[AreaEvent]) -
             let funnel = timing(facts, e.area, moon, birth, e.at, 3);
             let agree = agreeing_levels(&funnel);
             let mut s = 0.0;
+            let area = lang::area_name(lang, e.area.name);
+            let primary = e.area.primary;
             if p.promised {
                 s += 0.3;
-                factors.push(format!(
-                    "{} promised: {:?} as {}th sub-lord signifies {:?}",
-                    e.area.name,
-                    p.sub_lord,
-                    e.area.primary,
-                    p.fulfilling.iter().map(|x| x.house).collect::<Vec<_>>()
-                ));
+                let houses = p.fulfilling.iter().map(|x| x.house).collect::<Vec<_>>();
+                let sub = lang::graha_name(lang, p.sub_lord);
+                let list = houses.iter().map(|h| h.to_string()).collect::<Vec<_>>().join(", ");
+                factors.push(match lang {
+                    Lang::En => format!("{} promised: {:?} as {}th sub-lord signifies {:?}", e.area.name, p.sub_lord, primary, houses),
+                    Lang::Ml => format!("{area} വാഗ്ദാനമുണ്ട്: {primary}-ാം ഭാവത്തിന്റെ ഉപനാഥനായ {sub} {list} ഭാവങ്ങളെ സൂചിപ്പിക്കുന്നു"),
+                    Lang::Hi => format!("{area} का वादा है: {primary}वें भाव का उप-स्वामी {sub} भाव {list} का सूचक है"),
+                });
             } else {
-                factors.push(format!(
-                    "{} not promised by the {}th sub-lord {:?}",
-                    e.area.name, e.area.primary, p.sub_lord
-                ));
+                let sub = lang::graha_name(lang, p.sub_lord);
+                factors.push(match lang {
+                    Lang::En => format!("{} not promised by the {}th sub-lord {:?}", e.area.name, primary, p.sub_lord),
+                    Lang::Ml => format!("{primary}-ാം ഭാവത്തിന്റെ ഉപനാഥനായ {sub} {area} വാഗ്ദാനം ചെയ്യുന്നില്ല"),
+                    Lang::Hi => format!("{primary}वें भाव का उप-स्वामी {sub} {area} का वादा नहीं करता"),
+                });
             }
             s += 0.1 * p.strength;
             s += 0.4 * agree as f64 / 3.0;
             if let Some(l) = funnel.first() {
-                factors.push(format!(
-                    "at the event: {:?} maha, {} of 3 levels signify the area",
-                    l.period.lord, agree
-                ));
+                let lord = lang::graha_name(lang, l.period.lord);
+                factors.push(match lang {
+                    Lang::En => format!("at the event: {:?} maha, {} of 3 levels signify the area", l.period.lord, agree),
+                    Lang::Ml => format!("സംഭവസമയത്ത്: {lord} മഹാദശ; 3 തലങ്ങളിൽ {agree} എണ്ണം ഈ മേഖലയെ സൂചിപ്പിക്കുന്നു"),
+                    Lang::Hi => format!("घटना के समय: {lord} महादशा; 3 में से {agree} स्तर इस क्षेत्र के सूचक हैं"),
+                });
             }
             if let Some(antar) = funnel.get(1) {
                 let (q, why) = period_quality(facts, e.area, antar.period.lord);
                 s += 0.2 * q;
-                factors.push(format!(
-                    "antardasha {:?}: {}",
-                    antar.period.lord,
-                    why.join("; ")
-                ));
+                let lord = lang::graha_name(lang, antar.period.lord);
+                factors.push(match lang {
+                    Lang::En => format!("antardasha {:?}: {}", antar.period.lord, why.join("; ")),
+                    // The reasons behind the period's quality are English rule text;
+                    // the expert line keeps the period and its verdict in the reader's
+                    // words.
+                    Lang::Ml => format!("{lord} അന്തർദശ: {}", if q >= 0.5 { "ഈ മേഖലയ്ക്ക് അനുകൂലം" } else { "ഈ മേഖലയ്ക്ക് അത്ര അനുകൂലമല്ല" }),
+                    Lang::Hi => format!("{lord} अंतर्दशा: {}", if q >= 0.5 { "इस क्षेत्र के अनुकूल" } else { "इस क्षेत्र के लिए कम अनुकूल" }),
+                });
             }
             EventScore {
                 label: e.label.clone(),
@@ -256,6 +288,22 @@ pub fn rectify_by_areas(
     step_ns: i128,
     events: &[AreaEvent],
 ) -> Result<Vec<AreaCandidate>, ChartError> {
+    rectify_by_areas_in(spk, eop, obs, ayanamsa, center, half_window_ns, step_ns, events, Lang::En)
+}
+
+/// [`rectify_by_areas`], its reasons in the reader's language.
+#[allow(clippy::too_many_arguments)]
+pub fn rectify_by_areas_in(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    obs: &Observer,
+    ayanamsa: Ayanamsa,
+    center: Instant,
+    half_window_ns: i128,
+    step_ns: i128,
+    events: &[AreaEvent],
+    lang: Lang,
+) -> Result<Vec<AreaCandidate>, ChartError> {
     let step = step_ns.max(1_000_000_000);
     let mut out = Vec::new();
     let mut t = center.add_ns(-half_window_ns);
@@ -271,7 +319,7 @@ pub fn rectify_by_areas(
         let ch = compute(spk, eop, &input)?;
         let facts = Facts::from_chart(&ch);
         let moon = ch.bodies[1].sidereal;
-        let per_event = score_chart(&facts, moon, t, events);
+        let per_event = score_chart(&facts, moon, t, events, lang);
         let score = if per_event.is_empty() {
             0.0
         } else {

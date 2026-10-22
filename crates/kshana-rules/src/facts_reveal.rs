@@ -719,7 +719,16 @@ pub fn chart_facts(
         f.rasi_occupants(11)
     );
     if e.abs() >= 0.55 {
-        found.push((Claim::FirstBorn(e < 0.0), (e.abs() / 0.8).tanh(), why11.clone(), "BPHS, Sahaja bhava (the 11th for the elder co-born); Mars the karaka"));
+        found.push((
+            Claim::FirstBorn(e < 0.0),
+            (e.abs() / 0.8).tanh(),
+            why11.clone(),
+            lang.pick([
+                "BPHS, Sahaja bhava (the 11th for the elder co-born); Mars the karaka",
+                "BPHS, സഹജഭാവം (മൂത്ത സഹോദരങ്ങൾക്ക് 11-ാം ഭാവം); ചൊവ്വ കാരകൻ",
+                "BPHS, सहज भाव (बड़े भाई-बहनों के लिए 11वाँ भाव); मंगल कारक",
+            ]),
+        ));
     }
     let m = many(&v);
     if m.abs() >= 0.6 {
@@ -727,7 +736,11 @@ pub fn chart_facts(
             Claim::ManySiblings(m > 0.0),
             (m.abs() / 0.8).tanh(),
             format!("3rd and 11th from lagna: occupants {:?} and {:?}; Mars {:?}", f.rasi_occupants(3), f.rasi_occupants(11), dignity(DashaLord::Mars, f.planet(DashaLord::Mars).sidereal)),
-            "BPHS, Sahaja bhava (the 3rd and 11th); Mars the karaka of the co-born",
+            lang.pick([
+                "BPHS, Sahaja bhava (the 3rd and 11th); Mars the karaka of the co-born",
+                "BPHS, സഹജഭാവം (3-ഉം 11-ഉം ഭാവങ്ങൾ); സഹോദരങ്ങളുടെ കാരകൻ ചൊവ്വ",
+                "BPHS, सहज भाव (तीसरा और 11वाँ भाव); भाई-बहनों का कारक मंगल",
+            ]),
         ));
     }
     for (h, karaka, mother) in [(4u8, DashaLord::Moon, true), (9u8, DashaLord::Sun, false)] {
@@ -739,7 +752,19 @@ pub fn chart_facts(
                 if mother { Claim::Mother(g) } else { Claim::Father(g) },
                 (lead / 0.6).tanh(),
                 format!("{} from lagna and {:?}: {:?} colours them most ({:.1} against {:.1})", ordinal(h), karaka, g, w[top], w[top] - lead),
-                if mother { "BPHS, Sukha bhava (the 4th, the mother); Moon the karaka; natures from Brihat Jataka ch. 2" } else { "BPHS, Dharma bhava (the 9th, the father); Sun the karaka; natures from Brihat Jataka ch. 2" },
+                if mother {
+                    lang.pick([
+                        "BPHS, Sukha bhava (the 4th, the mother); Moon the karaka; natures from Brihat Jataka ch. 2",
+                        "BPHS, സുഖഭാവം (4-ാം ഭാവം, അമ്മ); ചന്ദ്രൻ കാരകൻ; സ്വഭാവങ്ങൾ ബൃഹജ്ജാതകം അധ്യായം 2-ൽ നിന്ന്",
+                        "BPHS, सुख भाव (चौथा भाव, माँ); चंद्र कारक; स्वभाव बृहज्जातक अध्याय 2 से",
+                    ])
+                } else {
+                    lang.pick([
+                        "BPHS, Dharma bhava (the 9th, the father); Sun the karaka; natures from Brihat Jataka ch. 2",
+                        "BPHS, ധർമ്മഭാവം (9-ാം ഭാവം, അച്ഛൻ); സൂര്യൻ കാരകൻ; സ്വഭാവങ്ങൾ ബൃഹജ്ജാതകം അധ്യായം 2-ൽ നിന്ന്",
+                        "BPHS, धर्म भाव (नौवाँ भाव, पिता); सूर्य कारक; स्वभाव बृहज्जातक अध्याय 2 से",
+                    ])
+                },
             ));
         }
     }
@@ -749,7 +774,11 @@ pub fn chart_facts(
                 Claim::Mark { decanate: d, part, side },
                 s,
                 format!("rising decanate {}; {:?} in the {}", d + 1, g, ordinal(f.planet(g).rasi_house)),
-                "Brihat Jataka ch. 5 (Janmakala-lakshana): the decanate's body, the visible half left",
+                lang.pick([
+                    "Brihat Jataka ch. 5 (Janmakala-lakshana): the decanate's body, the visible half left",
+                    "ബൃഹജ്ജാതകം അധ്യായം 5 (ജന്മകാലലക്ഷണം): ദ്രേക്കാണത്തിന്റെ ശരീരഭാഗം, കാണുന്ന പകുതി ഇടത്",
+                    "बृहज्जातक अध्याय 5 (जन्मकाल-लक्षण): द्रेष्काण का अंग, दिखने वाला आधा बायाँ",
+                ]),
             ));
         }
     }
@@ -762,7 +791,11 @@ pub fn chart_facts(
         }
         let lead = year_lead(&ys, best);
         if top >= 0.15 && lead >= 0.04 {
-            found.push((Claim::Year { event: e, year: best }, (lead / 0.06).tanh().min(1.0), format!("third-level periods best in {best}: {top:.2}, ahead by {lead:.2}"), "KP significators of the event's houses in the Vimshottari periods; the natal promise as in the ledger's retrodiction"));
+            found.push((Claim::Year { event: e, year: best }, (lead / 0.06).tanh().min(1.0), format!("third-level periods best in {best}: {top:.2}, ahead by {lead:.2}"), lang.pick([
+                "KP significators of the event's houses in the Vimshottari periods; the natal promise as in the ledger's retrodiction",
+                "വിംശോത്തരി കാലങ്ങളിൽ സംഭവത്തിന്റെ ഭാവങ്ങളുടെ KP സൂചകങ്ങൾ; ജനനസമയത്തെ വാഗ്ദാനം, രേഖയിലെ പിൻവായനയിലെ പോലെ",
+                "विंशोत्तरी दशाओं में घटना के भावों के KP सूचक; जन्म का वादा, रिकॉर्ड की पिछली पढ़त की तरह",
+            ])));
         }
     }
 

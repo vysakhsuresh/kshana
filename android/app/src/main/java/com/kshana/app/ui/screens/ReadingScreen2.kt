@@ -270,20 +270,23 @@ internal fun ConsultScreen(profile: BirthProfile, place: Place, settings: Engine
 private fun SituationAnswer(profile: BirthProfile, place: Place, settings: EngineSettings, key: String, since: String?, doors: ReadingDoors) {
     val context = LocalContext.current
     val kind = Situations.kind(key) ?: return
-    var a by remember(key) { mutableStateOf(ConsultCache.answers[key]) }
+    val langCode = Lang.code
+    // The cache is emptied whenever the language changes (ConsultCache.key holds it).
+    val cacheKey = key
+    var a by remember(cacheKey) { mutableStateOf(ConsultCache.answers[cacheKey]) }
     var why by remember(key) { mutableStateOf(false) }
-    LaunchedEffect(key) {
+    LaunchedEffect(cacheKey) {
         if (a != null) return@LaunchedEffect
         runCatching {
             val engine = EngineProvider.get(context)
             val r = withContext(Dispatchers.Default) {
-                if (kind.topic != null && topics().any { it.key == kind.topic }) {
-                    engine.askTopic(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, kind.topic, kind.question, Instants.now())
+                if (kind.topic != null && topics(langCode).any { it.key == kind.topic }) {
+                    engine.askTopic(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, kind.topic, kind.question, Instants.now(), langCode)
                 } else {
-                    engine.ask(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, kind.life, kind.question, Instants.now())
+                    engine.ask(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, kind.life, kind.question, Instants.now(), langCode)
                 }
             }
-            ConsultCache.answers[key] = r
+            ConsultCache.answers[cacheKey] = r
             a = r
         }
     }

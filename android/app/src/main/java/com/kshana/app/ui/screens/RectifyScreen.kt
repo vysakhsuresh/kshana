@@ -189,7 +189,7 @@ fun RectifyScreen(profile: BirthProfile, settings: EngineSettings, onBack: () ->
                 engine.rectify(
                     profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa,
                     Instants.fromInstant(centre.minusSeconds(half)), Instants.fromInstant(centre.plusSeconds(half)),
-                    evs, max.toUInt(),
+                    evs, max.toUInt(), com.kshana.app.data.Lang.code,
                 )
             }
             error = null
@@ -370,7 +370,7 @@ private fun ChartReaderRectify(profile: BirthProfile, settings: EngineSettings, 
                 val center = profile.birthInstant()
                 val records = events.map { KpLifeEventRecord(it.area, it.instant(zone), it.label) }
                 val found = withContext(Dispatchers.Default) {
-                    engine.rectifyKp(center, halfSeconds.toULong(), stepSeconds.toULong(), profile.latitude, profile.longitude, settings.ayanamsa, records)
+                    engine.rectifyKp(center, halfSeconds.toULong(), stepSeconds.toULong(), profile.latitude, profile.longitude, settings.ayanamsa, records, com.kshana.app.data.Lang.code)
                 }
                 candidates = found
                 status = if (found.isEmpty()) "No candidate could be scored in this window." else "${found.size} candidates · best first · ${events.size} events"
@@ -395,7 +395,7 @@ private fun ChartReaderRectify(profile: BirthProfile, settings: EngineSettings, 
                 val engine = EngineProvider.get(context)
                 val records = events.map { it.ledgerRecord(zone) }
                 val found = withContext(Dispatchers.Default) {
-                    engine.birthPosterior(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, halfSeconds, step, records)
+                    engine.birthPosterior(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, halfSeconds, step, records, com.kshana.app.data.Lang.code)
                 }
                 posterior = found
                 posteriorStatus = "${found.instants.size} candidates · step %.0f s · ${found.events} events".format(found.stepSeconds)

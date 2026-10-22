@@ -313,10 +313,11 @@ impl Engine {
         events: Vec<LedgerEventRecord>,
         from: ExactInstant,
         to: ExactInstant,
+        lang: String,
     ) -> Result<TallyRecord, KshanaError> {
         let ch = chart_of(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let evs = to_events(&events)?;
-        let t = kshana_ledger::tally(
+        let t = kshana_ledger::tally_in(
             &self.spk,
             &ch,
             ayanamsa.into(),
@@ -324,6 +325,7 @@ impl Engine {
             from.into(),
             to.into(),
             kshana_ledger::SUPPORT_THRESHOLD,
+            kshana_rules::Lang::parse(&lang),
         )
         .map_err(err)?;
         Ok(TallyRecord {
@@ -451,9 +453,10 @@ impl Engine {
         kind: String,
         window_start: ExactInstant,
         window_end: ExactInstant,
+        lang: String,
     ) -> Result<SealedRecord, KshanaError> {
         let ch = chart_of(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
-        let f = kshana_ledger::seal(
+        let f = kshana_ledger::seal_in(
             &self.spk,
             &ch,
             ayanamsa.into(),
@@ -461,6 +464,7 @@ impl Engine {
             &area,
             kind_of(&kind)?,
             (window_start.into(), window_end.into()),
+            kshana_rules::Lang::parse(&lang),
         )
         .map_err(err)?;
         Ok(sealed_record(&f))
@@ -508,6 +512,7 @@ impl Engine {
         half_window_seconds: i64,
         step_seconds: i64,
         events: Vec<LedgerEventRecord>,
+        lang: String,
     ) -> Result<PosteriorRecord, KshanaError> {
         let evs = to_events(&events)?;
         let obs = Observer {
@@ -515,7 +520,7 @@ impl Engine {
             longitude_deg,
             height_m: 0.0,
         };
-        let p = kshana_ledger::birth_posterior(
+        let p = kshana_ledger::birth_posterior_in(
             &self.spk,
             self.eop.as_ref(),
             &obs,
@@ -525,6 +530,7 @@ impl Engine {
             half_window_seconds,
             step_seconds,
             &evs,
+            kshana_rules::Lang::parse(&lang),
         )
         .map_err(err)?;
         Ok(PosteriorRecord {
@@ -657,6 +663,7 @@ mod tests {
                 events.clone(),
                 from,
                 to,
+                "en".into(),
             )
             .unwrap();
         assert_eq!(t.per_event.len(), 3);
@@ -707,6 +714,7 @@ mod tests {
                 "Gain".into(),
                 u(2027, 1, 1, 0, 0),
                 u(2027, 7, 1, 0, 0),
+                "en".into(),
             )
             .unwrap();
         assert!(sealed.verified && !sealed.resolved);
@@ -733,6 +741,7 @@ mod tests {
                 "Gain".into(),
                 u(2027, 1, 1, 0, 0),
                 u(2027, 7, 1, 0, 0),
+                "en".into(),
             )
             .is_err());
 
@@ -772,6 +781,7 @@ mod tests {
                 600,
                 120,
                 events,
+                "en".into(),
             )
             .unwrap();
         assert_eq!(post.instants.len(), 11);
@@ -789,7 +799,8 @@ mod tests {
                 AyanamsaChoice::Lahiri,
                 600,
                 120,
-                vec![]
+                vec![],
+                "en".into()
             )
             .is_err());
     }

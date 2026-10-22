@@ -436,8 +436,10 @@ fn feeds(range: std::ops::Range<usize>, name: &str) {
             a.run(&tag("plain_reading"), || e.plain_reading(b, la, lo, AY, t));
             a.run(&tag("daily"), || e.daily(b, la, lo, AY, t, hla, hlo));
             a.run(&tag("transits"), || e.transits(b, la, lo, AY, t, 60));
-            a.run(&tag("chart_yogas"), || e.chart_yogas(b, la, lo, AY, t));
-            a.run(&tag("couple"), || e.couple(b, la, lo, ob, ola, olo, hla, hlo, HS, AY, male, t));
+            let ylang = LANGS[(ci + di + 1) % LANGS.len()];
+            a.run(&format!("c{ci}.{ylang}.chart_yogas"), || e.chart_yogas(b, la, lo, AY, t, ylang.into()));
+            let clang = LANGS[(ci + di) % LANGS.len()];
+            a.run(&format!("c{ci}.{clang}.couple"), || e.couple(b, la, lo, ob, ola, olo, hla, hlo, HS, AY, male, t, clang.into()));
             a.run(&tag("talk"), || e.talk_window(b, la, lo, ob, ola, olo, hla, hlo, HS, AY, t, 14));
             if di == 0 || full() {
                 for life in life_names() {
@@ -459,8 +461,10 @@ fn feeds(range: std::ops::Range<usize>, name: &str) {
         let t = ds[0];
         let tag = |s: &str| format!("c{ci}.{s}");
         a.run(&tag("yogas"), || e.yogas(b, la, lo, AY));
-        a.run(&tag("kundali"), || e.kundali(b, la, lo, ob, ola, olo, HS, AY, male));
-        a.run(&tag("kundali_rev"), || e.kundali(ob, ola, olo, b, la, lo, HS, AY, !male));
+        for lang in LANGS {
+            a.run(&format!("c{ci}.{lang}.kundali"), || e.kundali(b, la, lo, ob, ola, olo, HS, AY, male, lang.into()));
+            a.run(&format!("c{ci}.{lang}.kundali_rev"), || e.kundali(ob, ola, olo, b, la, lo, HS, AY, !male, lang.into()));
+        }
         a.run(&tag("compat"), || e.compatibility(b, la, lo, ob, ola, olo, AY));
         a.run(&tag("life_map"), || e.life_map(b, la, lo, AY, 90));
         a.run(&tag("karakas"), || e.karakas(b, la, lo, AY));
@@ -507,7 +511,7 @@ fn every_question() {
     let mut a = Audit::default();
     let which: Vec<usize> = if full() { (0..cs.len()).collect() } else { vec![1, 6, 14, 18] };
     let t = at(2026, 10, 21, 5, 0);
-    let qs = questions();
+    let qs = questions("en".into());
     for (wi, &ci) in which.iter().enumerate() {
         let (b, la, lo, male) = cs[ci];
         let (ob, ola, olo, _) = cs[(ci + 5) % cs.len()];
@@ -518,21 +522,26 @@ fn every_question() {
         for (i, life) in life_names().into_iter().enumerate() {
             for (qi, q) in qs.iter().enumerate() {
                 if pick(i, qi) {
-                    a.run(&tag(&format!("ask_{life}_{}", q.key)), || e.ask(b, la, lo, la, lo, HS, AY, life.clone(), q.key.clone(), t));
+                    // Each pair in one language, rotating, so all three are read.
+                    let lang = LANGS[(i + qi + wi) % LANGS.len()];
+                    a.run(&format!("c{ci}.{lang}.ask_{life}_{}", q.key), || e.ask(b, la, lo, la, lo, HS, AY, life.clone(), q.key.clone(), t, lang.into()));
                 }
             }
         }
-        for (i, tp) in topics().into_iter().enumerate() {
+        for (i, tp) in topics("en".into()).into_iter().enumerate() {
             for (qi, q) in qs.iter().enumerate() {
                 if pick(i, qi) {
-                    a.run(&tag(&format!("topic_{}_{}", tp.key, q.key)), || e.ask_topic(b, la, lo, la, lo, HS, AY, tp.key.clone(), q.key.clone(), t));
+                    let lang = LANGS[(i + qi + wi) % LANGS.len()];
+                    a.run(&format!("c{ci}.{lang}.topic_{}_{}", tp.key, q.key), || e.ask_topic(b, la, lo, la, lo, HS, AY, tp.key.clone(), q.key.clone(), t, lang.into()));
                 }
             }
         }
         for q in &qs {
-            a.run(&tag(&format!("couple_ask_{}", q.key)), || e.couple_ask(b, la, lo, ob, ola, olo, la, lo, HS, AY, q.key.clone(), t));
+            for lang in LANGS {
+                a.run(&format!("c{ci}.{lang}.couple_ask_{}", q.key), || e.couple_ask(b, la, lo, ob, ola, olo, la, lo, HS, AY, q.key.clone(), t, lang.into()));
+            }
         }
-        for pu in purposes() {
+        for pu in purposes("en".into()) {
             a.run(&tag(&format!("appointment_{}", pu.key)), || e.appointment(b, la, lo, la, lo, HS, AY, pu.key.clone(), t));
             a.run(&tag(&format!("slots_{}", pu.key)), || e.best_slots(b, la, lo, la, lo, HS, AY, pu.key.clone(), t, 7, 4));
         }
@@ -615,9 +624,11 @@ fn chart_pages() {
 #[test]
 fn catalogues_and_questions() {
     let mut a = Audit::default();
-    a.read("questions", format!("{:?}", questions()));
-    a.read("purposes", format!("{:?}", purposes()));
-    a.read("topics", format!("{:?}", topics()));
+    for lang in LANGS {
+        a.read(&format!("questions_{lang}"), format!("{:?}", questions(lang.into())));
+        a.read(&format!("purposes_{lang}"), format!("{:?}", purposes(lang.into())));
+        a.read(&format!("topics_{lang}"), format!("{:?}", topics(lang.into())));
+    }
     a.read("hora_lore", format!("{:?}", hora_lore_all()));
     a.read("glossary", format!("{:?}", glossary()));
     a.read("yoga_catalogue", format!("{:?}", yoga_catalogue()));
@@ -658,7 +669,9 @@ fn catalogues_and_questions() {
         "what is my longevity", "my ayurdaya", "maraka dasha when", "is this a bad time for travel", "accident yoga in my chart", "widow yoga",
     ];
     for s in typed {
-        a.read(&format!("understand[{s}]"), format!("{:?}", understand(s.into())));
+        for lang in LANGS {
+            a.read(&format!("understand.{lang}[{s}]"), format!("{:?}", understand(s.into(), lang.into())));
+        }
     }
     a.finish("catalogues_and_questions", 1500);
 }

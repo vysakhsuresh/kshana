@@ -121,6 +121,121 @@ pub fn weekday_of_lord(l: DashaLord) -> Option<usize> {
     }
 }
 
+// The traditional names, for expert text only (chart pages, "how this helps"). Plain
+// predictions never use them: `plain::jargon_in` bans them there. The shared lexicon in
+// `kshana-speak` sits above this crate, so the engine keeps its own copy here.
+
+const GRAHA: [[&str; 3]; 9] = [
+    ["Sun", "സൂര്യൻ", "सूर्य"],
+    ["Moon", "ചന്ദ്രൻ", "चंद्र"],
+    ["Mars", "ചൊവ്വ", "मंगल"],
+    ["Mercury", "ബുധൻ", "बुध"],
+    ["Jupiter", "വ്യാഴം", "गुरु"],
+    ["Venus", "ശുക്രൻ", "शुक्र"],
+    ["Saturn", "ശനി", "शनि"],
+    ["Rahu", "രാഹു", "राहु"],
+    ["Ketu", "കേതു", "केतु"],
+];
+
+/// A graha's name (expert text only): "Saturn", "ശനി", "शनि".
+pub fn graha_name(lang: Lang, l: DashaLord) -> &'static str {
+    lang.pick(GRAHA[idx(l)])
+}
+
+const SIGN_ML: [&str; 12] = ["മേടം", "ഇടവം", "മിഥുനം", "കർക്കടകം", "ചിങ്ങം", "കന്നി", "തുലാം", "വൃശ്ചികം", "ധനു", "മകരം", "കുംഭം", "മീനം"];
+const SIGN_HI: [&str; 12] = ["मेष", "वृषभ", "मिथुन", "कर्क", "सिंह", "कन्या", "तुला", "वृश्चिक", "धनु", "मकर", "कुंभ", "मीन"];
+
+/// A sign's name by index, 0 = Aries (expert text only): "Aries", "മേടം", "मेष".
+pub fn sign_name(lang: Lang, sign: usize) -> &'static str {
+    let s = sign % 12;
+    match lang {
+        Lang::En => crate::forecast::SIGN_NAMES[s],
+        Lang::Ml => SIGN_ML[s],
+        Lang::Hi => SIGN_HI[s],
+    }
+}
+
+const STAR_ML: [&str; 27] = [
+    "അശ്വതി", "ഭരണി", "കാർത്തിക", "രോഹിണി", "മകയിരം", "തിരുവാതിര", "പുണർതം", "പൂയം", "ആയില്യം", "മകം", "പൂരം", "ഉത്രം", "അത്തം", "ചിത്തിര",
+    "ചോതി", "വിശാഖം", "അനിഴം", "തൃക്കേട്ട", "മൂലം", "പൂരാടം", "ഉത്രാടം", "തിരുവോണം", "അവിട്ടം", "ചതയം", "പൂരുരുട്ടാതി", "ഉത്രട്ടാതി", "രേവതി",
+];
+const STAR_HI: [&str; 27] = [
+    "अश्विनी", "भरणी", "कृत्तिका", "रोहिणी", "मृगशिरा", "आर्द्रा", "पुनर्वसु", "पुष्य", "आश्लेषा", "मघा", "पूर्वा फाल्गुनी", "उत्तरा फाल्गुनी", "हस्त", "चित्रा",
+    "स्वाति", "विशाखा", "अनुराधा", "ज्येष्ठा", "मूल", "पूर्वाषाढ़ा", "उत्तराषाढ़ा", "श्रवण", "धनिष्ठा", "शतभिषा", "पूर्वा भाद्रपद", "उत्तरा भाद्रपद", "रेवती",
+];
+
+/// A birth-star's name by index, 0 = Ashwini (expert text only).
+pub fn star_name(lang: Lang, star: usize) -> &'static str {
+    let s = star % 27;
+    match lang {
+        Lang::En => kshana_vedic::panchanga::NAKSHATRA_NAMES[s],
+        Lang::Ml => STAR_ML[s],
+        Lang::Hi => STAR_HI[s],
+    }
+}
+
+/// An ordinal for a count or a house in the reader's language: "7th", "7-ാം", "7वाँ".
+pub fn ordinal(lang: Lang, n: u32) -> String {
+    match lang {
+        Lang::En => {
+            let suf = match (n % 10, n % 100) {
+                (1, x) if x != 11 => "st",
+                (2, x) if x != 12 => "nd",
+                (3, x) if x != 13 => "rd",
+                _ => "th",
+            };
+            format!("{n}{suf}")
+        }
+        Lang::Ml => format!("{n}-ാം"),
+        Lang::Hi => format!("{n}वाँ"),
+    }
+}
+
+/// Capitalise the first letter in English; Malayalam and Hindi have no case.
+pub fn cap(lang: Lang, s: &str) -> String {
+    match lang {
+        Lang::En => plain::cap(s),
+        _ => s.to_string(),
+    }
+}
+
+/// The words on a purpose chip (Plan), by the purpose's key; `None` for an unknown key.
+pub fn purpose_words(lang: Lang, key: &str) -> Option<&'static str> {
+    let t = match key {
+        "meeting" => ["Meeting someone", "ഒരാളെ കാണാൻ", "किसी से मिलना"],
+        "interview" => ["Interview, pitch", "ഇന്റർവ്യൂ, അവതരണം", "इंटरव्यू, प्रस्तुति"],
+        "exam" => ["Exam, test", "പരീക്ഷ", "परीक्षा, टेस्ट"],
+        "journey" => ["Journey", "യാത്ര", "यात्रा"],
+        "deal" => ["Deal, signing, purchase", "ഇടപാട്, ഒപ്പിടൽ, വാങ്ങൽ", "सौदा, दस्तख़त, ख़रीद"],
+        "doctor" => ["Doctor, treatment", "ഡോക്ടർ, ചികിത്സ", "डॉक्टर, इलाज"],
+        "date" => ["Date, proposal", "ഇഷ്ടം പറയാൻ, കൂടിക്കാഴ്ച", "मुलाक़ात, प्रस्ताव"],
+        "family" => ["Family matter", "കുടുംബകാര്യം", "पारिवारिक बात"],
+        "property" => ["Home, land, rent", "വീട്, ഭൂമി, വാടക", "घर, ज़मीन, किराया"],
+        "launch" => ["Starting something new", "പുതിയതെന്തെങ്കിലും തുടങ്ങാൻ", "कुछ नया शुरू करना"],
+        "anything" => ["Anything at all", "എന്തിനും", "कुछ भी"],
+        _ => return None,
+    };
+    Some(lang.pick(t))
+}
+
+/// An area's name (`crate::areas::AREAS`), from its English name; other names pass
+/// through unchanged.
+pub fn area_name(lang: Lang, en: &str) -> String {
+    let t = match en {
+        "Career" => ["Career", "ജോലി", "करियर"],
+        "Marriage" => ["Marriage", "വിവാഹം", "विवाह"],
+        "Children" => ["Children", "മക്കൾ", "संतान"],
+        "Wealth" => ["Wealth", "സമ്പത്ത്", "धन"],
+        "Health" => ["Health", "ആരോഗ്യം", "सेहत"],
+        "Property" => ["Property", "വീടും ഭൂമിയും", "ज़मीन-जायदाद"],
+        "Education" => ["Education", "പഠനം", "पढ़ाई"],
+        "Family" => ["Family", "കുടുംബം", "परिवार"],
+        "Foreign" => ["Foreign", "വിദേശം", "विदेश"],
+        _ => return en.to_string(),
+    };
+    lang.pick(t).to_string()
+}
+
 /// A life's name.
 pub fn life_name(lang: Lang, life: Life) -> &'static str {
     let t = match life {

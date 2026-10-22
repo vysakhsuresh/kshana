@@ -252,9 +252,9 @@ fun LedgerScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> 
     var chanceHash by remember { mutableIntStateOf(0) }
     var chanceStage by remember { mutableStateOf<String?>(null) }
     var chanceError by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(events, profile, settings) {
+    LaunchedEffect(events, profile, settings, com.kshana.app.data.Lang.code) {
         val list = events
-        val hash = list.hashCode()
+        val hash = 31 * list.hashCode() + com.kshana.app.data.Lang.code.hashCode()
         chanceCache[hash]?.let { chance = it; chanceHash = hash; chanceStage = null; return@LaunchedEffect }
         chance = null
         chanceError = null
@@ -265,7 +265,7 @@ fun LedgerScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> 
             val (from, to) = tallySpan(list, zone)
             chanceStage = "Reading the exact coverage of every area over the span…"
             val tally = withContext(Dispatchers.Default) {
-                engine.coverageTally(birth, profile.latitude, profile.longitude, settings.ayanamsa, list, from, to)
+                engine.coverageTally(birth, profile.latitude, profile.longitude, settings.ayanamsa, list, from, to, com.kshana.app.data.Lang.code)
             }
             chance = ChanceResult(tally, null, null); chanceHash = hash
             chanceStage = "Scoring ${plural(list.size, "event")} and ${list.size * METRICS_PER_EVENT.toInt()} matched quiet moments…"
@@ -284,7 +284,7 @@ fun LedgerScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> 
         }
         chanceStage = null
     }
-    val currentChance = if (chanceHash == events.hashCode()) chance else null
+    val currentChance = if (chanceHash == 31 * events.hashCode() + com.kshana.app.data.Lang.code.hashCode()) chance else null
 
     // Shift the sky: the circular time-shift test, run on demand.
     val shiftCache = remember(profile, settings) { HashMap<Int, SurrogateRecord>() }

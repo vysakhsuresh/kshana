@@ -7,6 +7,7 @@
 //! silently altered: the offset is shown, named and reversible.
 
 use crate::forecast::Life;
+use crate::plain::Lang;
 
 /// One answer.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -51,6 +52,58 @@ pub struct Calibration {
 
 /// Score a record.
 pub fn calibrate(records: &[Record]) -> Calibration {
+    calibrate_in(records, Lang::En)
+}
+
+fn life_words(lang: Lang, life: Life, hits: usize, n: usize, offset: f64) -> String {
+    let en = life.name().to_ascii_lowercase();
+    let l = crate::lang::life_name(lang, life);
+    let pts = (offset.abs() * 100.0).round();
+    match lang {
+        Lang::En => {
+            if n == 0 {
+                format!("No answers yet for {en}.")
+            } else if n < 5 {
+                format!("{hits} of {n} right for {en}; five answers make a record.")
+            } else if offset.abs() < 0.01 {
+                format!("{hits} of {n} right for {en}: the app reads your {en} as it is.")
+            } else if offset > 0.0 {
+                format!("{hits} of {n} right for {en}: things went better than the app said, so your record lifts {en} by {:.0}.", offset * 100.0)
+            } else {
+                format!("{hits} of {n} right for {en}: things went harder than the app said, so your record lowers {en} by {:.0}.", -offset * 100.0)
+            }
+        }
+        Lang::Ml => {
+            if n == 0 {
+                format!("{l}: ഇതുവരെ ഉത്തരങ്ങളൊന്നുമില്ല.")
+            } else if n < 5 {
+                format!("{l}: {n}-ൽ {hits} ശരിയായി; അഞ്ച് ഉത്തരങ്ങളാകുമ്പോൾ ഒരു രേഖയാകും.")
+            } else if offset.abs() < 0.01 {
+                format!("{l}: {n}-ൽ {hits} ശരിയായി; ആപ്പ് നിങ്ങളുടെ {l} ഉള്ളതുപോലെ തന്നെ വായിക്കുന്നു.")
+            } else if offset > 0.0 {
+                format!("{l}: {n}-ൽ {hits} ശരിയായി. ആപ്പ് പറഞ്ഞതിനേക്കാൾ നന്നായി കാര്യങ്ങൾ നടന്നു, അതിനാൽ നിങ്ങളുടെ രേഖ {l} {pts:.0} പോയിന്റ് ഉയർത്തുന്നു.")
+            } else {
+                format!("{l}: {n}-ൽ {hits} ശരിയായി. ആപ്പ് പറഞ്ഞതിനേക്കാൾ പ്രയാസമായാണ് കാര്യങ്ങൾ നടന്നത്, അതിനാൽ നിങ്ങളുടെ രേഖ {l} {pts:.0} പോയിന്റ് താഴ്ത്തുന്നു.")
+            }
+        }
+        Lang::Hi => {
+            if n == 0 {
+                format!("{l}: अभी तक कोई जवाब नहीं।")
+            } else if n < 5 {
+                format!("{l}: {n} में से {hits} सही; पाँच जवाबों से एक रिकॉर्ड बनता है।")
+            } else if offset.abs() < 0.01 {
+                format!("{l}: {n} में से {hits} सही; ऐप आपके {l} को जैसा है वैसा ही पढ़ता है।")
+            } else if offset > 0.0 {
+                format!("{l}: {n} में से {hits} सही। बातें ऐप के कहे से बेहतर रहीं, इसलिए आपका रिकॉर्ड {l} को {pts:.0} अंक ऊपर करता है।")
+            } else {
+                format!("{l}: {n} में से {hits} सही। बातें ऐप के कहे से कठिन रहीं, इसलिए आपका रिकॉर्ड {l} को {pts:.0} अंक नीचे करता है।")
+            }
+        }
+    }
+}
+
+/// Score a record, its words in the reader's language.
+pub fn calibrate_in(records: &[Record], lang: Lang) -> Calibration {
     let mut lives = Vec::with_capacity(9);
     let mut n_all = 0;
     let mut hits_all = 0;
@@ -65,30 +118,25 @@ pub fn calibrate(records: &[Record]) -> Calibration {
             rs.iter().map(|r| (if r.happened { 1.0 } else { 0.0 }) - r.predicted).sum::<f64>() / n as f64
         };
         let offset = if n >= 5 { (0.5 * bias).clamp(-0.08, 0.08) } else { 0.0 };
-        let words = if n == 0 {
-            format!("No answers yet for {}.", life.name().to_ascii_lowercase())
-        } else if n < 5 {
-            format!("{} of {} right for {}; five answers make a record.", hits, n, life.name().to_ascii_lowercase())
-        } else if offset.abs() < 0.01 {
-            format!("{} of {} right for {}: the app reads your {} as it is.", hits, n, life.name().to_ascii_lowercase(), life.name().to_ascii_lowercase())
-        } else if offset > 0.0 {
-            format!("{} of {} right for {}: things went better than the app said, so your record lifts {} by {:.0}.", hits, n, life.name().to_ascii_lowercase(), life.name().to_ascii_lowercase(), offset * 100.0)
-        } else {
-            format!("{} of {} right for {}: things went harder than the app said, so your record lowers {} by {:.0}.", hits, n, life.name().to_ascii_lowercase(), life.name().to_ascii_lowercase(), -offset * 100.0)
-        };
+        let words = life_words(lang, life, hits, n, offset);
         n_all += n;
         hits_all += hits;
         lives.push(LifeCalibration { life, n, hits, rate, offset, words });
     }
     let words = if n_all == 0 {
-        "No record yet. When a window the app named has passed, say whether it happened; five answers for a life make a record.".to_string()
+        lang.pick([
+            "No record yet. When a window the app named has passed, say whether it happened; five answers for a life make a record.",
+            "ഇതുവരെ രേഖയൊന്നുമില്ല. ആപ്പ് പറഞ്ഞ ഒരു സമയം കഴിഞ്ഞാൽ അത് നടന്നോ എന്ന് പറയൂ; ഒരു കാര്യത്തിന് അഞ്ച് ഉത്തരങ്ങളാകുമ്പോൾ ഒരു രേഖയാകും.",
+            "अभी कोई रिकॉर्ड नहीं। ऐप का बताया कोई समय बीत जाए, तो बताइए कि वह हुआ या नहीं; किसी एक बात के पाँच जवाबों से रिकॉर्ड बनता है।",
+        ])
+        .to_string()
     } else {
-        format!(
-            "{} of {} windows you judged came out as the app said ({:.0}%).",
-            hits_all,
-            n_all,
-            100.0 * hits_all as f64 / n_all as f64
-        )
+        let pct = 100.0 * hits_all as f64 / n_all as f64;
+        match lang {
+            Lang::En => format!("{hits_all} of {n_all} windows you judged came out as the app said ({pct:.0}%)."),
+            Lang::Ml => format!("നിങ്ങൾ വിലയിരുത്തിയ {n_all} സമയങ്ങളിൽ {hits_all} എണ്ണം ആപ്പ് പറഞ്ഞതുപോലെ നടന്നു ({pct:.0}%)."),
+            Lang::Hi => format!("आपने जिन {n_all} समयों को परखा, उनमें से {hits_all} ऐप के कहे जैसे निकले ({pct:.0}%)."),
+        }
     };
     Calibration { lives, n: n_all, hits: hits_all, words }
 }

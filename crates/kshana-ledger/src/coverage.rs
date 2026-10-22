@@ -29,7 +29,7 @@ use crate::score::{
 };
 use kshana_chart::Chart;
 use kshana_ephem::Spk;
-use kshana_rules::{area, Area, Facts};
+use kshana_rules::{area, Area, Facts, Lang};
 use kshana_time::Instant;
 use kshana_trace::dasha_transitions;
 use kshana_vedic::dasha::YEAR_365_25_NS;
@@ -486,6 +486,11 @@ pub fn coverage(
 
 /// Coverage read from a profile already built.
 pub fn coverage_of(p: &FitProfile, threshold: f64) -> Coverage {
+    coverage_of_in(p, threshold, Lang::En)
+}
+
+/// [`coverage_of`], its words in the reader's language.
+pub fn coverage_of_in(p: &FitProfile, threshold: f64, lang: Lang) -> Coverage {
     let fraction = p.coverage(threshold);
     let mean_fit = p.mean_fit();
     let cannot_fail = fraction > CANNOT_FAIL_COVERAGE;
@@ -494,7 +499,27 @@ pub fn coverage_of(p: &FitProfile, threshold: f64) -> Coverage {
     } else {
         "favourable"
     };
-    let words = if p.segments.is_empty() {
+    let area = kshana_rules::lang::area_name(lang, p.area.name);
+    let (cells, frac) = (p.segments.len(), percent(fraction));
+    let words = if lang == Lang::Ml {
+        let o = if p.kind.is_adverse() { "പ്രതികൂല" } else { "അനുകൂല" };
+        if p.segments.is_empty() {
+            format!("ഈ കാലയളവിൽ ജനനത്തിനു ശേഷമുള്ള സമയമില്ല, അതിനാൽ {area} ({o}) എന്നതിന് കവറേജില്ല.")
+        } else if cannot_fail {
+            format!("നിങ്ങളുടെ ജാതകത്തിൽ {area} എന്നതിന് ഈ പരിശോധന തോൽക്കില്ല: {o} വായന കാലയളവിന്റെ {frac} സമയത്ത് കുറഞ്ഞത് {threshold:.2} നേടി ({cells} കൃത്യ പ്രത്യന്തര ഖണ്ഡങ്ങൾ, ശരാശരി ചേർച്ച {mean_fit:.2}; ഗോചരഭാഗം ഓരോ ഖണ്ഡത്തിലും ഒരിക്കൽ അളന്നു).")
+        } else {
+            format!("{area} ({o}) കാലയളവിന്റെ {frac} സമയത്ത് കുറഞ്ഞത് {threshold:.2} നേടി ({cells} കൃത്യ പ്രത്യന്തര ഖണ്ഡങ്ങൾ, ശരാശരി ചേർച്ച {mean_fit:.2}; ഗോചരഭാഗം ഓരോ ഖണ്ഡത്തിലും ഒരിക്കൽ അളന്നു), അതിനാൽ ഏതെങ്കിലുമൊരു നിമിഷത്തിന് ഏകദേശം {frac} സമയം പിന്തുണ കിട്ടും.")
+        }
+    } else if lang == Lang::Hi {
+        let o = if p.kind.is_adverse() { "प्रतिकूल" } else { "अनुकूल" };
+        if p.segments.is_empty() {
+            format!("इस अवधि में जन्म के बाद का कोई समय नहीं है, इसलिए {area} ({o}) का कोई कवरेज नहीं।")
+        } else if cannot_fail {
+            format!("आपकी कुंडली में {area} के लिए यह परीक्षा विफल नहीं हो सकती: {o} पढ़त अवधि के {frac} समय में कम से कम {threshold:.2} रही ({cells} सटीक प्रत्यंतर खंड, औसत मेल {mean_fit:.2}; गोचर वाला हिस्सा हर खंड में एक बार मापा गया)।")
+        } else {
+            format!("{area} ({o}) अवधि के {frac} समय में कम से कम {threshold:.2} रहा ({cells} सटीक प्रत्यंतर खंड, औसत मेल {mean_fit:.2}; गोचर वाला हिस्सा हर खंड में एक बार मापा गया), इसलिए किसी भी पल को लगभग {frac} समय समर्थन मिलता है।")
+        }
+    } else if p.segments.is_empty() {
         format!(
             "The span holds no time after birth, so {} ({orientation}) has no coverage.",
             p.area.name
@@ -589,6 +614,24 @@ pub fn expected_hits(coverages: &[f64]) -> PoissonBinomial {
 
 /// "about 1 time in N" for a probability, or "almost always"/"almost never".
 pub fn chance_words(p: f64) -> String {
+    chance_words_in(p, Lang::En)
+}
+
+/// [`chance_words`] in the reader's language.
+pub fn chance_words_in(p: f64, lang: Lang) -> String {
+    if lang != Lang::En {
+        return if p.is_nan() || p <= 0.0 {
+            lang.pick(["", "യാദൃച്ഛികമായി ഏതാണ്ട് ഒരിക്കലുമില്ല", "संयोग से लगभग कभी नहीं"]).to_string()
+        } else if p >= 0.5 {
+            lang.pick(["", "യാദൃച്ഛികമായി പകുതിയിലേറെ തവണ", "संयोग से आधे से ज़्यादा बार"]).to_string()
+        } else {
+            let n = (1.0 / p).round();
+            match lang {
+                Lang::Ml => format!("യാദൃച്ഛികമായി ഏകദേശം {n:.0}-ൽ ഒരിക്കൽ"),
+                _ => format!("संयोग से लगभग {n:.0} में 1 बार"),
+            }
+        };
+    }
     if p.is_nan() || p <= 0.0 {
         "almost never by chance".to_string()
     } else if p >= 0.5 {
@@ -656,6 +699,21 @@ pub fn tally(
     to: Instant,
     threshold: f64,
 ) -> Result<Tally, LedgerError> {
+    tally_in(spk, natal, ayanamsa, events, from, to, threshold, Lang::En)
+}
+
+/// [`tally`], its words in the reader's language.
+#[allow(clippy::too_many_arguments)]
+pub fn tally_in(
+    spk: &Spk,
+    natal: &Chart,
+    ayanamsa: Ayanamsa,
+    events: &[LifeEvent],
+    from: Instant,
+    to: Instant,
+    threshold: f64,
+    lang: Lang,
+) -> Result<Tally, LedgerError> {
     let facts = Facts::from_chart(natal);
     let mut cache = TransitCache::new(spk, natal, ayanamsa);
     let set = ProfileSet::build(&mut cache, &facts, events, from, to)?;
@@ -666,7 +724,7 @@ pub fn tally(
         let key = (ev.area.clone(), ev.kind.is_adverse());
         let c = coverages
             .entry(key)
-            .or_insert_with(|| coverage_of(p, threshold))
+            .or_insert_with(|| coverage_of_in(p, threshold, lang))
             .clone();
         let exact_fit = score_event(spk, natal, ayanamsa, ev)?.fit;
         let fit = p.fit_at(ev.at).unwrap_or(exact_fit);
@@ -694,6 +752,41 @@ pub fn tally(
     let mut keys: Vec<&(String, bool)> = coverages.keys().collect();
     keys.sort();
     let coverage_words: Vec<String> = keys.iter().map(|k| coverages[*k].words.clone()).collect();
+    if lang != Lang::En {
+        let ml = lang == Lang::Ml;
+        let mut words = if events.is_empty() {
+            lang.pick(["", "തീയതിയുള്ള സംഭവങ്ങളൊന്നും ഇതുവരെ ചേർത്തിട്ടില്ല, അതിനാൽ എണ്ണാൻ ഒന്നുമില്ല.", "अभी कोई तारीख़ वाली घटना दर्ज नहीं, इसलिए गिनने को कुछ नहीं।"]).to_string()
+        } else if total == 0 {
+            let n = events.len();
+            if ml {
+                format!("തീയതിയുള്ള {n} സംഭവങ്ങളും നിങ്ങളുടെ ജാതകത്തിൽ ഈ പരിശോധന തോൽക്കാത്ത മേഖലകളിലാണ്, അതിനാൽ പ്രധാന ഫലമില്ല.")
+            } else {
+                format!("तारीख़ वाली सभी {n} घटनाएँ उन क्षेत्रों में हैं जहाँ आपकी कुंडली में यह परीक्षा विफल नहीं हो सकती, इसलिए कोई मुख्य नतीजा नहीं।")
+            }
+        } else {
+            let (m, sd, cw) = (pb.mean, pb.sd(), chance_words_in(p_value, lang));
+            if ml {
+                format!("തീയതിയുള്ള {total} സംഭവങ്ങളിൽ {supported} എണ്ണത്തെ അപ്പോൾ നടന്നിരുന്ന ദശകൾ പിന്തുണച്ചു; യാദൃച്ഛികത മാത്രം {m:.0} ± {sd:.0} തരും; ഇത് {cw} സംഭവിക്കുന്നു (p = {p_value:.3}).")
+            } else {
+                format!("तारीख़ वाली {total} घटनाओं में से {supported} को उस समय चल रही दशाओं ने समर्थन दिया; सिर्फ़ संयोग {m:.0} ± {sd:.0} देता; ऐसा {cw} होता है (p = {p_value:.3})।")
+            }
+        };
+        if excluded > 0 {
+            let mut areas: Vec<String> = per_event.iter().filter(|e| e.cannot_fail).map(|e| kshana_rules::lang::area_name(lang, &e.area)).collect();
+            areas.sort();
+            areas.dedup();
+            let pc = percent(CANNOT_FAIL_COVERAGE);
+            if ml {
+                words.push_str(&format!(" {} എന്നിവയിലെ {excluded} സംഭവങ്ങൾ പ്രധാന ഫലത്തിൽ നിന്ന് ഒഴിവാക്കി: നിങ്ങളുടെ ജാതകത്തിൽ ആ മേഖലകൾക്ക് ഈ പരിശോധന തോൽക്കില്ല (കവറേജ് {pc}-ൽ കൂടുതൽ).", areas.join(", ")));
+            } else {
+                words.push_str(&format!(" {} की {excluded} घटनाएँ मुख्य नतीजे से बाहर रखी गईं: आपकी कुंडली में उन क्षेत्रों के लिए यह परीक्षा विफल नहीं हो सकती (कवरेज {pc} से ऊपर)।", areas.join(" और ")));
+            }
+        }
+        if total > 0 && total < 10 {
+            words.push_str(lang.pick(["", " എണ്ണിയ സംഭവങ്ങൾ പത്തിൽ കുറവായതിനാൽ യാദൃച്ഛികതയുടെ പരിധി വിശാലമാണ്.", " दस से कम गिनी गई घटनाओं में संयोग की सीमा चौड़ी है।"]));
+        }
+        return Ok(Tally { supported, total, expected: pb.mean, sd: pb.sd(), p_value, excluded, threshold, per_event, coverage_words, words });
+    }
     let mut words = if events.is_empty() {
         "No dated events logged yet, so there is nothing to tally.".to_string()
     } else if total == 0 {
