@@ -59,10 +59,10 @@ fun GiftsScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> U
     var list by remember { mutableStateOf<List<uniffi.kshana_ffi.ChartYogaRecord>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     val expert = com.kshana.app.data.Expert.on(context)
-    LaunchedEffect(profile) {
+    LaunchedEffect(profile, com.kshana.app.data.Lang.code) {
         runCatching {
             val engine = EngineProvider.get(context)
-            list = withContext(Dispatchers.Default) { engine.chartYogas(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, Instants.now()) }
+            list = withContext(Dispatchers.Default) { engine.chartYogas(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, Instants.now(), com.kshana.app.data.Lang.code) }
         }.onFailure { error = it.message }
     }
     Page("YOUR GIFTS", "What you were born with", "The strengths and the tender spots your birth shows, and when each one comes forward in life.", onBack) {

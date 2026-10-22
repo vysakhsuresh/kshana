@@ -403,6 +403,7 @@ fn feeds(range: std::ops::Range<usize>, name: &str) {
                 }
                 a.run(&l("past"), || e.past_checks(b, la, lo, HS, AY, t, lang.into(), vec![]));
                 a.run(&l("seal_pick"), || e.seal_pick(b, la, lo, HS, AY, t, lang.into()));
+                a.run(&l("chart_yogas"), || e.chart_yogas(b, la, lo, AY, t, lang.into()));
                 if !heavy {
                     continue;
                 }
@@ -436,7 +437,7 @@ fn feeds(range: std::ops::Range<usize>, name: &str) {
             a.run(&tag("plain_reading"), || e.plain_reading(b, la, lo, AY, t));
             a.run(&tag("daily"), || e.daily(b, la, lo, AY, t, hla, hlo));
             a.run(&tag("transits"), || e.transits(b, la, lo, AY, t, 60));
-            a.run(&tag("chart_yogas"), || e.chart_yogas(b, la, lo, AY, t));
+            a.run(&tag("chart_yogas"), || e.chart_yogas(b, la, lo, AY, t, "en".into()));
             a.run(&tag("couple"), || e.couple(b, la, lo, ob, ola, olo, hla, hlo, HS, AY, male, t));
             a.run(&tag("talk"), || e.talk_window(b, la, lo, ob, ola, olo, hla, hlo, HS, AY, t, 14));
             if di == 0 || full() {

@@ -4643,7 +4643,7 @@ mod plain_audit {
                         audit(&tag(&format!("slots_{}", pu.key)), format!("{:?}", engine.best_slots(b, la, lo, la, lo, hs, ay, pu.key.clone(), t, 7, 5).unwrap()), &mut hits);
                     }
                     audit(&tag("timeline"), format!("{:?}", engine.timeline(b, la, lo, hs, ay, t).unwrap()), &mut hits);
-                    audit(&tag("chart_yogas"), format!("{:?}", engine.chart_yogas(b, la, lo, ay, t).unwrap()), &mut hits);
+                    audit(&tag("chart_yogas"), format!("{:?}", engine.chart_yogas(b, la, lo, ay, t, "en".into()).unwrap()), &mut hits);
                     audit(&tag("kundali"), format!("{:?}", engine.kundali(b, la, lo, ob, ola, olo, hs, ay, true).unwrap()), &mut hits);
                     audit(&tag("talk"), format!("{:?}", engine.talk_window(b, la, lo, ob, ola, olo, la, lo, hs, ay, t, 14).unwrap()), &mut hits);
                     for life in std::iter::once(None).chain(life_names().into_iter().map(Some)) {

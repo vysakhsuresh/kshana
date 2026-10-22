@@ -347,11 +347,11 @@ fn yoga_cited(key: &str, lang: Lang) -> Option<Cited> {
     Some(Cited {
         key: format!("yoga.{key}"),
         kind: if later { "custom" } else { "text" },
-        book: d.source.to_string(),
+        book: d.source_in(lang).to_string(),
         chapter: None,
         verse: None,
         note,
-        line: d.source.to_string(),
+        line: d.source_in(lang).to_string(),
     })
 }
 

@@ -354,6 +354,7 @@ fn combustion_orb(g: DashaLord, retrograde: bool) -> Option<f64> {
 struct Ctx<'a> {
     f: &'a Facts,
     sarva: [u8; 12],
+    lang: Lang,
 }
 
 impl<'a> Ctx<'a> {
@@ -441,7 +442,61 @@ impl<'a> Ctx<'a> {
         gs.iter().map(|g| self.strength(*g)).sum::<f64>() / gs.len() as f64
     }
     fn name(&self, g: DashaLord) -> String {
-        format!("{g:?}")
+        match self.lang {
+            Lang::En => format!("{g:?}"),
+            l => words::graha(l, g).to_string(),
+        }
+    }
+    /// A list of grahas: English keeps its `{:?}` form ("[Sun, Moon]").
+    fn list(&self, v: &[DashaLord]) -> String {
+        match self.lang {
+            Lang::En => format!("{v:?}"),
+            l => words::graha_list(l, v),
+        }
+    }
+    /// A dignity: English keeps its `{:?}` form.
+    fn dg(&self, d: Dignity) -> String {
+        match self.lang {
+            Lang::En => format!("{d:?}"),
+            l => words::dignity(l, d).to_string(),
+        }
+    }
+    /// A list of house numbers: English keeps its `{:?}` form ("[1, 7]").
+    fn hs(&self, v: &[u8]) -> String {
+        match self.lang {
+            Lang::En => format!("{v:?}"),
+            _ => words::houses(v),
+        }
+    }
+    /// A house ordinal ("7th", "ഏഴാം", "सप्तम").
+    fn o(&self, h: u8) -> &'static str {
+        words::bhava(self.lang, h)
+    }
+    /// "Mars (lord of 1) and Jupiter (lord of 9) are in mutual aspect", for the Raja and
+    /// Dhana yogas.
+    fn lords_joined(&self, a: DashaLord, ha: u8, b: DashaLord, hb: u8, how: &'static str, tainted: bool) -> String {
+        let (na, nb, oa, ob, h) = (self.name(a), self.name(b), self.o(ha), self.o(hb), self.how(how));
+        match self.lang {
+            Lang::En => format!("{na} (lord of {ha}) and {nb} (lord of {hb}) are {how}{}", if tainted { "; one also rules the 8th or 12th" } else { "" }),
+            Lang::Ml => format!("{na} ({oa} ഭാവാധിപൻ), {nb} ({ob} ഭാവാധിപൻ): {h}{}", if tainted { "; ഒരാൾ എട്ടാമതിന്റെയോ പന്ത്രണ്ടാമതിന്റെയോ അധിപൻ കൂടിയാണ്" } else { "" }),
+            Lang::Hi => format!("{na} ({oa} भावेश) और {nb} ({ob} भावेश) {h}{}", if tainted { "; इनमें एक अष्टम या द्वादश का स्वामी भी है" } else { "" }),
+        }
+    }
+    /// "Mars, lord of 6, is in house 8".
+    fn lord_in(&self, l: DashaLord, h: u8, at: u8) -> String {
+        let (n, oh, oa) = (self.name(l), self.o(h), self.o(at));
+        crate::say3!(self.lang, "{n}, lord of {h}, is in house {at}", "{oh} ഭാവാധിപനായ {n} {oa} ഭാവത്തിൽ", "{oh} भावेश {n} {oa} भाव में")
+    }
+    /// One of the relation words of [`Ctx::connected`].
+    fn how(&self, en: &'static str) -> &'static str {
+        let t = match en {
+            "conjoined" => ["conjoined", "യോഗത്തിൽ (ഒരേ രാശിയിൽ)", "युति में"],
+            "exchanging signs" => ["exchanging signs", "രാശി പരിവർത്തനത്തിൽ", "राशि परिवर्तन में"],
+            "in mutual aspect" => ["in mutual aspect", "പരസ്പര ദൃഷ്ടിയിൽ", "परस्पर दृष्टि में"],
+            "in mutual rasi drishti" => ["in mutual rasi drishti", "പരസ്പര രാശിദൃഷ്ടിയിൽ", "परस्पर राशि दृष्टि में"],
+            _ => [en, en, en],
+        };
+        self.lang.pick(t)
     }
 }
 
@@ -470,7 +525,7 @@ fn graha_strength_in(c: &Ctx, g: DashaLord) -> f64 {
 
 /// Strength of one graha for yoga purposes, `[0, 1]` (see the module notes).
 pub fn graha_strength(facts: &Facts, g: DashaLord) -> f64 {
-    let c = Ctx { f: facts, sarva: sarva_for(facts) };
+    let c = Ctx { f: facts, sarva: sarva_for(facts), lang: Lang::En };
     graha_strength_in(&c, g)
 }
 
@@ -506,7 +561,13 @@ impl Out<'_, '_> {
 
 /// Every catalogued yoga present in the chart.
 pub fn chart_yogas(facts: &Facts) -> Vec<YogaFound> {
-    let c = Ctx { f: facts, sarva: sarva_for(facts) };
+    chart_yogas_in(facts, Lang::En)
+}
+
+/// [`chart_yogas`] with the factors written in the reader's language. The catalogue
+/// fields read through [`YogaDef::title_in`] and its siblings.
+pub fn chart_yogas_in(facts: &Facts, lang: Lang) -> Vec<YogaFound> {
+    let c = Ctx { f: facts, sarva: sarva_for(facts), lang };
     let mut o = Out { c: &c, v: Vec::new() };
     nabhasa(&mut o);
     lunar(&mut o);
@@ -537,24 +598,27 @@ fn nabhasa(o: &mut Out) {
     let mut found: Vec<(&str, String)> = Vec::new();
 
     // Ashraya: the modality of the signs (BPHS ch. 35 v. 7).
-    for (key, m, label) in [("rajju", 0u8, "movable"), ("musala", 1, "fixed"), ("nala", 2, "dual")] {
+    let lang = c.lang;
+    for (key, m, label) in [("rajju", 0u8, ["movable", "ചര", "चर"]), ("musala", 1, ["fixed", "സ്ഥിര", "स्थिर"]), ("nala", 2, ["dual", "ഉഭയ", "द्विस्वभाव"])] {
         if SEVEN.iter().all(|g| c.sign(*g) % 3 == m) {
-            found.push((key, format!("all seven grahas are in {label} signs")));
+            let label = lang.pick(label);
+            found.push((key, crate::say3!(lang, "all seven grahas are in {label} signs", "ഏഴു ഗ്രഹങ്ങളും {label}രാശികളിൽ", "सातों ग्रह {label} राशियों में")));
         }
     }
     // Dala: Mala and Sarpa (BPHS ch. 35 v. 8).
     let ben_k = KENDRA.iter().filter(|k| hs.iter().any(|(g, h)| h == *k && c.benefic(*g))).count();
     let mal_k = KENDRA.iter().filter(|k| hs.iter().any(|(g, h)| h == *k && !c.benefic(*g))).count();
     if ben_k >= 3 && mal_k == 0 {
-        found.push(("mala", format!("benefics hold {ben_k} kendras and no malefic is in a kendra")));
+        found.push(("mala", crate::say3!(lang, "benefics hold {ben_k} kendras and no malefic is in a kendra", "{ben_k} കേന്ദ്രങ്ങളിൽ ശുഭഗ്രഹങ്ങൾ, ഒരു കേന്ദ്രത്തിലും പാപഗ്രഹമില്ല", "{ben_k} केंद्रों में शुभ ग्रह, किसी केंद्र में पाप ग्रह नहीं")));
     }
     if mal_k >= 3 && ben_k == 0 {
-        found.push(("sarpa", format!("malefics hold {mal_k} kendras and no benefic is in a kendra")));
+        found.push(("sarpa", crate::say3!(lang, "malefics hold {mal_k} kendras and no benefic is in a kendra", "{mal_k} കേന്ദ്രങ്ങളിൽ പാപഗ്രഹങ്ങൾ, ഒരു കേന്ദ്രത്തിലും ശുഭഗ്രഹമില്ല", "{mal_k} केंद्रों में पाप ग्रह, किसी केंद्र में शुभ ग्रह नहीं")));
     }
     // Akriti (BPHS ch. 35 v. 9-17).
     for (a, b) in [(1u8, 4u8), (4, 7), (7, 10), (10, 1)] {
         if fills(&[a, b]) {
-            found.push(("gada", format!("all seven grahas in the {a} and {b} houses")));
+            let (oa, ob) = (c.o(a), c.o(b));
+            found.push(("gada", crate::say3!(lang, "all seven grahas in the {a} and {b} houses", "ഏഴു ഗ്രഹങ്ങളും {oa}, {ob} ഭാവങ്ങളിൽ", "सातों ग्रह {oa} और {ob} भाव में")));
         }
     }
     let simple: [(&str, &[u8]); 13] = [
@@ -572,21 +636,26 @@ fn nabhasa(o: &mut Out) {
         ("yupa", &[1, 2, 3, 4]),
         ("shara", &[4, 5, 6, 7]),
     ];
+    let fill_words = |set: &[u8]| {
+        let hs = c.hs(set);
+        crate::say3!(lang, "all seven grahas fill houses {hs}", "ഏഴു ഗ്രഹങ്ങളും {hs} ഭാവങ്ങളിൽ നിറഞ്ഞു", "सातों ग्रह {hs} भावों में भरे हैं")
+    };
     for (key, set) in simple {
         if fills(set) {
-            found.push((key, format!("all seven grahas fill houses {set:?}")));
+            found.push((key, fill_words(set)));
         }
     }
     for (key, start, len) in [("shakti", 7u8, 4u8), ("danda", 10, 4), ("nauka", 1, 7), ("kuta", 4, 7), ("chhatra", 7, 7), ("chapa", 10, 7)] {
         let set = run(start, len);
         if fills(&set) {
-            found.push((key, format!("all seven grahas fill houses {set:?}")));
+            found.push((key, fill_words(&set)));
         }
     }
     for start in [2u8, 3, 5, 6, 8, 9, 11, 12] {
         let set = run(start, 7);
         if fills(&set) {
-            found.push(("ardha_chandra", format!("all seven grahas fill the seven houses from the {start}")));
+            let os = c.o(start);
+            found.push(("ardha_chandra", crate::say3!(lang, "all seven grahas fill the seven houses from the {start}", "{os} ഭാവം മുതൽ ഏഴു ഭാവങ്ങളിൽ ഏഴു ഗ്രഹങ്ങളും", "{os} भाव से सात भावों में सातों ग्रह")));
         }
     }
     // Vajra and Yava: benefics and malefics split between the kendra pairs.
@@ -597,10 +666,10 @@ fn nabhasa(o: &mut Out) {
             && b.iter().all(|h| bens.contains(h)) && m.iter().all(|h| mals.contains(h))
     };
     if split(&[1, 7], &[4, 10]) {
-        found.push(("vajra", "benefics in the 1st and 7th, malefics in the 4th and 10th".into()));
+        found.push(("vajra", lang.pick(["benefics in the 1st and 7th, malefics in the 4th and 10th", "ശുഭഗ്രഹങ്ങൾ ഒന്നിലും ഏഴിലും, പാപഗ്രഹങ്ങൾ നാലിലും പത്തിലും", "शुभ ग्रह प्रथम और सप्तम में, पाप ग्रह चतुर्थ और दशम में"]).into()));
     }
     if split(&[4, 10], &[1, 7]) {
-        found.push(("yava", "malefics in the 1st and 7th, benefics in the 4th and 10th".into()));
+        found.push(("yava", lang.pick(["malefics in the 1st and 7th, benefics in the 4th and 10th", "പാപഗ്രഹങ്ങൾ ഒന്നിലും ഏഴിലും, ശുഭഗ്രഹങ്ങൾ നാലിലും പത്തിലും", "पाप ग्रह प्रथम और सप्तम में, शुभ ग्रह चतुर्थ और दशम में"]).into()));
     }
     // Sankhya: only when no other Nabhasa yoga forms (BPHS ch. 35 v. 18).
     if found.is_empty() {
@@ -608,7 +677,8 @@ fn nabhasa(o: &mut Out) {
         signs.sort_unstable();
         signs.dedup();
         let key = ["gola", "yuga", "shoola", "kedara", "pasha", "daama", "vallaki"][signs.len() - 1];
-        found.push((key, format!("the seven grahas occupy {} signs", signs.len())));
+        let n = signs.len();
+        found.push((key, crate::say3!(lang, "the seven grahas occupy {n} signs", "ഏഴു ഗ്രഹങ്ങൾ {n} രാശികളിൽ", "सात ग्रह {n} राशियों में")));
     }
     for (key, why) in found {
         let d = def(key);
@@ -633,62 +703,72 @@ fn lunar(o: &mut Out) {
         g.extend_from_slice(v);
         g
     };
+    let lang = c.lang;
     match (second.is_empty(), twelfth.is_empty()) {
         (false, true) => {
             let g = with_moon(&second);
-            o.push("sunapha", vec![format!("{} in the 2nd from the Moon, nothing in the 12th", names(&second))], g.clone(), g);
+            let a = names(&second);
+            o.push("sunapha", vec![crate::say3!(lang, "{a} in the 2nd from the Moon, nothing in the 12th", "ചന്ദ്രനിൽ നിന്ന് രണ്ടാം ഭാവത്തിൽ {a}; പന്ത്രണ്ടാം ഭാവത്തിൽ ഒന്നുമില്ല", "चंद्र से द्वितीय भाव में {a}; द्वादश भाव में कोई नहीं")], g.clone(), g);
         }
         (true, false) => {
             let g = with_moon(&twelfth);
-            o.push("anapha", vec![format!("{} in the 12th from the Moon, nothing in the 2nd", names(&twelfth))], g.clone(), g);
+            let a = names(&twelfth);
+            o.push("anapha", vec![crate::say3!(lang, "{a} in the 12th from the Moon, nothing in the 2nd", "ചന്ദ്രനിൽ നിന്ന് പന്ത്രണ്ടാം ഭാവത്തിൽ {a}; രണ്ടാം ഭാവത്തിൽ ഒന്നുമില്ല", "चंद्र से द्वादश भाव में {a}; द्वितीय भाव में कोई नहीं")], g.clone(), g);
         }
         (false, false) => {
             let mut g = with_moon(&second);
             g.extend(twelfth.iter().copied());
-            o.push("durudhura", vec![format!("{} in the 2nd and {} in the 12th from the Moon", names(&second), names(&twelfth))], g.clone(), g);
+            let (a, b) = (names(&second), names(&twelfth));
+            o.push("durudhura", vec![crate::say3!(lang, "{a} in the 2nd and {b} in the 12th from the Moon", "ചന്ദ്രനിൽ നിന്ന് രണ്ടാം ഭാവത്തിൽ {a}, പന്ത്രണ്ടാം ഭാവത്തിൽ {b}", "चंद्र से द्वितीय भाव में {a} और द्वादश भाव में {b}")], g.clone(), g);
         }
         (true, true) => {
             // Kemadruma bhanga (BPHS ch. 37; Phaladeepika ch. 6; Saravali ch. 13).
             let mut cancels = Vec::new();
             let lagna_k: Vec<DashaLord> = SEVEN.iter().copied().filter(|g| *g != Moon && kendra(c.house(*g))).collect();
             if !lagna_k.is_empty() {
-                cancels.push(format!("{} in a kendra from the lagna", names(&lagna_k)));
+                let a = names(&lagna_k);
+                cancels.push(crate::say3!(lang, "{a} in a kendra from the lagna", "ലഗ്നത്തിൽ നിന്ന് കേന്ദ്രത്തിൽ {a}", "लग्न से केंद्र में {a}"));
             }
             let moon_k: Vec<DashaLord> = SEVEN.iter().copied().filter(|g| matches!(from(m, c.sign(*g)), 4 | 7 | 10)).collect();
             if !moon_k.is_empty() {
-                cancels.push(format!("{} in a kendra from the Moon", names(&moon_k)));
+                let a = names(&moon_k);
+                cancels.push(crate::say3!(lang, "{a} in a kendra from the Moon", "ചന്ദ്രനിൽ നിന്ന് കേന്ദ്രത്തിൽ {a}", "चंद्र से केंद्र में {a}"));
             }
             let with: Vec<DashaLord> = SEVEN.iter().copied().filter(|g| c.conj(*g, Moon)).collect();
             if !with.is_empty() {
-                cancels.push(format!("{} with the Moon", names(&with)));
+                let a = names(&with);
+                cancels.push(crate::say3!(lang, "{a} with the Moon", "ചന്ദ്രനോടൊപ്പം {a}", "चंद्र के साथ {a}"));
             }
             if c.aspects(Jupiter, Moon) {
-                cancels.push("Jupiter aspects the Moon".into());
+                cancels.push(lang.pick(["Jupiter aspects the Moon", "ചന്ദ്രനിൽ വ്യാഴത്തിന്റെ ദൃഷ്ടി", "चंद्र पर गुरु की दृष्टि"]).into());
             }
             if cancels.is_empty() {
-                o.push("kemadruma", vec!["no graha other than the Sun in the 2nd or 12th from the Moon, and none of the cancellations".into()], vec![Moon], vec![Moon]);
+                o.push("kemadruma", vec![lang.pick(["no graha other than the Sun in the 2nd or 12th from the Moon, and none of the cancellations", "ചന്ദ്രനിൽ നിന്ന് രണ്ടിലും പന്ത്രണ്ടിലും സൂര്യനല്ലാതെ ഒരു ഗ്രഹവുമില്ല; ഭംഗയോഗങ്ങളുമില്ല", "चंद्र से द्वितीय या द्वादश में सूर्य के सिवा कोई ग्रह नहीं, और कोई भंग भी नहीं"]).into()], vec![Moon], vec![Moon]);
             } else {
-                let f = cancels.iter().map(|x| format!("Kemadruma is cancelled: {x}")).collect();
+                let f = cancels.iter().map(|x| crate::say3!(lang, "Kemadruma is cancelled: {x}", "കേമദ്രുമത്തിന് ഭംഗം: {x}", "केमद्रुम भंग: {x}")).collect();
                 o.push("kemadruma_bhanga", f, vec![Moon], vec![Moon]);
             }
         }
     }
     // Adhi from the Moon (BPHS ch. 37) and from the lagna (Lagnadhi, BPHS ch. 36).
-    adhi(o, "adhi", m, "the Moon");
-    adhi(o, "lagnadhi", c.f.lagna_sign, "the lagna");
+    let the_moon = lang.pick(["the Moon", "ചന്ദ്രനിൽ നിന്ന്", "चंद्र से"]);
+    let the_lagna = lang.pick(["the lagna", "ലഗ്നത്തിൽ നിന്ന്", "लग्न से"]);
+    adhi(o, "adhi", m, the_moon);
+    adhi(o, "lagnadhi", c.f.lagna_sign, the_lagna);
     if c.conj(Moon, Mars) {
-        o.push("chandra_mangala", vec!["the Moon and Mars share a sign".into()], vec![Moon, Mars], vec![Moon, Mars]);
+        o.push("chandra_mangala", vec![lang.pick(["the Moon and Mars share a sign", "ചന്ദ്രനും ചൊവ്വയും ഒരേ രാശിയിൽ", "चंद्र और मंगल एक ही राशि में"]).into()], vec![Moon, Mars], vec![Moon, Mars]);
     }
     let trio = [Mercury, Jupiter, Venus];
-    for (base, label) in [(m, "the Moon"), (c.f.lagna_sign, "the lagna")] {
+    for (base, label) in [(m, the_moon), (c.f.lagna_sign, the_lagna)] {
         if trio.iter().all(|g| matches!(from(base, c.sign(*g)), 3 | 6 | 10 | 11)) {
-            o.push("vasumati", vec![format!("Mercury, Jupiter and Venus all in upachayas from {label}")], trio.to_vec(), trio.to_vec());
+            o.push("vasumati", vec![crate::say3!(lang, "Mercury, Jupiter and Venus all in upachayas from {label}", "{label} ബുധൻ, വ്യാഴം, ശുക്രൻ മൂന്നും ഉപചയ ഭാവങ്ങളിൽ", "{label} बुध, गुरु और शुक्र तीनों उपचय भावों में")], trio.to_vec(), trio.to_vec());
             break;
         }
     }
     let jm = from(m, c.sign(Jupiter));
     if dusthana(jm) && !kendra(c.house(Jupiter)) {
-        o.push("shakata", vec![format!("Jupiter is {jm} signs from the Moon and not in a kendra from the lagna")], vec![Jupiter, Moon], vec![Jupiter, Moon]);
+        let oj = c.o(jm);
+        o.push("shakata", vec![crate::say3!(lang, "Jupiter is {jm} signs from the Moon and not in a kendra from the lagna", "വ്യാഴം ചന്ദ്രനിൽ നിന്ന് {oj} ഭാവത്തിൽ, ലഗ്നത്തിൽ നിന്ന് കേന്ദ്രത്തിലല്ല", "गुरु चंद्र से {oj} भाव में, और लग्न से केंद्र में नहीं")], vec![Jupiter, Moon], vec![Jupiter, Moon]);
     }
     // Gaja Kesari (BPHS ch. 36; Phaladeepika ch. 6).
     let jd = c.dig(Jupiter);
@@ -698,16 +778,19 @@ fn lunar(o: &mut Out) {
         .filter(|g| c.benefic(*g) && (c.conj(*g, Jupiter) || c.aspects(*g, Jupiter)))
         .collect();
     if sound && kendra(jm) {
-        let mut f = vec![format!("Jupiter is in the {jm} from the Moon, {jd:?}, not combust")];
+        let (oj, dj) = (c.o(jm), c.dg(jd));
+        let mut f = vec![crate::say3!(lang, "Jupiter is in the {jm} from the Moon, {jd:?}, not combust", "വ്യാഴം ചന്ദ്രനിൽ നിന്ന് {oj} ഭാവത്തിൽ, {dj}, മൗഢ്യമില്ല", "गुरु चंद्र से {oj} भाव में, {dj}, अस्त नहीं")];
         let mut s = c.mean(&[Jupiter, Moon]);
         if ben_with.is_empty() {
             s *= 0.85;
         } else {
-            f.push(format!("Jupiter is joined or aspected by {}", names(&ben_with)));
+            let a = names(&ben_with);
+            f.push(crate::say3!(lang, "Jupiter is joined or aspected by {a}", "വ്യാഴത്തോടൊപ്പമോ വ്യാഴത്തിൽ ദൃഷ്ടിയോടെയോ {a}", "गुरु पर {a} की युति या दृष्टि"));
         }
         o.push_with("gaja_kesari", f, vec![Jupiter, Moon], vec![Jupiter, Moon], s, false);
     } else if sound && kendra(c.house(Jupiter)) && !ben_with.is_empty() {
-        let f = vec![format!("Jupiter in a kendra from the lagna, joined or aspected by {} (BPHS ch. 36)", names(&ben_with))];
+        let a = names(&ben_with);
+        let f = vec![crate::say3!(lang, "Jupiter in a kendra from the lagna, joined or aspected by {a} (BPHS ch. 36)", "ലഗ്നത്തിൽ നിന്ന് കേന്ദ്രത്തിൽ വ്യാഴം, ഒപ്പമോ ദൃഷ്ടിയോടെയോ {a} (BPHS അ. 36)", "लग्न से केंद्र में गुरु, {a} की युति या दृष्टि के साथ (BPHS अ. 36)")];
         o.push("gaja_kesari", f, vec![Jupiter], vec![Jupiter]);
     }
 }
@@ -726,12 +809,25 @@ fn adhi(o: &mut Out, key: &str, base: u8, label: &str) {
         distinct.sort_unstable();
         distinct.dedup();
         let full = distinct.len() == 3;
-        let f = vec![format!(
-            "{} in the {:?} from {label}, no malefic there{}",
-            ben.iter().map(|g| c.name(*g)).collect::<Vec<_>>().join(", "),
-            places,
-            if full { "; all three places filled (the full yoga)" } else { "" }
-        )];
+        let who = ben.iter().map(|g| c.name(*g)).collect::<Vec<_>>().join(", ");
+        let f = vec![match c.lang {
+            Lang::En => format!(
+                "{} in the {:?} from {label}, no malefic there{}",
+                who,
+                places,
+                if full { "; all three places filled (the full yoga)" } else { "" }
+            ),
+            Lang::Ml => format!(
+                "{label} {} ഭാവങ്ങളിൽ {who}, അവിടെ പാപഗ്രഹമില്ല{}",
+                words::houses(&places),
+                if full { "; മൂന്നു സ്ഥാനങ്ങളും നിറഞ്ഞു (പൂർണ്ണയോഗം)" } else { "" }
+            ),
+            Lang::Hi => format!(
+                "{label} {} भावों में {who}, वहाँ कोई पाप ग्रह नहीं{}",
+                words::houses(&places),
+                if full { "; तीनों स्थान भरे हैं (पूर्ण योग)" } else { "" }
+            ),
+        }];
         let s = c.mean(&ben) * if full { 1.0 } else { 0.85 };
         o.push_with(key, f, ben.clone(), ben, s, false);
     }
@@ -747,16 +843,22 @@ fn solar(o: &mut Out) {
     let mut g = vec![Sun];
     g.extend(second.iter().copied());
     g.extend(twelfth.iter().copied());
+    let lang = c.lang;
+    let (a, b) = (names(&second), names(&twelfth));
     match (second.is_empty(), twelfth.is_empty()) {
-        (false, true) => o.push("vesi", vec![format!("{} in the 2nd from the Sun", names(&second))], g.clone(), g),
-        (true, false) => o.push("vasi", vec![format!("{} in the 12th from the Sun", names(&twelfth))], g.clone(), g),
-        (false, false) => o.push("ubhayachari", vec![format!("{} in the 2nd and {} in the 12th from the Sun", names(&second), names(&twelfth))], g.clone(), g),
+        (false, true) => o.push("vesi", vec![crate::say3!(lang, "{a} in the 2nd from the Sun", "സൂര്യനിൽ നിന്ന് രണ്ടാം ഭാവത്തിൽ {a}", "सूर्य से द्वितीय भाव में {a}")], g.clone(), g),
+        (true, false) => o.push("vasi", vec![crate::say3!(lang, "{b} in the 12th from the Sun", "സൂര്യനിൽ നിന്ന് പന്ത്രണ്ടാം ഭാവത്തിൽ {b}", "सूर्य से द्वादश भाव में {b}")], g.clone(), g),
+        (false, false) => o.push("ubhayachari", vec![crate::say3!(lang, "{a} in the 2nd and {b} in the 12th from the Sun", "സൂര്യനിൽ നിന്ന് രണ്ടാം ഭാവത്തിൽ {a}, പന്ത്രണ്ടാം ഭാവത്തിൽ {b}", "सूर्य से द्वितीय भाव में {a} और द्वादश भाव में {b}")], g.clone(), g),
         (true, true) => {}
     }
     if c.conj(Sun, Mercury) {
         let comb = c.combust(Mercury);
         let st = c.mean(&[Sun, Mercury]) * if comb { 0.6 } else { 1.0 };
-        let f = vec![format!("Sun and Mercury share a sign{}", if comb { "; Mercury is combust, which weakens it" } else { "" })];
+        let f = vec![match lang {
+            Lang::En => format!("Sun and Mercury share a sign{}", if comb { "; Mercury is combust, which weakens it" } else { "" }),
+            Lang::Ml => format!("സൂര്യനും ബുധനും ഒരേ രാശിയിൽ{}", if comb { "; ബുധന് മൗഢ്യം, അത് യോഗത്തെ ദുർബലമാക്കുന്നു" } else { "" }),
+            Lang::Hi => format!("सूर्य और बुध एक ही राशि में{}", if comb { "; बुध अस्त है, जिससे योग कमज़ोर होता है" } else { "" }),
+        }];
         o.push_with("budhaditya", f, vec![Sun, Mercury], vec![Sun, Mercury], st, false);
     }
 }
@@ -769,16 +871,19 @@ fn mahapurusha(o: &mut Out) {
     let c = o.c;
     for (g, key) in [(Mars, "ruchaka"), (Mercury, "bhadra"), (Jupiter, "hamsa"), (Venus, "malavya"), (Saturn, "shasha")] {
         if kendra(c.house(g)) && c.own_or_exalted(g) {
-            let mut f = vec![format!("{g:?} is {:?} in house {}", c.dig(g), c.house(g))];
+            let lang = c.lang;
+            let (gn, d, h, oh) = (c.name(g), c.dg(c.dig(g)), c.house(g), c.o(c.house(g)));
+            let mut f = vec![crate::say3!(lang, "{gn} is {d} in house {h}", "{gn} {oh} ഭാവത്തിൽ {d}", "{gn} {oh} भाव में {d}")];
             let mut s = c.strength(g);
             // Commonly read caveat: joined by the Sun or Moon the yoga gives less.
             let lum: Vec<DashaLord> = [Sun, Moon].into_iter().filter(|l| c.conj(*l, g)).collect();
             if !lum.is_empty() {
                 s *= 0.8;
-                f.push(format!("joined by {lum:?}, which lessens it"));
+                let l = c.list(&lum);
+                f.push(crate::say3!(lang, "joined by {l}, which lessens it", "{l} ഒപ്പമുണ്ട്, അത് ഫലം കുറയ്ക്കുന്നു", "{l} की युति, जिससे फल कम होता है"));
             }
             if c.combust(g) {
-                f.push("combust".into());
+                f.push(lang.pick(["combust", "മൗഢ്യം", "अस्त"]).into());
             }
             o.push_with(key, f, vec![g], vec![g], s, false);
         }
@@ -811,20 +916,23 @@ fn raja(o: &mut Out) {
             if tainted {
                 s *= 0.8;
             }
-            o.push_with(key, vec![format!("{kl:?} (lord of {kh}) and {tl:?} (lord of {th}) are {how}{}", if tainted { "; one also rules the 8th or 12th" } else { "" })], vec![kl, tl], vec![kl, tl], s, false);
+            o.push_with(key, vec![c.lords_joined(kl, kh, tl, th, how, tainted)], vec![kl, tl], vec![kl, tl], s, false);
         }
     }
+    let lang = c.lang;
     // Yogakaraka (BPHS ch. 34).
     for g in SEVEN {
         let owns: Vec<u8> = (1..=12u8).filter(|h| c.lord(*h) == g).collect();
         if owns.iter().any(|h| matches!(h, 4 | 7 | 10)) && owns.iter().any(|h| matches!(h, 5 | 9)) {
-            o.push("yogakaraka", vec![format!("{g:?} rules houses {owns:?}, a kendra and a trikona")], vec![g], vec![g]);
+            let (gn, hs) = (c.name(g), c.hs(&owns));
+            o.push("yogakaraka", vec![crate::say3!(lang, "{gn} rules houses {hs}, a kendra and a trikona", "{gn} {hs} ഭാവങ്ങളുടെ അധിപൻ: ഒരു കേന്ദ്രവും ഒരു ത്രികോണവും", "{gn} {hs} भावों का स्वामी: एक केंद्र और एक त्रिकोण")], vec![g], vec![g]);
         }
     }
     // Brihat Jataka ch. 11: three or more grahas exalted or in moolatrikona.
     let high: Vec<DashaLord> = SEVEN.iter().copied().filter(|g| matches!(c.dig(*g), Dignity::Exalted | Dignity::Moolatrikona)).collect();
     if high.len() >= 3 {
-        o.push("three_exalted", vec![format!("{high:?} are exalted or in moolatrikona")], high.clone(), high);
+        let l = c.list(&high);
+        o.push("three_exalted", vec![crate::say3!(lang, "{l} are exalted or in moolatrikona", "{l}: ഉച്ചത്തിലോ മൂലത്രികോണത്തിലോ", "{l}: उच्च या मूलत्रिकोण में")], high.clone(), high);
     }
     // Brihat Jataka ch. 11: a vargottama Moon aspected by four or more grahas.
     let moon_d9 = (varga(c.p(Moon).sidereal, 9) / 30.0).floor() as u8 % 12;
@@ -833,7 +941,8 @@ fn raja(o: &mut Out) {
         if by.len() >= 4 {
             let mut g = vec![Moon];
             g.extend(by.iter().copied());
-            o.push("vargottama_moon", vec![format!("the Moon is vargottama and aspected by {by:?}")], g.clone(), g);
+            let l = c.list(&by);
+            o.push("vargottama_moon", vec![crate::say3!(lang, "the Moon is vargottama and aspected by {l}", "ചന്ദ്രൻ വർഗോത്തമത്തിൽ; ദൃഷ്ടി ചെയ്യുന്നവർ: {l}", "चंद्र वर्गोत्तम है और उस पर {l} की दृष्टि")], g.clone(), g);
         }
     }
 }
@@ -852,7 +961,7 @@ fn dhana(o: &mut Out) {
             }
             if let Some(how) = c.connected(la, lb) {
                 seen.push((la, lb));
-                o.push("dhana", vec![format!("{la:?} (lord of {a}) and {lb:?} (lord of {b}) are {how}")], vec![la, lb], vec![la, lb]);
+                o.push("dhana", vec![c.lords_joined(la, a, lb, b, how, false)], vec![la, lb], vec![la, lb]);
             }
         }
     }
@@ -878,7 +987,10 @@ fn parivartana(o: &mut Out) {
             } else {
                 "maha_parivartana"
             };
-            o.push(key, vec![format!("{p:?} and {q:?} exchange signs, joining houses {} and {}", a.min(b), a.max(b))], vec![*p, *q], vec![*p, *q]);
+            let (np, nq, lo, hi) = (c.name(*p), c.name(*q), a.min(b), a.max(b));
+            let (olo, ohi) = (c.o(lo), c.o(hi));
+            let f = crate::say3!(c.lang, "{np} and {nq} exchange signs, joining houses {lo} and {hi}", "{np}, {nq}: രാശി പരിവർത്തനം, {olo}, {ohi} ഭാവങ്ങളെ ബന്ധിപ്പിക്കുന്നു", "{np} और {nq} में राशि परिवर्तन, {olo} और {ohi} भाव को जोड़ता है");
+            o.push(key, vec![f], vec![*p, *q], vec![*p, *q]);
         }
     }
 }
@@ -891,11 +1003,12 @@ fn viparita(o: &mut Out) {
         if !dusthana(at) {
             continue;
         }
-        let mut f = vec![format!("{l:?}, lord of {h}, is in house {at}")];
+        let lang = c.lang;
+        let mut f = vec![c.lord_in(l, h, at)];
         let mut s = c.strength(l).max(0.4);
         if l == c.lord(1) {
             s *= 0.5;
-            f.push("it also rules the lagna, whose lord in a dusthana harms the self: much weakened".into());
+            f.push(lang.pick(["it also rules the lagna, whose lord in a dusthana harms the self: much weakened", "ഇത് ലഗ്നാധിപൻ കൂടിയാണ്; ലഗ്നാധിപൻ ദുഃസ്ഥാനത്തിൽ സ്വയം ക്ലേശിക്കുന്നു: യോഗം ഏറെ ദുർബലം", "यह लग्नेश भी है, और दुःस्थान में लग्नेश स्वयं को कष्ट देता है: योग बहुत कमज़ोर"]).into());
         }
         // Uttara Kalamrita ch. 4: the yoga is purest unjoined by other lords.
         let joined: Vec<DashaLord> = SEVEN
@@ -905,7 +1018,8 @@ fn viparita(o: &mut Out) {
             .collect();
         if !joined.is_empty() {
             s *= 0.8;
-            f.push(format!("joined by {joined:?}, lords of other houses, which dilutes it"));
+            let j = c.list(&joined);
+            f.push(crate::say3!(lang, "joined by {j}, lords of other houses, which dilutes it", "മറ്റു ഭാവാധിപന്മാരായ {j} ഒപ്പമുണ്ട്, അത് യോഗം നേർപ്പിക്കുന്നു", "अन्य भावों के स्वामी {j} की युति, जिससे योग हल्का पड़ता है"));
         }
         o.push_with(key, f, vec![l], vec![l], s, false);
     }
@@ -931,40 +1045,45 @@ fn neecha_bhanga(o: &mut Out) {
         // In a kendra from the lagna or from the Moon; the Moon is not counted as in
         // a kendra from itself.
         let in_k = |x: DashaLord| kendra(c.house(x)) || (x != Moon && kendra(from(m, c.sign(x))));
+        let lang = c.lang;
+        let (dn, xn) = (c.name(disp), c.name(ex_lord));
         let mut rules = Vec::new();
         if in_k(disp) {
-            rules.push(format!("its dispositor {disp:?} is in a kendra from the lagna or the Moon (Phaladeepika ch. 7)"));
+            rules.push(crate::say3!(lang, "its dispositor {dn} is in a kendra from the lagna or the Moon (Phaladeepika ch. 7)", "രാശ്യാധിപനായ {dn} ലഗ്നത്തിൽ നിന്നോ ചന്ദ്രനിൽ നിന്നോ കേന്ദ്രത്തിൽ (ഫലദീപിക അ. 7)", "राशीश {dn} लग्न या चंद्र से केंद्र में (फलदीपिका अ. 7)"));
         }
         if let Some(e) = ex_here {
+            let en = c.name(e);
             if e != g && in_k(e) {
-                rules.push(format!("{e:?}, exalted in this sign, is in a kendra from the lagna or the Moon (Phaladeepika ch. 7)"));
+                rules.push(crate::say3!(lang, "{en}, exalted in this sign, is in a kendra from the lagna or the Moon (Phaladeepika ch. 7)", "ഈ രാശിയിൽ ഉച്ചനാകുന്ന {en} ലഗ്നത്തിൽ നിന്നോ ചന്ദ്രനിൽ നിന്നോ കേന്ദ്രത്തിൽ (ഫലദീപിക അ. 7)", "इस राशि में उच्च होने वाला {en} लग्न या चंद्र से केंद्र में (फलदीपिका अ. 7)"));
             }
             if e != g && (c.conj(e, g) || c.aspects(e, g)) {
-                rules.push(format!("{e:?}, exalted in this sign, joins or aspects it (Saravali)"));
+                rules.push(crate::say3!(lang, "{en}, exalted in this sign, joins or aspects it (Saravali)", "ഈ രാശിയിൽ ഉച്ചനാകുന്ന {en} ഒപ്പമുണ്ട് അല്ലെങ്കിൽ ദൃഷ്ടി ചെയ്യുന്നു (സാരാവലി)", "इस राशि में उच्च होने वाला {en} साथ है या दृष्टि डालता है (सारावली)"));
             }
         }
         if ex_lord != g && in_k(ex_lord) {
-            rules.push(format!("{ex_lord:?}, lord of its exaltation sign, is in a kendra from the lagna or the Moon (BPHS)"));
+            rules.push(crate::say3!(lang, "{xn}, lord of its exaltation sign, is in a kendra from the lagna or the Moon (BPHS)", "ഉച്ചരാശ്യാധിപനായ {xn} ലഗ്നത്തിൽ നിന്നോ ചന്ദ്രനിൽ നിന്നോ കേന്ദ്രത്തിൽ (BPHS)", "उच्च राशि का स्वामी {xn} लग्न या चंद्र से केंद्र में (BPHS)"));
         }
         if ex_lord != disp && c.mutual_kendra(disp, ex_lord) && disp != g && ex_lord != g {
-            rules.push(format!("its dispositor {disp:?} and its exaltation lord {ex_lord:?} are in mutual kendras (Phaladeepika ch. 7)"));
+            rules.push(crate::say3!(lang, "its dispositor {dn} and its exaltation lord {xn} are in mutual kendras (Phaladeepika ch. 7)", "രാശ്യാധിപനായ {dn}, ഉച്ചരാശ്യാധിപനായ {xn}: പരസ്പരം കേന്ദ്രങ്ങളിൽ (ഫലദീപിക അ. 7)", "राशीश {dn} और उच्च राशि का स्वामी {xn} परस्पर केंद्र में (फलदीपिका अ. 7)"));
         }
         if disp != g && (c.conj(disp, g) || c.aspects(disp, g)) {
-            rules.push(format!("its dispositor {disp:?} joins or aspects it (BPHS)"));
+            rules.push(crate::say3!(lang, "its dispositor {dn} joins or aspects it (BPHS)", "രാശ്യാധിപനായ {dn} ഒപ്പമുണ്ട് അല്ലെങ്കിൽ ദൃഷ്ടി ചെയ്യുന്നു (BPHS)", "राशीश {dn} साथ है या दृष्टि डालता है (BPHS)"));
         }
         if c.exchange(g, disp) {
-            rules.push(format!("it exchanges signs with its dispositor {disp:?}"));
+            rules.push(crate::say3!(lang, "it exchanges signs with its dispositor {dn}", "രാശ്യാധിപനുമായി ({dn}) രാശി പരിവർത്തനം", "राशीश {dn} के साथ राशि परिवर्तन"));
         }
         let d9 = (varga(c.p(g).sidereal, 9) / 30.0).floor() as u8 % 12;
         if d9 == ex_sign {
-            rules.push("it is exalted in the navamsa (Phaladeepika ch. 7)".into());
+            rules.push(lang.pick(["it is exalted in the navamsa (Phaladeepika ch. 7)", "നവാംശത്തിൽ ഉച്ചം (ഫലദീപിക അ. 7)", "नवांश में उच्च (फलदीपिका अ. 7)"]).into());
         }
         if rules.is_empty() {
             continue;
         }
         let n = rules.len() as f64;
         let s = (0.35 + 0.15 * n).min(1.0) * (0.7 + 0.3 * c.strength(disp));
-        let mut f = vec![format!("{g:?} is debilitated in house {}", c.house(g))];
+        let (gn, h) = (c.name(g), c.house(g));
+        let oh = c.o(h);
+        let mut f = vec![crate::say3!(lang, "{gn} is debilitated in house {h}", "{gn} {oh} ഭാവത്തിൽ നീചത്തിൽ", "{gn} {oh} भाव में नीच")];
         f.extend(rules);
         o.push_with("neecha_bhanga", f, vec![g, disp], vec![g, disp], s, false);
     }
@@ -987,71 +1106,88 @@ fn named(o: &mut Out) {
         !v.is_empty() && v.iter().all(|g| !c.benefic(*g))
     };
     let ben_at_sign = |s: u8| c.in_sign(s, false).iter().any(|g| c.benefic(*g));
+    let lang = c.lang;
+    let n = |g: DashaLord| c.name(g);
 
     // Lakshmi (BPHS ch. 36).
     let l9 = c.lord(9);
     if c.own_or_exalted(l9) && (kendra(c.house(l9)) || trikona(c.house(l9))) && c.strong(l1) {
-        o.push("lakshmi", vec![format!("9th lord {l9:?} is {:?} in house {}; lagna lord {l1:?} is strong", c.dig(l9), c.house(l9))], vec![l9, l1], vec![l9, l1]);
+        let (n9, n1, d9, h9) = (c.name(l9), c.name(l1), c.dg(c.dig(l9)), c.house(l9));
+        let o9 = c.o(h9);
+        o.push("lakshmi", vec![crate::say3!(lang, "9th lord {n9} is {d9} in house {h9}; lagna lord {n1} is strong", "ഒമ്പതാം ഭാവാധിപനായ {n9} {o9} ഭാവത്തിൽ {d9}; ലഗ്നാധിപനായ {n1} ബലവാൻ", "नवमेश {n9} {o9} भाव में {d9}; लग्नेश {n1} बलवान")], vec![l9, l1], vec![l9, l1]);
     }
     // Saraswati (Phaladeepika ch. 6).
     let good_place = |g: DashaLord| matches!(c.house(g), 1 | 2 | 4 | 5 | 7 | 9 | 10);
     if [Jupiter, Venus, Mercury].iter().all(|g| good_place(*g))
         && matches!(c.dig(Jupiter), Dignity::Own | Dignity::Moolatrikona | Dignity::Exalted | Dignity::Friend)
     {
-        o.push("saraswati", vec![format!("Jupiter, Venus and Mercury in houses {}, {}, {}; Jupiter {:?}", c.house(Jupiter), c.house(Venus), c.house(Mercury), c.dig(Jupiter))], vec![Jupiter, Venus, Mercury], vec![Jupiter, Venus, Mercury]);
+        let (hj, hv, hm, dj) = (c.house(Jupiter), c.house(Venus), c.house(Mercury), c.dg(c.dig(Jupiter)));
+        let (oj, ov, om) = (c.o(hj), c.o(hv), c.o(hm));
+        o.push("saraswati", vec![crate::say3!(lang, "Jupiter, Venus and Mercury in houses {hj}, {hv}, {hm}; Jupiter {dj}", "വ്യാഴം {oj}, ശുക്രൻ {ov}, ബുധൻ {om} ഭാവങ്ങളിൽ; വ്യാഴം {dj}", "गुरु {oj}, शुक्र {ov}, बुध {om} भाव में; गुरु {dj}")], vec![Jupiter, Venus, Mercury], vec![Jupiter, Venus, Mercury]);
     }
     // Amala (BPHS ch. 36).
     if only_benefics(10) {
         let v = c.in_house(10, true);
-        o.push("amala", vec![format!("only benefics ({}) in the 10th from the lagna", names(&v))], v.clone(), v);
+        let a = names(&v);
+        o.push("amala", vec![crate::say3!(lang, "only benefics ({a}) in the 10th from the lagna", "ലഗ്നത്തിൽ നിന്ന് പത്താം ഭാവത്തിൽ ശുഭഗ്രഹങ്ങൾ മാത്രം ({a})", "लग्न से दशम भाव में केवल शुभ ग्रह ({a})")], v.clone(), v);
     } else {
         let s10 = (c.sign(Moon) + 9) % 12;
         let v = c.in_sign(s10, true);
         if !v.is_empty() && v.iter().all(|g| c.benefic(*g)) {
-            o.push("amala", vec![format!("only benefics ({}) in the 10th from the Moon", names(&v))], v.clone(), v);
+            let a = names(&v);
+            o.push("amala", vec![crate::say3!(lang, "only benefics ({a}) in the 10th from the Moon", "ചന്ദ്രനിൽ നിന്ന് പത്താം ഭാവത്തിൽ ശുഭഗ്രഹങ്ങൾ മാത്രം ({a})", "चंद्र से दशम भाव में केवल शुभ ग्रह ({a})")], v.clone(), v);
         }
     }
     // Parvata (BPHS ch. 36).
     let kv: Vec<DashaLord> = KENDRA.iter().flat_map(|h| c.in_house(*h, true)).collect();
     let clean_68 = [6u8, 8].iter().all(|h| c.in_house(*h, true).iter().all(|g| c.benefic(*g)));
     if !kv.is_empty() && kv.iter().all(|g| c.benefic(*g)) && clean_68 {
-        o.push("parvata", vec![format!("only benefics ({}) in the kendras; the 6th and 8th empty or benefic", names(&kv))], kv.clone(), kv.clone());
+        let a = names(&kv);
+        o.push("parvata", vec![crate::say3!(lang, "only benefics ({a}) in the kendras; the 6th and 8th empty or benefic", "കേന്ദ്രങ്ങളിൽ ശുഭഗ്രഹങ്ങൾ മാത്രം ({a}); ആറും എട്ടും ഒഴിഞ്ഞോ ശുഭരോടെയോ", "केंद्रों में केवल शुभ ग्रह ({a}); षष्ठ और अष्टम खाली या शुभ")], kv.clone(), kv.clone());
     } else {
         let l12 = c.lord(12);
         if l12 != l1 && c.mutual_kendra(l1, l12) {
-            o.push("parvata", vec![format!("lords of the 1st ({l1:?}) and 12th ({l12:?}) in mutual kendras")], vec![l1, l12], vec![l1, l12]);
+            let (n1, n12) = (n(l1), n(l12));
+            o.push("parvata", vec![crate::say3!(lang, "lords of the 1st ({n1}) and 12th ({n12}) in mutual kendras", "ലഗ്നാധിപൻ ({n1}), പന്ത്രണ്ടാം ഭാവാധിപൻ ({n12}): പരസ്പരം കേന്ദ്രങ്ങളിൽ", "लग्नेश ({n1}) और द्वादशेश ({n12}) परस्पर केंद्र में")], vec![l1, l12], vec![l1, l12]);
         }
     }
     // Kahala (BPHS ch. 36).
     let (l4, l5, l6, l7, l10, l2) = (c.lord(4), c.lord(5), c.lord(6), c.lord(7), c.lord(10), c.lord(2));
     if l4 != l9 && c.mutual_kendra(l4, l9) && c.strong(l1) {
-        o.push("kahala", vec![format!("4th lord {l4:?} and 9th lord {l9:?} in mutual kendras; lagna lord strong")], vec![l4, l9, l1], vec![l4, l9]);
+        let (n4, n9) = (n(l4), n(l9));
+        o.push("kahala", vec![crate::say3!(lang, "4th lord {n4} and 9th lord {n9} in mutual kendras; lagna lord strong", "നാലാം ഭാവാധിപൻ {n4}, ഒമ്പതാം ഭാവാധിപൻ {n9}: പരസ്പരം കേന്ദ്രങ്ങളിൽ; ലഗ്നാധിപൻ ബലവാൻ", "चतुर्थेश {n4} और नवमेश {n9} परस्पर केंद्र में; लग्नेश बलवान")], vec![l4, l9, l1], vec![l4, l9]);
     }
     // Chamara (BPHS ch. 36).
     if c.dig(l1) == Dignity::Exalted && kendra(c.house(l1)) && c.aspects(Jupiter, l1) {
-        o.push("chamara", vec![format!("lagna lord {l1:?} exalted in house {} and aspected by Jupiter", c.house(l1))], vec![l1, Jupiter], vec![l1, Jupiter]);
+        let (n1, h1) = (n(l1), c.house(l1));
+        let o1 = c.o(h1);
+        o.push("chamara", vec![crate::say3!(lang, "lagna lord {n1} exalted in house {h1} and aspected by Jupiter", "ലഗ്നാധിപനായ {n1} {o1} ഭാവത്തിൽ ഉച്ചത്തിൽ, വ്യാഴത്തിന്റെ ദൃഷ്ടിയോടെ", "लग्नेश {n1} {o1} भाव में उच्च, और उस पर गुरु की दृष्टि")], vec![l1, Jupiter], vec![l1, Jupiter]);
     } else {
         for h in [1u8, 7, 9, 10] {
             let b: Vec<DashaLord> = c.in_house(h, false).into_iter().filter(|g| c.benefic(*g)).collect();
             if b.len() >= 2 {
-                o.push("chamara", vec![format!("benefics {} together in house {h}", names(&b))], b.clone(), b);
+                let (a, oh) = (names(&b), c.o(h));
+                o.push("chamara", vec![crate::say3!(lang, "benefics {a} together in house {h}", "ശുഭഗ്രഹങ്ങളായ {a} ഒരുമിച്ച് {oh} ഭാവത്തിൽ", "शुभ ग्रह {a} एक साथ {oh} भाव में")], b.clone(), b);
                 break;
             }
         }
     }
     // Shankha (BPHS ch. 36).
     if l5 != l6 && c.mutual_kendra(l5, l6) && c.strong(l1) {
-        o.push("shankha", vec![format!("5th lord {l5:?} and 6th lord {l6:?} in mutual kendras; lagna lord strong")], vec![l5, l6, l1], vec![l5, l6]);
+        let (n5, n6) = (n(l5), n(l6));
+        o.push("shankha", vec![crate::say3!(lang, "5th lord {n5} and 6th lord {n6} in mutual kendras; lagna lord strong", "അഞ്ചാം ഭാവാധിപൻ {n5}, ആറാം ഭാവാധിപൻ {n6}: പരസ്പരം കേന്ദ്രങ്ങളിൽ; ലഗ്നാധിപൻ ബലവാൻ", "पंचमेश {n5} और षष्ठेश {n6} परस्पर केंद्र में; लग्नेश बलवान")], vec![l5, l6, l1], vec![l5, l6]);
     } else if l1 != l10 && c.conj(l1, l10) && c.sign(l1) % 3 == 0 && c.strong(l9) {
-        o.push("shankha", vec![format!("lords of the 1st ({l1:?}) and 10th ({l10:?}) together in a movable sign; 9th lord strong")], vec![l1, l10, l9], vec![l1, l10]);
+        let (n1, n10) = (n(l1), n(l10));
+        o.push("shankha", vec![crate::say3!(lang, "lords of the 1st ({n1}) and 10th ({n10}) together in a movable sign; 9th lord strong", "ലഗ്നാധിപനും ({n1}) പത്താം ഭാവാധിപനും ({n10}) ഒരുമിച്ച് ചരരാശിയിൽ; ഒമ്പതാം ഭാവാധിപൻ ബലവാൻ", "लग्नेश ({n1}) और दशमेश ({n10}) एक साथ चर राशि में; नवमेश बलवान")], vec![l1, l10, l9], vec![l1, l10]);
     }
     // Bheri (BPHS ch. 36).
     let trio = [Venus, Jupiter, l1];
     let mutual = trio.iter().all(|a| trio.iter().all(|b| c.mutual_kendra(*a, *b)));
     if mutual && c.strong(l9) {
-        o.push("bheri", vec![format!("Venus, Jupiter and lagna lord {l1:?} in mutual kendras; 9th lord {l9:?} strong")], vec![Venus, Jupiter, l1], vec![Venus, Jupiter, l1]);
+        let (n1, n9) = (n(l1), n(l9));
+        o.push("bheri", vec![crate::say3!(lang, "Venus, Jupiter and lagna lord {n1} in mutual kendras; 9th lord {n9} strong", "ശുക്രൻ, വ്യാഴം, ലഗ്നാധിപനായ {n1}: പരസ്പരം കേന്ദ്രങ്ങളിൽ; ഒമ്പതാം ഭാവാധിപനായ {n9} ബലവാൻ", "शुक्र, गुरु और लग्नेश {n1} परस्पर केंद्र में; नवमेश {n9} बलवान")], vec![Venus, Jupiter, l1], vec![Venus, Jupiter, l1]);
     } else if SEVEN.iter().all(|g| matches!(c.house(*g), 1 | 2 | 7 | 12)) && c.strong(l9) {
-        o.push("bheri", vec!["all seven grahas in the 1st, 2nd, 7th and 12th; 9th lord strong".into()], vec![l9], vec![l9]);
+        o.push("bheri", vec![lang.pick(["all seven grahas in the 1st, 2nd, 7th and 12th; 9th lord strong", "ഏഴു ഗ്രഹങ്ങളും ഒന്ന്, രണ്ട്, ഏഴ്, പന്ത്രണ്ട് ഭാവങ്ങളിൽ; ഒമ്പതാം ഭാവാധിപൻ ബലവാൻ", "सातों ग्रह प्रथम, द्वितीय, सप्तम और द्वादश भाव में; नवमेश बलवान"]).into()], vec![l9], vec![l9]);
     }
     // Mridanga (BPHS ch. 36, Raman's reading).
     if c.strong(l1) {
@@ -1060,27 +1196,34 @@ fn named(o: &mut Out) {
             let nl = sign_lord(n);
             let l2x = sign_lord(c.sign(nl) as usize);
             if (kendra(c.house(l2x)) || trikona(c.house(l2x))) && c.own_or_exalted(l2x) {
-                o.push("mridanga", vec![format!("{e:?} exalted; its navamsa lord {nl:?} sits in a sign of {l2x:?}, which is {:?} in house {}; lagna lord strong", c.dig(l2x), c.house(l2x))], vec![e, l2x, l1], vec![l2x, e]);
+                let (ne, nn, nx, dx, hx) = (n(e), n(nl), n(l2x), c.dg(c.dig(l2x)), c.house(l2x));
+                let ox = c.o(hx);
+                o.push("mridanga", vec![crate::say3!(lang, "{ne} exalted; its navamsa lord {nn} sits in a sign of {nx}, which is {dx} in house {hx}; lagna lord strong", "{ne} ഉച്ചത്തിൽ; അതിന്റെ നവാംശാധിപനായ {nn} {nx} ആധിപത്യമുള്ള രാശിയിൽ; {nx} {ox} ഭാവത്തിൽ {dx}; ലഗ്നാധിപൻ ബലവാൻ", "{ne} उच्च; उसका नवांशेश {nn} {nx} की राशि में, और {nx} {ox} भाव में {dx}; लग्नेश बलवान")], vec![e, l2x, l1], vec![l2x, e]);
                 break;
             }
         }
     }
     // Shrinatha.
     if c.house(l7) == 10 && c.dig(l7) == Dignity::Exalted && l10 != l9 && c.conj(l10, l9) {
-        o.push("shrinatha", vec![format!("7th lord {l7:?} exalted in the 10th; 10th lord {l10:?} with 9th lord {l9:?}")], vec![l7, l10, l9], vec![l7, l10, l9]);
+        let (n7, n10, n9) = (n(l7), n(l10), n(l9));
+        o.push("shrinatha", vec![crate::say3!(lang, "7th lord {n7} exalted in the 10th; 10th lord {n10} with 9th lord {n9}", "ഏഴാം ഭാവാധിപനായ {n7} പത്താം ഭാവത്തിൽ ഉച്ചത്തിൽ; പത്താം ഭാവാധിപനായ {n10}, ഒമ്പതാം ഭാവാധിപനായ {n9} എന്നിവർ ഒരുമിച്ച്", "सप्तमेश {n7} दशम भाव में उच्च; दशमेश {n10} नवमेश {n9} के साथ")], vec![l7, l10, l9], vec![l7, l10, l9]);
     }
     // Khadga.
     if l2 != l9 && c.house(l2) == 9 && c.house(l9) == 2 && (kendra(c.house(l1)) || trikona(c.house(l1))) {
-        o.push("khadga", vec![format!("2nd lord {l2:?} in the 9th and 9th lord {l9:?} in the 2nd; lagna lord in house {}", c.house(l1))], vec![l2, l9, l1], vec![l2, l9]);
+        let (n2, n9, h1) = (n(l2), n(l9), c.house(l1));
+        let o1 = c.o(h1);
+        o.push("khadga", vec![crate::say3!(lang, "2nd lord {n2} in the 9th and 9th lord {n9} in the 2nd; lagna lord in house {h1}", "രണ്ടാം ഭാവാധിപനായ {n2} ഒമ്പതിൽ, ഒമ്പതാം ഭാവാധിപനായ {n9} രണ്ടിൽ; ലഗ്നാധിപൻ {o1} ഭാവത്തിൽ", "द्वितीयेश {n2} नवम में और नवमेश {n9} द्वितीय में; लग्नेश {o1} भाव में")], vec![l2, l9, l1], vec![l2, l9]);
     }
     // Kalanidhi.
     if matches!(c.house(Jupiter), 2 | 5) && [Mercury, Venus].iter().all(|g| c.conj(*g, Jupiter) || c.aspects(*g, Jupiter)) {
-        o.push("kalanidhi", vec![format!("Jupiter in house {} joined or aspected by Mercury and Venus", c.house(Jupiter))], vec![Jupiter, Mercury, Venus], vec![Jupiter, Mercury, Venus]);
+        let hj = c.house(Jupiter);
+        let oj = c.o(hj);
+        o.push("kalanidhi", vec![crate::say3!(lang, "Jupiter in house {hj} joined or aspected by Mercury and Venus", "{oj} ഭാവത്തിൽ വ്യാഴം, ബുധന്റെയും ശുക്രന്റെയും യോഗമോ ദൃഷ്ടിയോ ഉണ്ട്", "{oj} भाव में गुरु, बुध और शुक्र की युति या दृष्टि के साथ")], vec![Jupiter, Mercury, Venus], vec![Jupiter, Mercury, Venus]);
     }
     // Matsya.
     let five = c.in_house(5, true);
     if only_benefics(1) && only_benefics(9) && five.iter().any(|g| c.benefic(*g)) && five.iter().any(|g| !c.benefic(*g)) && only_malefics(4) && only_malefics(8) {
-        o.push("matsya", vec!["benefics in the 1st and 9th, mixed in the 5th, malefics in the 4th and 8th".into()], c.in_house(9, true), c.in_house(9, true));
+        o.push("matsya", vec![lang.pick(["benefics in the 1st and 9th, mixed in the 5th, malefics in the 4th and 8th", "ശുഭഗ്രഹങ്ങൾ ഒന്നിലും ഒമ്പതിലും, അഞ്ചിൽ ശുഭരും പാപരും, പാപഗ്രഹങ്ങൾ നാലിലും എട്ടിലും", "शुभ ग्रह प्रथम और नवम में, पंचम में मिश्रित, पाप ग्रह चतुर्थ और अष्टम में"]).into()], c.in_house(9, true), c.in_house(9, true));
     }
     // Kurma.
     let mal_dig = |h: u8| {
@@ -1089,59 +1232,64 @@ fn named(o: &mut Out) {
     };
     if [5u8, 6, 7].iter().all(|h| only_benefics(*h)) && [1u8, 3, 11].iter().all(|h| mal_dig(*h)) {
         let g: Vec<DashaLord> = [5u8, 6, 7].iter().flat_map(|h| c.in_house(*h, false)).collect();
-        o.push("kurma", vec!["benefics in the 5th, 6th and 7th; dignified malefics in the 1st, 3rd and 11th".into()], g.clone(), g);
+        o.push("kurma", vec![lang.pick(["benefics in the 5th, 6th and 7th; dignified malefics in the 1st, 3rd and 11th", "ശുഭഗ്രഹങ്ങൾ അഞ്ചിലും ആറിലും ഏഴിലും; ബലമുള്ള പാപഗ്രഹങ്ങൾ ഒന്നിലും മൂന്നിലും പതിനൊന്നിലും", "शुभ ग्रह पंचम, षष्ठ और सप्तम में; बलवान पाप ग्रह प्रथम, तृतीय और एकादश में"]).into()], g.clone(), g);
     }
     // Chatussagara.
     if KENDRA.iter().all(|h| !c.in_house(*h, true).is_empty()) {
-        o.push("chatussagara", vec!["all four kendras are occupied".into()], kv.clone(), kv.clone());
+        o.push("chatussagara", vec![lang.pick(["all four kendras are occupied", "നാലു കേന്ദ്രങ്ങളിലും ഗ്രഹങ്ങളുണ്ട്", "चारों केंद्रों में ग्रह हैं"]).into()], kv.clone(), kv.clone());
     }
     // Shubha and Papa kartari on the lagna.
     if only_benefics(2) && only_benefics(12) {
         let mut g = c.in_house(2, true);
         g.extend(c.in_house(12, true));
-        o.push("shubha_kartari", vec!["benefics only in the 2nd and the 12th".into()], g.clone(), g);
+        o.push("shubha_kartari", vec![lang.pick(["benefics only in the 2nd and the 12th", "രണ്ടിലും പന്ത്രണ്ടിലും ശുഭഗ്രഹങ്ങൾ മാത്രം", "द्वितीय और द्वादश में केवल शुभ ग्रह"]).into()], g.clone(), g);
     }
     // Hari, Hara, Brahma (BPHS ch. 36).
     for (key, l, places) in [("hari", l2, [2u8, 12, 8]), ("hara", l7, [4, 9, 8]), ("brahma", l1, [4, 10, 11])] {
         let base = c.sign(l);
         if places.iter().all(|p| ben_at_sign((base + p - 1) % 12)) {
-            o.push(key, vec![format!("benefics in the {places:?} from {l:?}")], vec![l], vec![l, Jupiter, Venus]);
+            let (hs, nl) = (c.hs(&places), n(l));
+            o.push(key, vec![crate::say3!(lang, "benefics in the {hs} from {nl}", "{nl} നിൽക്കുന്ന രാശിയിൽ നിന്ന് {hs} സ്ഥാനങ്ങളിൽ ശുഭഗ്രഹങ്ങൾ", "{nl} से {hs} स्थानों में शुभ ग्रह")], vec![l], vec![l, Jupiter, Venus]);
         }
     }
     // Guru-Mangala.
     if matches!(from(c.sign(Jupiter), c.sign(Mars)), 1 | 7) {
-        o.push("guru_mangala", vec!["Jupiter and Mars in one sign or opposite".into()], vec![Jupiter, Mars], vec![Jupiter, Mars]);
+        o.push("guru_mangala", vec![lang.pick(["Jupiter and Mars in one sign or opposite", "വ്യാഴവും ചൊവ്വയും ഒരേ രാശിയിലോ നേർക്കുനേരോ", "गुरु और मंगल एक ही राशि में या आमने-सामने"]).into()], vec![Jupiter, Mars], vec![Jupiter, Mars]);
     }
     // Bhaskara.
     let me = c.sign(Mercury);
     if from(c.sign(Sun), me) == 2 && from(me, c.sign(Moon)) == 11 && matches!(from(c.sign(Moon), c.sign(Jupiter)), 5 | 9) {
-        o.push("bhaskara", vec!["Mercury 2nd from the Sun, the Moon 11th from Mercury, Jupiter in a trine from the Moon".into()], vec![Sun, Mercury, Moon, Jupiter], vec![Sun, Mercury, Moon, Jupiter]);
+        o.push("bhaskara", vec![lang.pick(["Mercury 2nd from the Sun, the Moon 11th from Mercury, Jupiter in a trine from the Moon", "സൂര്യനിൽ നിന്ന് രണ്ടിൽ ബുധൻ, ബുധനിൽ നിന്ന് പതിനൊന്നിൽ ചന്ദ്രൻ, ചന്ദ്രനിൽ നിന്ന് ത്രികോണത്തിൽ വ്യാഴം", "सूर्य से द्वितीय में बुध, बुध से एकादश में चंद्र, चंद्र से त्रिकोण में गुरु"]).into()], vec![Sun, Mercury, Moon, Jupiter], vec![Sun, Mercury, Moon, Jupiter]);
     }
     // Indra.
     let l11 = c.lord(11);
     if c.exchange(l5, l11) && c.house(Moon) == 5 {
-        o.push("indra", vec![format!("5th lord {l5:?} and 11th lord {l11:?} exchange signs; the Moon in the 5th")], vec![l5, l11, Moon], vec![l5, l11, Moon]);
+        let (n5, n11) = (n(l5), n(l11));
+        o.push("indra", vec![crate::say3!(lang, "5th lord {n5} and 11th lord {n11} exchange signs; the Moon in the 5th", "അഞ്ചാം ഭാവാധിപൻ {n5}, പതിനൊന്നാം ഭാവാധിപൻ {n11}: രാശി പരിവർത്തനം; ചന്ദ്രൻ അഞ്ചിൽ", "पंचमेश {n5} और एकादशेश {n11} में राशि परिवर्तन; चंद्र पंचम में")], vec![l5, l11, Moon], vec![l5, l11, Moon]);
     }
     // Marud.
     if matches!(from(c.sign(Venus), c.sign(Jupiter)), 5 | 9) && from(c.sign(Jupiter), c.sign(Moon)) == 5 && kendra(from(c.sign(Moon), c.sign(Sun))) {
-        o.push("marud", vec!["Jupiter in a trine from Venus, the Moon 5th from Jupiter, the Sun in a kendra from the Moon".into()], vec![Jupiter, Venus, Moon, Sun], vec![Jupiter, Venus, Moon]);
+        o.push("marud", vec![lang.pick(["Jupiter in a trine from Venus, the Moon 5th from Jupiter, the Sun in a kendra from the Moon", "ശുക്രനിൽ നിന്ന് ത്രികോണത്തിൽ വ്യാഴം, വ്യാഴത്തിൽ നിന്ന് അഞ്ചിൽ ചന്ദ്രൻ, ചന്ദ്രനിൽ നിന്ന് കേന്ദ്രത്തിൽ സൂര്യൻ", "शुक्र से त्रिकोण में गुरु, गुरु से पंचम में चंद्र, चंद्र से केंद्र में सूर्य"]).into()], vec![Jupiter, Venus, Moon, Sun], vec![Jupiter, Venus, Moon]);
     }
     // Budha.
     let rs = c.sign(Rahu);
     if c.house(Jupiter) == 1 && kendra(c.house(Moon)) && from(c.sign(Moon), rs) == 2 && from(rs, c.sign(Sun)) == 3 && from(rs, c.sign(Mars)) == 3 {
-        o.push("budha", vec!["Jupiter in the lagna, the Moon in a kendra, Rahu 2nd from the Moon, the Sun and Mars 3rd from Rahu".into()], vec![Jupiter, Moon, Rahu, Sun, Mars], vec![Jupiter, Moon]);
+        o.push("budha", vec![lang.pick(["Jupiter in the lagna, the Moon in a kendra, Rahu 2nd from the Moon, the Sun and Mars 3rd from Rahu", "ലഗ്നത്തിൽ വ്യാഴം, കേന്ദ്രത്തിൽ ചന്ദ്രൻ, ചന്ദ്രനിൽ നിന്ന് രണ്ടിൽ രാഹു, രാഹുവിൽ നിന്ന് മൂന്നിൽ സൂര്യനും ചൊവ്വയും", "लग्न में गुरु, केंद्र में चंद्र, चंद्र से द्वितीय में राहु, राहु से तृतीय में सूर्य और मंगल"]).into()], vec![Jupiter, Moon, Rahu, Sun, Mars], vec![Jupiter, Moon]);
     }
     // Siva.
     if c.house(l5) == 9 && c.house(l9) == 10 && c.house(l10) == 5 && l5 != l9 && l9 != l10 {
-        o.push("siva", vec![format!("5th lord {l5:?} in the 9th, 9th lord {l9:?} in the 10th, 10th lord {l10:?} in the 5th")], vec![l5, l9, l10], vec![l5, l9, l10]);
+        let (n5, n9, n10) = (n(l5), n(l9), n(l10));
+        o.push("siva", vec![crate::say3!(lang, "5th lord {n5} in the 9th, 9th lord {n9} in the 10th, 10th lord {n10} in the 5th", "അഞ്ചാം ഭാവാധിപനായ {n5} ഒമ്പതിൽ, ഒമ്പതാം ഭാവാധിപനായ {n9} പത്തിൽ, പത്താം ഭാവാധിപനായ {n10} അഞ്ചിൽ", "पंचमेश {n5} नवम में, नवमेश {n9} दशम में, दशमेश {n10} पंचम में")], vec![l5, l9, l10], vec![l5, l9, l10]);
     }
     // Jaya.
     if c.dig(l6) == Dignity::Debilitated && c.dig(l10) == Dignity::Exalted {
-        o.push("jaya", vec![format!("6th lord {l6:?} debilitated and 10th lord {l10:?} exalted")], vec![l10], vec![l10, l6]);
+        let (n6, n10) = (n(l6), n(l10));
+        o.push("jaya", vec![crate::say3!(lang, "6th lord {n6} debilitated and 10th lord {n10} exalted", "ആറാം ഭാവാധിപനായ {n6} നീചത്തിൽ, പത്താം ഭാവാധിപനായ {n10} ഉച്ചത്തിൽ", "षष्ठेश {n6} नीच और दशमेश {n10} उच्च")], vec![l10], vec![l10, l6]);
     }
     // Vidyut.
     if c.dig(l11) == Dignity::Exalted && l11 != Venus && c.conj(l11, Venus) && kendra(from(c.sign(l1), c.sign(l11))) {
-        o.push("vidyut", vec![format!("11th lord {l11:?} exalted, with Venus, in a kendra from lagna lord {l1:?}")], vec![l11, Venus], vec![l11, Venus]);
+        let (n11, n1) = (n(l11), n(l1));
+        o.push("vidyut", vec![crate::say3!(lang, "11th lord {n11} exalted, with Venus, in a kendra from lagna lord {n1}", "പതിനൊന്നാം ഭാവാധിപനായ {n11} ഉച്ചത്തിൽ, ശുക്രനോടൊപ്പം, ലഗ്നാധിപനായ {n1} നിൽക്കുന്നിടത്തു നിന്ന് കേന്ദ്രത്തിൽ", "एकादशेश {n11} उच्च, शुक्र के साथ, लग्नेश {n1} से केंद्र में")], vec![l11, Venus], vec![l11, Venus]);
     }
     // Sareera Soukhya.
     let k: Vec<DashaLord> = {
@@ -1150,7 +1298,8 @@ fn named(o: &mut Out) {
         v.into_iter().filter(|g| kendra(c.house(*g))).collect()
     };
     if !k.is_empty() {
-        o.push("sareera_soukhya", vec![format!("{} in a kendra", names(&k))], k.clone(), k);
+        let a = names(&k);
+        o.push("sareera_soukhya", vec![crate::say3!(lang, "{a} in a kendra", "കേന്ദ്രത്തിൽ {a}", "केंद्र में {a}")], k.clone(), k);
     }
 }
 
@@ -1167,17 +1316,17 @@ fn hardship(o: &mut Out) {
     if only_malefics(2) && only_malefics(12) {
         let mut g = c.in_house(2, true);
         g.extend(c.in_house(12, true));
-        o.push("papa_kartari", vec!["malefics only in the 2nd and the 12th".into()], vec![c.lord(1)], g);
+        o.push("papa_kartari", vec![lang.pick(["malefics only in the 2nd and the 12th", "രണ്ടിലും പന്ത്രണ്ടിലും പാപഗ്രഹങ്ങൾ മാത്രം", "द्वितीय और द्वादश में केवल पाप ग्रह"]).into()], vec![c.lord(1)], g);
     }
     for (h, key) in [(10u8, "duryoga"), (11, "daridra")] {
         let l = c.lord(h);
         let at = c.house(l);
         if dusthana(at) {
-            let mut f = vec![format!("{l:?}, lord of {h}, is in house {at}")];
+            let mut f = vec![c.lord_in(l, h, at)];
             let mut s = 1.0 - 0.6 * c.strength(l);
             if c.own_or_exalted(l) {
                 s *= 0.6;
-                f.push("it is dignified there, which softens it".into());
+                f.push(lang.pick(["it is dignified there, which softens it", "അവിടെ അതിന് ബലമുണ്ട്, അത് ഫലം മയപ്പെടുത്തുന്നു", "वहाँ यह बलवान है, जिससे फल नरम पड़ता है"]).into());
             }
             o.push_with(key, f, vec![l], vec![l], s, false);
         }
@@ -1186,7 +1335,7 @@ fn hardship(o: &mut Out) {
     let rahu = c.p(Rahu).sidereal;
     let sides: Vec<bool> = SEVEN.iter().map(|g| (c.p(*g).sidereal - rahu).rem_euclid(360.0) < 180.0).collect();
     if sides.iter().all(|b| *b) || sides.iter().all(|b| !*b) {
-        o.push("kala_sarpa", vec!["all seven grahas lie on one side of the Rahu-Ketu axis".into()], vec![Rahu, Ketu], vec![Rahu, Ketu]);
+        o.push("kala_sarpa", vec![lang.pick(["all seven grahas lie on one side of the Rahu-Ketu axis", "ഏഴു ഗ്രഹങ്ങളും രാഹു-കേതു അച്ചുതണ്ടിന്റെ ഒരു വശത്ത്", "सातों ग्रह राहु-केतु अक्ष के एक ओर"]).into()], vec![Rahu, Ketu], vec![Rahu, Ketu]);
     }
     // Balarishta (BPHS ch. 9) and its cancellation (ch. 10).
     if dusthana(c.house(Moon)) {
@@ -1195,21 +1344,25 @@ fn hardship(o: &mut Out) {
         if !mal.is_empty() {
             let mut cancels = Vec::new();
             if kendra(c.house(Jupiter)) && c.strong(Jupiter) {
-                cancels.push("a strong Jupiter in a kendra".to_string());
+                cancels.push(lang.pick(["a strong Jupiter in a kendra", "കേന്ദ്രത്തിൽ ബലവാനായ വ്യാഴം", "केंद्र में बलवान गुरु"]).to_string());
             }
             let l1 = c.lord(1);
             if kendra(c.house(l1)) && c.strong(l1) {
-                cancels.push(format!("a strong lagna lord {l1:?} in a kendra"));
+                let n1 = c.name(l1);
+                cancels.push(crate::say3!(lang, "a strong lagna lord {n1} in a kendra", "കേന്ദ്രത്തിൽ ബലവാനായ ലഗ്നാധിപൻ {n1}", "केंद्र में बलवान लग्नेश {n1}"));
             }
             if !ben.is_empty() {
-                cancels.push(format!("benefic aspect or company on the Moon from {ben:?}"));
+                let b = c.list(&ben);
+                cancels.push(crate::say3!(lang, "benefic aspect or company on the Moon from {b}", "ചന്ദ്രന് {b} നൽകുന്ന ശുഭദൃഷ്ടിയോ ശുഭയോഗമോ", "चंद्र पर {b} की शुभ दृष्टि या युति"));
             }
-            let base = format!("the Moon in house {} aspected by {mal:?}", c.house(Moon));
+            let (hm, ml) = (c.house(Moon), c.list(&mal));
+            let om = c.o(hm);
+            let base = crate::say3!(lang, "the Moon in house {hm} aspected by {ml}", "{om} ഭാവത്തിൽ ചന്ദ്രൻ, ദൃഷ്ടി ചെയ്യുന്നവർ: {ml}", "{om} भाव में चंद्र, उस पर {ml} की दृष्टि");
             if cancels.is_empty() {
                 o.push("balarishta", vec![base], vec![Moon], vec![Moon]);
             } else {
                 let mut f = vec![base];
-                f.extend(cancels.into_iter().map(|x| format!("cancelled by {x}")));
+                f.extend(cancels.into_iter().map(|x| crate::say3!(lang, "cancelled by {x}", "ഭംഗം: {x}", "भंग: {x}")));
                 o.push_with("arishta_bhanga", f, vec![Moon], vec![Moon], 0.6, false);
             }
         }
@@ -1230,13 +1383,15 @@ fn pravrajya(o: &mut Out) {
         if strongest != Sun && c.combust(strongest) {
             continue;
         }
-        o.push("pravrajya", vec![format!("{v:?} together in one sign; the strongest, {strongest:?}, is not combust")], v.clone(), vec![strongest]);
+        let (vl, sn) = (c.list(&v), c.name(strongest));
+        o.push("pravrajya", vec![crate::say3!(c.lang, "{vl} together in one sign; the strongest, {sn}, is not combust", "{vl} ഒരേ രാശിയിൽ ഒരുമിച്ച്; ഏറ്റവും ബലവാൻ {sn}, അതിന് മൗഢ്യമില്ല", "{vl} एक ही राशि में साथ; सबसे बलवान {sn} अस्त नहीं")], v.clone(), vec![strongest]);
     }
     let d = sign_lord(c.sign(Moon) as usize);
     if d != Saturn && c.aspects(Saturn, d) {
         let others = SEVEN.iter().any(|g| *g != Saturn && *g != d && c.aspects(*g, d));
         if !others {
-            o.push("pravrajya_saturn", vec![format!("{d:?}, lord of the Moon's sign, is aspected by Saturn and by no other graha")], vec![d, Saturn], vec![Saturn, d]);
+            let dn = c.name(d);
+            o.push("pravrajya_saturn", vec![crate::say3!(c.lang, "{dn}, lord of the Moon's sign, is aspected by Saturn and by no other graha", "ചന്ദ്രരാശ്യാധിപൻ {dn}: ശനിയുടെ ദൃഷ്ടി മാത്രം, മറ്റൊരു ഗ്രഹത്തിന്റെയുമില്ല", "चंद्र राशि के स्वामी {dn} पर केवल शनि की दृष्टि, किसी अन्य ग्रह की नहीं")], vec![d, Saturn], vec![Saturn, d]);
         }
     }
 }
@@ -1246,7 +1401,9 @@ fn jaimini(o: &mut Out) {
     let lon = |g: DashaLord| c.p(g).sidereal;
     let k = chara_karakas([lon(Sun), lon(Moon), lon(Mars), lon(Mercury), lon(Jupiter), lon(Venus), lon(Saturn)]);
     let ak = k[0].graha;
-    for (key, other, label) in [("jaimini_ak_amk", k[1].graha, "Amatyakaraka"), ("jaimini_ak_pk", k[4].graha, "Putrakaraka")] {
+    let lang = c.lang;
+    for (key, other, label) in [("jaimini_ak_amk", k[1].graha, ["Amatyakaraka", "അമാത്യകാരകനായ", "अमात्यकारक"]), ("jaimini_ak_pk", k[4].graha, ["Putrakaraka", "പുത്രകാരകനായ", "पुत्रकारक"])] {
+        let label = lang.pick(label);
         let how = if c.conj(ak, other) {
             Some("conjoined")
         } else if c.exchange(ak, other) {
@@ -1257,7 +1414,8 @@ fn jaimini(o: &mut Out) {
             None
         };
         if let Some(how) = how {
-            o.push(key, vec![format!("Atmakaraka {ak:?} and {label} {other:?} are {how} (seven-karaka scheme)")], vec![ak, other], vec![ak, other]);
+            let (an, on, h) = (c.name(ak), c.name(other), c.how(how));
+            o.push(key, vec![crate::say3!(lang, "Atmakaraka {an} and {label} {on} are {how} (seven-karaka scheme)", "ആത്മകാരകനായ {an}, {label} {on}: {h} (സപ്തകാരക പദ്ധതി)", "आत्मकारक {an} और {label} {on} {h} (सप्त-कारक पद्धति)")], vec![ak, other], vec![ak, other]);
         }
     }
 }
@@ -1489,6 +1647,44 @@ mod tests {
     }
 
     // Signs: 0 Ari 1 Tau 2 Gem 3 Can 4 Leo 5 Vir 6 Lib 7 Sco 8 Sag 9 Cap 10 Aqu 11 Pis
+
+    #[test]
+    fn factors_speak_each_language() {
+        // A spread of synthetic charts, enough to fire most of the catalogue.
+        let mut seed: u64 = 7;
+        let mut next = || {
+            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            (seed >> 33) as f64 / (1u64 << 31) as f64
+        };
+        let mut fired = std::collections::BTreeSet::new();
+        for i in 0..1500 {
+            let lagna = (i % 12) as u8;
+            let mut lons: [f64; 9] = std::array::from_fn(|_| next() * 360.0);
+            // Bunch some charts so the Nabhasa patterns form.
+            if i % 3 == 0 {
+                let base = next() * 360.0;
+                for l in lons.iter_mut().take(7) {
+                    *l = (base + next() * 120.0) % 360.0;
+                }
+            }
+            lons[8] = (lons[7] + 180.0) % 360.0;
+            let f = mk(lagna, lons);
+            let en = chart_yogas(&f);
+            assert_eq!(en, chart_yogas_in(&f, Lang::En));
+            for lang in [Lang::Ml, Lang::Hi] {
+                let other = chart_yogas_in(&f, lang);
+                assert_eq!(other.len(), en.len());
+                for y in &other {
+                    fired.insert(y.def.key);
+                    for t in &y.factors {
+                        let latin = t.split(|ch: char| !ch.is_ascii_alphabetic()).any(|w| w.len() >= 3 && w != "BPHS");
+                        assert!(!latin, "{lang:?} {}: {t}", y.def.key);
+                    }
+                }
+            }
+        }
+        assert!(fired.len() > 40, "{}", fired.len());
+    }
 
     #[test]
     fn catalogue_is_complete_and_plain() {
