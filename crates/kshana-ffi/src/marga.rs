@@ -4,7 +4,7 @@
 //! number comes from the kernel through the natal chart and `kshana_day`.
 
 use kshana_marga as marga;
-use kshana_rules::Facts;
+use kshana_rules::{Facts, Lang};
 use kshana_sky::Observer;
 use kshana_vedic::DashaLord;
 
@@ -19,11 +19,17 @@ fn err<E: std::fmt::Debug>(e: E) -> KshanaError {
     KshanaError::Engine(format!("{e:?}"))
 }
 
-fn sign_name(s: u8) -> String {
+fn sign_name(s: u8, lang: Lang) -> String {
+    if lang != Lang::En {
+        return kshana_rules::yogas::words::rasi(lang, s as usize).to_string();
+    }
     marga::SIGN_NAMES[(s % 12) as usize].to_string()
 }
 
-fn nakshatra_name(n: usize) -> String {
+fn nakshatra_name(n: usize, lang: Lang) -> String {
+    if lang != Lang::En {
+        return kshana_rules::yogas::words::star(lang, n).to_string();
+    }
     kshana_vedic::panchanga::NAKSHATRA_NAMES[n % 27].to_string()
 }
 
@@ -58,15 +64,15 @@ pub struct SphutaRecord {
     pub words: Vec<String>,
 }
 
-impl From<&marga::Sphuta> for SphutaRecord {
-    fn from(s: &marga::Sphuta) -> Self {
+impl SphutaRecord {
+    fn of(s: &marga::Sphuta, lang: Lang) -> Self {
         SphutaRecord {
             name: s.name.to_string(),
             longitude: s.longitude,
             sign: s.sign,
-            sign_name: sign_name(s.sign),
+            sign_name: sign_name(s.sign, lang),
             nakshatra: s.nakshatra as u32,
-            nakshatra_name: nakshatra_name(s.nakshatra),
+            nakshatra_name: nakshatra_name(s.nakshatra, lang),
             pada: s.pada,
             lord: g(s.lord),
             star_lord: g(s.star_lord),
@@ -264,13 +270,13 @@ pub struct PadaRecord {
     pub words: Vec<String>,
 }
 
-impl From<&marga::Pada> for PadaRecord {
-    fn from(p: &marga::Pada) -> Self {
+impl PadaRecord {
+    fn of(p: &marga::Pada, lang: Lang) -> Self {
         PadaRecord {
             name: p.name.clone(),
             house: p.house,
             sign: p.sign,
-            sign_name: sign_name(p.sign),
+            sign_name: sign_name(p.sign, lang),
             lord: g(p.lord),
             rasi_house: p.rasi_house,
             second: p.second.iter().map(|x| g(*x)).collect(),
@@ -334,9 +340,9 @@ fn obs(latitude_deg: f64, longitude_deg: f64) -> Observer {
     }
 }
 
-fn yogi_record(y: &marga::Yogi) -> YogiRecord {
+fn yogi_record(y: &marga::Yogi, lang: Lang) -> YogiRecord {
     YogiRecord {
-        point: (&y.point).into(),
+        point: SphutaRecord::of(&y.point, lang),
         yogi: g(y.yogi),
         sahayogi: g(y.sahayogi),
         avayogi_point: y.avayogi_point,
@@ -358,16 +364,17 @@ fn component(a: &marga::Ayurdaya) -> AyurComponentRecord {
 
 /// Read an Ashtamangala number (the three cowrie remainders, digits 1–8).
 #[uniffi::export]
-pub fn ashtamangala_number(number: u32) -> AshtamangalaRecord {
-    let a = marga::ashtamangala(number);
+pub fn ashtamangala_number(number: u32, lang: String) -> AshtamangalaRecord {
+    let lang = Lang::parse(&lang);
+    let a = marga::ashtamangala::ashtamangala_in(number, lang);
     AshtamangalaRecord {
         number: a.number,
         digits: a.digits.clone(),
         planets: a.planets.iter().map(|p| p.map(g)).collect(),
         arudha_sign: a.arudha_sign,
-        arudha_sign_name: sign_name(a.arudha_sign),
+        arudha_sign_name: sign_name(a.arudha_sign, lang),
         nakshatra: a.nakshatra.map(|n| n as u32),
-        nakshatra_name: a.nakshatra.map(nakshatra_name),
+        nakshatra_name: a.nakshatra.map(|n| nakshatra_name(n, lang)),
         indications: a.indications,
     }
 }
@@ -383,19 +390,21 @@ impl Engine {
         latitude_deg: f64,
         longitude_deg: f64,
         ayanamsa: AyanamsaChoice,
+        lang: String,
     ) -> Result<SphutaReportRecord, KshanaError> {
+        let lang = Lang::parse(&lang);
         let ch = natal_chart(self, at, latitude_deg, longitude_deg, ayanamsa)?;
         let o = obs(latitude_deg, longitude_deg);
-        let r = marga::sphuta_report(&self.spk, self.eop.as_ref(), &o, &ch, ayanamsa.into())
+        let r = marga::sphuta::sphuta_report_in(&self.spk, self.eop.as_ref(), &o, &ch, ayanamsa.into(), lang)
             .map_err(err)?;
         Ok(SphutaReportRecord {
             gulika_convention: format!("{:?}", r.gulika.convention),
             gulika_at: r.gulika.at.into(),
             gulika_night: r.gulika.night,
             gulika_sidereal: r.gulika.sidereal,
-            sphutas: r.sphutas.iter().map(Into::into).collect(),
-            yogi: yogi_record(&r.yogi),
-            bhrigu_bindu: (&r.bhrigu_bindu).into(),
+            sphutas: r.sphutas.iter().map(|s| SphutaRecord::of(s, lang)).collect(),
+            yogi: yogi_record(&r.yogi, lang),
+            bhrigu_bindu: SphutaRecord::of(&r.bhrigu_bindu, lang),
         })
     }
 
@@ -437,18 +446,20 @@ impl Engine {
         longitude_deg: f64,
         ayanamsa: AyanamsaChoice,
         arudha_sign: u8,
+        lang: String,
     ) -> Result<PrasnaSphutaRecord, KshanaError> {
+        let lang = Lang::parse(&lang);
         let ch = natal_chart(self, at, latitude_deg, longitude_deg, ayanamsa)?;
-        let p = marga::prasna_sphutas(&ch, arudha_sign).map_err(err)?;
+        let p = marga::ashtamangala::prasna_sphutas_in(&ch, arudha_sign, lang).map_err(err)?;
         Ok(PrasnaSphutaRecord {
-            lagna: (&p.lagna).into(),
-            chandra: (&p.chandra).into(),
-            arudha: (&p.arudha).into(),
+            lagna: SphutaRecord::of(&p.lagna, lang),
+            chandra: SphutaRecord::of(&p.chandra, lang),
+            arudha: SphutaRecord::of(&p.arudha, lang),
             arudha_sign: p.arudha_sign,
             veethi_sign: p.veethi_sign,
-            veethi_sign_name: sign_name(p.veethi_sign),
+            veethi_sign_name: sign_name(p.veethi_sign, lang),
             chatra_sign: p.chatra_sign,
-            chatra_sign_name: sign_name(p.chatra_sign),
+            chatra_sign_name: sign_name(p.chatra_sign, lang),
             words: p.words,
         })
     }
@@ -461,24 +472,26 @@ impl Engine {
         latitude_deg: f64,
         longitude_deg: f64,
         ayanamsa: AyanamsaChoice,
+        lang: String,
     ) -> Result<JaiminiRecord, KshanaError> {
+        let lang = Lang::parse(&lang);
         let ch = natal_chart(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let f = Facts::from_chart(&ch);
-        let k = marga::karakamsa(&f);
+        let k = marga::jaimini::karakamsa_in(&f, lang);
         Ok(JaiminiRecord {
             rasi_drishti: (0..12u8)
                 .map(|s| RasiDrishtiRecord {
                     sign: s,
-                    sign_name: sign_name(s),
+                    sign_name: sign_name(s, lang),
                     aspects: marga::rasi_drishti(s),
                 })
                 .collect(),
-            argala: marga::argala(&f)
+            argala: marga::jaimini::argala_in(&f, lang)
                 .iter()
                 .map(|a| ArgalaRecord {
                     house: a.house,
                     sign: a.sign,
-                    sign_name: sign_name(a.sign),
+                    sign_name: sign_name(a.sign, lang),
                     by: a.by.iter().map(|x| g(*x)).collect(),
                     obstructed_by: a.obstructed_by.iter().map(|x| g(*x)).collect(),
                     net: a.net,
@@ -501,13 +514,13 @@ impl Engine {
                 atmakaraka: g(k.atmakaraka),
                 degree_in_sign: k.degree_in_sign,
                 sign: k.sign,
-                sign_name: sign_name(k.sign),
+                sign_name: sign_name(k.sign, lang),
                 navamsa_lagna: k.navamsa_lagna,
                 occupants: k.occupants.iter().map(|x| g(*x)).collect(),
                 words: k.words.clone(),
             },
-            pada_lagna: (&marga::pada_lagna(&f)).into(),
-            upapada: (&marga::upapada(&f)).into(),
+            pada_lagna: PadaRecord::of(&marga::jaimini::pada_of_in(&f, 1, lang), lang),
+            upapada: PadaRecord::of(&marga::jaimini::pada_of_in(&f, 12, lang), lang),
         })
     }
 
@@ -524,7 +537,9 @@ impl Engine {
         from: ExactInstant,
         to: ExactInstant,
         fraction: Option<f64>,
+        lang: String,
     ) -> Result<Vec<SandhiRecord>, KshanaError> {
+        let lang = Lang::parse(&lang);
         let ch = natal_chart(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let moon = ch.bodies[1].sidereal;
         let rule = match fraction {
@@ -547,7 +562,7 @@ impl Engine {
             boundary: s.boundary.into(),
             start: s.start.into(),
             end: s.end.into(),
-            rule: s.rule.name().to_string(),
+            rule: s.rule.name_in(lang).to_string(),
         })
         .collect())
     }
@@ -560,11 +575,13 @@ impl Engine {
         longitude_deg: f64,
         ayanamsa: AyanamsaChoice,
         dasha_lord: String,
+        lang: String,
     ) -> Result<Vec<ChidraRecord>, KshanaError> {
+        let lang = Lang::parse(&lang);
         let ch = natal_chart(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let f = Facts::from_chart(&ch);
         let lord = parse_lord(&dasha_lord)?;
-        Ok(marga::chidra_lords(&f, lord)
+        Ok(marga::sandhi::chidra_lords_in(&f, lord, lang)
             .into_iter()
             .map(|(l, reason)| ChidraRecord { lord: g(l), reason })
             .collect())
@@ -577,9 +594,11 @@ impl Engine {
         latitude_deg: f64,
         longitude_deg: f64,
         ayanamsa: AyanamsaChoice,
+        lang: String,
     ) -> Result<Vec<VimshopakaRecord>, KshanaError> {
+        let lang = Lang::parse(&lang);
         let ch = natal_chart(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
-        Ok(marga::vimshopaka(&ch)
+        Ok(marga::vimshopaka::vimshopaka_in(&ch, lang)
             .map_err(err)?
             .iter()
             .map(|v| VimshopakaRecord {
@@ -626,7 +645,7 @@ mod tests {
         let Some(e) = engine() else { return };
         let b = birth();
         let s = e
-            .prasna_marga_sphutas(b, 9.9312, 76.2673, AyanamsaChoice::Lahiri)
+            .prasna_marga_sphutas(b, 9.9312, 76.2673, AyanamsaChoice::Lahiri, "en".into())
             .unwrap();
         assert_eq!(s.sphutas.len(), 11);
         assert_eq!(s.sphutas[0].name, "Trisphuta");
@@ -639,12 +658,12 @@ mod tests {
         assert_eq!(a.caveat, kshana_marga::LONGEVITY_CAVEAT);
         assert_eq!(a.words[0], a.caveat);
         let p = e
-            .prasna_arudha_sphutas(b, 9.9312, 76.2673, AyanamsaChoice::Lahiri, 5)
+            .prasna_arudha_sphutas(b, 9.9312, 76.2673, AyanamsaChoice::Lahiri, 5, "en".into())
             .unwrap();
         assert_eq!(p.arudha_sign, 5);
         assert_eq!(p.arudha.sign, 5);
         let j = e
-            .jaimini_extras(b, 9.9312, 76.2673, AyanamsaChoice::Lahiri)
+            .jaimini_extras(b, 9.9312, 76.2673, AyanamsaChoice::Lahiri, "en".into())
             .unwrap();
         assert_eq!(j.rasi_drishti.len(), 12);
         assert_eq!(j.argala.len(), 12);
@@ -660,7 +679,7 @@ mod tests {
         })
         .unwrap();
         let w = e
-            .dasha_sandhi_windows(b, 9.9312, 76.2673, AyanamsaChoice::Lahiri, b, to, None)
+            .dasha_sandhi_windows(b, 9.9312, 76.2673, AyanamsaChoice::Lahiri, b, to, None, "en".into())
             .unwrap();
         assert!(w.iter().any(|x| x.level == 1));
         assert!(w.iter().all(|x| x.rule == "last and first sub-periods"));
@@ -673,18 +692,19 @@ mod tests {
                 b,
                 to,
                 Some(0.125),
+                "en".into(),
             )
             .unwrap();
         assert_eq!(w.len(), w8.len());
         let c = e
-            .dasha_chidra_lords(b, 9.9312, 76.2673, AyanamsaChoice::Lahiri, "Venus".into())
+            .dasha_chidra_lords(b, 9.9312, 76.2673, AyanamsaChoice::Lahiri, "Venus".into(), "en".into())
             .unwrap();
         assert!(c.len() >= 5);
         assert!(e
-            .dasha_chidra_lords(b, 9.9312, 76.2673, AyanamsaChoice::Lahiri, "Pluto".into())
+            .dasha_chidra_lords(b, 9.9312, 76.2673, AyanamsaChoice::Lahiri, "Pluto".into(), "en".into())
             .is_err());
         let v = e
-            .vimshopaka_bala(b, 9.9312, 76.2673, AyanamsaChoice::Lahiri)
+            .vimshopaka_bala(b, 9.9312, 76.2673, AyanamsaChoice::Lahiri, "en".into())
             .unwrap();
         assert_eq!(v.len(), 7);
         assert!(v.iter().all(|x| x.shodashavarga <= 20.0));
@@ -692,7 +712,7 @@ mod tests {
 
     #[test]
     fn ashtamangala_is_pure() {
-        let a = ashtamangala_number(831);
+        let a = ashtamangala_number(831, "en".into());
         assert_eq!(a.digits, vec![8, 3, 1]);
         assert_eq!(a.planets[0].as_deref(), Some("Rahu"));
         assert_eq!(a.arudha_sign_name, "Gemini");

@@ -338,7 +338,7 @@ mod tests {
         assert_eq!(j7.padas.len(), 12);
         assert_eq!(j7.padas[0].label, "A1");
         // The Pada lagna and Upapada agree with the marga module's.
-        let m = e.jaimini_extras(b, 9.9312, 76.2673, AyanamsaChoice::Lahiri).unwrap();
+        let m = e.jaimini_extras(b, 9.9312, 76.2673, AyanamsaChoice::Lahiri, "en".into()).unwrap();
         assert_eq!(j7.padas[0].sign, m.pada_lagna.sign);
         assert_eq!(j7.padas[11].sign, m.upapada.sign);
         assert_eq!(j7.karakamsa, m.karakamsa.sign);

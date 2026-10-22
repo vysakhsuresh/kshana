@@ -76,15 +76,15 @@ fun MeScreen(
     val context = LocalContext.current
     var atmakaraka by remember { mutableStateOf<KarakaRecord?>(null) }
 
-    LaunchedEffect(profile, settings) {
+    LaunchedEffect(profile, settings, com.kshana.app.data.Lang.code) {
         atmakaraka = null
         if (profile == null) return@LaunchedEffect
         try {
             val engine = EngineProvider.get(context)
             val list = withContext(Dispatchers.Default) {
-                engine.karakas(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa)
+                engine.karakas(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, com.kshana.app.data.Lang.code)
             }
-            atmakaraka = list.firstOrNull { it.name.equals("Atmakaraka", ignoreCase = true) }
+            atmakaraka = list.firstOrNull { it.rank.toInt() == 0 }
                 ?: list.minByOrNull { it.rank.toInt() }
         } catch (e: Exception) {
             // The line is optional; the screen stands without it.

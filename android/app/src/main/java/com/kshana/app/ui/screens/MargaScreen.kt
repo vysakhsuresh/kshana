@@ -169,7 +169,7 @@ private fun <T : Any> mgLoad(key: Any?, cached: T?, onLoaded: (T) -> Unit, compu
 @Composable
 fun MargaScreen(profile: BirthProfile, here: Place, settings: EngineSettings, onBack: () -> Unit) {
     val zone = remember { ZoneId.systemDefault() }
-    val cache = remember(profile, settings, here) { MargaCache() }
+    val cache = remember(profile, settings, here, com.kshana.app.data.Lang.code) { MargaCache() }
     var part by remember(profile, settings) { mutableStateOf(MargaPart.SPHUTAS) }
 
     Column(
@@ -312,7 +312,7 @@ private fun SphutaPart(profile: BirthProfile, here: Place, settings: EngineSetti
     val placeName = if (isNow) here.name else profile.placeName
 
     val error = mgLoad(key, cache.sphutas[key], { cache.sphutas[key] = it }) { engine ->
-        engine.prasnaMargaSphutas(at, lat, lon, settings.ayanamsa)
+        engine.prasnaMargaSphutas(at, lat, lon, settings.ayanamsa, com.kshana.app.data.Lang.code)
     }
     val rec = cache.sphutas[key]
 
@@ -386,7 +386,7 @@ private fun AshtamangalaPart(here: Place, settings: EngineSettings, zone: ZoneId
     var typed by remember { mutableStateOf("") }
     val number = typed.toIntOrNull()
     val valid = number != null && number in 1..999
-    val read: AshtamangalaRecord? = remember(number) { if (number != null && number in 1..999) ashtamangalaNumber(number.toUInt()) else null }
+    val read: AshtamangalaRecord? = remember(number, com.kshana.app.data.Lang.code) { if (number != null && number in 1..999) ashtamangalaNumber(number.toUInt(), com.kshana.app.data.Lang.code) else null }
 
     SectionLabel("Ashtamangala")
     MgSentence("One hundred and eight cowries in three heaps, each counted off in eights; the three remainders make the number.")
@@ -413,7 +413,7 @@ private fun AshtamangalaPart(here: Place, settings: EngineSettings, zone: ZoneId
         val sign = read.arudhaSign.toInt()
         val error = mgLoad(sign, cache.arudha[sign], { cache.arudha[sign] = it }) { engine ->
             val at = Instants.now()
-            ArudhaCast(at, engine.prasnaArudhaSphutas(at, here.latitude, here.longitude, settings.ayanamsa, sign.toUByte()))
+            ArudhaCast(at, engine.prasnaArudhaSphutas(at, here.latitude, here.longitude, settings.ayanamsa, sign.toUByte(), com.kshana.app.data.Lang.code))
         }
         SectionLabel("The prasna now")
         ErrorLine(error)
@@ -500,7 +500,7 @@ private fun mgFieldColors() = OutlinedTextFieldDefaults.colors(
 @Composable
 private fun JaiminiPart(profile: BirthProfile, settings: EngineSettings, cache: MargaCache) {
     val error = mgLoad("jaimini", cache.jaimini, { cache.jaimini = it }) { engine ->
-        engine.jaiminiExtras(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa)
+        engine.jaiminiExtras(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, com.kshana.app.data.Lang.code)
     }
     SectionLabel("Jaimini")
     ErrorLine(error)
@@ -628,7 +628,7 @@ private fun SandhiPart(profile: BirthProfile, settings: EngineSettings, zone: Zo
     val birth = remember(profile) { profile.birthInstant() }
 
     val error = mgLoad("sandhi:$ruleKey", cache.sandhi[ruleKey], { cache.sandhi[ruleKey] = it }) { engine ->
-        engine.dashaSandhiWindows(birth, profile.latitude, profile.longitude, settings.ayanamsa, from, to, if (eighth) 0.125 else null)
+        engine.dashaSandhiWindows(birth, profile.latitude, profile.longitude, settings.ayanamsa, from, to, if (eighth) 0.125 else null, com.kshana.app.data.Lang.code)
     }
     val windows = cache.sandhi[ruleKey]
 
@@ -666,7 +666,7 @@ private fun SandhiPart(profile: BirthProfile, settings: EngineSettings, zone: Zo
         if (lordError == null) MgLoading("Reading the running mahadasha…")
     } else {
         val chidraError = mgLoad("chidra:$lord", cache.chidra[lord], { cache.chidra[lord] = it }) { engine ->
-            engine.dashaChidraLords(birth, profile.latitude, profile.longitude, settings.ayanamsa, lord)
+            engine.dashaChidraLords(birth, profile.latitude, profile.longitude, settings.ayanamsa, lord, com.kshana.app.data.Lang.code)
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text("${mgGlyph(lord)} $lord".trim(), fontFamily = KshanaFonts.serif, fontSize = 20.sp, color = KshanaColors.Gold, modifier = Modifier.weight(1f))
@@ -741,7 +741,7 @@ private fun ChidraRow(c: ChidraRecord) {
 @Composable
 private fun VimshopakaPart(profile: BirthProfile, settings: EngineSettings, cache: MargaCache) {
     val error = mgLoad("vimshopaka", cache.vimshopaka, { cache.vimshopaka = it }) { engine ->
-        engine.vimshopakaBala(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa)
+        engine.vimshopakaBala(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, com.kshana.app.data.Lang.code)
     }
     SectionLabel("Vimshopaka bala")
     MgSentence("Each graha's strength out of twenty across the divisional charts, in the four schemes the text weighs.")

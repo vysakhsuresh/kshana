@@ -463,7 +463,7 @@ fn feeds(range: std::ops::Range<usize>, name: &str) {
         a.run(&tag("kundali_rev"), || e.kundali(ob, ola, olo, b, la, lo, HS, AY, !male));
         a.run(&tag("compat"), || e.compatibility(b, la, lo, ob, ola, olo, AY));
         a.run(&tag("life_map"), || e.life_map(b, la, lo, AY, 90));
-        a.run(&tag("karakas"), || e.karakas(b, la, lo, AY));
+        a.run(&tag("karakas"), || e.karakas(b, la, lo, AY, LANGS[ci % LANGS.len()].into()));
         a.run(&tag("jaimini_full"), || e.jaimini_full(b, la, lo, AY, ci % 2 == 0, t));
         for life in std::iter::once(None).chain(life_names().into_iter().map(Some)) {
             a.run(&tag(&format!("parihara_{life:?}")), || e.parihara(b, la, lo, AY, t, life));
@@ -562,12 +562,13 @@ fn chart_pages() {
         let t = ds[ci % ds.len()];
         let tag = |s: &str| format!("c{ci}.{s}");
         a.run(&tag("varsha"), || e.varshaphala(b, la, lo, AY, 2026 + (ci as i64 % 4), la, lo));
-        a.run(&tag("jaimini_extras"), || e.jaimini_extras(b, la, lo, AY));
-        a.run(&tag("sandhi"), || e.dasha_sandhi_windows(b, la, lo, AY, at(2026, 1, 1, 0, 0), at(2036, 1, 1, 0, 0), None));
+        let ml = LANGS[ci % LANGS.len()];
+        a.run(&tag("jaimini_extras"), || e.jaimini_extras(b, la, lo, AY, ml.into()));
+        a.run(&tag("sandhi"), || e.dasha_sandhi_windows(b, la, lo, AY, at(2026, 1, 1, 0, 0), at(2036, 1, 1, 0, 0), None, ml.into()));
         for lord in ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"] {
-            a.run(&tag(&format!("chidra_{lord}")), || e.dasha_chidra_lords(b, la, lo, AY, lord.into()));
+            a.run(&tag(&format!("chidra_{lord}")), || e.dasha_chidra_lords(b, la, lo, AY, lord.into(), ml.into()));
         }
-        a.run(&tag("vimshopaka"), || e.vimshopaka_bala(b, la, lo, AY));
+        a.run(&tag("vimshopaka"), || e.vimshopaka_bala(b, la, lo, AY, ml.into()));
         a.run(&tag("dashas"), || e.dasha_systems_at(b, la, lo, AY, t));
         a.run(&tag("dashas_more"), || e.dasha_systems_more_at(b, la, lo, AY, t));
         a.run(&tag("patyayini"), || e.patyayini(b, la, lo, AY, 2027, la, lo));
@@ -584,8 +585,8 @@ fn chart_pages() {
         a.run(&tag("progressed_hits"), || e.progressed_hits(b, la, lo, AY, t, at(2031, 1, 1, 0, 0)));
         a.run(&tag("muhurta"), || e.muhurta(["Marriage", "Travel", "Business", "Housewarming", "Learning", "Medical", "General"][ci % 7].into(), t, 14, la, lo, AY, None, 5));
         a.run(&tag("panchanga"), || e.panchanga_detail(t, la, lo, AY));
-        a.run(&tag("sphutas"), || e.prasna_marga_sphutas(t, la, lo, AY));
-        a.run(&tag("arudha"), || e.prasna_arudha_sphutas(t, la, lo, AY, (ci % 12) as u8));
+        a.run(&tag("sphutas"), || e.prasna_marga_sphutas(t, la, lo, AY, ml.into()));
+        a.run(&tag("arudha"), || e.prasna_arudha_sphutas(t, la, lo, AY, (ci % 12) as u8, ml.into()));
         a.run(&tag("calendar"), || e.calendar(t, 30, la, lo, AY));
         a.run(&tag("calendar_days"), || e.calendar_days(la, lo, 330, 2026, 1 + (ci as u32 % 12), 1, 31, AY));
         a.run(&tag("calendar_festivals"), || e.calendar_festivals(la, lo, 330, 2026, 1 + (ci as u32 % 12), 1, 31, AY));
@@ -605,7 +606,7 @@ fn chart_pages() {
         }
     }
     for n in [111, 123, 234, 345, 456, 567, 678, 781, 812, 888, 518, 647] {
-        a.read(&format!("ashtamangala_{n}"), format!("{:?}", ashtamangala_number(n)));
+        a.read(&format!("ashtamangala_{n}"), format!("{:?}", ashtamangala_number(n, LANGS[n as usize % LANGS.len()].into())));
     }
     a.finish("chart_pages", 3000);
 }
