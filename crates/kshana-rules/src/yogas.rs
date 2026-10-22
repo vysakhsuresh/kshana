@@ -1224,6 +1224,178 @@ fn jaimini(o: &mut Out) {
     }
 }
 
+/// Format one of three per-language templates: `say3!(lang, "en {x}", "ml {x}", "hi {x}")`.
+/// Only the chosen arm is formatted, so extra arguments are evaluated once.
+#[macro_export]
+macro_rules! say3 {
+    ($lang:expr, $en:literal, $ml:literal, $hi:literal $(, $a:expr)* $(,)?) => {
+        match $lang {
+            $crate::plain::Lang::En => format!($en $(, $a)*),
+            $crate::plain::Lang::Ml => format!($ml $(, $a)*),
+            $crate::plain::Lang::Hi => format!($hi $(, $a)*),
+        }
+    };
+}
+
+/// Chart words for the expert pages, in the classical terms each script's astrologers
+/// use: graha, rasi, bhava ordinals and dignities. English gives the names the English
+/// text has always used (the enum names).
+pub mod words {
+    use crate::parashari::Dignity;
+    use crate::plain::Lang;
+    use kshana_vedic::DashaLord;
+
+    const GRAHA: [[&str; 3]; 9] = [
+        ["Sun", "സൂര്യൻ", "सूर्य"],
+        ["Moon", "ചന്ദ്രൻ", "चंद्र"],
+        ["Mars", "ചൊവ്വ", "मंगल"],
+        ["Mercury", "ബുധൻ", "बुध"],
+        ["Jupiter", "വ്യാഴം", "गुरु"],
+        ["Venus", "ശുക്രൻ", "शुक्र"],
+        ["Saturn", "ശനി", "शनि"],
+        ["Rahu", "രാഹു", "राहु"],
+        ["Ketu", "കേതു", "केतु"],
+    ];
+
+    fn graha_index(g: DashaLord) -> usize {
+        match g {
+            DashaLord::Sun => 0,
+            DashaLord::Moon => 1,
+            DashaLord::Mars => 2,
+            DashaLord::Mercury => 3,
+            DashaLord::Jupiter => 4,
+            DashaLord::Venus => 5,
+            DashaLord::Saturn => 6,
+            DashaLord::Rahu => 7,
+            DashaLord::Ketu => 8,
+        }
+    }
+
+    /// A graha's name: "Mars", "ചൊവ്വ", "मंगल".
+    pub fn graha(lang: Lang, g: DashaLord) -> &'static str {
+        lang.pick(GRAHA[graha_index(g)])
+    }
+
+    /// Grahas joined with commas: "Mars, Venus".
+    pub fn graha_list(lang: Lang, gs: &[DashaLord]) -> String {
+        gs.iter().map(|g| graha(lang, *g)).collect::<Vec<_>>().join(", ")
+    }
+
+    /// A graha name by its English name ("Mars"), for text that carries names as
+    /// strings; anything unknown comes back unchanged.
+    pub fn graha_named(lang: Lang, en: &str) -> String {
+        GRAHA.iter().find(|t| t[0] == en).map(|t| lang.pick(*t).to_string()).unwrap_or_else(|| en.to_string())
+    }
+
+    const RASI: [[&str; 3]; 12] = [
+        ["Aries", "മേടം", "मेष"],
+        ["Taurus", "ഇടവം", "वृषभ"],
+        ["Gemini", "മിഥുനം", "मिथुन"],
+        ["Cancer", "കർക്കടകം", "कर्क"],
+        ["Leo", "ചിങ്ങം", "सिंह"],
+        ["Virgo", "കന്നി", "कन्या"],
+        ["Libra", "തുലാം", "तुला"],
+        ["Scorpio", "വൃശ്ചികം", "वृश्चिक"],
+        ["Sagittarius", "ധനു", "धनु"],
+        ["Capricorn", "മകരം", "मकर"],
+        ["Aquarius", "കുംഭം", "कुंभ"],
+        ["Pisces", "മീനം", "मीन"],
+    ];
+
+    /// A sign's name from its index, 0 = Aries.
+    pub fn rasi(lang: Lang, sign: usize) -> &'static str {
+        lang.pick(RASI[sign % 12])
+    }
+
+    const ORD: [[&str; 3]; 12] = [
+        ["1st", "ഒന്നാം", "प्रथम"],
+        ["2nd", "രണ്ടാം", "द्वितीय"],
+        ["3rd", "മൂന്നാം", "तृतीय"],
+        ["4th", "നാലാം", "चतुर्थ"],
+        ["5th", "അഞ്ചാം", "पंचम"],
+        ["6th", "ആറാം", "षष्ठ"],
+        ["7th", "ഏഴാം", "सप्तम"],
+        ["8th", "എട്ടാം", "अष्टम"],
+        ["9th", "ഒമ്പതാം", "नवम"],
+        ["10th", "പത്താം", "दशम"],
+        ["11th", "പതിനൊന്നാം", "एकादश"],
+        ["12th", "പന്ത്രണ്ടാം", "द्वादश"],
+    ];
+
+    /// A house ordinal, 1-based: "7th", "ഏഴാം", "सप्तम". Followed by ഭാവം / भाव it
+    /// reads "ഏഴാം ഭാവം", "सप्तम भाव"; neither form changes with case.
+    pub fn bhava(lang: Lang, h: u8) -> &'static str {
+        lang.pick(ORD[((h.max(1) - 1) % 12) as usize])
+    }
+
+    /// Several house numbers in the reader's script: "1, 4, 7" stays digits in every
+    /// language; this joins them with commas.
+    pub fn houses(hs: &[u8]) -> String {
+        hs.iter().map(|h| h.to_string()).collect::<Vec<_>>().join(", ")
+    }
+
+    /// A dignity: "Exalted", "ഉച്ചം", "उच्च".
+    pub fn dignity(lang: Lang, d: Dignity) -> &'static str {
+        let t = match d {
+            Dignity::Debilitated => ["Debilitated", "നീചം", "नीच"],
+            Dignity::Enemy => ["Enemy", "ശത്രുക്ഷേത്രം", "शत्रु राशि"],
+            Dignity::Neutral => ["Neutral", "സമക്ഷേത്രം", "सम राशि"],
+            Dignity::Friend => ["Friend", "മിത്രക്ഷേത്രം", "मित्र राशि"],
+            Dignity::Own => ["Own", "സ്വക്ഷേത്രം", "स्वराशि"],
+            Dignity::Moolatrikona => ["Moolatrikona", "മൂലത്രികോണം", "मूलत्रिकोण"],
+            Dignity::Exalted => ["Exalted", "ഉച്ചം", "उच्च"],
+        };
+        lang.pick(t)
+    }
+
+    const STAR: [[&str; 3]; 27] = [
+        ["Ashwini", "അശ്വതി", "अश्विनी"],
+        ["Bharani", "ഭരണി", "भरणी"],
+        ["Krittika", "കാർത്തിക", "कृत्तिका"],
+        ["Rohini", "രോഹിണി", "रोहिणी"],
+        ["Mrigashira", "മകയിരം", "मृगशिरा"],
+        ["Ardra", "തിരുവാതിര", "आर्द्रा"],
+        ["Punarvasu", "പുണർതം", "पुनर्वसु"],
+        ["Pushya", "പൂയം", "पुष्य"],
+        ["Ashlesha", "ആയില്യം", "आश्लेषा"],
+        ["Magha", "മകം", "मघा"],
+        ["Purva Phalguni", "പൂരം", "पूर्वा फाल्गुनी"],
+        ["Uttara Phalguni", "ഉത്രം", "उत्तरा फाल्गुनी"],
+        ["Hasta", "അത്തം", "हस्त"],
+        ["Chitra", "ചിത്തിര", "चित्रा"],
+        ["Swati", "ചോതി", "स्वाति"],
+        ["Vishakha", "വിശാഖം", "विशाखा"],
+        ["Anuradha", "അനിഴം", "अनुराधा"],
+        ["Jyeshtha", "തൃക്കേട്ട", "ज्येष्ठा"],
+        ["Mula", "മൂലം", "मूल"],
+        ["Purva Ashadha", "പൂരാടം", "पूर्वाषाढ़ा"],
+        ["Uttara Ashadha", "ഉത്രാടം", "उत्तराषाढ़ा"],
+        ["Shravana", "തിരുവോണം", "श्रवण"],
+        ["Dhanishta", "അവിട്ടം", "धनिष्ठा"],
+        ["Shatabhisha", "ചതയം", "शतभिषा"],
+        ["Purva Bhadrapada", "പൂരുരുട്ടാതി", "पूर्वा भाद्रपद"],
+        ["Uttara Bhadrapada", "ഉത്രട്ടാതി", "उत्तरा भाद्रपद"],
+        ["Revati", "രേവതി", "रेवती"],
+    ];
+
+    /// A nakshatra's name from its index, 0 = Ashwini. Use only in ml and hi text:
+    /// English text keeps whatever spelling it already printed.
+    pub fn star(lang: Lang, i: usize) -> &'static str {
+        lang.pick(STAR[i % 27])
+    }
+
+    /// A star name by its English spelling, for text that carries names as strings;
+    /// anything unknown comes back unchanged.
+    pub fn star_named(lang: Lang, en: &str) -> String {
+        STAR.iter().find(|t| t[0].eq_ignore_ascii_case(en)).map(|t| lang.pick(*t).to_string()).unwrap_or_else(|| en.to_string())
+    }
+
+    /// A sign name by its English spelling; anything unknown comes back unchanged.
+    pub fn rasi_named(lang: Lang, en: &str) -> String {
+        RASI.iter().find(|t| t[0].eq_ignore_ascii_case(en)).map(|t| lang.pick(*t).to_string()).unwrap_or_else(|| en.to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
