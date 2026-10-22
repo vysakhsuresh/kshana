@@ -177,7 +177,7 @@ fun BookScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(trialName(s.kind), fontFamily = FontFamily.Serif, fontSize = 17.sp, color = (if (s.current) KshanaColors.Ember else KshanaColors.Text).copy(alpha = alpha))
+                    Text(tr(trialName(s.kind)), fontFamily = FontFamily.Serif, fontSize = 17.sp, color = (if (s.current) KshanaColors.Ember else KshanaColors.Text).copy(alpha = alpha))
                     Text("age ${s.age.toInt()}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Muted.copy(alpha = alpha))
                 }
                 Text("${dayMon(s.start)} ${localText(s.start, YEAR_ONLY)} – ${dayMon(s.end)} ${localText(s.end, YEAR_ONLY)}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky.copy(alpha = alpha))

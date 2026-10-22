@@ -78,30 +78,30 @@ fun CompatibilityScreen(settings: EngineSettings, onFamily: () -> Unit, onBack: 
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("COMPATIBILITY", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-            Text("BACK", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onBack).padding(12.dp))
+            Text(tr("COMPATIBILITY"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            Text(tr("BACK"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onBack).padding(12.dp))
         }
-        Text("Two skies, matched", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+        Text(tr("Two skies, matched"), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
 
         if (people.size < 2) {
             Text(
-                "Matching needs two births. Add a partner or anyone else under Family and both will appear here to choose from.",
+                tr("Matching needs two births. Add a partner or anyone else under Family and both will appear here to choose from."),
                 style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft,
             )
             QuietButton("ADD A PERSON", onClick = onFamily)
             return@Column
         }
 
-        SectionLabel("Person A")
+        SectionLabel(tr("Person A"))
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for ((i, p) in people.withIndex()) Chip(p.name.uppercase(), selected = i == indexA, onClick = { indexA = i })
         }
-        SectionLabel("Person B")
+        SectionLabel(tr("Person B"))
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for ((i, p) in people.withIndex()) Chip(p.name.uppercase(), selected = i == indexB, onClick = { indexB = i })
         }
         if (indexA == indexB) {
-            Text("Choose two different people.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            Text(tr("Choose two different people."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         }
         Spacer(Modifier.height(4.dp))
         GoldButton(
@@ -116,13 +116,13 @@ fun CompatibilityScreen(settings: EngineSettings, onFamily: () -> Unit, onBack: 
         val pair = request
         if (c != null && pair != null) {
             val maxTotal = c.kutas.sumOf { it.max }.let { if (it > 0.0) it else 36.0 }
-            SectionLabel("${pair.first.name} · ${pair.second.name}")
+            SectionLabel(tr("${pair.first.name} · ${pair.second.name}"))
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("${num(c.total)} / ${num(maxTotal)}", style = MaterialTheme.typography.headlineLarge, color = KshanaColors.Sky)
                 Text(c.verdict, style = MaterialTheme.typography.displayMedium, color = KshanaColors.Gold, modifier = Modifier.padding(bottom = 4.dp))
             }
 
-            SectionLabel("Ashtakoota")
+            SectionLabel(tr("Ashtakoota"))
             for (k in c.kutas) {
                 Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -135,19 +135,19 @@ fun CompatibilityScreen(settings: EngineSettings, onFamily: () -> Unit, onBack: 
                     }
                 }
             }
-            if (c.nadiDosha) Text("Nadi dosha: both charts share the same nadi.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Gold)
-            if (c.bhakootDosha) Text("Bhakoot dosha: the Moon signs stand in a difficult relation.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Gold)
+            if (c.nadiDosha) Text(tr("Nadi dosha: both charts share the same nadi."), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Gold)
+            if (c.bhakootDosha) Text(tr("Bhakoot dosha: the Moon signs stand in a difficult relation."), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Gold)
 
-            SectionLabel("Mangal dosha")
+            SectionLabel(tr("Mangal dosha"))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 MangalCard(pair.first.name, c.mangalA, Modifier.weight(1f))
                 MangalCard(pair.second.name, c.mangalB, Modifier.weight(1f))
             }
 
-            SectionLabel("Western synastry")
+            SectionLabel(tr("Western synastry"))
             val top = remember(c) { c.synastry.sortedByDescending { it.weight }.take(8) }
             if (top.isEmpty()) {
-                Text("No cross-aspects within orb.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+                Text(tr("No cross-aspects within orb."), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             }
             for (s in top) {
                 val toneWord = when { s.tone > 0 -> "harmonious"; s.tone < 0 -> "tense"; else -> "neutral" }
@@ -160,9 +160,9 @@ fun CompatibilityScreen(settings: EngineSettings, onFamily: () -> Unit, onBack: 
                 }
             }
 
-            SectionLabel("In words")
+            SectionLabel(tr("In words"))
             if (c.sentences.isEmpty()) {
-                Text("The engine wrote no sentences for this pair.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+                Text(tr("The engine wrote no sentences for this pair."), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             }
             for ((i, s) in c.sentences.withIndex()) SentenceRow(i, s.text, s.why, s.confidence, s.rules)
         }
@@ -183,15 +183,15 @@ private fun Bar(fraction: Float) {
 private fun MangalCard(name: String, m: MangalRecord, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(8.dp)
     val headline = when {
-        !m.present -> "No Mangal dosha"
-        !m.effective -> "Mangal dosha, cancelled by ${m.cancellations.joinToString(", ").ifBlank { "the chart" }}"
-        else -> "Mangal dosha, uncancelled"
+        !m.present -> tr("No Mangal dosha")
+        !m.effective -> trf("Mangal dosha, cancelled by {0}", m.cancellations.joinToString(", ").ifBlank { tr("the chart") })
+        else -> tr("Mangal dosha, uncancelled")
     }
     Column(modifier.clip(shape).background(KshanaColors.Surface).border(1.dp, KshanaColors.Line, shape).padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(name, style = MaterialTheme.typography.titleLarge, color = KshanaColors.Text)
         Text(headline, style = MaterialTheme.typography.bodyMedium, color = if (m.effective) KshanaColors.Gold else KshanaColors.TextSoft)
         Text(
-            "Mars in house ${m.fromLagna} from lagna · ${m.fromMoon} from Moon · ${m.fromVenus} from Venus",
+            trf("Mars in house {0} from lagna · {1} from Moon · {2} from Venus", m.fromLagna, m.fromMoon, m.fromVenus),
             fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Sky,
         )
     }
