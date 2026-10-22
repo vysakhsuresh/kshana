@@ -578,7 +578,7 @@ fn chart_pages() {
         a.run(&tag("ashtakavarga"), || e.ashtakavarga(b, la, lo, AY));
         a.run(&tag("retrodict"), || e.retrodict(b, la, lo, AY, at(2010, 1, 1, 0, 0), at(2026, 1, 1, 0, 0)));
         a.run(&tag("transit_windows"), || e.transit_windows(b, la, lo, AY, t, at(2029, 1, 1, 0, 0)));
-        a.run(&tag("areas"), || e.area_readings(b, la, lo, 0.0, HS, AY, t, 3));
+        a.run(&tag("areas"), || e.area_readings(b, la, lo, 0.0, HS, AY, t, 3, LANGS[ci % LANGS.len()].into()));
         a.run(&tag("profections"), || e.profections(b, la, lo, AY, t));
         a.run(&tag("firdaria"), || e.firdaria(b, la, lo, AY));
         a.run(&tag("progressed_hits"), || e.progressed_hits(b, la, lo, AY, t, at(2031, 1, 1, 0, 0)));
@@ -600,7 +600,7 @@ fn chart_pages() {
                     continue;
                 }
                 let n = if ci % 2 == 0 { Some(((ci * 37 + 11) % 249 + 1) as u16) } else { None };
-                a.run(&tag(&format!("prashna_{area}_{shape:?}")), || e.prashna(t, la, lo, n, area.into(), shape, AY, 15));
+                a.run(&tag(&format!("prashna_{area}_{shape:?}")), || e.prashna(t, la, lo, n, area.into(), shape, AY, 15, LANGS[(ci + ai + si) % LANGS.len()].into()));
             }
         }
     }
