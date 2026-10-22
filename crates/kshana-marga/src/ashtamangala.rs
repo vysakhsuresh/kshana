@@ -37,8 +37,9 @@
 use kshana_chart::Chart;
 use kshana_vedic::DashaLord;
 
-use crate::sphuta::{make, Sphuta};
-use crate::{body_sidereal, graha_name, norm360, sign_of, MargaError, SIGN_NAMES};
+use crate::sphuta::{gn, make_in, nn, sn, Sphuta};
+use kshana_rules::{say3, Lang};
+use crate::{body_sidereal, norm360, sign_of, MargaError};
 
 /// For each digit 1–8: the planet, the deity it signals and the dosha or matter it
 /// points to in the Kerala Deva prasna (convention stated in the module notes).
@@ -85,6 +86,53 @@ pub const DIGIT_SIGNALS: [(DashaLord, &str, &str); 8] = [
     ),
 ];
 
+/// [`DIGIT_SIGNALS`]' deity and signal in Malayalam and Hindi: `[[ml deity, ml signal],
+/// [hi deity, hi signal]]` for digits 1–8.
+const DIGIT_SIGNALS_IN: [[[&str; 2]; 2]; 8] = [
+    [
+        ["ശിവൻ", "പ്രതിഷ്ഠാദേവതയുടെ അപ്രീതി, പിതൃപരമ്പര, അധികാരം"],
+        ["शिव", "प्रतिष्ठित देवता की अप्रसन्नता, पितृ वंश, अधिकार"],
+    ],
+    [
+        ["സുബ്രഹ്മണ്യനും ഭദ്രകാളിയും", "ഉഗ്രമൂർത്തികൾ, അഗ്നി, കലഹം, ശത്രുക്കൾ, രക്തം"],
+        ["सुब्रह्मण्य और भद्रकाली", "उग्र देवता, अग्नि, कलह, शत्रु, रक्त"],
+    ],
+    [
+        ["ബ്രഹ്മാവും കുലദേവതയും (ചില വായനകളിൽ വിഷ്ണു)", "ഗുരുവിനോടും ബ്രാഹ്മണരോടുമുള്ള വീഴ്ചകൾ, തറവാട്ടു ദേവസ്ഥാനം"],
+        ["ब्रह्मा और कुलदेवता (कुछ पाठों में विष्णु)", "गुरु और ब्राह्मणों के प्रति चूक, पैतृक देवस्थान"],
+    ],
+    [
+        ["വിഷ്ണു", "വിദ്യ, വ്യാപാരം, വാക്ക്, നിറവേറ്റാത്ത നേർച്ചകൾ"],
+        ["विष्णु", "विद्या, व्यापार, वाणी, अधूरी मन्नतें"],
+    ],
+    [
+        ["ലക്ഷ്മിയും യക്ഷിയും", "സ്ത്രീകൾ, ധനം, സുഖഭോഗങ്ങൾ, യക്ഷിദോഷം"],
+        ["लक्ष्मी और यक्षी", "स्त्रियाँ, धन, भोग-विलास, यक्षी दोष"],
+    ],
+    [
+        ["ശാസ്താവും (അയ്യപ്പൻ) കിരാതമൂർത്തിയും", "പരേതർ (പിതൃദോഷം, പ്രേതദോഷം), ഭൃത്യർ, രോഗം"],
+        ["शास्ता (अय्यप्पा) और किरात", "दिवंगत (पितृ और प्रेत दोष), सेवक, रोग"],
+    ],
+    [
+        ["ദുർഗ്ഗ (ഭഗവതി)", "അമ്മ, മനസ്സ്, ജലം, ദേവിയുടെ അപ്രീതി"],
+        ["दुर्गा (भगवती)", "माता, मन, जल, देवी की अप्रसन्नता"],
+    ],
+    [
+        ["നാഗങ്ങൾ", "സർപ്പദോഷം, വിഷം, വഞ്ചന, സർപ്പക്കാവ്"],
+        ["नाग देवता", "सर्प दोष, विष, छल, नाग स्थान"],
+    ],
+];
+
+/// The deity and signal of a digit 1–8 in the reader's language.
+fn digit_words(lang: Lang, d: u8) -> (&'static str, &'static str) {
+    let i = (d - 1) as usize;
+    match lang {
+        Lang::En => (DIGIT_SIGNALS[i].1, DIGIT_SIGNALS[i].2),
+        Lang::Ml => (DIGIT_SIGNALS_IN[i][0][0], DIGIT_SIGNALS_IN[i][0][1]),
+        Lang::Hi => (DIGIT_SIGNALS_IN[i][1][0], DIGIT_SIGNALS_IN[i][1][1]),
+    }
+}
+
 /// Planet of a digit 1–8, `None` for any other digit.
 pub fn digit_planet(d: u8) -> Option<DashaLord> {
     DIGIT_SIGNALS.get(d.checked_sub(1)? as usize).map(|s| s.0)
@@ -109,6 +157,11 @@ pub struct Ashtamangala {
 
 /// Read an Ashtamangala number.
 pub fn ashtamangala(number: u32) -> Ashtamangala {
+    ashtamangala_in(number, Lang::En)
+}
+
+/// [`ashtamangala`] with the readings in the reader's language.
+pub fn ashtamangala_in(number: u32, lang: Lang) -> Ashtamangala {
     let digits: Vec<u8> = number.to_string().bytes().map(|b| b - b'0').collect();
     let planets: Vec<Option<DashaLord>> = digits.iter().map(|d| digit_planet(*d)).collect();
     let r12 = (number % 12) as u8;
@@ -119,55 +172,70 @@ pub fn ashtamangala(number: u32) -> Ashtamangala {
         Some(((number % 27) as usize + 26) % 27)
     };
     let mut indications = Vec::new();
-    let labels: &[&str] = if digits.len() == 3 {
-        &["past", "present", "future"]
-    } else {
-        &[]
+    let labels: [&str; 3] = match lang {
+        Lang::En => ["past", "present", "future"],
+        Lang::Ml => ["ഭൂതം", "വർത്തമാനം", "ഭാവി"],
+        Lang::Hi => ["भूत", "वर्तमान", "भविष्य"],
     };
+    let labels: &[&str] = if digits.len() == 3 { &labels } else { &[] };
     for (i, (d, p)) in digits.iter().zip(planets.iter()).enumerate() {
         let label = labels
             .get(i)
             .map(|l| l.to_string())
-            .unwrap_or_else(|| format!("digit {}", i + 1));
+            .unwrap_or_else(|| say3!(lang, "digit {}", "{}-ാം അക്കം", "अंक {}", i + 1));
         match p {
             Some(g) => {
-                let (_, deity, signal) = DIGIT_SIGNALS[(*d - 1) as usize];
-                indications.push(format!(
-                    "{label}: {d} is {} ({}); deity {deity}; signals {signal}",
-                    graha_name(*g),
-                    if d % 2 == 1 {
-                        "odd, read as good"
-                    } else {
-                        "even, read as bad"
-                    }
+                let (deity, signal) = digit_words(lang, *d);
+                let graha = gn(lang, *g);
+                let parity = if d % 2 == 1 {
+                    lang.pick(["odd, read as good", "ഓജസംഖ്യ, ശുഭമായി വായിക്കുന്നു", "विषम, शुभ माना जाता है"])
+                } else {
+                    lang.pick(["even, read as bad", "യുഗ്മസംഖ്യ, അശുഭമായി വായിക്കുന്നു", "सम, अशुभ माना जाता है"])
+                };
+                indications.push(say3!(
+                    lang,
+                    "{label}: {d} is {graha} ({parity}); deity {deity}; signals {signal}",
+                    "{label}: {d} = {graha} ({parity}); ദേവത {deity}; സൂചന: {signal}",
+                    "{label}: {d} = {graha} ({parity}); देवता {deity}; संकेत: {signal}"
                 ));
             }
-            None => indications.push(format!(
-                "{label}: {d} is not an Ashtamangala digit (the cowrie remainders run 1–8)"
+            None => indications.push(say3!(
+                lang,
+                "{label}: {d} is not an Ashtamangala digit (the cowrie remainders run 1–8)",
+                "{label}: {d} അഷ്ടമംഗല അക്കമല്ല (കവടി ശിഷ്ടങ്ങൾ 1–8 വരെ)",
+                "{label}: {d} अष्टमंगल अंक नहीं है (कौड़ी शेष 1–8 तक होते हैं)"
             )),
         }
     }
     if digits.len() == 3 {
         let good = digits.iter().filter(|d| *d % 2 == 1).count();
-        indications.push(format!(
-            "{good} of the three digits are odd: {}",
-            match good {
-                3 => "the number is wholly favourable",
-                2 => "favourable on the whole",
-                1 => "unfavourable on the whole",
-                _ => "the number is wholly unfavourable",
-            }
+        let verdict = match good {
+            3 => lang.pick(["the number is wholly favourable", "സംഖ്യ പൂർണ്ണമായും ശുഭം", "संख्या पूर्णतः शुभ"]),
+            2 => lang.pick(["favourable on the whole", "മൊത്തത്തിൽ ശുഭം", "कुल मिलाकर शुभ"]),
+            1 => lang.pick(["unfavourable on the whole", "മൊത്തത്തിൽ അശുഭം", "कुल मिलाकर अशुभ"]),
+            _ => lang.pick(["the number is wholly unfavourable", "സംഖ്യ പൂർണ്ണമായും അശുഭം", "संख्या पूर्णतः अशुभ"]),
+        };
+        indications.push(say3!(
+            lang,
+            "{good} of the three digits are odd: {verdict}",
+            "മൂന്ന് അക്കങ്ങളിൽ {good} എണ്ണം ഓജം: {verdict}",
+            "तीन अंकों में से {good} विषम हैं: {verdict}"
         ));
     }
-    indications.push(format!(
-        "remainder by twelve {r12}: the number signals {} (practice: remainder counted from Aries, zero is Pisces)",
-        SIGN_NAMES[arudha_sign as usize]
+    let s = sn(lang, arudha_sign);
+    indications.push(say3!(
+        lang,
+        "remainder by twelve {r12}: the number signals {s} (practice: remainder counted from Aries, zero is Pisces)",
+        "പന്ത്രണ്ടു കൊണ്ടുള്ള ശിഷ്ടം {r12}: സംഖ്യ {s} രാശി സൂചിപ്പിക്കുന്നു (ആചാരം: ശിഷ്ടം മേടം മുതൽ എണ്ണുന്നു, പൂജ്യം മീനം)",
+        "बारह से भाग का शेष {r12}: संख्या {s} राशि बताती है (परंपरा: शेष मेष से गिना जाता है, शून्य मीन है)"
     ));
     if let Some(n) = nakshatra {
-        indications.push(format!(
-            "remainder by twenty-seven {}: {} (practice: counted from Ashwini, zero is Revati)",
-            number % 27,
-            kshana_vedic::panchanga::NAKSHATRA_NAMES[n]
+        let (r27, star) = (number % 27, nn(lang, n));
+        indications.push(say3!(
+            lang,
+            "remainder by twenty-seven {r27}: {star} (practice: counted from Ashwini, zero is Revati)",
+            "ഇരുപത്തിയേഴു കൊണ്ടുള്ള ശിഷ്ടം {r27}: {star} (ആചാരം: അശ്വതി മുതൽ എണ്ണുന്നു, പൂജ്യം രേവതി)",
+            "सत्ताईस से भाग का शेष {r27}: {star} (परंपरा: अश्विनी से गिना जाता है, शून्य रेवती है)"
         ));
     }
     Ashtamangala {
@@ -218,6 +286,11 @@ pub struct PrasnaSphutas {
 
 /// The prasna sphutas of a chart with the Arudha sign the gold piece marked.
 pub fn prasna_sphutas(chart: &Chart, arudha_sign: u8) -> Result<PrasnaSphutas, MargaError> {
+    prasna_sphutas_in(chart, arudha_sign, Lang::En)
+}
+
+/// [`prasna_sphutas`] in the reader's language.
+pub fn prasna_sphutas_in(chart: &Chart, arudha_sign: u8, lang: Lang) -> Result<PrasnaSphutas, MargaError> {
     let arudha_sign = arudha_sign % 12;
     let lagna_lon = chart.cusps_sidereal[0];
     let moon = body_sidereal(chart, "Moon")?;
@@ -228,33 +301,57 @@ pub fn prasna_sphutas(chart: &Chart, arudha_sign: u8) -> Result<PrasnaSphutas, M
     let veethi_sign = veethi_rasi(sun_sign);
     let chatra_sign = chatra_rasi(arudha_sign, lagna_sign, sun_sign);
     let n = (lagna_sign as i32 - arudha_sign as i32).rem_euclid(12) + 1;
+    let (a, v, s, c, l) = (
+        sn(lang, arudha_sign),
+        sn(lang, veethi_sign),
+        sn(lang, sun_sign),
+        sn(lang, chatra_sign),
+        sn(lang, lagna_sign),
+    );
     let words = vec![
-        format!(
-            "Arudha {}: the sign the gold piece marked; its sphuta carries the lagna's degree (convention)",
-            SIGN_NAMES[arudha_sign as usize]
+        say3!(
+            lang,
+            "Arudha {a}: the sign the gold piece marked; its sphuta carries the lagna's degree (convention)",
+            "ആരൂഢം {a}: സ്വർണ്ണം വെച്ച രാശി; അതിന്റെ സ്ഫുടത്തിന് ലഗ്നത്തിന്റെ അംശം തന്നെ (സ്വീകരിച്ച രീതി)",
+            "आरूढ़ {a}: वह राशि जिस पर स्वर्ण रखा गया; इसके स्फुट में लग्न का अंश लिया जाता है (परिपाटी)"
         ),
-        format!(
-            "Veethi {}: the Sun in {} walks that path",
-            SIGN_NAMES[veethi_sign as usize], SIGN_NAMES[sun_sign as usize]
+        say3!(
+            lang,
+            "Veethi {v}: the Sun in {s} walks that path",
+            "വീഥി {v}: {s} രാശിയിലുള്ള സൂര്യൻ ആ വീഥിയിൽ സഞ്ചരിക്കുന്നു",
+            "वीथि {v}: {s} में स्थित सूर्य उसी पथ पर चलता है"
         ),
-        format!(
-            "Chatra {}: from Arudha {} to lagna {} is {n} counting both ends; the {n}th from Veethi {}",
-            SIGN_NAMES[chatra_sign as usize],
-            SIGN_NAMES[arudha_sign as usize],
-            SIGN_NAMES[lagna_sign as usize],
-            SIGN_NAMES[veethi_sign as usize]
+        say3!(
+            lang,
+            "Chatra {c}: from Arudha {a} to lagna {l} is {n} counting both ends; the {n}th from Veethi {v}",
+            "ഛത്രം {c}: ആരൂഢം {a} മുതൽ ലഗ്നം {l} വരെ ഇരുവശവും കൂട്ടി {n}; വീഥി {v} മുതൽ {n}-ാമത്തേത്",
+            "छत्र {c}: आरूढ़ {a} से लग्न {l} तक दोनों सिरे गिनकर {n}; वीथि {v} से {n}वाँ"
         ),
-        "Prasna Marga reads the Arudha and the Chatra rasi beside the lagna and the Moon; wherever the lagna is named, Chandra lagna is read as well".into(),
+        lang.pick([
+            "Prasna Marga reads the Arudha and the Chatra rasi beside the lagna and the Moon; wherever the lagna is named, Chandra lagna is read as well",
+            "പ്രശ്നമാർഗ്ഗം ലഗ്നത്തിനും ചന്ദ്രനും ഒപ്പം ആരൂഢവും ഛത്രരാശിയും വായിക്കുന്നു; ലഗ്നം പറയുന്നിടത്തെല്ലാം ചന്ദ്രലഗ്നവും വായിക്കണം",
+            "प्रश्न मार्ग लग्न और चंद्र के साथ आरूढ़ और छत्र राशि को भी पढ़ता है; जहाँ भी लग्न का नाम आता है, वहाँ चंद्र लग्न भी पढ़ा जाता है",
+        ])
+        .into(),
     ];
     Ok(PrasnaSphutas {
-        lagna: make("Lagna", lagna_lon, "the rising degree".into(), Vec::new()),
-        chandra: make("Chandra", moon, "the Moon".into(), Vec::new()),
-        arudha: make(
+        lagna: make_in(
+            lang,
+            "Lagna",
+            lagna_lon,
+            lang.pick(["the rising degree", "ഉദയ ലഗ്നാംശം", "उदित अंश"]).into(),
+            Vec::new(),
+        ),
+        chandra: make_in(lang, "Chandra", moon, lang.pick(["the Moon", "ചന്ദ്രൻ", "चंद्र"]).into(), Vec::new()),
+        arudha: make_in(
+            lang,
             "Arudha",
             arudha_lon,
-            format!(
-                "Arudha sign {} + the lagna's degree",
-                SIGN_NAMES[arudha_sign as usize]
+            say3!(
+                lang,
+                "Arudha sign {a} + the lagna's degree",
+                "ആരൂഢരാശി {a} + ലഗ്നാംശം",
+                "आरूढ़ राशि {a} + लग्न का अंश"
             ),
             Vec::new(),
         ),

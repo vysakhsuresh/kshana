@@ -53,6 +53,19 @@ impl Relation {
             Relation::AdhiSatru => "great enemy",
         }
     }
+
+    /// Word for the relation in the reader's language: the classical panchadha terms
+    /// in Malayalam and Hindi.
+    pub fn name_in(self, lang: kshana_rules::Lang) -> &'static str {
+        let t = match self {
+            Relation::AdhiMitra => [self.name(), "അധിമിത്രം", "अधिमित्र"],
+            Relation::Mitra => [self.name(), "മിത്രം", "मित्र"],
+            Relation::Sama => [self.name(), "സമം", "सम"],
+            Relation::Satru => [self.name(), "ശത്രു", "शत्रु"],
+            Relation::AdhiSatru => [self.name(), "അധിശത്രു", "अधिशत्रु"],
+        };
+        lang.pick(t)
+    }
 }
 
 /// Temporary (tatkalika) relationship from the rasi positions: +1 when `other` stands in
