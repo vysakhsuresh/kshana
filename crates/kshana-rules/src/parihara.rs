@@ -37,8 +37,11 @@ use crate::doshas::{doshas, Dosha};
 use crate::facts::Facts;
 use crate::karma::{classify, may_claim, KarmaVerdict, TransitSigns};
 use crate::parashari::{dignity, period_quality, Dignity};
-use crate::plain::jargon;
-use crate::remedy_timing::{fmt_utc, weekday_of, RemedyWindow, TimingTable, WEEKDAY_NAMES};
+use crate::plain::{jargon, Lang};
+use crate::remedy_timing::{fmt_utc, graha_word, nakshatra_word, weekday_of, RemedyWindow, TimingTable, WEEKDAY_NAMES};
+
+#[path = "parihara_words.rs"]
+mod words;
 use kshana_chart::Chart;
 use kshana_ephem::{Body, Spk};
 use kshana_events::EventError;
@@ -147,10 +150,11 @@ pub struct Remedy {
     pub source: &'static str,
     /// Fit score in `[0, 1]`.
     pub fit: f64,
-    /// Effort, in words.
-    pub effort: &'static str,
-    /// The day to begin or keep it, in words ("Saturday", "any day").
-    pub day: &'static str,
+    /// Effort, in words (in the reader's language).
+    pub effort: String,
+    /// The day to begin or keep it, in words ("Saturday", "any day"), in the reader's
+    /// language.
+    pub day: String,
     /// True for mantra, pooja and gem: supportive, never required.
     pub optional: bool,
     /// What the texts let this rung claim for the cause's karma class.
@@ -184,6 +188,296 @@ pub fn costs_money(kind: RemedyKind, title_en: &str) -> bool {
 pub fn costs_money_title(title_en: &str) -> bool {
     let t = title_en.to_lowercase();
     PAID_WORDS.iter().any(|w| t.contains(w))
+}
+
+// ---------------------------------------------------------------------------------
+// The reader's language. The plan is built in English (the source, compared by the
+// tests and read for the paid words and the cues); each line the person reads is then
+// given in their language from [`words`].
+// ---------------------------------------------------------------------------------
+
+/// A fixed line of the plan (a title, a why, an effort, a source …) in the reader's
+/// language; the English itself in English, or when the line has no translation.
+pub fn say(lang: Lang, en: &str) -> String {
+    match (lang, words::ml_hi(en)) {
+        (Lang::Ml, Some((ml, _))) => ml.to_string(),
+        (Lang::Hi, Some((_, hi))) => hi.to_string(),
+        _ => en.to_string(),
+    }
+}
+
+/// True when a fixed line has its Malayalam and Hindi.
+pub fn has_words(en: &str) -> bool {
+    words::ml_hi(en).is_some()
+}
+
+/// A source line ([`Remedy::source`]) in the reader's language.
+pub fn source_words(lang: Lang, source: &'static str) -> String {
+    let t: Option<[&str; 2]> = match source {
+        VRATAS_SOURCE => Some(["ഇന്ത്യയിലുടനീളം പാലിക്കുന്ന ആഴ്ചവ്രതങ്ങൾ (ആചാരം; എണ്ണങ്ങൾ സാധാരണയുള്ളവ, ഒരൊറ്റ ശാസ്ത്രശ്ലോകമില്ല); ചാന്ദ്രായണം ബൃഹത് പരാശരം അധ്യായം 85 അനുസരിച്ച്", "पूरे भारत में रखे जाने वाले वार-व्रत (परंपरा; गिनतियाँ आम चलन की, कोई एक शास्त्रीय श्लोक नहीं); चांद्रायण बृहत् पराशर अध्याय 85 के अनुसार"]),
+        MANTRA_DOSES_SOURCE => Some(["ക്ഷേത്രാചാരത്തിലെ ജപസംഖ്യകൾ (മന്ത്രമഹോദധി; തിരുപ്പതി പട്ടിക പകരമായി); സ്തോത്രങ്ങൾക്ക് ബൃഹത് പരാശരത്തിലെ ദശാധ്യായങ്ങൾ; കലിയുഗത്തിൽ ×4 എന്നത് ആചാരം", "मंदिर परंपरा की जप-संख्या (मंत्र महोदधि; तिरुपति सूची विकल्प के रूप में); स्तोत्रों के लिए बृहत् पराशर के दशा अध्याय; कलियुग में ×4 का नियम परंपरा है"]),
+        GEMS_SOURCE => Some(["ഫലദീപിക (ഓരോ ഗ്രഹത്തിനും രത്നം); ലോഹവും വിരലും ദിവസവും സാധാരണ ആചാരം, ഗ്രന്ഥങ്ങൾ തമ്മിൽ ഭിന്നം; ഗുണഫലം നോക്കിയുള്ള നിബന്ധന ആധുനികം", "फलदीपिका (हर ग्रह का रत्न); धातु, उँगली और दिन आम चलन, ग्रंथों में भिन्न; शुभ-फल वाली शर्त आधुनिक है"]),
+        HOUSE_DUTIES_SOURCE => Some(["ബൃഹത് പരാശരം, ഭാവാധ്യായവും കാരകാധ്യായവും; ധർമശാസ്ത്രവായന", "बृहत् पराशर, भावाध्याय और कारकाध्याय; धर्मशास्त्र के अनुसार"]),
+        DASHA_FORMULAE_SOURCE => Some(["ബൃഹത് പരാശരം അധ്യായം 51–60, ഓരോ അന്തർദശാധ്യായത്തിന്റെയും ഒടുവിലുള്ള പരിഹാരങ്ങൾ", "बृहत् पराशर अध्याय 51–60, हर अंतर्दशा अध्याय के अंत के उपाय"]),
+        GRAHA_SHANTI_SOURCE => Some(["യാജ്ഞവൽക്യസ്മൃതി 1.295–309 (ഗ്രഹശാന്തി); മത്സ്യപുരാണം അധ്യായം 93 (നവഗ്രഹശാന്തി)", "याज्ञवल्क्य स्मृति 1.295–309 (ग्रहशांति); मत्स्य पुराण अध्याय 93 (नवग्रह शांति)"]),
+        _ => None,
+    };
+    match (lang, t) {
+        (Lang::Ml, Some([ml, _])) => ml.to_string(),
+        (Lang::Hi, Some([_, hi])) => hi.to_string(),
+        _ => say(lang, source),
+    }
+}
+
+fn weekday_index(en: &str) -> Option<usize> {
+    WEEKDAY_NAMES.iter().position(|d| *d == en)
+}
+
+/// An effort or a day ([`Remedy::effort`], [`Remedy::day`]) in the reader's language:
+/// "40 days", "12 Sundays", "20 min · daily", "start Tuesday", "any day" …
+pub fn effort_words(lang: Lang, en: &str) -> String {
+    if lang == Lang::En {
+        return en.to_string();
+    }
+    if has_words(en) {
+        return say(lang, en);
+    }
+    if en.contains(" · ") {
+        return en.split(" · ").map(|p| effort_words(lang, p)).collect::<Vec<_>>().join(" · ");
+    }
+    if let Some(i) = weekday_index(en) {
+        return crate::lang::weekday(lang, i).to_string();
+    }
+    if let Some(i) = en.strip_prefix("start ").and_then(weekday_index) {
+        let d = crate::lang::weekday(lang, i);
+        return match lang {
+            Lang::Ml => format!("{d} തുടങ്ങുക"),
+            _ => format!("{d} से शुरू करें"),
+        };
+    }
+    if let Some(i) = en.strip_suffix('s').and_then(weekday_index) {
+        let d = crate::lang::weekday(lang, i);
+        return match lang {
+            Lang::Ml => format!("{d}കളിൽ"),
+            _ => format!("हर {d}"),
+        };
+    }
+    let mut parts = en.splitn(2, ' ');
+    if let (Some(n), Some(unit)) = (parts.next(), parts.next()) {
+        if n.chars().all(|c| c.is_ascii_digit()) {
+            let unit_l = match unit {
+                "days" => Some(lang.pick(["days", "ദിവസം", "दिन"]).to_string()),
+                "weeks" => Some(lang.pick(["weeks", "ആഴ്ച", "हफ़्ते"]).to_string()),
+                "min" => Some(lang.pick(["min", "മിനിറ്റ്", "मिनट"]).to_string()),
+                "h" => Some(lang.pick(["h", "മണിക്കൂർ", "घंटा"]).to_string()),
+                "malas" => Some(lang.pick(["malas", "മാല", "माला"]).to_string()),
+                u => u.strip_suffix('s').and_then(weekday_index).map(|i| crate::lang::weekday(lang, i).to_string()),
+            };
+            if let Some(u) = unit_l {
+                return format!("{n} {u}");
+            }
+        }
+    }
+    if en.chars().all(|c| c.is_ascii_digit()) {
+        return en.to_string();
+    }
+    en.to_string()
+}
+
+/// A cadence ([`Schedule::cadence`]) in the reader's language: "daily", "weekly on
+/// Saturday", "monthly on Amavasya", "40 days" …
+pub fn cadence_words(lang: Lang, en: &str) -> String {
+    if lang == Lang::En {
+        return en.to_string();
+    }
+    if let Some(i) = en.strip_prefix("weekly on ").and_then(weekday_index) {
+        let d = crate::lang::weekday(lang, i);
+        return match lang {
+            Lang::Ml => format!("എല്ലാ {d}യും"),
+            _ => format!("हर {d}"),
+        };
+    }
+    match en {
+        "monthly on Amavasya" => lang.pick(["", "എല്ലാ മാസവും അമാവാസിയിൽ", "हर महीने अमावस्या को"]).to_string(),
+        "monthly on Panchami" => lang.pick(["", "എല്ലാ മാസവും പഞ്ചമിയിൽ", "हर महीने पंचमी को"]).to_string(),
+        "one lunar month from Shukla Pratipada" => lang.pick(["", "ശുക്ലപ്രതിപദം മുതൽ ഒരു ചാന്ദ്രമാസം", "शुक्ल प्रतिपदा से एक चांद्र मास"]).to_string(),
+        _ => effort_words(lang, en),
+    }
+}
+
+/// An area of life by its English name, lower or title case, in the reader's language.
+fn area_words(lang: Lang, en: &str) -> String {
+    let t = match en.to_ascii_lowercase().as_str() {
+        "career" => ["career", "ജോലി", "करियर"],
+        "marriage" => ["marriage", "വിവാഹം", "विवाह"],
+        "children" => ["children", "മക്കൾ", "संतान"],
+        "wealth" => ["wealth", "സമ്പത്ത്", "धन"],
+        "health" => ["health", "ആരോഗ്യം", "सेहत"],
+        "property" => ["property", "വസ്തുവകകൾ", "जायदाद"],
+        "education" => ["education", "പഠനം", "पढ़ाई"],
+        "family" => ["family", "കുടുംബം", "परिवार"],
+        "foreign" => ["foreign", "വിദേശം", "विदेश"],
+        _ => return en.to_string(),
+    };
+    lang.pick(t).to_string()
+}
+
+/// The cause in plain words, in the reader's language: [`plain_cause`] for English.
+pub fn plain_cause_in(lang: Lang, lord: DashaLord, level: Option<usize>, matter: Option<&str>, severity: f64) -> String {
+    if lang == Lang::En {
+        return plain_cause(lord, level, matter, severity);
+    }
+    let p = crate::lang::pressure(lang, lord);
+    let m = matter.map(|m| area_words(lang, m));
+    let level_noun = |i: usize| match (lang, i) {
+        (Lang::Ml, 0) => "ജീവിതത്തിലെ നീണ്ട അധ്യായം",
+        (Lang::Ml, 1) => "അതിനുള്ളിലെ ഘട്ടം",
+        (Lang::Ml, 2) => "ഏതാനും മാസത്തെ കാലം",
+        (Lang::Ml, 3) => "ഏതാനും ആഴ്ചകളുടെ കാലം",
+        (Lang::Ml, _) => "ഏതാനും ദിവസങ്ങളുടെ കാലം",
+        (_, 0) => "ज़िंदगी के लंबे अध्याय",
+        (_, 1) => "उसके भीतर के दौर",
+        (_, 2) => "कुछ महीनों के मौसम",
+        (_, 3) => "कुछ हफ़्तों के दौर",
+        _ => "कुछ दिनों के दौर",
+    };
+    let head = match (level, &m, lang) {
+        (Some(i), Some(m), Lang::Ml) => format!("നിങ്ങൾ കടന്നുപോകുന്ന {} നിങ്ങളുടെ {m} കാര്യത്തിൽ {p} കൊണ്ടുവരുന്നു", level_noun(i)),
+        (Some(i), None, Lang::Ml) => format!("നിങ്ങൾ കടന്നുപോകുന്ന {} {p} കൊണ്ടുവരുന്നു", level_noun(i)),
+        (Some(i), Some(m), _) => format!("आप {} में हैं, जो आपके {m} में {p} लाता है", level_noun(i)),
+        (Some(i), None, _) => format!("आप {} में हैं, जो {p} लाता है", level_noun(i)),
+        (None, Some(m), Lang::Ml) => format!("ജനനം മുതൽ നിങ്ങളുടെ {m} കാര്യത്തിൽ {p} വരാൻ ഇടയുണ്ട്"),
+        (None, Some(m), _) => format!("जन्म से आपके {m} में {p} की संभावना रहती है"),
+        (None, None, _) => {
+            return lang
+                .pick([
+                    "",
+                    "പ്രത്യേകിച്ച് ഒന്നും നിങ്ങളെ ഭാരപ്പെടുത്തുന്നില്ല. ഗൗരവമുള്ളതൊന്നും നിങ്ങൾക്കെതിരല്ല: നിങ്ങളുടെ സ്വന്തം പരിശ്രമമാണ് പരിഹാരം, താഴെയുള്ള പട്ടിക അധികസഹായമാണ്.",
+                    "आप पर कोई ख़ास बोझ नहीं है। कुछ भी गंभीर आपके ख़िलाफ़ नहीं: आपकी अपनी मेहनत ही उपाय है, और नीचे की सूची अतिरिक्त मदद है।",
+                ])
+                .to_string()
+        }
+    };
+    match (severity < 0.25, lang) {
+        (true, Lang::Ml) => format!("{head}, പക്ഷേ ലഘുവായി മാത്രം. ഗൗരവമുള്ളതൊന്നും നിങ്ങൾക്കെതിരല്ല: നിങ്ങളുടെ സ്വന്തം പരിശ്രമമാണ് പരിഹാരം, താഴെയുള്ള പട്ടിക അധികസഹായമാണ്."),
+        (true, _) => format!("{head}, पर सिर्फ़ हल्के से। कुछ भी गंभीर आपके ख़िलाफ़ नहीं: आपकी अपनी मेहनत ही उपाय है, और नीचे की सूची अतिरिक्त मदद है।"),
+        (false, Lang::Ml) => format!("{head}. താഴെയുള്ള പരിഹാരങ്ങൾ കൃത്യമായി അത് കുറയ്ക്കാനായി തിരഞ്ഞെടുത്തവയാണ്."),
+        (false, _) => format!("{head}। नीचे के उपाय ठीक इसी को कम करने के लिए चुने गए हैं।"),
+    }
+}
+
+/// [`signature`] in the reader's language.
+pub fn signature_in(lang: Lang, g: DashaLord) -> String {
+    let t = match g {
+        DashaLord::Sun => ["", "ശിവനും ആദിത്യനും · ഞായറാഴ്ച · ചെമ്പ് · ഗോതമ്പ് · ചുവപ്പും കുങ്കുമനിറവും", "शिव और आदित्य · रविवार · तांबा · गेहूँ · लाल और केसरिया"],
+        DashaLord::Moon => ["", "പാർവതി · തിങ്കളാഴ്ച · വെള്ളി · അരി · വെള്ള", "पार्वती · सोमवार · चाँदी · चावल · सफ़ेद"],
+        DashaLord::Mars => ["", "സുബ്രഹ്മണ്യനും ഹനുമാനും · ചൊവ്വാഴ്ച · ചെമ്പ് · ചുവന്ന പരിപ്പ് · ചുവപ്പ്", "सुब्रह्मण्य और हनुमान · मंगलवार · तांबा · मसूर · लाल"],
+        DashaLord::Mercury => ["", "വിഷ്ണു · ബുധനാഴ്ച · ഓട് · ചെറുപയർ · പച്ച", "विष्णु · बुधवार · काँसा · हरी मूँग · हरा"],
+        DashaLord::Jupiter => ["", "ദക്ഷിണാമൂർത്തി · വ്യാഴാഴ്ച · സ്വർണം · കടലപ്പരിപ്പ് · മഞ്ഞ", "दक्षिणामूर्ति · गुरुवार · सोना · चने की दाल · पीला"],
+        DashaLord::Venus => ["", "ലക്ഷ്മി · വെള്ളിയാഴ്ച · വെള്ളി · അരിയും തൈരും · വെള്ള", "लक्ष्मी · शुक्रवार · चाँदी · चावल और दही · सफ़ेद"],
+        DashaLord::Saturn => ["", "ഹനുമാൻ · ശനിയാഴ്ച · ഇരുമ്പ് · കറുത്ത എള്ള് · കറുപ്പും നീലയും", "हनुमान · शनिवार · लोहा · काले तिल · काला और नीला"],
+        DashaLord::Rahu => ["", "ദുർഗ · ശനിയാഴ്ച · ഈയം · കടുകും ഉഴുന്നും · പുകനീല", "दुर्गा · शनिवार · सीसा · सरसों और उड़द · धुएँ-सा नीला"],
+        DashaLord::Ketu => ["", "ഗണപതി · ചൊവ്വാഴ്ച · എള്ള് · പല നിറങ്ങൾ", "गणेश · मंगलवार · तिल · कई रंग"],
+    };
+    match lang {
+        Lang::En => signature(g).to_string(),
+        _ => lang.pick(t).to_string(),
+    }
+}
+
+/// The record line of a row ([`Remedy::measurable`]) in the reader's language, for the
+/// lines built with the graha, the weekday or a count in them. English reads as
+/// [`measurable_of`] writes it.
+fn measurable_in(lang: Lang, kind: RemedyKind, g: DashaLord, cadence: &str, count: Option<u32>) -> String {
+    if lang == Lang::En {
+        return measurable_of(kind, g, cadence, count);
+    }
+    let day = crate::lang::weekday(lang, weekday_of(g) as usize);
+    let gl = graha_word(lang, g);
+    let planned = count.map(|n| n.to_string()).unwrap_or_else(|| cadence_words(lang, cadence));
+    match (kind, lang) {
+        (RemedyKind::Karma, Lang::Ml) => format!("ദിവസം ഒരിക്കൽ 'ചെയ്തു, <സമയം>' എന്ന് രേഖപ്പെടുത്തുക; അടുത്ത {gl} സൂര്യോദയഹോര മുതൽ പാലിച്ച ദിവസങ്ങളും നിശ്ചയിച്ച ദിവസങ്ങളും കണക്കുപുസ്തകം എണ്ണും."),
+        (RemedyKind::Karma, _) => format!("दिन में एक बार 'किया, <समय>' दर्ज करें; अगले {gl} सूर्योदय होरा से बही निभाए और तय दिनों को गिनती है।"),
+        (RemedyKind::Seva, _) => seva_measurable(lang, day),
+        (RemedyKind::Discipline | RemedyKind::Vastra, Lang::Ml) => format!("പാലിച്ച ഓരോ ദിവസവും സൂര്യോദയസൂചനയിൽ രേഖപ്പെടുത്തുക; {planned} നിശ്ചയിച്ചിരിക്കുന്നു; ഒരു ദിവസം മുടങ്ങിയാൽ ഇത് മുറിയില്ല (അടുത്ത ഹോരയിൽ വീണ്ടെടുക്കാം, ലജ്ജിക്കേണ്ട)."),
+        (RemedyKind::Discipline | RemedyKind::Vastra, _) => format!("निभाया हर दिन सूर्योदय के संकेत पर दर्ज करें; {planned} तय हैं; एक दिन छूटने से यह नहीं टूटता (अगले होरा में पूरा करें, कोई शर्म नहीं)।"),
+        (RemedyKind::Vrata, Lang::Ml) => format!("പാലിച്ച ഓരോ ദിവസവും സൂര്യോദയസൂചനയിൽ രേഖപ്പെടുത്തുക; {planned} നിശ്ചയിച്ചിരിക്കുന്നു."),
+        (RemedyKind::Vrata, _) => format!("निभाया हर दिन सूर्योदय के संकेत पर दर्ज करें; {planned} तय हैं।"),
+        _ => say(lang, &measurable_of(kind, g, cadence, count)),
+    }
+}
+
+fn seva_measurable(lang: Lang, day: &str) -> String {
+    match lang {
+        Lang::Ml => format!("സേവിച്ച മണിക്കൂർ തുടങ്ങിയ സമയത്തോടെ രേഖപ്പെടുത്തുക; ഓരോ {day}യും ഒന്ന് നിശ്ചയിച്ചിരിക്കുന്നു."),
+        Lang::Hi => format!("सेवा का घंटा उसके शुरू होने के समय के साथ दर्ज करें; हर {day} एक तय है।"),
+        Lang::En => format!("Log the hour served with its start instant; one planned per {day}."),
+    }
+}
+
+/// A gem, metal or finger of [`GEMS`] in the reader's language.
+fn gem_words(lang: Lang, en: &'static str) -> &'static str {
+    let t: [&str; 3] = match en {
+        "ruby" => [en, "മാണിക്യം", "माणिक्य"],
+        "spotless pearl" => [en, "കളങ്കമില്ലാത്ത മുത്ത്", "बेदाग़ मोती"],
+        "coral" => [en, "പവിഴം", "मूँगा"],
+        "emerald" => [en, "മരതകം", "पन्ना"],
+        "yellow sapphire" => [en, "പുഷ്യരാഗം", "पुखराज"],
+        "diamond" => [en, "വജ്രം", "हीरा"],
+        "blue sapphire (the most reactive; test first)" => [en, "ഇന്ദ്രനീലം (ഏറ്റവും ശക്തമായി പ്രതികരിക്കുന്നത്; ആദ്യം പരീക്ഷിച്ചുനോക്കുക)", "नीलम (सबसे तेज़ असर वाला; पहले परखें)"],
+        "hessonite (gomedha)" => [en, "ഗോമേദകം", "गोमेद"],
+        "cat's eye" => [en, "വൈഡൂര്യം", "लहसुनिया"],
+        "gold or copper" => [en, "സ്വർണമോ ചെമ്പോ", "सोना या तांबा"],
+        "silver" => [en, "വെള്ളി", "चाँदी"],
+        "gold" => [en, "സ്വർണം", "सोना"],
+        "silver or platinum" => [en, "വെള്ളിയോ പ്ലാറ്റിനമോ", "चाँदी या प्लैटिनम"],
+        "silver, iron or panchadhatu" => [en, "വെള്ളി, ഇരുമ്പ് അല്ലെങ്കിൽ പഞ്ചലോഹം", "चाँदी, लोहा या पंचधातु"],
+        "ring finger" => [en, "മോതിരവിരൽ", "अनामिका"],
+        "little finger" => [en, "ചെറുവിരൽ", "कनिष्ठा"],
+        "index finger" => [en, "ചൂണ്ടുവിരൽ", "तर्जनी"],
+        "middle or ring finger" => [en, "നടുവിരലോ മോതിരവിരലോ", "मध्यमा या अनामिका"],
+        "middle finger" => [en, "നടുവിരൽ", "मध्यमा"],
+        _ => [en, en, en],
+    };
+    lang.pick(t)
+}
+
+/// A house's duty lines ([`HOUSE_DUTIES`]) in the reader's language: the conduct as a
+/// title, the service as a title, and the domain.
+fn duty_words(lang: Lang, house: u8) -> (&'static str, &'static str, &'static str) {
+    const ML: [(&str, &str, &str); 12] = [
+        ("വാക്ക് പാലിക്കുക; സൂര്യോദയത്തോടൊപ്പം ഉണരുക", "മറ്റാരെയുമല്ല: സ്വയം ചിട്ടയിൽ നിർത്തുക", "സ്വന്തം വ്യക്തിത്വവും ശരീരവും"),
+        ("സത്യമുള്ള വാക്ക്; കുടുംബത്തെ ഊട്ടുക", "വിദ്യാർത്ഥികൾക്ക് ഭക്ഷണം കൊടുക്കുക", "വാക്കും ഭക്ഷണവും കുടുംബസ്വത്തും"),
+        ("സഹോദരങ്ങളുമായുള്ള വഴക്ക് തീർക്കുക; പ്രയാസമുള്ള ജോലി പൂർത്തിയാക്കുക", "മറ്റുള്ളവരെ സംരക്ഷിക്കുന്നവരെ സേവിക്കുക; രക്തദാനം", "സഹോദരങ്ങളും ധൈര്യവും പരിശ്രമവും"),
+        ("അമ്മയെ പരിചരിക്കുക; ഉറക്കം ചിട്ടയാക്കുക", "ആശ്രയമില്ലാത്ത സ്ത്രീകളെയും കുട്ടികളെയും സേവിക്കുക", "അമ്മയും വീടും ഭൂമിയും"),
+        ("പഠിപ്പിക്കുക; അധ്യാപകനെ ആദരിക്കുക", "വിദ്യാർത്ഥികളെ സേവിക്കുക", "മക്കളും പഠനവും പൂർവപുണ്യവും"),
+        ("ഒരു കടം വീട്ടുക; രോഗികളെ സേവിക്കുക", "ആരുമില്ലാത്ത രോഗികളെ സേവിക്കുക", "കടങ്ങളും എതിരാളികളും സേവനവും അസുഖവും"),
+        ("ബന്ധത്തിൽ ഒരു വാക്ക് പാലിക്കുക", "സ്ത്രീകളെയും കലാകാരന്മാരെയും സേവിക്കുക", "ജീവിതപങ്കാളിയും പങ്കാളികളും"),
+        ("പരേതർക്കുള്ള കർമങ്ങൾ പൂർത്തിയാക്കുക; അവരുടെ സ്മൃതിസ്ഥലം സന്ദർശിക്കുക", "വയോധികരെ സേവിക്കുക", "കാത്തുസൂക്ഷിക്കേണ്ട ആരോഗ്യവും മറഞ്ഞിരിക്കുന്നവയും പൈതൃകസ്വത്തും"),
+        ("അച്ഛനെ സേവിക്കുക; കുടുംബാചാരങ്ങൾ പാലിക്കുക", "ആരുമില്ലാത്ത മുതിർന്നവരെ സേവിക്കുക", "അച്ഛനും ധർമവും ആചാര്യനും"),
+        ("നീട്ടിവച്ച കടമ പൂർത്തിയാക്കുക", "തൊഴിലാളികളെ സേവിക്കുക", "ജോലിയും സമൂഹത്തോടുള്ള കടമയും"),
+        ("ഒരു നേട്ടം പങ്കുവയ്ക്കുക", "ആവശ്യമുള്ള ഒരു മുതിർന്നയാളെ സേവിക്കുക", "നേട്ടങ്ങളും മുതിർന്നവരും"),
+        ("ഒരു ആഡംബരം കുറയ്ക്കുക; മൗനം പാലിക്കുക", "സന്യാസിമാരെയും തെരുവുമൃഗങ്ങളെയും സേവിക്കുക", "നഷ്ടവും വിദേശവും ഉറക്കവും മോക്ഷവും"),
+    ];
+    const HI: [(&str, &str, &str); 12] = [
+        ("वचन निभाएँ; सूर्योदय के साथ उठें", "किसी और की नहीं: ख़ुद को व्यवस्थित रखें", "अपना आप और शरीर"),
+        ("सच्ची बोली; परिवार को खिलाएँ", "विद्यार्थियों को खाना खिलाएँ", "वाणी, भोजन और परिवार का धन"),
+        ("भाई-बहन से झगड़ा ख़त्म करें; कठिन काम पूरा करें", "दूसरों की रक्षा करने वालों की सेवा करें; रक्तदान", "भाई-बहन, हिम्मत और मेहनत"),
+        ("माँ की देखभाल करें; नींद नियमित रखें", "बेसहारा महिलाओं और बच्चों की सेवा करें", "माँ, घर और ज़मीन"),
+        ("सिखाएँ; शिक्षक का सम्मान करें", "विद्यार्थियों की सेवा करें", "संतान, पढ़ाई और पूर्व पुण्य"),
+        ("एक कर्ज़ चुकाएँ; बीमारों की सेवा करें", "बेसहारा बीमारों की सेवा करें", "कर्ज़, विरोधी, सेवा और बीमारी"),
+        ("रिश्ते में एक वादा निभाएँ", "महिलाओं और कलाकारों की सेवा करें", "जीवनसाथी और साझेदार"),
+        ("दिवंगतों के कर्म पूरे करें; उनकी समाधि पर जाएँ", "बुज़ुर्गों की सेवा करें", "सँभालने लायक सेहत, छिपी बातें और विरासत"),
+        ("पिता की सेवा करें; परिवार की रीतियाँ निभाएँ", "बेसहारा बुज़ुर्गों की सेवा करें", "पिता, धर्म और आचार्य"),
+        ("टली हुई ज़िम्मेदारी पूरी करें", "मज़दूरों की सेवा करें", "काम और समाज के प्रति कर्तव्य"),
+        ("एक लाभ बाँटें", "किसी ज़रूरतमंद बुज़ुर्ग की सेवा करें", "लाभ और बड़े"),
+        ("एक शौक़ सादा करें; मौन रखें", "संन्यासियों और आवारा जानवरों की सेवा करें", "हानि, परदेस, नींद और मोक्ष"),
+    ];
+    let i = ((house as usize).clamp(1, 12)) - 1;
+    match lang {
+        Lang::Ml => ML[i],
+        _ => HI[i],
+    }
 }
 
 /// The located cause.
@@ -1259,13 +1553,19 @@ struct PlanRow {
     /// Added to the fit: a shade less for the alternatives and the matter's own rows.
     bonus: f64,
     measurable: String,
+    /// The title, why and record line in the reader's language when they are built
+    /// with numbers or days in them (`None` in English, or for a fixed line, which
+    /// [`say`] gives).
+    title_l: Option<String>,
+    why_l: Option<String>,
+    measurable_l: Option<String>,
 }
 
 fn weekday_name(g: DashaLord) -> &'static str {
     WEEKDAY_NAMES[weekday_of(g) as usize]
 }
 
-fn label_tithis(nums: &[u8]) -> Vec<(u8, String)> {
+fn label_tithis(lang: Lang, nums: &[u8]) -> Vec<(u8, String)> {
     nums.iter()
         .map(|&n| {
             let t = Tithi {
@@ -1274,11 +1574,18 @@ fn label_tithis(nums: &[u8]) -> Vec<(u8, String)> {
             };
             (
                 n,
-                format!(
-                    "{} ({})",
-                    t.name(),
-                    if t.is_shukla() { "Shukla" } else { "Krishna" }
-                ),
+                match lang {
+                    Lang::En => format!(
+                        "{} ({})",
+                        t.name(),
+                        if t.is_shukla() { "Shukla" } else { "Krishna" }
+                    ),
+                    _ => format!(
+                        "{} ({})",
+                        crate::remedy_timing::tithi_word(lang, n),
+                        crate::remedy_timing::paksha_word(lang, n)
+                    ),
+                },
             )
         })
         .collect()
@@ -1289,6 +1596,7 @@ struct Scheduler<'a> {
     table: &'a TimingTable,
     obs: &'a Observer,
     cache: HashMap<DashaLord, Vec<RemedyWindow>>,
+    lang: Lang,
 }
 
 impl<'a> Scheduler<'a> {
@@ -1296,7 +1604,7 @@ impl<'a> Scheduler<'a> {
         if let Some(w) = self.cache.get(&g) {
             return w.clone();
         }
-        let w = self.table.windows(self.obs, g, 3);
+        let w = self.table.windows_in(self.obs, g, 3, self.lang);
         self.cache.insert(g, w.clone());
         w
     }
@@ -1321,7 +1629,7 @@ impl<'a> Scheduler<'a> {
                 .cloned()
                 .collect(),
             Cue::PlanetTithi => all.iter().filter(|w| w.kind == "tithi").cloned().collect(),
-            Cue::Tithis(nums) => self.table.tithi_windows(&label_tithis(nums), 3),
+            Cue::Tithis(nums) => self.table.tithi_windows_in(&label_tithis(self.lang, nums), 3, self.lang),
             Cue::NakshatraIndex(i) => self
                 .table
                 .nakshatras
@@ -1331,12 +1639,16 @@ impl<'a> Scheduler<'a> {
                     start: s.start,
                     end: s.end,
                     kind: "nakshatra",
-                    words: format!(
-                        "the Moon in {}: {} to {}",
-                        nakshatra((i as f64 + 0.5) * NAKSHATRA_SPAN).name(),
-                        fmt_utc(s.start),
-                        fmt_utc(s.end)
-                    ),
+                    words: match self.lang {
+                        Lang::En => format!(
+                            "the Moon in {}: {} to {}",
+                            nakshatra((i as f64 + 0.5) * NAKSHATRA_SPAN).name(),
+                            fmt_utc(s.start),
+                            fmt_utc(s.end)
+                        ),
+                        Lang::Ml => format!("ചന്ദ്രൻ {} നക്ഷത്രത്തിൽ: {} മുതൽ {} വരെ", nakshatra_word(self.lang, i), fmt_utc(s.start), fmt_utc(s.end)),
+                        Lang::Hi => format!("चंद्र {} नक्षत्र में: {} से {} तक", nakshatra_word(self.lang, i), fmt_utc(s.start), fmt_utc(s.end)),
+                    },
                     hora_index: 0,
                 })
                 .collect(),
@@ -1466,7 +1778,9 @@ fn measurable_of(kind: RemedyKind, g: DashaLord, cadence: &str, count: Option<u3
 /// Plan rows from a plain dictionary ([`table`], [`crate::daana::alternatives`],
 /// [`life_table`]): the person's words, the texts' column beside them, a cadence read
 /// from the effort and the cue its kind is timed to.
+#[allow(clippy::too_many_arguments)]
 fn dictionary_rows(
+    lang: Lang,
     g: DashaLord,
     rows: Vec<Row>,
     prefix: &str,
@@ -1502,6 +1816,9 @@ fn dictionary_rows(
                 effort,
                 day,
                 measurable: measurable_of(kind, g, &cadence, count),
+                title_l: None,
+                why_l: None,
+                measurable_l: (lang != Lang::En).then(|| measurable_in(lang, kind, g, &cadence, count)),
                 cadence,
                 count,
                 duration_days,
@@ -1519,6 +1836,7 @@ fn dictionary_rows(
 }
 
 fn planet_rows(
+    lang: Lang,
     g: DashaLord,
     severity: f64,
     debilitated: bool,
@@ -1526,9 +1844,12 @@ fn planet_rows(
     weak: bool,
 ) -> Vec<PlanRow> {
     let day = weekday_name(g);
+    let day_l = crate::lang::weekday(lang, weekday_of(g) as usize);
+    let local = lang != Lang::En;
     // The graha's own dictionary, then food, creatures, water and colour.
-    let mut rows = dictionary_rows(g, table(g), "GRAHA", severity, 0.0, debilitated);
+    let mut rows = dictionary_rows(lang, g, table(g), "GRAHA", severity, 0.0, debilitated);
     rows.extend(dictionary_rows(
+        lang,
         g,
         crate::daana::alternatives(g),
         "ALT",
@@ -1581,6 +1902,28 @@ fn planet_rows(
                 .map(|n| n.to_string())
                 .unwrap_or_else(|| "43 days".into())
         ),
+        title_l: local.then(|| match (lang, v.count) {
+            (Lang::Ml, Some(n)) => format!("തുടർച്ചയായി {n} {day_l}കളിൽ ലളിതമായ ഒരു വ്രതം"),
+            (_, Some(n)) => format!("लगातार {n} {day_l} सादा व्रत"),
+            _ => say(lang, "A simple fast for 43 days, the way your family keeps it"),
+        }),
+        why_l: local.then(|| {
+            let alt = v.alternate.map(|a| match lang {
+                Lang::Ml => format!(" ചില കുടുംബങ്ങൾ {a} എണ്ണം പാലിക്കുന്നു."),
+                _ => format!(" कुछ परिवार {a} रखते हैं।"),
+            });
+            match lang {
+                Lang::Ml => format!("അന്നത്തേക്കുള്ള ലാളിത്യത്തിന്റെ ഒരു വ്രതം, ചികിത്സയല്ല: സുഖമില്ലെങ്കിൽ ഭക്ഷണം കഴിക്കുക. നിങ്ങളുടെ സ്ഥലത്തെ സൂര്യോദയം മുതലാണ് ദിവസം.{}", alt.unwrap_or_default()),
+                _ => format!("दिन भर की सादगी का एक व्रत, इलाज नहीं: तबीयत ठीक न हो तो खाना खाएँ। दिन आपकी जगह के सूर्योदय से शुरू होता है।{}", alt.unwrap_or_default()),
+            }
+        }),
+        measurable_l: local.then(|| {
+            let n = v.count.map(|n| n.to_string()).unwrap_or_else(|| effort_words(lang, "43 days"));
+            match lang {
+                Lang::Ml => format!("പാലിച്ച ഓരോ {day_l}യും സൂര്യോദയസൂചനയിൽ രേഖപ്പെടുത്തുക; {n} നിശ്ചയിച്ചിരിക്കുന്നു."),
+                _ => format!("निभाया हर {day_l} सूर्योदय के संकेत पर दर्ज करें; {n} तय हैं।"),
+            }
+        }),
     });
     // Full japa dose
     let m = mantra_dose(g);
@@ -1618,6 +1961,18 @@ fn planet_rows(
             "Tap once per mala (108); {} planned; the end date follows from your malas per day.",
             m.count
         ),
+        title_l: local.then(|| match lang {
+            Lang::Ml => format!("പൂർണജപം: ആകെ {} തവണ", m.count),
+            _ => format!("पूरा जप: कुल {} बार", m.count),
+        }),
+        why_l: local.then(|| match lang {
+            Lang::Ml => format!("ദിവസം 108-ന്റെ രണ്ട് മാല ജപിച്ചാൽ {days} ദിവസം കൊണ്ട് തീരും. ഐച്ഛികം, ഒരിക്കലും നിർബന്ധമില്ല; പേരിന് പതിനൊന്ന് തവണയല്ല, മുഴുവൻ എണ്ണവും അറിയാനാണ് ഇത് കാണിക്കുന്നത്."),
+            _ => format!("रोज़ 108 की दो माला से यह {days} दिन में पूरा होता है। वैकल्पिक, कभी ज़रूरी नहीं; पूरी गिनती इसलिए दिखाई है ताकि आप पूरा जानें, नाम भर के ग्यारह नहीं।"),
+        }),
+        measurable_l: local.then(|| match lang {
+            Lang::Ml => format!("ഓരോ മാലയ്ക്കും (108) ഒരിക്കൽ തൊടുക; {} നിശ്ചയിച്ചിരിക്കുന്നു; ദിവസം എത്ര മാല എന്നതനുസരിച്ച് അവസാന തീയതി മാറും.", m.count),
+            _ => format!("हर माला (108) पर एक बार टैप करें; {} तय हैं; आख़िरी तारीख़ रोज़ की मालाओं से तय होगी।", m.count),
+        }),
     });
     // Gem: information only, gated
     let gr = gem_row(g);
@@ -1656,23 +2011,73 @@ fn planet_rows(
         weight: 0.0,
         bonus: 0.0,
         measurable: "Nothing to log; information only.".to_string(),
+        title_l: local.then(|| {
+            let gem = gem_words(lang, gr.gem);
+            match lang {
+                Lang::Ml => format!("{gem} (അറിവിന് മാത്രം)"),
+                _ => format!("{gem} (सिर्फ़ जानकारी के लिए)"),
+            }
+        }),
+        why_l: (local && allowed).then(|| {
+            let (gem, metal, finger) = (gem_words(lang, gr.gem), gem_words(lang, gr.metal), gem_words(lang, gr.finger));
+            match lang {
+                Lang::Ml => format!("പഴയ ഗ്രന്ഥങ്ങൾ ഈ കല്ല് നിങ്ങൾക്ക് അനുവദിക്കുന്നു: {gem}; ലോഹം: {metal}; അണിയേണ്ട വിരൽ: {finger}. യോഗ്യനായ ജ്യോതിഷിയുടെ ഉപദേശത്തോടെ മാത്രം; ഒരിക്കലും ആവശ്യമില്ല. ഇത് വിലകൊടുത്ത് വാങ്ങേണ്ടതാണ്, ഇതിന് ഫലമൊന്നും അവകാശപ്പെടുന്നില്ല; അറിവിന് മാത്രം."),
+                _ => format!("पुराने ग्रंथ आपके लिए यह रत्न ठीक मानते हैं: {gem}, {metal} में जड़ा, {finger} में पहना जाए। सिर्फ़ योग्य ज्योतिषी की सलाह पर; कभी ज़रूरी नहीं। यह ख़रीदना पड़ता है, और इसके फल का कोई दावा नहीं; सिर्फ़ जानकारी के लिए।"),
+            }
+        }),
+        measurable_l: None,
     });
     rows
 }
 
-fn house_rows(g: DashaLord, house: u8, severity: f64) -> Vec<PlanRow> {
+fn house_rows(lang: Lang, g: DashaLord, house: u8, severity: f64) -> Vec<PlanRow> {
     let d = house_duty(house);
     let day = weekday_name(g);
+    let local = lang != Lang::En;
+    let day_l = crate::lang::weekday(lang, weekday_of(g) as usize);
+    let (conduct_l, seva_l, domain_l) = if local { duty_words(lang, house) } else { ("", "", "") };
+    // Each English line falls back to a plain line when it would name the astrology;
+    // the reader's language follows the same choice.
+    const DUTY_FALLBACK: &str = "Do the duty you have been putting off, first thing each day";
+    const DUTY_WHY_FALLBACK: &str = "The trouble here is a duty left undone; doing it is the remedy.";
+    const SEVA_FALLBACK: &str = "Give an hour of real help to someone who needs it";
+    const SEVA_WHY_FALLBACK: &str = "An hour of real help each week, not money alone.";
+    let title = plain_or(crate::plain::cap(d.conduct), DUTY_FALLBACK);
+    let why = plain_or(
+        format!("This is the duty behind {}: the trouble there is this duty left undone, and doing it is the remedy.", d.domain),
+        DUTY_WHY_FALLBACK,
+    );
+    let seva_title = plain_or(format!("Serve {}", d.seva), SEVA_FALLBACK);
+    let seva_why = plain_or(
+        format!("The people {} depends on; an hour of real help on {day}, not money alone.", d.domain),
+        SEVA_WHY_FALLBACK,
+    );
+    let duty_title_l = local.then(|| if title == DUTY_FALLBACK { say(lang, DUTY_FALLBACK) } else { conduct_l.to_string() });
+    let duty_why_l = local.then(|| match (why == DUTY_WHY_FALLBACK, lang) {
+        (true, _) => say(lang, DUTY_WHY_FALLBACK),
+        (false, Lang::Ml) => format!("{domain_l} എന്നതിന് പിന്നിലെ കടമയാണിത്: അവിടത്തെ പ്രശ്നം ഈ കടമ ചെയ്യാതെ വിട്ടതാണ്, അത് ചെയ്യുന്നതാണ് പരിഹാരം."),
+        (false, _) => format!("{domain_l} के पीछे यही ज़िम्मेदारी है: वहाँ की परेशानी इसी के अधूरे रहने से है, और इसे निभाना ही उपाय है।"),
+    });
+    let seva_title_l = local.then(|| if seva_title == SEVA_FALLBACK { say(lang, SEVA_FALLBACK) } else { seva_l.to_string() });
+    let seva_why_l = local.then(|| match (seva_why == SEVA_WHY_FALLBACK, lang) {
+        (true, _) => say(lang, SEVA_WHY_FALLBACK),
+        (false, Lang::Ml) => format!("{domain_l} ആശ്രയിക്കുന്ന ആളുകൾ; {day_l} ഒരു മണിക്കൂർ യഥാർത്ഥ സഹായം, പണം മാത്രമല്ല."),
+        (false, _) => format!("{domain_l} जिन लोगों पर टिका है; {day_l} को एक घंटे की सच्ची मदद, सिर्फ़ पैसा नहीं।"),
+    });
+    let gl = graha_word(lang, g);
     vec![
         PlanRow {
             kind: RemedyKind::Karma,
             planet: g,
             rule_id: format!("KS-R-DUTY-{house:02}"),
-            title: plain_or(crate::plain::cap(d.conduct), "Do the duty you have been putting off, first thing each day"),
-            why: plain_or(
-                format!("This is the duty behind {}: the trouble there is this duty left undone, and doing it is the remedy.", d.domain),
-                "The trouble here is a duty left undone; doing it is the remedy.",
-            ),
+            title,
+            why,
+            title_l: duty_title_l,
+            why_l: duty_why_l,
+            measurable_l: local.then(|| match lang {
+                Lang::Ml => format!("അടുത്ത {gl} സൂര്യോദയഹോര മുതൽ ദിവസം ഒരിക്കൽ 'ചെയ്തു, <സമയം>' എന്ന് രേഖപ്പെടുത്തുക."),
+                _ => format!("अगले {gl} सूर्योदय होरा से दिन में एक बार 'किया, <समय>' दर्ज करें।"),
+            }),
             why_expert: format!(
                 "The {house}th house is {}; its karaka is {}. The texts read the affliction as this duty left undone, and the remedy is the duty itself: {}.",
                 d.domain, d.karaka, d.conduct
@@ -1692,11 +2097,11 @@ fn house_rows(g: DashaLord, house: u8, severity: f64) -> Vec<PlanRow> {
             kind: RemedyKind::Seva,
             planet: g,
             rule_id: format!("KS-R-DUTY-{house:02}-SEVA"),
-            title: plain_or(format!("Serve {}", d.seva), "Give an hour of real help to someone who needs it"),
-            why: plain_or(
-                format!("The people {} depends on; an hour of real help on {day}, not money alone.", d.domain),
-                "An hour of real help each week, not money alone.",
-            ),
+            title: seva_title,
+            why: seva_why,
+            title_l: seva_title_l,
+            why_l: seva_why_l,
+            measurable_l: local.then(|| seva_measurable(lang, day_l)),
             why_expert: format!(
                 "The people the {house}th house signifies ({}); an hour of real help on {day}, not money alone. Daana family: {}.",
                 d.seva, d.daana
@@ -1716,6 +2121,7 @@ fn house_rows(g: DashaLord, house: u8, severity: f64) -> Vec<PlanRow> {
 }
 
 fn dasha_rows(
+    lang: Lang,
     g: DashaLord,
     level: &'static str,
     since: Instant,
@@ -1753,6 +2159,12 @@ fn dasha_rows(
             weight: severity,
             bonus: 0.0,
             measurable: "Tap once per mala (108) in the hora; 108 a day planned until the period ends.".to_string(),
+            title_l: None,
+            why_l: (lang != Lang::En).then(|| match lang {
+                Lang::Ml => format!("ഇതുപോലൊരു ജീവിതഘട്ടത്തിന് പഴയ ഗ്രന്ഥങ്ങൾ പറയുന്ന പരിഹാരം; ഇനി {days_left} ദിവസം ബാക്കി. ഐച്ഛികം, ഒരിക്കലും നിർബന്ധമില്ല."),
+                _ => format!("ज़िंदगी के ऐसे दौर के लिए पुराने ग्रंथों का उपाय; इसके {days_left} दिन बाक़ी हैं। वैकल्पिक, कभी ज़रूरी नहीं।"),
+            }),
+            measurable_l: None,
         },
         PlanRow {
             kind: RemedyKind::Daana,
@@ -1777,6 +2189,9 @@ fn dasha_rows(
             weight: severity,
             bonus: 0.0,
             measurable: "Log each day's feeding or the one gift with its instant; 43 planned.".to_string(),
+            title_l: None,
+            why_l: None,
+            measurable_l: None,
         },
     ]
 }
@@ -1796,10 +2211,11 @@ type Spec = (
 
 /// Rows for a present dosha: conduct first, then the vow with its tithi, then the
 /// rite the text names (optional).
-fn dosha_rows(d: &Dosha) -> Vec<PlanRow> {
+fn dosha_rows(lang: Lang, d: &Dosha) -> Vec<PlanRow> {
     use RemedyKind::*;
     let g = d.planet;
     let day = weekday_name(g);
+    let day_l = crate::lang::weekday(lang, weekday_of(g) as usize);
     let specs: Vec<Spec> = match d.rule_id {
         "KS-R-SHAPA-01" => vec![
             (Karma, "Visit or call your father or elders on a fixed day; keep the yearly remembrance day of the departed".into(), "A duty to ancestors left undone is the karmic domain of this curse; the conduct is the remedy.".into(), "weekly", "weekly on Sunday".into(), None, None, Cue::FirstHora),
@@ -1908,11 +2324,24 @@ fn dosha_rows(d: &Dosha) -> Vec<PlanRow> {
                         "Optional, never required. Listed so you know it is not hidden.",
                     ),
                 };
+                let title_en = plain_or(title.clone(), plain_title);
+                // In the reader's language: the rite's own line when it reads plainly and
+                // has its words, otherwise the plain line for its kind.
+                let title_l = (lang != Lang::En).then(|| {
+                    if title_en != plain_title && has_words(&title_en) {
+                        say(lang, &title_en)
+                    } else {
+                        say(lang, plain_title)
+                    }
+                });
                 PlanRow {
                     kind,
                     planet: g,
                     rule_id: format!("{}-{}", d.rule_id, kind.rung()),
-                    title: plain_or(title.clone(), plain_title),
+                    title: title_en,
+                    title_l,
+                    why_l: None,
+                    measurable_l: (lang != Lang::En && kind == Seva).then(|| seva_measurable(lang, day_l)),
                     why: plain_why.to_string(),
                     why_expert: format!(
                         "{title}. {why} [{}: {}]",
@@ -2036,40 +2465,54 @@ pub fn plain_cause(lord: DashaLord, level: Option<usize>, matter: Option<&str>, 
     }
 }
 
+/// The remedy, with its English title beside it (the sort key, so the order is the
+/// same in every language).
 fn into_remedy(
+    lang: Lang,
     r: PlanRow,
     karma: &KarmaVerdict,
     windows: Vec<RemedyWindow>,
-) -> Remedy {
+) -> (String, Remedy) {
     let paid = costs_money(r.kind, &r.title);
     let fit = if r.kind == RemedyKind::Gem {
         0.0
     } else {
         (r.kind.base_fit() * (0.5 + 0.5 * r.weight.min(1.0)) + r.bonus).clamp(0.0, 1.0)
     };
-    Remedy {
+    let title_en = r.title.clone();
+    let (title, why, measurable) = if lang == Lang::En {
+        (r.title, r.why, r.measurable)
+    } else {
+        (
+            r.title_l.unwrap_or_else(|| say(lang, &r.title)),
+            r.why_l.unwrap_or_else(|| say(lang, &r.why)),
+            r.measurable_l.unwrap_or_else(|| say(lang, &r.measurable)),
+        )
+    };
+    let remedy = Remedy {
         kind: r.kind,
         rung: r.kind.rung(),
         rule_id: r.rule_id,
-        title: r.title,
-        why: r.why,
+        title,
+        why,
         why_expert: r.why_expert,
         source: r.source,
         fit,
-        effort: r.effort,
-        day: r.day,
+        effort: effort_words(lang, r.effort),
+        day: effort_words(lang, r.day),
         optional: r.kind.is_optional(),
         may_claim: may_claim(karma.class, karma.kind_in_play, r.kind.rung()),
         schedule: Schedule {
-            cadence: r.cadence,
+            cadence: cadence_words(lang, &r.cadence),
             count: r.count,
             duration_days: r.duration_days,
             windows,
         },
-        measurable: r.measurable,
+        measurable,
         costs_money: paid,
         source_keys: crate::sources::of_remedy(r.kind, r.source),
-    }
+    };
+    (title_en, remedy)
 }
 
 /// Build the remedy plan at `at` for the natal `chart`, optionally narrowed to an area.
@@ -2085,6 +2528,24 @@ pub fn parihara(
     ayanamsa: Ayanamsa,
     at: Instant,
     area: Option<Area>,
+) -> Result<Parihara, EventError> {
+    parihara_in(spk, eop, obs, chart, ayanamsa, at, area, Lang::En)
+}
+
+/// [`parihara`] with every line the person reads (titles, whys, efforts, days, the
+/// cause, the cadence and record lines, the windows' words, the header and the ledger
+/// line) in the reader's language. The order, ids, fits and windows are the same in
+/// every language; the texts' column (`why_expert`, [`Cause::words`]) stays English.
+#[allow(clippy::too_many_arguments)]
+pub fn parihara_in(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    obs: &Observer,
+    chart: &Chart,
+    ayanamsa: Ayanamsa,
+    at: Instant,
+    area: Option<Area>,
+    lang: Lang,
 ) -> Result<Parihara, EventError> {
     let facts = Facts::from_chart(chart);
     let chain = vimshottari_levels(
@@ -2143,7 +2604,7 @@ pub fn parihara(
             "no running period found".into(),
             None,
         ));
-    let plain = plain_cause(planet, level_idx, matter.as_deref(), severity);
+    let plain = plain_cause_in(lang, planet, level_idx, matter.as_deref(), severity);
     let running_idx = level_idx.or_else(|| chain.iter().position(|p| p.lord == planet));
     let running_level = running_idx.and_then(|i| LEVELS.get(i).copied());
     let running_since = running_idx.map(|i| chain[i].start);
@@ -2177,15 +2638,17 @@ pub fn parihara(
         table: &table,
         obs,
         cache: HashMap::new(),
+        lang,
     };
 
     // Rows
     let house = duty_house(&facts, planet, area);
-    let mut rows = planet_rows(planet, severity, debilitated, functional_benefic, weak);
+    let mut rows = planet_rows(lang, planet, severity, debilitated, functional_benefic, weak);
     if let Some(a) = area {
-        rows.extend(house_rows(planet, house, severity));
+        rows.extend(house_rows(lang, planet, house, severity));
         // The matter's own remedies sit just under the graha's: same kind, a shade less fit.
         rows.extend(dictionary_rows(
+            lang,
             planet,
             life_table(a.name),
             "LIFE",
@@ -2196,23 +2659,24 @@ pub fn parihara(
     }
     if let (Some(level), Some(since), Some(until)) = (running_level, running_since, running_until) {
         if severity >= 0.5 {
-            rows.extend(dasha_rows(planet, level, since, until, at, severity));
+            rows.extend(dasha_rows(lang, planet, level, since, until, at, severity));
         }
     }
     for d in present.iter().take(3) {
-        rows.extend(dosha_rows(d));
+        rows.extend(dosha_rows(lang, d));
     }
     unique_ids(&mut rows);
 
-    let mut remedies: Vec<Remedy> = rows
+    let mut remedies: Vec<(String, Remedy)> = rows
         .into_iter()
         .map(|r| {
             let windows = sched.pick(r.planet, r.cue);
-            into_remedy(r, &karma, windows)
+            into_remedy(lang, r, &karma, windows)
         })
         .collect();
-    // Free first: whatever costs money comes after every free remedy, gems last.
-    remedies.sort_by(|a, b| {
+    // Free first: whatever costs money comes after every free remedy, gems last. Ties
+    // go by the English title, so the order is the same in every language.
+    remedies.sort_by(|(ta, a), (tb, b)| {
         a.costs_money
             .cmp(&b.costs_money)
             .then(a.rung.cmp(&b.rung))
@@ -2221,8 +2685,9 @@ pub fn parihara(
                     .partial_cmp(&a.fit)
                     .unwrap_or(std::cmp::Ordering::Equal),
             )
-            .then(a.title.cmp(&b.title))
+            .then(ta.cmp(tb))
     });
+    let remedies: Vec<Remedy> = remedies.into_iter().map(|(_, r)| r).collect();
 
     // Words (the texts' terms, for the expert pages)
     let duty = house_duty(house);
@@ -2269,14 +2734,26 @@ pub fn parihara(
         words.push_str(" Nothing here is hostile. The period withholds only what duty leaves undone; no remedy beyond your own effort is required.");
     }
 
-    let ledger_hint = format!(
-        "Every row is an if-then plan: IF its window begins (an exact instant) THEN the one act, with its count. Record each occurrence as 'did it at <instant>' against the planned window; the ledger shows adherence (done over planned), punctuality (inside the window), streaks with repairs counted separately, and a weekly four-item automaticity check. One missed day does not void a 40- or 43-day vow (Lally 2010): repair in the next {planet:?} hora, with no shaming copy. Nothing here measures the sky; it measures what you did.{}",
-        if karma.class == crate::karma::KarmaClass::Dridha {
-            " This cause is dridha: no signal trend is shown for it."
-        } else {
-            ""
-        }
-    );
+    let dridha = karma.class == crate::karma::KarmaClass::Dridha;
+    let gl = graha_word(lang, planet);
+    let ledger_hint = match lang {
+        Lang::En => format!(
+            "Every row is an if-then plan: IF its window begins (an exact instant) THEN the one act, with its count. Record each occurrence as 'did it at <instant>' against the planned window; the ledger shows adherence (done over planned), punctuality (inside the window), streaks with repairs counted separately, and a weekly four-item automaticity check. One missed day does not void a 40- or 43-day vow (Lally 2010): repair in the next {planet:?} hora, with no shaming copy. Nothing here measures the sky; it measures what you did.{}",
+            if dridha {
+                " This cause is dridha: no signal trend is shown for it."
+            } else {
+                ""
+            }
+        ),
+        Lang::Ml => format!(
+            "ഓരോ വരിയും ഒരു 'എങ്കിൽ-അപ്പോൾ' പദ്ധതിയാണ്: അതിന്റെ സമയം (കൃത്യമായ ഒരു നിമിഷം) തുടങ്ങിയാൽ, ആ ഒരു പ്രവൃത്തി, അതിന്റെ എണ്ണത്തോടെ. ഓരോ തവണയും നിശ്ചയിച്ച സമയത്തിനെതിരെ 'ചെയ്തു, <സമയം>' എന്ന് രേഖപ്പെടുത്തുക; പാലിച്ചത് (ചെയ്തത് / നിശ്ചയിച്ചത്), കൃത്യനിഷ്ഠ (സമയത്തിനുള്ളിൽ), തുടർച്ചകൾ (വീണ്ടെടുത്തവ പ്രത്യേകം), ആഴ്ചതോറുമുള്ള നാലു ചോദ്യങ്ങളുള്ള ശീലപരിശോധന എന്നിവ കണക്കുപുസ്തകം കാണിക്കും. ഒരു ദിവസം മുടങ്ങിയാൽ 40-ഓ 43-ഓ ദിവസത്തെ വ്രതം മുറിയില്ല (ലാലി, 2010): അടുത്ത {gl} ഹോരയിൽ വീണ്ടെടുക്കുക, കുറ്റപ്പെടുത്തലില്ലാതെ. ഇവിടെ ഒന്നും ആകാശത്തെ അളക്കുന്നില്ല; നിങ്ങൾ ചെയ്തതിനെയാണ് അളക്കുന്നത്.{}",
+            if dridha { " ഈ കാരണം ദൃഢകർമമാണ്: ഇതിന് ഒരു പ്രവണതാരേഖയും കാണിക്കുന്നില്ല." } else { "" }
+        ),
+        Lang::Hi => format!(
+            "हर पंक्ति एक 'अगर-तो' योजना है: अगर उसका समय (एक सटीक क्षण) शुरू हो, तो वह एक काम, उसकी गिनती के साथ। हर बार तय समय के सामने 'किया, <समय>' दर्ज करें; बही दिखाती है कि कितना निभाया (किया / तय), समय की पाबंदी (समय के भीतर), लगातार निभाए दिन (छूटे और फिर पूरे किए अलग गिने जाते हैं), और हर हफ़्ते चार सवालों वाली आदत की जाँच। एक दिन छूटने से 40 या 43 दिन का व्रत नहीं टूटता (लैली, 2010): अगले {gl} होरा में पूरा करें, बिना किसी शर्म के। यहाँ कुछ भी आकाश को नहीं मापता; यह मापता है कि आपने क्या किया।{}",
+            if dridha { " यह कारण दृढ़ कर्म है: इसके लिए कोई रुझान नहीं दिखाया जाता।" } else { "" }
+        ),
+    };
 
     Ok(Parihara {
         planet,
@@ -2296,7 +2773,7 @@ pub fn parihara(
         },
         plain,
         remedies,
-        signature: signature(planet).to_string(),
+        signature: signature_in(lang, planet),
         ledger_hint,
     })
 }
@@ -2307,6 +2784,12 @@ pub fn parihara(
 /// creatures, water, colour), strongest fit first; no exact windows, no dosha families
 /// (those need the sky at an instant: use [`parihara`]).
 pub fn parihara_from_facts(facts: &Facts, area: Option<Area>, period_lords: &[DashaLord]) -> Parihara {
+    parihara_from_facts_in(facts, area, period_lords, Lang::En)
+}
+
+/// [`parihara_from_facts`] with every line the person reads in the reader's language;
+/// the order and ids are the same in every language.
+pub fn parihara_from_facts_in(facts: &Facts, area: Option<Area>, period_lords: &[DashaLord], lang: Lang) -> Parihara {
     // Candidate causes with severity
     let mut candidates: Vec<(DashaLord, f64, Option<usize>)> = Vec::new();
     let matter = area.map(|a| a.name.to_ascii_lowercase());
@@ -2331,17 +2814,18 @@ pub fn parihara_from_facts(facts: &Facts, area: Option<Area>, period_lords: &[Da
         .into_iter()
         .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
         .unwrap_or((DashaLord::Saturn, 0.0, None));
-    let plain = plain_cause(planet, level_idx, matter.as_deref(), severity);
+    let plain = plain_cause_in(lang, planet, level_idx, matter.as_deref(), severity);
     let p = facts.planet(planet);
     let dig = dignity(planet, p.sidereal);
     let debilitated = dig == Dignity::Debilitated;
     let karma = classify(facts, planet, area, period_lords, None);
     let house = duty_house(facts, planet, area);
 
-    let mut rows = dictionary_rows(planet, table(planet), "GRAHA", severity, 0.0, debilitated);
+    let mut rows = dictionary_rows(lang, planet, table(planet), "GRAHA", severity, 0.0, debilitated);
     // The other ways: food to the graha's people, its creatures fed, water and trees,
     // colour. They sit with the daana and seva of the main table.
     rows.extend(dictionary_rows(
+        lang,
         planet,
         crate::daana::alternatives(planet),
         "ALT",
@@ -2352,6 +2836,7 @@ pub fn parihara_from_facts(facts: &Facts, area: Option<Area>, period_lords: &[Da
     if let Some(a) = area {
         // The matter's own remedies sit just under the graha's: same kind, a shade less fit.
         rows.extend(dictionary_rows(
+            lang,
             planet,
             life_table(a.name),
             "LIFE",
@@ -2363,7 +2848,7 @@ pub fn parihara_from_facts(facts: &Facts, area: Option<Area>, period_lords: &[Da
     unique_ids(&mut rows);
     let mut remedies: Vec<Remedy> = rows
         .into_iter()
-        .map(|r| into_remedy(r, &karma, Vec::new()))
+        .map(|r| into_remedy(lang, r, &karma, Vec::new()).1)
         .collect();
     remedies.sort_by(|a, b| {
         a.costs_money.cmp(&b.costs_money).then(
@@ -2402,8 +2887,8 @@ pub fn parihara_from_facts(facts: &Facts, area: Option<Area>, period_lords: &[Da
         },
         plain,
         remedies,
-        signature: signature(planet).to_string(),
-        ledger_hint: "Record each occurrence as 'did it at <instant>'; one missed day does not void a 40-day vow.".to_string(),
+        signature: signature_in(lang, planet),
+        ledger_hint: say(lang, "Record each occurrence as 'did it at <instant>'; one missed day does not void a 40-day vow."),
     }
 }
 
@@ -2451,6 +2936,152 @@ mod tests {
             assert_eq!(jargon(r.1), None, "title: {}", r.1);
             assert_eq!(jargon(r.2), None, "why: {}", r.2);
         }
+    }
+
+    /// A Latin word of three or more letters that is not an all-capital acronym (UTC).
+    fn latin_word(s: &str) -> Option<String> {
+        s.split(|c: char| !c.is_ascii_alphabetic())
+            .find(|w| w.len() >= 3 && !w.chars().all(|c| c.is_ascii_uppercase()))
+            .map(str::to_string)
+    }
+
+    fn in_script(lang: Lang, s: &str) -> bool {
+        match lang {
+            Lang::Ml => s.chars().any(|c| ('\u{0D00}'..='\u{0D7F}').contains(&c)),
+            Lang::Hi => s.chars().any(|c| ('\u{0900}'..='\u{097F}').contains(&c)),
+            Lang::En => true,
+        }
+    }
+
+    #[test]
+    fn every_row_reads_in_malayalam_and_hindi() {
+        let mut rows: Vec<Row> = Vec::new();
+        for g in DashaLord::ORDER {
+            rows.extend(table(g));
+            rows.extend(crate::daana::alternatives(g));
+        }
+        for a in crate::areas::AREAS {
+            rows.extend(life_table(a.name));
+        }
+        let mut bad = Vec::new();
+        for r in &rows {
+            for s in [r.1, r.2] {
+                if !has_words(s) {
+                    bad.push(format!("no words: {s}"));
+                }
+            }
+            for lang in [Lang::Ml, Lang::Hi] {
+                for (field, s) in [("title", say(lang, r.1)), ("why", say(lang, r.2)), ("effort", effort_words(lang, r.3)), ("day", effort_words(lang, r.4)), ("source", source_words(lang, r.5))] {
+                    if let Some(w) = latin_word(&s) {
+                        bad.push(format!("{lang:?} {field} [{w}]: {s}"));
+                    }
+                    if !in_script(lang, &s) && s.chars().any(|c| c.is_alphabetic()) {
+                        bad.push(format!("{lang:?} {field} not in script: {s}"));
+                    }
+                    if field != "source" {
+                        if let Some(w) = crate::plain::jargon_in(lang, &s) {
+                            bad.push(format!("{lang:?} {field} jargon [{w}]: {s}"));
+                        }
+                    }
+                }
+            }
+        }
+        for g in DashaLord::ORDER {
+            for lang in [Lang::Ml, Lang::Hi] {
+                let s = signature_in(lang, g);
+                assert!(latin_word(&s).is_none() && crate::plain::jargon_in(lang, &s).is_none(), "{s}");
+            }
+        }
+        assert!(bad.is_empty(), "{bad:#?}");
+    }
+
+    #[test]
+    fn effort_and_cadence_words_read_in_the_reader_language() {
+        assert_eq!(effort_words(Lang::Ml, "12 Sundays"), "12 ഞായറാഴ്ച");
+        assert_eq!(effort_words(Lang::Hi, "20 min · daily"), "20 मिनट · रोज़");
+        assert_eq!(effort_words(Lang::Ml, "start Tuesday"), "ചൊവ്വാഴ്ച തുടങ്ങുക");
+        assert_eq!(effort_words(Lang::Hi, "1 h · Saturdays"), "1 घंटा · हर शनिवार");
+        assert_eq!(effort_words(Lang::En, "1 h · Saturdays"), "1 h · Saturdays");
+        assert_eq!(cadence_words(Lang::Ml, "weekly on Saturday"), "എല്ലാ ശനിയാഴ്ചയും");
+        assert_eq!(cadence_words(Lang::Hi, "40 days"), "40 दिन");
+        assert_eq!(plain_cause_in(Lang::En, DashaLord::Saturn, Some(1), Some("career"), 0.6), plain_cause(DashaLord::Saturn, Some(1), Some("career"), 0.6));
+        for lang in [Lang::Ml, Lang::Hi] {
+            for g in DashaLord::ORDER {
+                for level in [None, Some(0), Some(1), Some(2)] {
+                    for m in [None, Some("career"), Some("marriage")] {
+                        for sev in [0.1, 0.8] {
+                            let s = plain_cause_in(lang, g, level, m, sev);
+                            assert!(latin_word(&s).is_none() && crate::plain::jargon_in(lang, &s).is_none(), "{s}");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn the_plan_reads_in_malayalam_and_hindi_in_the_same_order() {
+        let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/de421.bsp");
+        let Ok(spk) = Spk::open(&p) else { return };
+        let obs = Observer {
+            latitude_deg: 9.9312,
+            longitude_deg: 76.2673,
+            height_m: 0.0,
+        };
+        let ch = kochi_chart(&spk);
+        let at = Utc::new(2026, 10, 15, 9, 2, 7, 0)
+            .unwrap()
+            .to_instant()
+            .unwrap();
+        let mut bad = Vec::new();
+        for area in std::iter::once(None).chain(AREAS.iter().copied().map(Some)) {
+            let en = parihara(&spk, None, &obs, &ch, Ayanamsa::Lahiri, at, area).unwrap();
+            let en_quick = parihara_from_facts(&Facts::from_chart(&ch), area, &[DashaLord::Saturn, DashaLord::Mercury]);
+            for lang in [Lang::Ml, Lang::Hi] {
+                let l = parihara_in(&spk, None, &obs, &ch, Ayanamsa::Lahiri, at, area, lang).unwrap();
+                let ids = |p: &Parihara| p.remedies.iter().map(|r| r.rule_id.clone()).collect::<Vec<_>>();
+                assert_eq!(ids(&en), ids(&l), "{lang:?} {area:?}");
+                assert!(en.remedies.iter().zip(&l.remedies).all(|(a, b)| a.costs_money == b.costs_money && a.fit == b.fit && a.schedule.windows.len() == b.schedule.windows.len()));
+                let quick = parihara_from_facts_in(&Facts::from_chart(&ch), area, &[DashaLord::Saturn, DashaLord::Mercury], lang);
+                assert_eq!(ids(&en_quick), ids(&quick));
+                for plan in [&l, &quick] {
+                    let mut shown: Vec<(String, String, bool)> = vec![
+                        ("plain".into(), plan.plain.clone(), true),
+                        ("signature".into(), plan.signature.clone(), true),
+                        ("ledger_hint".into(), plan.ledger_hint.clone(), false),
+                    ];
+                    for r in &plan.remedies {
+                        shown.push((format!("title {}", r.rule_id), r.title.clone(), true));
+                        shown.push((format!("why {}", r.rule_id), r.why.clone(), true));
+                        shown.push((format!("effort {}", r.rule_id), r.effort.clone(), true));
+                        shown.push((format!("day {}", r.rule_id), r.day.clone(), true));
+                        shown.push((format!("cadence {}", r.rule_id), r.schedule.cadence.clone(), false));
+                        shown.push((format!("measurable {}", r.rule_id), r.measurable.clone(), false));
+                        shown.push((format!("source {}", r.rule_id), source_words(lang, r.source), false));
+                        for w in &r.schedule.windows {
+                            shown.push((format!("window {}", r.rule_id), w.words.clone(), false));
+                        }
+                    }
+                    for (field, s, plain) in shown {
+                        // A rite's source from the dosha catalogue is the catalogue's own.
+                        if field.starts_with("source KS-R-SHAPA") || field.starts_with("source KS-R-BADH") || field.starts_with("source KS-R-YOGA") {
+                            continue;
+                        }
+                        if let Some(w) = latin_word(&s) {
+                            bad.push(format!("{lang:?} {field} [{w}]: {s}"));
+                        }
+                        if plain {
+                            if let Some(w) = crate::plain::jargon_in(lang, &s) {
+                                bad.push(format!("{lang:?} {field} jargon [{w}]: {s}"));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        bad.sort();
+        bad.dedup();
+        assert!(bad.is_empty(), "{bad:#?}");
     }
 
     #[test]

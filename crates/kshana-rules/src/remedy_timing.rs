@@ -216,6 +216,164 @@ pub fn tithi_numbers(planet: DashaLord) -> Vec<(u8, String)> {
     out
 }
 
+/// [`tithi_numbers`] with the labels in the reader's language (the texts' terms in
+/// that script, for the expert pages). English is [`tithi_numbers`] itself.
+pub fn tithi_numbers_in(planet: DashaLord, lang: Lang) -> Vec<(u8, String)> {
+    if lang == Lang::En {
+        return tithi_numbers(planet);
+    }
+    let g = graha_word(lang, planet);
+    let mut out: Vec<(u8, String)> = Vec::new();
+    let (group, base) = tithi_group(planet);
+    let group = match (lang, group) {
+        (Lang::Ml, "Nanda") => "നന്ദ",
+        (Lang::Ml, "Bhadra") => "ഭദ്ര",
+        (Lang::Ml, "Jaya") => "ജയ",
+        (Lang::Ml, "Rikta") => "രിക്ത",
+        (Lang::Ml, "Purna") => "പൂർണ",
+        (Lang::Hi, "Nanda") => "नंदा",
+        (Lang::Hi, "Bhadra") => "भद्रा",
+        (Lang::Hi, "Jaya") => "जया",
+        (Lang::Hi, "Rikta") => "रिक्ता",
+        (Lang::Hi, "Purna") => "पूर्णा",
+        (_, g) => g,
+    };
+    for &n in base {
+        for k in [n, n + 15] {
+            out.push((
+                k,
+                match lang {
+                    Lang::Ml => format!("{} ({}), {group} തിഥി · {g} (മുഹൂർത്തചിന്താമണി)", tithi_word(lang, k), paksha_word(lang, k)),
+                    _ => format!("{} ({}), {g} की {group} तिथि (मुहूर्त चिंतामणि)", tithi_word(lang, k), paksha_word(lang, k)),
+                },
+            ));
+        }
+    }
+    for &(n, label) in observance_tithis(planet) {
+        if !out.iter().any(|(k, _)| *k == n) {
+            let l = observance_label(lang, label);
+            out.push((
+                n,
+                match lang {
+                    Lang::Ml => format!("{l}, {g} ആചരണതിഥി (ആചാരം)"),
+                    _ => format!("{l}, {g} की व्रत-तिथि (परंपरा)"),
+                },
+            ));
+        }
+    }
+    out.sort_by_key(|(k, _)| *k);
+    out
+}
+
+/// A graha's name in the reader's language, for the expert pages only (the plain words
+/// never name one).
+pub fn graha_word(lang: Lang, g: DashaLord) -> &'static str {
+    let t = match g {
+        DashaLord::Sun => ["Sun", "സൂര്യൻ", "सूर्य"],
+        DashaLord::Moon => ["Moon", "ചന്ദ്രൻ", "चंद्र"],
+        DashaLord::Mars => ["Mars", "ചൊവ്വ", "मंगल"],
+        DashaLord::Mercury => ["Mercury", "ബുധൻ", "बुध"],
+        DashaLord::Jupiter => ["Jupiter", "വ്യാഴം", "गुरु"],
+        DashaLord::Venus => ["Venus", "ശുക്രൻ", "शुक्र"],
+        DashaLord::Saturn => ["Saturn", "ശനി", "शनि"],
+        DashaLord::Rahu => ["Rahu", "രാഹു", "राहु"],
+        DashaLord::Ketu => ["Ketu", "കേതു", "केतु"],
+    };
+    lang.pick(t)
+}
+
+/// A nakshatra's name by index (0 = Ashwini), in the reader's language.
+pub fn nakshatra_word(lang: Lang, index: usize) -> &'static str {
+    const ML: [&str; 27] = [
+        "അശ്വതി", "ഭരണി", "കാർത്തിക", "രോഹിണി", "മകയിരം", "തിരുവാതിര", "പുണർതം", "പൂയം", "ആയില്യം",
+        "മകം", "പൂരം", "ഉത്രം", "അത്തം", "ചിത്തിര", "ചോതി", "വിശാഖം", "അനിഴം", "തൃക്കേട്ട",
+        "മൂലം", "പൂരാടം", "ഉത്രാടം", "തിരുവോണം", "അവിട്ടം", "ചതയം", "പൂരുരുട്ടാതി", "ഉത്രട്ടാതി", "രേവതി",
+    ];
+    const HI: [&str; 27] = [
+        "अश्विनी", "भरणी", "कृत्तिका", "रोहिणी", "मृगशिरा", "आर्द्रा", "पुनर्वसु", "पुष्य", "आश्लेषा",
+        "मघा", "पूर्वा फाल्गुनी", "उत्तरा फाल्गुनी", "हस्त", "चित्रा", "स्वाति", "विशाखा", "अनुराधा", "ज्येष्ठा",
+        "मूल", "पूर्वाषाढ़ा", "उत्तराषाढ़ा", "श्रवण", "धनिष्ठा", "शतभिषा", "पूर्वा भाद्रपद", "उत्तरा भाद्रपद", "रेवती",
+    ];
+    match lang {
+        Lang::En => nakshatra((index as f64 + 0.5) * kshana_vedic::NAKSHATRA_SPAN).name(),
+        Lang::Ml => ML[index % 27],
+        Lang::Hi => HI[index % 27],
+    }
+}
+
+/// A tithi's name by number (1–30), in the reader's language.
+pub fn tithi_word(lang: Lang, number: u8) -> &'static str {
+    const ML: [&str; 15] = [
+        "പ്രഥമ", "ദ്വിതീയ", "തൃതീയ", "ചതുർത്ഥി", "പഞ്ചമി", "ഷഷ്ഠി", "സപ്തമി", "അഷ്ടമി", "നവമി", "ദശമി",
+        "ഏകാദശി", "ദ്വാദശി", "ത്രയോദശി", "ചതുർദശി", "പൗർണമി",
+    ];
+    const HI: [&str; 15] = [
+        "प्रतिपदा", "द्वितीया", "तृतीया", "चतुर्थी", "पंचमी", "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी",
+        "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पूर्णिमा",
+    ];
+    let n = number.clamp(1, 30);
+    match (lang, n) {
+        (Lang::En, _) => Tithi { number: n, fraction: 0.0 }.name(),
+        (Lang::Ml, 30) => "അമാവാസി",
+        (Lang::Hi, 30) => "अमावस्या",
+        (Lang::Ml, _) => ML[((n - 1) % 15) as usize],
+        (Lang::Hi, _) => HI[((n - 1) % 15) as usize],
+    }
+}
+
+/// The fortnight of a tithi number (1–15 waxing), in the reader's language.
+pub fn paksha_word(lang: Lang, number: u8) -> &'static str {
+    let shukla = number <= 15;
+    match lang {
+        Lang::En => if shukla { "Shukla" } else { "Krishna" },
+        Lang::Ml => if shukla { "ശുക്ലപക്ഷം" } else { "കൃഷ്ണപക്ഷം" },
+        Lang::Hi => if shukla { "शुक्ल पक्ष" } else { "कृष्ण पक्ष" },
+    }
+}
+
+/// An observance tithi's label ([`observance_tithis`]) in the reader's language.
+fn observance_label(lang: Lang, en: &'static str) -> &'static str {
+    let t: [&str; 3] = match en {
+        "Saptami (Shukla; Bhanu Saptami on a Sunday)" => [en, "സപ്തമി (ശുക്ലം; ഞായറാഴ്ചയെങ്കിൽ ഭാനുസപ്തമി)", "सप्तमी (शुक्ल; रविवार को भानु सप्तमी)"],
+        "Saptami (Krishna)" => [en, "സപ്തമി (കൃഷ്ണം)", "सप्तमी (कृष्ण)"],
+        "Purnima" => [en, "പൗർണമി", "पूर्णिमा"],
+        "Pradosha (Shukla Trayodashi)" => [en, "പ്രദോഷം (ശുക്ല ത്രയോദശി)", "प्रदोष (शुक्ल त्रयोदशी)"],
+        "Pradosha (Krishna Trayodashi)" => [en, "പ്രദോഷം (കൃഷ്ണ ത്രയോദശി)", "प्रदोष (कृष्ण त्रयोदशी)"],
+        "Amavasya (Somavati on a Monday)" => [en, "അമാവാസി (തിങ്കളാഴ്ചയെങ്കിൽ സോമവതി)", "अमावस्या (सोमवार को सोमवती)"],
+        "Krishna Chaturthi (Sankashti; Angaraki on a Tuesday)" => [en, "കൃഷ്ണ ചതുർത്ഥി (സങ്കഷ്ടി; ചൊവ്വാഴ്ചയെങ്കിൽ അംഗാരകി)", "कृष्ण चतुर्थी (संकष्टी; मंगलवार को अंगारकी)"],
+        "Ashtami (Shukla; Budha Ashtami on a Wednesday)" => [en, "അഷ്ടമി (ശുക്ലം; ബുധനാഴ്ചയെങ്കിൽ ബുധാഷ്ടമി)", "अष्टमी (शुक्ल; बुधवार को बुधाष्टमी)"],
+        "Ashtami (Krishna)" => [en, "അഷ്ടമി (കൃഷ്ണം)", "अष्टमी (कृष्ण)"],
+        "Ekadashi (Shukla)" => [en, "ഏകാദശി (ശുക്ലം)", "एकादशी (शुक्ल)"],
+        "Ekadashi (Krishna)" => [en, "ഏകാദശി (കൃഷ്ണം)", "एकादशी (कृष्ण)"],
+        "Purnima (Guru Purnima in Ashadha)" => [en, "പൗർണമി (ആഷാഢത്തിൽ ഗുരുപൂർണിമ)", "पूर्णिमा (आषाढ़ में गुरु पूर्णिमा)"],
+        "Shukla Panchami" => [en, "ശുക്ല പഞ്ചമി", "शुक्ल पंचमी"],
+        "Shukla Trayodashi (Shukra Pradosha on a Friday)" => [en, "ശുക്ല ത്രയോദശി (വെള്ളിയാഴ്ചയെങ്കിൽ ശുക്രപ്രദോഷം)", "शुक्ल त्रयोदशी (शुक्रवार को शुक्र प्रदोष)"],
+        "Trayodashi (Shukla; Shani Trayodashi on a Saturday)" => [en, "ത്രയോദശി (ശുക്ലം; ശനിയാഴ്ചയെങ്കിൽ ശനിത്രയോദശി)", "त्रयोदशी (शुक्ल; शनिवार को शनि त्रयोदशी)"],
+        "Trayodashi (Krishna; Shani Trayodashi on a Saturday)" => [en, "ത്രയോദശി (കൃഷ്ണം; ശനിയാഴ്ചയെങ്കിൽ ശനിത്രയോദശി)", "त्रयोदशी (कृष्ण; शनिवार को शनि त्रयोदशी)"],
+        "Amavasya (Shani Amavasya on a Saturday)" => [en, "അമാവാസി (ശനിയാഴ്ചയെങ്കിൽ ശനി അമാവാസി)", "अमावस्या (शनिवार को शनि अमावस्या)"],
+        "Amavasya" => [en, "അമാവാസി", "अमावस्या"],
+        "Shukla Panchami (Naga Panchami in Shravana)" => [en, "ശുക്ല പഞ്ചമി (ശ്രാവണത്തിൽ നാഗപഞ്ചമി)", "शुक्ल पंचमी (श्रावण में नाग पंचमी)"],
+        "Chaturthi (Shukla)" => [en, "ചതുർത്ഥി (ശുക്ലം)", "चतुर्थी (शुक्ल)"],
+        "Sankashti Chaturthi (broken at moonrise)" => [en, "സങ്കഷ്ടി ചതുർത്ഥി (ചന്ദ്രോദയത്തിൽ വ്രതം മുറിക്കും)", "संकष्टी चतुर्थी (चंद्रोदय पर व्रत खोला जाता है)"],
+        _ => [en, en, en],
+    };
+    lang.pick(t)
+}
+
+/// A keeping length's source line ([`Keep::source`]) in the reader's language.
+pub fn keep_source_words(lang: Lang, source: &'static str) -> &'static str {
+    let t: [&str; 3] = match source {
+        KEEP_SOURCE_MANDALA => [source, "ദിവസേനയുള്ള വ്രതത്തിനോ ജപത്തിനോ 48 ദിവസത്തെ ഒരു മണ്ഡലം (ശബരിമല വ്രതത്തിൽ 41) ദക്ഷിണേന്ത്യയിലെ ക്ഷേത്രാചാരമാണ്; ആചാരം, ഒരൊറ്റ ശ്ലോകമല്ല", "रोज़ के व्रत या जप के लिए 48 दिन का मंडल (सबरीमला व्रत में 41) दक्षिण भारत की मंदिर परंपरा है; रीति, कोई एक श्लोक नहीं"],
+        KEEP_SOURCE_LAL_KITAB => [source, "ലാൽ കിതാബ് (1939–1952): ഒരു പരിഹാരം മുടങ്ങാതെ 40 മുതൽ 43 ദിവസം വരെ പാലിക്കുന്നു", "लाल किताब (1939–1952): उपाय 40 से 43 दिन तक बिना टूटे निभाया जाता है"],
+        KEEP_SOURCE_21 => [source, "21 ദിവസം വീടുകളിൽ സാധാരണമായ ചെറിയ വ്രതമാണ്; ആചാരം, ഒരൊറ്റ ശ്ലോകമല്ല", "21 दिन घरों में रखा जाने वाला आम छोटा व्रत है; रीति, कोई एक श्लोक नहीं"],
+        KEEP_SOURCE_MONTH => [source, "ഒരു ചാന്ദ്രമാസം, ഒരു മാസവ്രതത്തിന്റെ ദൈർഘ്യം (ചാന്ദ്രായണം പോലെ, ബൃഹത് പരാശരം അധ്യായം 85); ദൈർഘ്യം ഗ്രന്ഥത്തിന്റേത്, പ്രവൃത്തി ആപ്പിന്റേത്", "एक चांद्र मास, महीने भर के व्रत की अवधि (जैसे चांद्रायण, बृहत् पराशर अध्याय 85); अवधि ग्रंथ की, काम ऐप का"],
+        KEEP_SOURCE_WEEKDAYS => [source, "ഇന്ത്യയിലുടനീളം പാലിക്കുന്ന ആഴ്ചവ്രതങ്ങൾ: 12 ഞായറാഴ്ച, 16 തിങ്കളാഴ്ച, 21 ചൊവ്വാഴ്ച, 21 ബുധനാഴ്ച, 16 വ്യാഴാഴ്ച, 16 വെള്ളിയാഴ്ച, 7 ശനിയാഴ്ച (ചില കുടുംബങ്ങളിൽ 19); ആചാരം, ഒരൊറ്റ ശാസ്ത്രശ്ലോകമല്ല", "पूरे भारत में रखे जाने वाले वार-व्रत: 12 रविवार, 16 सोमवार, 21 मंगलवार, 21 बुधवार, 16 गुरुवार, 16 शुक्रवार, 7 शनिवार (कुछ परिवारों में 19); परंपरा, कोई एक शास्त्रीय श्लोक नहीं"],
+        KEEP_SOURCE_DEFAULT => [source, "പാരമ്പര്യം ഇതിന് എണ്ണം നിശ്ചയിക്കുന്നില്ല; എട്ട് ആഴ്ച (മാസത്തിലൊരിക്കലുള്ളതിന് മൂന്ന് മാസം, ഒറ്റത്തവണയുള്ളതിന് ഒരാഴ്ചയോ ഒരു മാസമോ) ആണ് ആപ്പിന്റെ സാധാരണ കണക്ക്", "परंपरा इसकी कोई गिनती तय नहीं करती; आठ हफ़्ते (महीने में एक बार वाले के लिए तीन महीने, एक बार के काम के लिए एक हफ़्ता या महीना) ऐप का सामान्य हिसाब है"],
+        _ => [source, source, source],
+    };
+    lang.pick(t)
+}
+
 /// A civil date-time in UTC for words.
 pub fn fmt_utc(t: Instant) -> String {
     let u = Utc::from_instant(t);
@@ -390,8 +548,21 @@ impl TimingTable {
     /// tithis and `count` of the Moon's stays in its nakshatras. Sorted by start. A
     /// hora that overlaps Rahu kala is left out.
     pub fn windows(&self, obs: &Observer, planet: DashaLord, count: usize) -> Vec<RemedyWindow> {
+        self.windows_in(obs, planet, count, Lang::En)
+    }
+
+    /// [`Self::windows`], with each window's words in the reader's language (the
+    /// texts' own terms, written in that script, for the expert pages).
+    pub fn windows_in(&self, obs: &Observer, planet: DashaLord, count: usize, lang: Lang) -> Vec<RemedyWindow> {
         let wd = weekday_of(planet);
         let hname = hora_name(planet);
+        let hl = graha_word(lang, hora_lord_of(planet));
+        let wdl = lang::weekday(lang, wd as usize);
+        let span = |s: Instant, e: Instant| match lang {
+            Lang::En => format!("{} to {}", fmt_utc(s), fmt_utc(e)),
+            Lang::Ml => format!("{} മുതൽ {} വരെ", fmt_utc(s), fmt_utc(e)),
+            Lang::Hi => format!("{} से {} तक", fmt_utc(s), fmt_utc(e)),
+        };
         let mut out = Vec::new();
         let mut found = 0;
         for f in &self.days {
@@ -418,25 +589,28 @@ impl TimingTable {
                     continue;
                 }
                 let idx = i + 1;
-                let when = if idx == 1 {
-                    "the first hora after sunrise, the day's cue"
-                } else if idx <= 12 {
-                    "by day"
-                } else {
-                    "by night"
+                let pick = if idx == 1 { 0 } else if idx <= 12 { 1 } else { 2 };
+                let when = match lang {
+                    Lang::En => ["the first hora after sunrise, the day's cue", "by day", "by night"][pick],
+                    Lang::Ml => ["സൂര്യോദയത്തിനു ശേഷമുള്ള ആദ്യ ഹോര, ദിവസത്തിന്റെ സൂചന", "പകൽ", "രാത്രി"][pick],
+                    Lang::Hi => ["सूर्योदय के बाद पहला होरा, दिन का संकेत", "दिन में", "रात में"][pick],
                 };
                 out.push(RemedyWindow {
                     start: s,
                     end: e,
                     kind: "weekday hora",
-                    words: format!(
-                        "{hname}'s hora, the {} of {} ({}); {when}: {} to {}",
-                        ordinal(idx),
-                        WEEKDAY_NAMES[wd as usize],
-                        VARA_NAMES[wd as usize],
-                        fmt_utc(s),
-                        fmt_utc(e)
-                    ),
+                    words: match lang {
+                        Lang::En => format!(
+                            "{hname}'s hora, the {} of {} ({}); {when}: {} to {}",
+                            ordinal(idx),
+                            WEEKDAY_NAMES[wd as usize],
+                            VARA_NAMES[wd as usize],
+                            fmt_utc(s),
+                            fmt_utc(e)
+                        ),
+                        Lang::Ml => format!("{hl} ഹോര, {wdl}യിലെ {idx}-ാമത്തേത്; {when}: {}", span(s, e)),
+                        Lang::Hi => format!("{hl} होरा, {wdl} का {idx}वाँ; {when}: {}", span(s, e)),
+                    },
                     hora_index: idx,
                 });
             }
@@ -444,12 +618,22 @@ impl TimingTable {
                 start: rk.0,
                 end: rk.1,
                 kind: "Rahu kala to avoid",
-                words: format!(
-                    "Rahu kala on {}: {} to {}; no remedy is begun here (the Kerala custom lights a Durga lamp for Rahu in it); a hora of {hname} overlapping it is left out",
-                    WEEKDAY_NAMES[wd as usize],
-                    fmt_utc(rk.0),
-                    fmt_utc(rk.1)
-                ),
+                words: match lang {
+                    Lang::En => format!(
+                        "Rahu kala on {}: {} to {}; no remedy is begun here (the Kerala custom lights a Durga lamp for Rahu in it); a hora of {hname} overlapping it is left out",
+                        WEEKDAY_NAMES[wd as usize],
+                        fmt_utc(rk.0),
+                        fmt_utc(rk.1)
+                    ),
+                    Lang::Ml => format!(
+                        "{wdl} രാഹുകാലം: {}; ഈ സമയത്ത് ഒരു പരിഹാരവും തുടങ്ങുന്നില്ല (കേരളത്തിലെ ആചാരത്തിൽ ഈ സമയത്ത് ദുർഗയ്ക്ക് വിളക്ക് കൊളുത്തും); ഇതിനോട് ചേർന്നുവരുന്ന {hl} ഹോര ഒഴിവാക്കിയിരിക്കുന്നു",
+                        span(rk.0, rk.1)
+                    ),
+                    Lang::Hi => format!(
+                        "{wdl} का राहुकाल: {}; इसमें कोई उपाय शुरू नहीं किया जाता (केरल की रीति में इसमें दुर्गा का दीपक जलाया जाता है); इससे टकराता {hl} होरा छोड़ दिया गया है",
+                        span(rk.0, rk.1)
+                    ),
+                },
                 hora_index: 0,
             });
             let bm_start = day.sunrise.add_ns(-96 * 60 * NS_PER_SEC);
@@ -458,18 +642,30 @@ impl TimingTable {
                 start: bm_start,
                 end: bm_end,
                 kind: "Brahma muhurta",
-                words: format!(
-                    "Brahma muhurta before the {} sunrise (sunrise − 96 min to − 48 min; sunrise at {} with the Sun's centre at −0°50′): {} to {}",
-                    WEEKDAY_NAMES[wd as usize],
-                    fmt_utc(day.sunrise),
-                    fmt_utc(bm_start),
-                    fmt_utc(bm_end)
-                ),
+                words: match lang {
+                    Lang::En => format!(
+                        "Brahma muhurta before the {} sunrise (sunrise − 96 min to − 48 min; sunrise at {} with the Sun's centre at −0°50′): {} to {}",
+                        WEEKDAY_NAMES[wd as usize],
+                        fmt_utc(day.sunrise),
+                        fmt_utc(bm_start),
+                        fmt_utc(bm_end)
+                    ),
+                    Lang::Ml => format!(
+                        "{wdl} സൂര്യോദയത്തിന് മുമ്പുള്ള ബ്രാഹ്മമുഹൂർത്തം (സൂര്യോദയത്തിന് 96 മിനിറ്റ് മുമ്പ് മുതൽ 48 മിനിറ്റ് മുമ്പ് വരെ; സൂര്യോദയം {}, സൂര്യബിംബത്തിന്റെ കേന്ദ്രം −0°50′-ൽ): {}",
+                        fmt_utc(day.sunrise),
+                        span(bm_start, bm_end)
+                    ),
+                    Lang::Hi => format!(
+                        "{wdl} के सूर्योदय से पहले ब्रह्म मुहूर्त (सूर्योदय से 96 मिनट पहले से 48 मिनट पहले तक; सूर्योदय {} पर, सूर्य का केंद्र −0°50′ पर): {}",
+                        fmt_utc(day.sunrise),
+                        span(bm_start, bm_end)
+                    ),
+                },
                 hora_index: 0,
             });
         }
-        let numbers = tithi_numbers(planet);
-        out.extend(self.tithi_windows(&numbers, count));
+        let numbers = tithi_numbers_in(planet, lang);
+        out.extend(self.tithi_windows_in(&numbers, count, lang));
         let mut n = 0;
         for sp in &self.nakshatras {
             if n == count {
@@ -478,15 +674,21 @@ impl TimingTable {
             if nakshatra_lord(sp.index) == planet {
                 n += 1;
                 let name = nakshatra((sp.index as f64 + 0.5) * kshana_vedic::NAKSHATRA_SPAN).name();
+                let gl = graha_word(lang, planet);
+                let nl = nakshatra_word(lang, sp.index);
                 out.push(RemedyWindow {
                     start: sp.start,
                     end: sp.end,
                     kind: "nakshatra",
-                    words: format!(
-                        "the Moon in {name}, a star of {planet:?} (Vimshottari): {} to {}",
-                        fmt_utc(sp.start),
-                        fmt_utc(sp.end)
-                    ),
+                    words: match lang {
+                        Lang::En => format!(
+                            "the Moon in {name}, a star of {planet:?} (Vimshottari): {} to {}",
+                            fmt_utc(sp.start),
+                            fmt_utc(sp.end)
+                        ),
+                        Lang::Ml => format!("ചന്ദ്രൻ {nl} നക്ഷത്രത്തിൽ, {gl} നാഥനായ നക്ഷത്രം (വിംശോത്തരി): {}", span(sp.start, sp.end)),
+                        Lang::Hi => format!("चंद्र {nl} नक्षत्र में, {gl} का नक्षत्र (विंशोत्तरी): {}", span(sp.start, sp.end)),
+                    },
                     hora_index: 0,
                 });
             }
@@ -498,6 +700,12 @@ impl TimingTable {
 
     /// Up to `count` exact spans of the given tithis (numbers 1–30 with labels), in order.
     pub fn tithi_windows(&self, numbers: &[(u8, String)], count: usize) -> Vec<RemedyWindow> {
+        self.tithi_windows_in(numbers, count, Lang::En)
+    }
+
+    /// [`Self::tithi_windows`], the span words in the reader's language (the labels are
+    /// taken as given).
+    pub fn tithi_windows_in(&self, numbers: &[(u8, String)], count: usize, lang: Lang) -> Vec<RemedyWindow> {
         let mut out = Vec::new();
         for sp in &self.tithis {
             if out.len() == count {
@@ -511,7 +719,11 @@ impl TimingTable {
                     start: sp.start,
                     end: sp.end,
                     kind: "tithi",
-                    words: format!("{label}: {} to {}", fmt_utc(sp.start), fmt_utc(sp.end)),
+                    words: match lang {
+                        Lang::En => format!("{label}: {} to {}", fmt_utc(sp.start), fmt_utc(sp.end)),
+                        Lang::Ml => format!("{label}: {} മുതൽ {} വരെ", fmt_utc(sp.start), fmt_utc(sp.end)),
+                        Lang::Hi => format!("{label}: {} से {} तक", fmt_utc(sp.start), fmt_utc(sp.end)),
+                    },
                     hora_index: 0,
                 });
             }

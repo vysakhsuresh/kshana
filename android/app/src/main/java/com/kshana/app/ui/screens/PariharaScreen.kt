@@ -148,15 +148,17 @@ private fun PariharaPlainScreen(profile: BirthProfile, settings: EngineSettings,
     var kept by remember { mutableStateOf<Set<String>>(emptySet()) }
     var since by remember { mutableStateOf<LocalDate?>(null) }
 
-    LaunchedEffect(profile, settings, life) {
+    LaunchedEffect(profile, settings, life, com.kshana.app.data.Lang.code) {
         try {
             val engine = EngineProvider.get(context)
             val birth = profile.birthInstant()
             val rec = withContext(Dispatchers.Default) {
-                engine.parihara(birth, profile.latitude, profile.longitude, settings.ayanamsa, Instants.now(), life)
+                engine.parihara(birth, profile.latitude, profile.longitude, settings.ayanamsa, Instants.now(), life, com.kshana.app.data.Lang.code)
             }
             val prefs = ProfileStore.prefs(context)
-            kept = rec.remedies.map { it.title }.filter { prefs.getBoolean(commitKey(rec.planet, it), false) }.toSet()
+            // Held remedies are keyed by rule id (the same in every language); a key by title
+            // from before is still read.
+            kept = rec.remedies.filter { prefs.getBoolean(commitKey(rec.planet, it.ruleId), false) || prefs.getBoolean(commitKey(rec.planet, it.title), false) }.map { it.ruleId }.toSet()
             since = prefs.getLong(sinceKey(rec.planet), 0L).takeIf { it > 0L }?.let { LocalDate.ofEpochDay(it) }
             record = rec
             error = null
@@ -169,9 +171,9 @@ private fun PariharaPlainScreen(profile: BirthProfile, settings: EngineSettings,
 
     fun toggle(rec: PariharaRecord, r: RemedyRecord) {
         val prefs = ProfileStore.prefs(context)
-        val now = r.title !in kept
-        kept = if (now) kept + r.title else kept - r.title
-        val edit = prefs.edit().putBoolean(commitKey(rec.planet, r.title), now)
+        val now = r.ruleId !in kept
+        kept = if (now) kept + r.ruleId else kept - r.ruleId
+        val edit = prefs.edit().putBoolean(commitKey(rec.planet, r.ruleId), now).remove(commitKey(rec.planet, r.title))
         if (kept.isEmpty()) {
             since = null
             edit.remove(sinceKey(rec.planet))
@@ -206,7 +208,7 @@ private fun PariharaPlainScreen(profile: BirthProfile, settings: EngineSettings,
         } else {
             // What costs money is never "required" and never counts against the effort.
             val required = rec.remedies.filter { !it.optional && !it.costsMoney }
-            val keptRequired = required.count { it.title in kept }
+            val keptRequired = required.count { it.ruleId in kept }
             val worthiness = if (required.isEmpty()) 0f else keptRequired.toFloat() / required.size
 
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -231,11 +233,11 @@ private fun PariharaPlainScreen(profile: BirthProfile, settings: EngineSettings,
                 Text(when { rec.severity >= 0.66 -> tr("PRESSING HARD"); rec.severity >= 0.33 -> tr("PRESSING MODERATELY"); else -> tr("PRESSING LIGHTLY") }, style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
                 Text(rec.cause, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text, modifier = Modifier.padding(top = 6.dp))
             }
-            HowThisHelps(remember(rec.planet, life) { uniffi.kshana_ffi.remedyHowItHelps(rec.planet, if (rec.runningLevel != null) "dasha" else "natal", life) })
+            HowThisHelps(remember(rec.planet, life, com.kshana.app.data.Lang.code) { uniffi.kshana_ffi.remedyHowItHelps(rec.planet, if (rec.runningLevel != null) "dasha" else "natal", life, com.kshana.app.data.Lang.code) })
 
             // The streak: today's tick on each held remedy, and the longest run.
             var streakVersion by remember { mutableStateOf(0) }
-            val bestStreak = remember(streakVersion, kept) { com.kshana.app.data.StreakStore.best(context, rec.planet, kept.toList()) }
+            val bestStreak = remember(streakVersion, kept) { com.kshana.app.data.StreakStore.best(context, rec.planet, rec.remedies.filter { it.ruleId in kept }.map { it.title }) }
             val today = java.time.LocalDate.now().dayOfWeek
             val pd = planetDay(rec.planet)
             if (pd == today) {
@@ -261,7 +263,7 @@ private fun PariharaPlainScreen(profile: BirthProfile, settings: EngineSettings,
             val paid = inGroup.filter { it.value.costsMoney }
             SectionLabel(trf("What helps most, first · {0} of {1}", shown.size, rec.remedies.size))
             if (shown.isEmpty()) Text(tr("None of this kind for you right now."), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
-            for ((i, r) in shown) RemedyRow(i + 1, r, r.title in kept, rec.planet, streakVersion, { streakVersion++ }) { toggle(rec, r) }
+            for ((i, r) in shown) RemedyRow(i + 1, r, r.ruleId in kept, rec.planet, streakVersion, { streakVersion++ }) { toggle(rec, r) }
             // Whatever costs money (a stone, a paid rite, a costly gift) waits behind its own door.
             if (paid.isNotEmpty()) {
                 var showPaid by remember { mutableStateOf(false) }
@@ -275,7 +277,7 @@ private fun PariharaPlainScreen(profile: BirthProfile, settings: EngineSettings,
                         tr("None of these is needed: the steps above do the work. A gemstone only with a qualified astrologer's advice; never necessary. Spend only what you can spare, never on anyone's insistence."),
                         style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
                     )
-                    for ((i, r) in paid) RemedyRow(i + 1, r, r.title in kept, rec.planet, streakVersion, { streakVersion++ }) { toggle(rec, r) }
+                    for ((i, r) in paid) RemedyRow(i + 1, r, r.ruleId in kept, rec.planet, streakVersion, { streakVersion++ }) { toggle(rec, r) }
                 }
             }
             Text(tr("Doing, serving and good habits do the real work. Giving and fasting support them. Chanting and prayer are optional, never required."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(top = 8.dp))
@@ -353,19 +355,19 @@ fun PariharaLedgerScreen(profile: BirthProfile, settings: EngineSettings, onBack
     val context = LocalContext.current
     val zone = remember { ZoneId.systemDefault() }
     var area by remember(profile, life) { mutableStateOf(AREAS.firstOrNull { it.equals(life, ignoreCase = true) } ?: ALL) }
-    val cache = remember(profile, settings) { mutableStateMapOf<String, PariharaRecord>() }
+    val cache = remember(profile, settings, com.kshana.app.data.Lang.code) { mutableStateMapOf<String, PariharaRecord>() }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var commitments by remember(profile) { mutableStateOf(CommitmentStore.commitments(context, profile.name)) }
 
-    LaunchedEffect(profile, settings, area) {
+    LaunchedEffect(profile, settings, area, com.kshana.app.data.Lang.code) {
         if (cache.containsKey(area)) return@LaunchedEffect
         loading = true
         try {
             val engine = EngineProvider.get(context)
             val birth = profile.birthInstant()
             val rec = withContext(Dispatchers.Default) {
-                engine.parihara(birth, profile.latitude, profile.longitude, settings.ayanamsa, Instants.now(), if (area == ALL) null else area)
+                engine.parihara(birth, profile.latitude, profile.longitude, settings.ayanamsa, Instants.now(), if (area == ALL) null else area, com.kshana.app.data.Lang.code)
             }
             cache[area] = rec
             commitments = CommitmentStore.refreshPlans(context, profile.name, rec.remedies)
