@@ -15,7 +15,9 @@
 use crate::coverage::fit_profile;
 use crate::event::{iso_utc, month_year, EventKind, LedgerError};
 use crate::hash::{seed_of, sha256_hex, SplitMix};
-use crate::metrics::{count_words, wilson_interval, Z95};
+use crate::metrics::{count_words, count_words_in, wilson_interval, Z95};
+use crate::score::{area_word, when_in};
+use kshana_rules::Lang;
 use kshana_chart::Chart;
 use kshana_ephem::Spk;
 use kshana_rules::area;
@@ -271,6 +273,67 @@ pub fn grade(questions: &[Question], answers: &[Option<usize>]) -> QuizResult {
     }
 }
 
+/// A question's prompt in the reader's language, rebuilt from its area and windows
+/// (English gives back [`Question::prompt`]).
+pub fn question_prompt(q: &Question, lang: Lang) -> String {
+    if lang == Lang::En {
+        return q.prompt.clone();
+    }
+    let area_w = area_word(lang, &q.area);
+    let listed: Vec<String> = q
+        .windows
+        .iter()
+        .enumerate()
+        .map(|(i, (s, e))| {
+            let (n, f, t) = (i + 1, when_in(lang, *s), when_in(lang, *e));
+            kshana_rules::say3!(lang, "", "{n}. {f} മുതൽ {t} വരെ", "{n}. {f} से {t} तक")
+        })
+        .collect();
+    let listed = listed.join("; ");
+    kshana_rules::say3!(
+        lang,
+        "",
+        "ഈ കാലയളവുകളിൽ ഏതിലാണ് നിങ്ങളുടെ {area_w} എന്ന മേഖലയിൽ ശ്രദ്ധേയമായ എന്തെങ്കിലും നടന്നത്? {listed}. നമ്പർ പറയുക, അല്ലെങ്കിൽ ഉറപ്പില്ലെന്ന് പറയുക.",
+        "इनमें से किस समय में आपके {area_w} में कुछ ख़ास हुआ था? {listed}। नंबर बताइए, या कहिए कि पक्का नहीं पता।"
+    )
+}
+
+/// A quiz grade's words in the reader's language, rebuilt from its numbers
+/// (English gives back [`QuizResult::words`]).
+pub fn grade_words(r: &QuizResult, lang: Lang) -> String {
+    if lang == Lang::En {
+        return r.words.clone();
+    }
+    let (skipped, total, p) = (r.skipped, r.total, r.binomial_pvalue);
+    let pct = r.chance_rate * 100.0;
+    if total == 0 {
+        return kshana_rules::say3!(
+            lang,
+            "",
+            "ഇതുവരെ ഒരു ചോദ്യത്തിനും ഉത്തരം നൽകിയില്ല ({skipped} ഒഴിവാക്കി); ഊഹിച്ചാൽ ഓരോ ചോദ്യത്തിനും {pct:.0}% സാധ്യത.",
+            "अभी तक किसी सवाल का जवाब नहीं ({skipped} छोड़े); अंदाज़े से हर सवाल पर {pct:.0}% संभावना।"
+        );
+    }
+    let expected = r.chance_rate * total as f64;
+    let count = count_words_in(r.correct, total, lang);
+    let verdict = if p <= 0.05 {
+        lang.pick(["", "ഊഹത്തേക്കാൾ കൂടുതൽ", "अंदाज़े से ज़्यादा"])
+    } else {
+        lang.pick(["", "ഊഹത്തേക്കാൾ കൂടുതലല്ല", "अंदाज़े से ज़्यादा नहीं"])
+    };
+    let skip = if skipped > 0 {
+        kshana_rules::say3!(lang, "", "; {skipped} ഒഴിവാക്കി", "; {skipped} छोड़े")
+    } else {
+        String::new()
+    };
+    kshana_rules::say3!(
+        lang,
+        "",
+        "ജാതകത്തിന്റെ കാലയളവ് നിങ്ങൾ {count} തവണ ശരിയായി പറഞ്ഞു; ഊഹിച്ചാൽ {total}-ൽ ഏകദേശം {expected:.1} കിട്ടും (ഓരോന്നിനും {pct:.0}%), അതിനാൽ ഇത് {verdict} ആണ് (p = {p:.3}){skip}.",
+        "आपने कुंडली की अवधि {count} बार सही बताई; अंदाज़े से {total} में से लगभग {expected:.1} मिलते (हर एक पर {pct:.0}%), इसलिए यह {verdict} है (p = {p:.3}){skip}।"
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -360,6 +423,13 @@ mod tests {
         // Grading.
         let key: Vec<Option<usize>> = qs.iter().map(|q| Some(q.predicted_index)).collect();
         let all = grade(&qs, &key);
+        for lang in [Lang::Ml, Lang::Hi] {
+            let none = grade(&qs, &[]);
+            for w in qs.iter().map(|q| question_prompt(q, lang)).chain([grade_words(&all, lang), grade_words(&none, lang)]) {
+                assert!(crate::score::tests::latin_words(&w).is_empty(), "{lang:?}: {w}");
+            }
+        }
+        assert_eq!(question_prompt(&qs[0], Lang::En), qs[0].prompt);
         assert_eq!((all.correct, all.total, all.skipped), (3, 3, 0));
         assert!((all.chance_rate - 1.0 / 3.0).abs() < 1e-12);
         assert!((all.binomial_pvalue - 1.0 / 27.0).abs() < 1e-12);

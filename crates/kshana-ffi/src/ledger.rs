@@ -2,6 +2,7 @@
 
 use kshana_chart::Chart;
 use kshana_ledger::{EventKind, LifeEvent};
+use kshana_rules::Lang;
 use kshana_time::Instant;
 use kshana_vedic::DashaLord;
 
@@ -157,7 +158,7 @@ fn lord_of(name: &str) -> Option<DashaLord> {
     })
 }
 
-fn score_record(s: &kshana_ledger::EventScore, ev: &LifeEvent) -> LedgerScoreRecord {
+fn score_record(s: &kshana_ledger::EventScore, ev: &LifeEvent, lang: Lang) -> LedgerScoreRecord {
     LedgerScoreRecord {
         dasha_support: s.dasha_support,
         parashari: s.parashari,
@@ -169,7 +170,7 @@ fn score_record(s: &kshana_ledger::EventScore, ev: &LifeEvent) -> LedgerScoreRec
         saturn_from_moon: s.saturn_from_moon,
         sade_sati_phase: s.sade_sati_phase,
         explanation: s.explanation.clone(),
-        words: kshana_ledger::fit_words(s, ev),
+        words: kshana_ledger::fit_words_in(s, ev, lang),
     }
 }
 
@@ -197,14 +198,16 @@ impl Engine {
         longitude_deg: f64,
         ayanamsa: AyanamsaChoice,
         events: Vec<LedgerEventRecord>,
+        lang: String,
     ) -> Result<Vec<LedgerScoreRecord>, KshanaError> {
+        let lang = Lang::parse(&lang);
         let ch = chart_of(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let mut out = Vec::with_capacity(events.len());
         for r in &events {
             let ev = to_event(r)?;
-            let s =
-                kshana_ledger::score_event(&self.spk, &ch, ayanamsa.into(), &ev).map_err(err)?;
-            out.push(score_record(&s, &ev));
+            let s = kshana_ledger::score_event_in(&self.spk, &ch, ayanamsa.into(), &ev, lang)
+                .map_err(err)?;
+            out.push(score_record(&s, &ev, lang));
         }
         Ok(out)
     }
@@ -222,15 +225,17 @@ impl Engine {
         from: ExactInstant,
         to: ExactInstant,
         per_event: u32,
+        lang: String,
     ) -> Result<LedgerCalibrationRecord, KshanaError> {
+        let lang = Lang::parse(&lang);
         let ch = chart_of(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let ay = ayanamsa.into();
         let evs: Vec<LifeEvent> = events.iter().map(to_event).collect::<Result<_, _>>()?;
         let mut scores = Vec::with_capacity(evs.len());
         let mut records = Vec::with_capacity(evs.len());
         for ev in &evs {
-            let s = kshana_ledger::score_event(&self.spk, &ch, ay, ev).map_err(err)?;
-            records.push(score_record(&s, ev));
+            let s = kshana_ledger::score_event_in(&self.spk, &ch, ay, ev, lang).map_err(err)?;
+            records.push(score_record(&s, ev, lang));
             scores.push(s);
         }
         let baseline = kshana_ledger::baseline_for_ledger(
@@ -262,7 +267,7 @@ impl Engine {
                     count: b.count as u32,
                 })
                 .collect(),
-            verdict: c.verdict,
+            verdict: kshana_ledger::calibration_verdict(&c, lang),
             scores: records,
         })
     }
@@ -276,10 +281,18 @@ impl Engine {
         ayanamsa: AyanamsaChoice,
         from: ExactInstant,
         to: ExactInstant,
+        lang: String,
     ) -> Result<Vec<PeriodReadingRecord>, KshanaError> {
         let ch = chart_of(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
-        let r = kshana_ledger::retrodict(&self.spk, &ch, ayanamsa.into(), from.into(), to.into())
-            .map_err(err)?;
+        let r = kshana_ledger::retrodict_in(
+            &self.spk,
+            &ch,
+            ayanamsa.into(),
+            from.into(),
+            to.into(),
+            Lang::parse(&lang),
+        )
+        .map_err(err)?;
         Ok(r.into_iter()
             .map(|p| PeriodReadingRecord {
                 start: p.start.into(),
@@ -413,6 +426,16 @@ pub fn ledger_event_kinds() -> Vec<String> {
         .collect()
 }
 
+/// An event kind's display name in the reader's language ("Loss" → "നഷ്ടം"); the
+/// kind itself stays the English key the ledger stores. Unknown kinds come back as given.
+#[uniffi::export]
+pub fn ledger_event_kind_name(kind: String, lang: String) -> String {
+    match EventKind::from_name(&kind) {
+        Some(k) => kshana_ledger::kind_word(Lang::parse(&lang), k).to_string(),
+        None => kind,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -455,6 +478,7 @@ mod tests {
                 76.2673,
                 AyanamsaChoice::Lahiri,
                 vec![ev.clone()],
+                "en".into(),
             )
             .unwrap();
         assert_eq!(s.len(), 1);
@@ -469,6 +493,7 @@ mod tests {
                 u(2005, 1, 1, 0, 0),
                 u(2026, 1, 1, 0, 0),
                 8,
+                "ml".into(),
             )
             .unwrap();
         assert_eq!(c.n, 1);
@@ -482,6 +507,7 @@ mod tests {
                 AyanamsaChoice::Lahiri,
                 u(2010, 1, 1, 0, 0),
                 u(2012, 1, 1, 0, 0),
+                "hi".into(),
             )
             .unwrap();
         assert!(!r.is_empty());
