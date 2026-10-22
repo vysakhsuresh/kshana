@@ -35,7 +35,7 @@ pub use firdaria::{
 };
 pub use profections::{profections, Profection};
 pub use progressions::{
-    ascendant_for_mc, lunation_phase_name, progressed_aspect_instants, progressed_ingresses,
+    ascendant_for_mc, lunation_phase_in, lunation_phase_name, progressed_aspect_instants, progressed_ingresses,
     progressed_instant, progressed_longitude, progressed_moon_ingresses, progressions,
     real_instant, Progressed, ProgressedBody, LUNATION_PHASES, PROGRESSED_SCAN_STEP_NS,
     TROPICAL_YEAR_DAYS,

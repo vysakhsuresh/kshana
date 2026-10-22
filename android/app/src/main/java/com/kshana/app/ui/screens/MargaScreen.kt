@@ -655,7 +655,7 @@ private fun SandhiPart(profile: BirthProfile, settings: EngineSettings, zone: Zo
     SectionLabel("Chidra lords of the running dasha")
     val lordError = mgLoad("lord", cache.runningLord, { cache.runningLord = it }) { engine ->
         val running = runCatching {
-            engine.dashaSystem(birth, profile.latitude, profile.longitude, settings.ayanamsa, "vimshottari", from)
+            engine.dashaSystem(birth, profile.latitude, profile.longitude, settings.ayanamsa, "vimshottari", from, "en")
                 .running.firstOrNull { it.level.toInt() == 1 }?.label
         }.getOrNull()
         running ?: windows?.firstOrNull()?.fromLord ?: throw IllegalStateException("The running mahadasha could not be read.")

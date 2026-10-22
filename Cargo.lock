@@ -527,6 +527,7 @@ dependencies = [
  "kshana-sky",
  "kshana-time",
  "kshana-vedic",
+ "kshana-western",
 ]
 
 [[package]]
@@ -562,8 +563,10 @@ dependencies = [
  "kshana-events",
  "kshana-frames",
  "kshana-houses",
+ "kshana-rules",
  "kshana-sky",
  "kshana-solver",
+ "kshana-speak",
  "kshana-time",
  "kshana-vedic",
 ]

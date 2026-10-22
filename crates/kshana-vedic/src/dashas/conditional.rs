@@ -100,6 +100,19 @@ impl Conditional {
         }
     }
 
+    /// The name as Malayalam and Hindi texts write it: `(Malayalam, Hindi)`.
+    pub const fn native_names(self) -> (&'static str, &'static str) {
+        match self {
+            Conditional::Dwadasottari => ("ദ്വാദശോത്തരി", "द्वादशोत्तरी"),
+            Conditional::Shodasottari => ("ഷോഡശോത്തരി", "षोडशोत्तरी"),
+            Conditional::Panchottari => ("പഞ്ചോത്തരി", "पंचोत्तरी"),
+            Conditional::Shatabdika => ("ശതാബ്ദിക", "शताब्दिका"),
+            Conditional::ChaturaseetiSama => ("ചതുരശീതി-സമ", "चतुरशीति-सम"),
+            Conditional::DwisaptatiSama => ("ദ്വിസപ്തതി-സമ", "द्विसप्तति-सम"),
+            Conditional::Shashtihayani => ("ഷഷ്ടിഹായനി", "षष्टिहायनी"),
+        }
+    }
+
     /// The lords in cycle order.
     pub const fn lords(self) -> &'static [DashaLord] {
         use DashaLord::*;

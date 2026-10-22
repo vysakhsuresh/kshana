@@ -19,6 +19,23 @@ pub const LEVEL_NAMES: [&str; 9] = [
     "Level 9",
 ];
 
+/// Name of level `level` (1-based) in the reader's language: the Kerala names (ദശ,
+/// അപഹാരം, ഛിദ്രം) and the Hindi panchang names (महादशा, अंतर्दशा, प्रत्यंतर्दशा).
+pub fn level_name_in(level: usize, lang: kshana_rules::Lang) -> &'static str {
+    const NAMES: [[&str; 3]; 9] = [
+        ["Mahadasha", "മഹാദശ", "महादशा"],
+        ["Antardasha", "അപഹാരം", "अंतर्दशा"],
+        ["Pratyantardasha", "ഛിദ്രം", "प्रत्यंतर्दशा"],
+        ["Sookshmadasha", "സൂക്ഷ്മദശ", "सूक्ष्म दशा"],
+        ["Pranadasha", "പ്രാണദശ", "प्राण दशा"],
+        ["Dehadasha", "ദേഹദശ", "देह दशा"],
+        ["Level 7", "ഏഴാം തലം", "सातवाँ स्तर"],
+        ["Level 8", "എട്ടാം തലം", "आठवाँ स्तर"],
+        ["Level 9", "ഒമ്പതാം തലം", "नौवाँ स्तर"],
+    ];
+    lang.pick(NAMES[level.clamp(1, 9) - 1])
+}
+
 /// The deepest level offered.
 pub const MAX_DEPTH: usize = 9;
 

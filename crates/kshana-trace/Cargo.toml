@@ -18,6 +18,8 @@ kshana-vedic = { workspace = true }
 kshana-chart = { workspace = true }
 kshana-houses = { workspace = true }
 kshana-frames = { workspace = true }
+kshana-rules = { workspace = true }
+kshana-speak = { workspace = true }
 
 [lints]
 workspace = true

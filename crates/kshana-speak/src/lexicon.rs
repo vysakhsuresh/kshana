@@ -2231,6 +2231,22 @@ pub fn graha(g: DashaLord, lang: Lang) -> &'static str {
     name(kshana_vedic::dashas::graha_name(g), lang)
 }
 
+/// A Western aspect's name in `lang`; English is the engine's own lower-case word
+/// (`"square"`).
+pub fn aspect(a: kshana_western::Aspect, lang: Lang) -> &'static str {
+    let (ml, hi) = a.native_names();
+    lang.pick([a.name(), ml, hi])
+}
+
+/// An aspect named by its English word (`"square"`, `"Square"`), in `lang`; unknown
+/// words come back unchanged.
+pub fn aspect_named<'a>(word: &'a str, lang: Lang) -> &'a str {
+    kshana_western::Aspect::ALL
+        .iter()
+        .find(|a| a.name().eq_ignore_ascii_case(word))
+        .map_or(word, |a| if lang == Lang::En { word } else { aspect(*a, lang) })
+}
+
 /// [`name`] for a sign, index 0 = Aries.
 pub fn sign(index: usize, lang: Lang) -> &'static str {
     name(RASI[index % 12].key, lang)

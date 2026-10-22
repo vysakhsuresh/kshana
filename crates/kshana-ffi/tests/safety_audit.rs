@@ -569,20 +569,20 @@ fn chart_pages() {
             a.run(&tag(&format!("chidra_{lord}")), || e.dasha_chidra_lords(b, la, lo, AY, lord.into()));
         }
         a.run(&tag("vimshopaka"), || e.vimshopaka_bala(b, la, lo, AY));
-        a.run(&tag("dashas"), || e.dasha_systems_at(b, la, lo, AY, t));
-        a.run(&tag("dashas_more"), || e.dasha_systems_more_at(b, la, lo, AY, t));
+        a.run(&tag("dashas"), || e.dasha_systems_at(b, la, lo, AY, t, lg.into()));
+        a.run(&tag("dashas_more"), || e.dasha_systems_more_at(b, la, lo, AY, t, lg.into()));
         a.run(&tag("patyayini"), || e.patyayini(b, la, lo, AY, 2027, la, lo));
         a.run(&tag("pakshi"), || e.pancha_pakshi(b, AY, t, la, lo, lg.into()));
         a.run(&tag("day_clock"), || e.day_clock(t, la, lo, AY, lg.into()));
         a.run(&tag("kp_full"), || e.kp_full(b, la, lo, AY, t, la, lo));
-        a.run(&tag("shadbala"), || e.shadbala(b, la, lo, AY));
+        a.run(&tag("shadbala"), || e.shadbala(b, la, lo, AY, lg.into()));
         a.run(&tag("ashtakavarga"), || e.ashtakavarga(b, la, lo, AY));
         a.run(&tag("retrodict"), || e.retrodict(b, la, lo, AY, at(2010, 1, 1, 0, 0), at(2026, 1, 1, 0, 0)));
         a.run(&tag("transit_windows"), || e.transit_windows(b, la, lo, AY, t, at(2029, 1, 1, 0, 0), lg.into()));
         a.run(&tag("areas"), || e.area_readings(b, la, lo, 0.0, HS, AY, t, 3));
-        a.run(&tag("profections"), || e.profections(b, la, lo, AY, t));
-        a.run(&tag("firdaria"), || e.firdaria(b, la, lo, AY));
-        a.run(&tag("progressed_hits"), || e.progressed_hits(b, la, lo, AY, t, at(2031, 1, 1, 0, 0)));
+        a.run(&tag("profections"), || e.profections(b, la, lo, AY, t, lg.into()));
+        a.run(&tag("firdaria"), || e.firdaria(b, la, lo, AY, lg.into()));
+        a.run(&tag("progressed_hits"), || e.progressed_hits(b, la, lo, AY, t, at(2031, 1, 1, 0, 0), lg.into()));
         a.run(&tag("muhurta"), || e.muhurta(["Marriage", "Travel", "Business", "Housewarming", "Learning", "Medical", "General"][ci % 7].into(), t, 14, la, lo, AY, None, 5));
         a.run(&tag("panchanga"), || e.panchanga_detail(t, la, lo, AY));
         a.run(&tag("sphutas"), || e.prasna_marga_sphutas(t, la, lo, AY));
@@ -622,7 +622,7 @@ fn catalogues_and_questions() {
     a.read("hora_lore", format!("{:?}", hora_lore_all()));
     a.read("glossary", format!("{:?}", glossary("en".into())));
     a.read("yoga_catalogue", format!("{:?}", yoga_catalogue()));
-    a.read("dasha_names", format!("{:?} {:?} {:?}", dasha_system_names(), more_dasha_system_names(), dasha_level_names()));
+    a.read("dasha_names", format!("{:?} {:?} {:?}", dasha_system_names(), more_dasha_system_names(), dasha_level_names("en".into())));
     for lang in ["en", "ml", "hi", "ta", "te", "kn"] {
         a.read(&format!("lexicon_{lang}"), format!("{:?}", lexicon(lang.into())));
     }

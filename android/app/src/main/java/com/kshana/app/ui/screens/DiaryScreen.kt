@@ -118,7 +118,7 @@ fun DiaryScreen(profile: BirthProfile, here: Place, settings: EngineSettings, on
                         profile.birthInstant(), profile.latitude, profile.longitude, 0.0, settings.houseSystem, settings.ayanamsa, false,
                     ).panchanga.moonSidereal
                     DiaryStore.snapshotLine(
-                        engine.snapshot(profile.birthInstant(), moon, here.latitude, here.longitude, settings.ayanamsa, at, SNAPSHOT_DEPTH),
+                        engine.snapshot(profile.birthInstant(), moon, here.latitude, here.longitude, settings.ayanamsa, at, SNAPSHOT_DEPTH, com.kshana.app.data.Lang.code),
                     )
                 }
             } catch (e: CancellationException) {

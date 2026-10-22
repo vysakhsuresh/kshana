@@ -196,10 +196,10 @@ fun DashasMoreScreen(profile: BirthProfile, settings: EngineSettings, onBack: ()
     val context = LocalContext.current
     var systems by remember { mutableStateOf<List<uniffi.kshana_ffi.DashaSystemRecord>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(profile) {
+    LaunchedEffect(profile, com.kshana.app.data.Lang.code) {
         runCatching {
             val engine = EngineProvider.get(context)
-            systems = withContext(Dispatchers.Default) { engine.dashaSystemsMoreAt(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, Instants.now()) }
+            systems = withContext(Dispatchers.Default) { engine.dashaSystemsMoreAt(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, Instants.now(), com.kshana.app.data.Lang.code) }
         }.onFailure { error = it.message }
     }
     val fmt = DateTimeFormatter.ofPattern("d MMM uuuu")

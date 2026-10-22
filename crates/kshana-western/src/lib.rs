@@ -52,6 +52,25 @@ impl Aspect {
         }
     }
 
+    /// The name as Malayalam and Hindi chart pages write it, `(Malayalam, Hindi)`: the
+    /// Indian names where the angle has one (യോഗം / युति for the conjunction, കേന്ദ്രം /
+    /// केंद्र for the square), the fraction of the circle for the minor aspects.
+    pub const fn native_names(self) -> (&'static str, &'static str) {
+        match self {
+            Aspect::Conjunction => ("യോഗം", "युति"),
+            Aspect::Opposition => ("സമസപ്തമം", "प्रतियुति"),
+            Aspect::Trine => ("ത്രികോണം", "त्रिकोण"),
+            Aspect::Square => ("കേന്ദ്രം", "केंद्र"),
+            Aspect::Sextile => ("ഷഷ്ഠാംശം", "षष्ठांश"),
+            Aspect::Quincunx => ("ക്വിൻകങ്ക്സ് (150°)", "क्विनकंक्स (150°)"),
+            Aspect::Semisextile => ("അർധ ഷഷ്ഠാംശം", "अर्ध षष्ठांश"),
+            Aspect::Semisquare => ("അർധ കേന്ദ്രം", "अर्ध केंद्र"),
+            Aspect::Sesquiquadrate => ("സാർധ കേന്ദ്രം", "सार्ध केंद्र"),
+            Aspect::Quintile => ("പഞ്ചമാംശം", "पंचमांश"),
+            Aspect::Biquintile => ("ദ്വിപഞ്ചമാംശം", "द्विपंचमांश"),
+        }
+    }
+
     /// Exact angle in degrees.
     pub const fn angle(self) -> f64 {
         match self {

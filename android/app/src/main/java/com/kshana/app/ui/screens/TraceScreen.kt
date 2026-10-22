@@ -131,14 +131,14 @@ fun TraceScreen(profile: BirthProfile, here: Place, settings: EngineSettings, on
     var moreLevels by remember { mutableStateOf(false) }
 
     var natalMoon by remember(profile, settings) { mutableStateOf<Double?>(null) }
-    var sensitivity by remember(profile, settings) { mutableStateOf<DashaSensitivityRecord?>(null) }
+    var sensitivity by remember(profile, settings, com.kshana.app.data.Lang.code) { mutableStateOf<DashaSensitivityRecord?>(null) }
     var levels by remember { mutableStateOf<List<String>>(emptyList()) }
-    var snapshot by remember(profile, here, settings) { mutableStateOf<SnapshotRecord?>(null) }
-    val cache = remember(profile, here, settings) { mutableStateMapOf<DayKey, List<TransitionRecord>>() }
+    var snapshot by remember(profile, here, settings, com.kshana.app.data.Lang.code) { mutableStateOf<SnapshotRecord?>(null) }
+    val cache = remember(profile, here, settings, com.kshana.app.data.Lang.code) { mutableStateMapOf<DayKey, List<TransitionRecord>>() }
     var error by remember { mutableStateOf<String?>(null) }
 
     // The natal Moon is read once from the birth chart; it seeds every dasha computation.
-    LaunchedEffect(profile, settings) {
+    LaunchedEffect(profile, settings, com.kshana.app.data.Lang.code) {
         try {
             val engine = EngineProvider.get(context)
             val chart = withContext(Dispatchers.Default) {
@@ -146,8 +146,8 @@ fun TraceScreen(profile: BirthProfile, here: Place, settings: EngineSettings, on
             }
             natalMoon = chart.panchanga.moonSidereal
             val moonSpeed = chart.bodies.firstOrNull { it.name == "Moon" }?.speed ?: 13.2
-            sensitivity = dashaSensitivity(chart.panchanga.moonSidereal, moonSpeed, profile.uncertaintySeconds().toDouble())
-            if (levels.isEmpty()) levels = dashaLevelNames()
+            sensitivity = dashaSensitivity(chart.panchanga.moonSidereal, moonSpeed, profile.uncertaintySeconds().toDouble(), com.kshana.app.data.Lang.code)
+            levels = dashaLevelNames(com.kshana.app.data.Lang.code)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -157,7 +157,7 @@ fun TraceScreen(profile: BirthProfile, here: Place, settings: EngineSettings, on
 
     // Solve the shown day for the chosen filters, once per (day, filters).
     val key = DayKey(date, filter)
-    LaunchedEffect(natalMoon, here, settings, key) {
+    LaunchedEffect(natalMoon, here, settings, key, com.kshana.app.data.Lang.code) {
         val moon = natalMoon ?: return@LaunchedEffect
         if (cache.containsKey(key)) return@LaunchedEffect
         error = null
@@ -175,6 +175,7 @@ fun TraceScreen(profile: BirthProfile, here: Place, settings: EngineSettings, on
                     key.filter.panchanga,
                     key.filter.horas,
                     key.filter.lagna,
+                    com.kshana.app.data.Lang.code,
                 )
             }
             cache[key] = list
@@ -199,12 +200,12 @@ fun TraceScreen(profile: BirthProfile, here: Place, settings: EngineSettings, on
 
     // What is running now: read at load, and again each time a boundary of today passes.
     val boundary = if (isToday) pastCount else -1
-    LaunchedEffect(profile, here, settings, natalMoon, boundary) {
+    LaunchedEffect(profile, here, settings, natalMoon, boundary, com.kshana.app.data.Lang.code) {
         val moon = natalMoon ?: return@LaunchedEffect
         try {
             val engine = EngineProvider.get(context)
             snapshot = withContext(Dispatchers.Default) {
-                engine.snapshot(profile.birthInstant(), moon, here.latitude, here.longitude, settings.ayanamsa, Instants.now(), 9u)
+                engine.snapshot(profile.birthInstant(), moon, here.latitude, here.longitude, settings.ayanamsa, Instants.now(), 9u, com.kshana.app.data.Lang.code)
             }
         } catch (e: CancellationException) {
             throw e
@@ -539,8 +540,8 @@ fun NextChanges(profile: BirthProfile, here: Place, settings: EngineSettings, co
         }
     }
 
-    var rows by remember(profile, here, settings) { mutableStateOf<List<RiverRow>>(emptyList()) }
-    var loadedUntil by remember(profile, here, settings) { mutableStateOf(0L) }
+    var rows by remember(profile, here, settings, com.kshana.app.data.Lang.code) { mutableStateOf<List<RiverRow>>(emptyList()) }
+    var loadedUntil by remember(profile, here, settings, com.kshana.app.data.Lang.code) { mutableStateOf(0L) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -558,7 +559,7 @@ fun NextChanges(profile: BirthProfile, here: Place, settings: EngineSettings, co
         }
     }
 
-    LaunchedEffect(profile, here, settings, stale) {
+    LaunchedEffect(profile, here, settings, stale, com.kshana.app.data.Lang.code) {
         if (!stale) return@LaunchedEffect
         loading = true
         try {
@@ -570,7 +571,7 @@ fun NextChanges(profile: BirthProfile, here: Place, settings: EngineSettings, co
                 engine.trace(
                     profile.birthInstant(), chart.panchanga.moonSidereal, here.latitude, here.longitude, settings.ayanamsa,
                     Instants.fromInstant(fromInstant), Instants.fromInstant(toInstant),
-                    5u, Finest.SUB, Finest.SIGN, true, true, Finest.NAKSHATRA,
+                    5u, Finest.SUB, Finest.SIGN, true, true, Finest.NAKSHATRA, com.kshana.app.data.Lang.code,
                 )
             }
             rows = groupRows(list, zone)

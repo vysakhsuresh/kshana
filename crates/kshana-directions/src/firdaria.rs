@@ -55,6 +55,22 @@ impl FirdariaLord {
         }
     }
 
+    /// Name in the reader's language: the planets as the almanacs print them, the nodes as
+    /// Rahu and Ketu.
+    pub fn name_in(self, lang: kshana_rules::Lang) -> &'static str {
+        match self {
+            FirdariaLord::Sun => lang.pick(["Sun", "സൂര്യൻ", "सूर्य"]),
+            FirdariaLord::Venus => lang.pick(["Venus", "ശുക്രൻ", "शुक्र"]),
+            FirdariaLord::Mercury => lang.pick(["Mercury", "ബുധൻ", "बुध"]),
+            FirdariaLord::Moon => lang.pick(["Moon", "ചന്ദ്രൻ", "चंद्र"]),
+            FirdariaLord::Saturn => lang.pick(["Saturn", "ശനി", "शनि"]),
+            FirdariaLord::Jupiter => lang.pick(["Jupiter", "വ്യാഴം", "गुरु"]),
+            FirdariaLord::Mars => lang.pick(["Mars", "ചൊവ്വ", "मंगल"]),
+            FirdariaLord::NorthNode => lang.pick(["North Node", "രാഹു (വടക്കേ പാതം)", "राहु (उत्तरी पात)"]),
+            FirdariaLord::SouthNode => lang.pick(["South Node", "കേതു (തെക്കേ പാതം)", "केतु (दक्षिणी पात)"]),
+        }
+    }
+
     /// True for the two nodes, which have no sub-periods.
     pub const fn is_node(self) -> bool {
         matches!(self, FirdariaLord::NorthNode | FirdariaLord::SouthNode)

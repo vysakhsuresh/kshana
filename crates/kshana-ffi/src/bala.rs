@@ -62,6 +62,9 @@ pub struct AvasthaRecord {
     pub baladi: String,
     pub jagradadi: String,
     pub deeptadi: String,
+    pub baladi_key: String,
+    pub jagradadi_key: String,
+    pub deeptadi_key: String,
 }
 
 /// The whole strength report.
@@ -89,7 +92,9 @@ impl Engine {
         latitude_deg: f64,
         longitude_deg: f64,
         ayanamsa: AyanamsaChoice,
+        lang: String,
     ) -> Result<ShadbalaRecord, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let ch = natal_chart(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let obs = Observer {
             latitude_deg,
@@ -98,7 +103,7 @@ impl Engine {
         };
         let s = kshana_bala::shadbala(&self.spk, self.eop.as_ref(), &obs, &ch, ayanamsa.into())
             .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
-        let g = |l: kshana_vedic::DashaLord| format!("{l:?}");
+        let g = |l: kshana_vedic::DashaLord| kshana_speak::lexicon::graha(l, lang).to_string();
         Ok(ShadbalaRecord {
             grahas: s
                 .grahas
@@ -157,10 +162,20 @@ impl Engine {
                 .wars
                 .iter()
                 .map(|w| {
-                    format!(
-                        "{:?} defeats {:?} ({:.2}° apart, {:.1} virupas)",
-                        w.winner, w.loser, w.separation_deg, w.virupas
-                    )
+                    match lang {
+                        kshana_rules::Lang::En => format!(
+                            "{:?} defeats {:?} ({:.2}° apart, {:.1} virupas)",
+                            w.winner, w.loser, w.separation_deg, w.virupas
+                        ),
+                        kshana_rules::Lang::Ml => format!(
+                            "{} {}-നെ ജയിക്കുന്നു ({:.2}° അകലം, {:.1} വിരൂപ)",
+                            g(w.winner), g(w.loser), w.separation_deg, w.virupas
+                        ),
+                        kshana_rules::Lang::Hi => format!(
+                            "{} {} को हराता है ({:.2}° दूरी, {:.1} विरूप)",
+                            g(w.winner), g(w.loser), w.separation_deg, w.virupas
+                        ),
+                    }
                 })
                 .collect(),
             strongest: g(s.strongest),
@@ -169,9 +184,12 @@ impl Engine {
                 .iter()
                 .map(|a| AvasthaRecord {
                     graha: g(a.graha),
-                    baladi: format!("{:?}", a.baladi),
-                    jagradadi: format!("{:?}", a.jagradadi),
-                    deeptadi: format!("{:?}", a.deeptadi),
+                    baladi: a.baladi.name_in(lang).to_string(),
+                    jagradadi: a.jagradadi.name_in(lang).to_string(),
+                    deeptadi: a.deeptadi.name_in(lang).to_string(),
+                    baladi_key: format!("{:?}", a.baladi),
+                    jagradadi_key: format!("{:?}", a.jagradadi),
+                    deeptadi_key: format!("{:?}", a.deeptadi),
                 })
                 .collect(),
         })
@@ -201,7 +219,7 @@ mod tests {
         })
         .unwrap();
         let s = engine
-            .shadbala(birth, 9.9312, 76.2673, AyanamsaChoice::Lahiri)
+            .shadbala(birth, 9.9312, 76.2673, AyanamsaChoice::Lahiri, "en".into())
             .unwrap();
         assert_eq!(s.grahas.len(), 7);
         assert_eq!(s.bhavas.len(), 12);

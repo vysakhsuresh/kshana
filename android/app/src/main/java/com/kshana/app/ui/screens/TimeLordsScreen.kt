@@ -101,8 +101,19 @@ private fun tlWithin(start: ExactInstant, end: ExactInstant, at: ExactInstant): 
 private fun shiftAt(at: ExactInstant, zone: ZoneId, days: Long, years: Long): ExactInstant =
     Instants.fromInstant(Instants.toLocal(at, zone).plusDays(days).plusYears(years).toInstant())
 
+/** The sign names as the engine writes them on the Malayalam and Hindi chart pages. */
+private val TL_SIGN_NAMES_ML = listOf(
+    "മേടം", "ഇടവം", "മിഥുനം", "കർക്കടകം", "ചിങ്ങം", "കന്നി", "തുലാം", "വൃശ്ചികം", "ധനു", "മകരം", "കുംഭം", "മീനം",
+)
+private val TL_SIGN_NAMES_HI = listOf(
+    "मेष", "वृषभ", "मिथुन", "कर्क", "सिंह", "कन्या", "तुला", "वृश्चिक", "धनु", "मकर", "कुंभ", "मीन",
+)
+
+private fun tlSignIndex(name: String): Int =
+    listOf(TL_SIGN_NAMES, TL_SIGN_NAMES_ML, TL_SIGN_NAMES_HI).map { it.indexOf(name) }.firstOrNull { it >= 0 } ?: -1
+
 private fun signGlyphFor(name: String): String {
-    val i = TL_SIGN_NAMES.indexOf(name)
+    val i = tlSignIndex(name)
     return if (i >= 0) TL_SIGN_GLYPHS[i] else ""
 }
 
@@ -111,7 +122,7 @@ private fun planetGlyphFor(name: String): String = PLANET_GLYPHS[name] ?: ""
 /** A two- or three-letter label for a strip: planet abbreviation, sign short name, else the first three letters. */
 private fun tlShortLabel(label: String): String {
     PLANET_ABBR[label]?.let { return it }
-    val sign = TL_SIGN_NAMES.indexOf(label)
+    val sign = tlSignIndex(label)
     if (sign >= 0) return SIGN_SHORT[sign]
     return label.take(3)
 }
@@ -129,12 +140,12 @@ fun TimeLordsScreen(profile: BirthProfile, settings: EngineSettings, onBack: () 
     val zone = remember { ZoneId.systemDefault() }
     var at by remember(profile, settings) { mutableStateOf(Instants.now()) }
     var isNow by remember(profile, settings) { mutableStateOf(true) }
-    val cache = remember(profile, settings) { mutableStateMapOf<ExactInstant, TimeLordsLoad>() }
+    val cache = remember(profile, settings, com.kshana.app.data.Lang.code) { mutableStateMapOf<ExactInstant, TimeLordsLoad>() }
     var loadError by remember { mutableStateOf<String?>(null) }
     val notesOpen = remember(profile, settings) { mutableStateMapOf<String, Boolean>() }
 
     // Every system at the chosen instant, each on its own so one failure leaves the rest.
-    LaunchedEffect(profile, settings, at) {
+    LaunchedEffect(profile, settings, at, com.kshana.app.data.Lang.code) {
         if (cache.containsKey(at)) return@LaunchedEffect
         loadError = null
         try {
@@ -147,13 +158,13 @@ fun TimeLordsScreen(profile: BirthProfile, settings: EngineSettings, onBack: () 
             val r = withContext(Dispatchers.Default) {
                 val dayAfter = ExactInstant(a.taiSeconds + TL_DAY_S, a.nanos)
                 TimeLordsLoad(
-                    dashas = tlSection { engine.dashaSystemsAt(birth, lat, lon, ay, a) },
-                    profection = tlSection { engine.profections(birth, lat, lon, ay, a) },
-                    firdaria = tlSection { engine.firdaria(birth, lat, lon, ay) },
-                    fortune = tlSection { engine.zodiacalReleasing(birth, lat, lon, ay, "fortune", 2u, dayAfter) },
-                    spirit = tlSection { engine.zodiacalReleasing(birth, lat, lon, ay, "spirit", 2u, dayAfter) },
-                    progressed = tlSection { engine.progressions(birth, lat, lon, ay, a) },
-                    hits = tlSection { engine.progressedHits(birth, lat, lon, ay, a, ExactInstant(a.taiSeconds + TL_TWO_YEARS_S, a.nanos)) },
+                    dashas = tlSection { engine.dashaSystemsAt(birth, lat, lon, ay, a, com.kshana.app.data.Lang.code) },
+                    profection = tlSection { engine.profections(birth, lat, lon, ay, a, com.kshana.app.data.Lang.code) },
+                    firdaria = tlSection { engine.firdaria(birth, lat, lon, ay, com.kshana.app.data.Lang.code) },
+                    fortune = tlSection { engine.zodiacalReleasing(birth, lat, lon, ay, "fortune", 2u, dayAfter, com.kshana.app.data.Lang.code) },
+                    spirit = tlSection { engine.zodiacalReleasing(birth, lat, lon, ay, "spirit", 2u, dayAfter, com.kshana.app.data.Lang.code) },
+                    progressed = tlSection { engine.progressions(birth, lat, lon, ay, a, com.kshana.app.data.Lang.code) },
+                    hits = tlSection { engine.progressedHits(birth, lat, lon, ay, a, ExactInstant(a.taiSeconds + TL_TWO_YEARS_S, a.nanos), com.kshana.app.data.Lang.code) },
                     lunar = tlSection { engine.lunarReturns(birth, lat, lon, ay, a, ExactInstant(a.taiSeconds + TL_LUNAR_SPAN_S, a.nanos)) },
                 )
             }
@@ -474,8 +485,8 @@ private fun ZrLot(title: String, periods: List<ZrRecord>, at: ExactInstant, zone
 
 @Composable
 private fun ProgressedBody(pr: ProgressedRecord, zone: ZoneId) {
-    val sun = pr.bodies.firstOrNull { it.name == "Sun" }
-    val moon = pr.bodies.firstOrNull { it.name == "Moon" }
+    val sun = pr.bodies.firstOrNull { it.key == "Sun" }
+    val moon = pr.bodies.firstOrNull { it.key == "Moon" }
     MonoRow("Progressed Sun", sun?.let { tlLongitude(it.longitude) } ?: "—")
     MonoRow("Progressed Moon", moon?.let { tlLongitude(it.longitude) } ?: "—")
     MonoRow("Progressed Ascendant", tlLongitude(pr.asc))
