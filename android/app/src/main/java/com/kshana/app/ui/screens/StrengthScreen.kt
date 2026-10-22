@@ -107,16 +107,17 @@ private fun strengthColour(ratio: Double): Color = if (ratio >= 1.0) KshanaColor
 @Composable
 fun StrengthScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> Unit) {
     val context = LocalContext.current
-    var record by remember(profile, settings) { mutableStateOf<ShadbalaRecord?>(null) }
+    val lang = com.kshana.app.data.Lang.code
+    var record by remember(profile, settings, lang) { mutableStateOf<ShadbalaRecord?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var selected by remember(profile, settings) { mutableStateOf<Int?>(null) }
 
-    LaunchedEffect(profile, settings) {
+    LaunchedEffect(profile, settings, lang) {
         try {
             val engine = EngineProvider.get(context)
             val birth = profile.birthInstant()
             record = withContext(Dispatchers.Default) {
-                engine.shadbala(birth, profile.latitude, profile.longitude, settings.ayanamsa)
+                engine.shadbala(birth, profile.latitude, profile.longitude, settings.ayanamsa, lang)
             }
             error = null
         } catch (e: CancellationException) {
@@ -286,7 +287,7 @@ private fun GrahaCard(g: GrahaBalaRecord) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(PLANET_GLYPHS[g.graha] ?: g.graha.take(2), fontSize = 24.sp, color = colour)
-            Text(g.graha, style = MaterialTheme.typography.titleLarge, color = KshanaColors.Text)
+            Text(g.grahaName, style = MaterialTheme.typography.titleLarge, color = KshanaColors.Text)
         }
         Text(
             "${v1(g.totalVirupas)} virupas = ${"%.2f".format(g.rupas)} rupas · required ${v1(g.required)} · ${pct(g.ratio)}",
@@ -324,7 +325,7 @@ private fun GrahaCard(g: GrahaBalaRecord) {
         )
         HorizontalDivider(color = KshanaColors.LineSoft)
         val motion = g.motion
-        MonoRow("Motion", if (motion == null) "— (Ayana and Paksha instead)" else "$motion · ${MOTION_WORDS[motion] ?: motion.lowercase()}", KshanaColors.TextSoft)
+        MonoRow("Motion", if (motion == null) "— (Ayana and Paksha instead)" else "${g.motionName ?: motion} · ${g.motionMeaning ?: MOTION_WORDS[motion] ?: motion.lowercase()}", KshanaColors.TextSoft)
         MonoRow("Ishta · Kashta", "${v1(g.ishta)} · ${v1(g.kashta)}")
         if (g.words.isNotEmpty()) {
             HorizontalDivider(color = KshanaColors.LineSoft)
@@ -357,7 +358,7 @@ private fun HouseRow(b: BhavaBalaRecord, maxRatio: Double) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(b.house.toInt().toString(), fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Muted, modifier = Modifier.width(24.dp))
             Text(
-                "${PLANET_GLYPHS[b.lord] ?: ""} ${b.lord}",
+                "${PLANET_GLYPHS[b.lord] ?: ""} ${b.lordName}",
                 style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1f),
             )
             Text("${"%.2f".format(b.rupas)} rupas · ${pct(b.ratio)}", fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = colour)
@@ -376,19 +377,21 @@ private fun AvasthaRow(a: AvasthaRecord) {
     Column(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "${PLANET_GLYPHS[a.graha] ?: ""} ${a.graha}",
+                "${PLANET_GLYPHS[a.graha] ?: ""} ${a.grahaName}",
                 style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1.1f),
             )
-            Text(a.baladi, fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.weight(1f))
-            Text(a.jagradadi, fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.weight(1f))
-            Text(a.deeptadi, fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.weight(1f))
+            Text(a.baladiName, fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.weight(1f))
+            Text(a.jagradadiName, fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.weight(1f))
+            Text(a.deeptadiName, fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = KshanaColors.Sky, modifier = Modifier.weight(1f))
         }
         Text(
-            listOf(
-                BALADI_WORDS[a.baladi] ?: a.baladi.lowercase(),
-                JAGRADADI_WORDS[a.jagradadi] ?: a.jagradadi.lowercase(),
-                DEEPTADI_WORDS[a.deeptadi] ?: a.deeptadi.lowercase(),
-            ).joinToString(" · "),
+            a.meaning.ifEmpty {
+                listOf(
+                    BALADI_WORDS[a.baladi] ?: a.baladi.lowercase(),
+                    JAGRADADI_WORDS[a.jagradadi] ?: a.jagradadi.lowercase(),
+                    DEEPTADI_WORDS[a.deeptadi] ?: a.deeptadi.lowercase(),
+                ).joinToString(" · ")
+            },
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
         )
     }

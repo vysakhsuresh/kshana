@@ -574,8 +574,8 @@ fn chart_pages() {
         a.run(&tag("patyayini"), || e.patyayini(b, la, lo, AY, 2027, la, lo));
         a.run(&tag("pakshi"), || e.pancha_pakshi(b, AY, t, la, lo));
         a.run(&tag("day_clock"), || e.day_clock(t, la, lo, AY));
-        a.run(&tag("kp_full"), || e.kp_full(b, la, lo, AY, t, la, lo));
-        a.run(&tag("shadbala"), || e.shadbala(b, la, lo, AY));
+        a.run(&tag("kp_full"), || e.kp_full(b, la, lo, AY, t, la, lo, "en".into()));
+        a.run(&tag("shadbala"), || e.shadbala(b, la, lo, AY, "en".into()));
         a.run(&tag("ashtakavarga"), || e.ashtakavarga(b, la, lo, AY));
         a.run(&tag("retrodict"), || e.retrodict(b, la, lo, AY, at(2010, 1, 1, 0, 0), at(2026, 1, 1, 0, 0), ["en", "ml", "hi"][ci % 3].into()));
         a.run(&tag("transit_windows"), || e.transit_windows(b, la, lo, AY, t, at(2029, 1, 1, 0, 0)));
