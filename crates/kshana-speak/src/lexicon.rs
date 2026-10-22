@@ -21,7 +21,9 @@
 //! users expect: udayadi nazhika and vinazhika since sunrise, the Kollavarsham date, the
 //! Tamil solar month, and a note on why a Drik panchanga differs from a Vakya almanac.
 
+use kshana_rules::Lang;
 use kshana_time::{civil_from_days, Instant, NS_PER_DAY, NS_PER_SEC};
+use kshana_vedic::DashaLord;
 
 /// A language the lexicon speaks.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -1520,7 +1522,7 @@ static PERIOD: [Row; 6] = [
     r(
         "Sookshma dasha",
         ("Sookshma dasha", "Fourth level"),
-        ("", ""),
+        ("സൂക്ഷ്മം", "Sookshmam"),
         ("சூட்சுமம்", "Sootchumam"),
         ("सूक्ष्म दशा", "Sookshma dasha"),
         ("", ""),
@@ -1529,7 +1531,7 @@ static PERIOD: [Row; 6] = [
     r(
         "Prana dasha",
         ("Prana dasha", "Fifth level"),
-        ("", ""),
+        ("പ്രാണം", "Pranam"),
         ("", ""),
         ("प्राण दशा", "Prana dasha"),
         ("", ""),
@@ -1573,7 +1575,7 @@ static CLOCK: [Row; 12] = [
     r(
         "Choghadiya",
         ("Choghadiya", "1/8 of the day or night"),
-        ("", ""),
+        ("ചോഘഡിയ", "Choghadiya"),
         ("", ""),
         ("चौघड़िया", "Chaughadiya"),
         ("", ""),
@@ -1584,7 +1586,7 @@ static CLOCK: [Row; 12] = [
         ("Hora", "Planetary hour, 1/12 of day or night"),
         ("ഹോര", "Hora"),
         ("ஓரை", "Orai"),
-        ("", ""),
+        ("होरा", "Hora"),
         ("హోర", "Hora"),
         ("ಹೋರಾ", "Hora"),
     ),
@@ -1593,7 +1595,7 @@ static CLOCK: [Row; 12] = [
         ("Ghati", "24 minutes, 1/60 of a day"),
         ("നാഴിക", "Nazhika"),
         ("நாழிகை", "Nazhigai"),
-        ("", ""),
+        ("घटी", "Ghati"),
         ("ఘడియ", "Ghadiya"),
         ("", ""),
     ),
@@ -1602,7 +1604,7 @@ static CLOCK: [Row; 12] = [
         ("Vighati", "24 seconds, 1/60 ghati"),
         ("വിനാഴിക", "Vinazhika"),
         ("விநாழிகை", "Vinazhigai"),
-        ("", ""),
+        ("विघटी", "Vighati"),
         ("విఘడియ", "Vighadiya"),
         ("", ""),
     ),
@@ -1611,7 +1613,7 @@ static CLOCK: [Row; 12] = [
         ("Nazhika", "24 minutes counted from sunrise"),
         ("നാഴിക", "Nazhika"),
         ("நாழிகை", "Nazhigai"),
-        ("", ""),
+        ("घटी", "Ghati"),
         ("ఘడియ", "Ghadiya"),
         ("", ""),
     ),
@@ -1620,7 +1622,7 @@ static CLOCK: [Row; 12] = [
         ("Vinazhika", "24 seconds, 1/60 nazhika"),
         ("വിനാഴിക", "Vinazhika"),
         ("விநாழிகை", "Vinazhigai"),
-        ("", ""),
+        ("विघटी", "Vighati"),
         ("విఘడియ", "Vighadiya"),
         ("", ""),
     ),
@@ -1691,7 +1693,7 @@ static OBSERVANCE: [Row; 3] = [
         ("Pradosha", "Dusk of the thirteenth tithi"),
         ("പ്രദോഷം", "Pradosham"),
         ("", ""),
-        ("", ""),
+        ("प्रदोष", "Pradosh"),
         ("ప్రదోషం", "Pradosham"),
         ("ಪ್ರದೋಷ", "Pradosha"),
     ),
@@ -1700,7 +1702,7 @@ static OBSERVANCE: [Row; 3] = [
         ("Sankranti", "Sun entering a sidereal sign"),
         ("സംക്രാന്തി", "Sankranthi"),
         ("", ""),
-        ("", ""),
+        ("संक्रांति", "Sankranti"),
         ("", ""),
         ("", ""),
     ),
@@ -2189,6 +2191,139 @@ pub fn term_latin(key: &str, lang: Language) -> &'static str {
     }
 }
 
+impl From<Lang> for Language {
+    fn from(lang: Lang) -> Language {
+        match lang {
+            Lang::En => Language::English,
+            Lang::Ml => Language::Malayalam,
+            Lang::Hi => Language::Hindi,
+        }
+    }
+}
+
+/// A name the engine prints, in the reader's language: `"Aries"` → `"മേടം"` / `"मेष"`,
+/// `"Ashwini"` → `"അശ്വതി"`, `"Ravivara"` → `"ഞായർ"`. English (and any key the lexicon does
+/// not hold) comes back unchanged, byte for byte, so English text stays as it was. Unverified
+/// cells fall back to the key as well.
+pub fn name<'a>(key: &'a str, lang: Lang) -> &'a str {
+    if lang == Lang::En {
+        return key;
+    }
+    if let Some((_, ml, hi)) = EXTRA.iter().find(|(k, _, _)| k.eq_ignore_ascii_case(key.trim())) {
+        return if lang == Lang::Ml { ml } else { hi };
+    }
+    match find(key) {
+        Some(row) => {
+            let native = row.cells[Language::from(lang).column()].0;
+            if native.is_empty() {
+                key
+            } else {
+                native
+            }
+        }
+        None => key,
+    }
+}
+
+/// [`name`] for a graha: `Sun` → `സൂര്യൻ` / `सूर्य`, the forms of Kerala panchangams and
+/// Hindi panchangs. English is the engine's own spelling.
+pub fn graha(g: DashaLord, lang: Lang) -> &'static str {
+    name(kshana_vedic::dashas::graha_name(g), lang)
+}
+
+/// [`name`] for a sign, index 0 = Aries.
+pub fn sign(index: usize, lang: Lang) -> &'static str {
+    name(RASI[index % 12].key, lang)
+}
+
+/// [`name`] for a nakshatra, index 0 = Ashwini.
+pub fn star(index: usize, lang: Lang) -> &'static str {
+    name(NAKSHATRA[index % 27].key, lang)
+}
+
+/// [`name`] for a weekday, 0 = Sunday, in the short almanac form (`ഞായർ`, `रविवार`); English
+/// is the day's English name.
+pub fn weekday(index: usize, lang: Lang) -> &'static str {
+    let row = &VARA[index % 7];
+    match lang {
+        Lang::En => row.cells[0].0,
+        _ => name(row.key, lang),
+    }
+}
+
+/// Names the tables do not hold as rows but the engine joins into labels: `(English, ml, hi)`.
+/// `Lagna` is an alias of the first bhava in the tables, but in a label it means the rising
+/// point itself.
+const EXTRA: [(&str, &str, &str); 8] = [
+    ("Lagna", "ലഗ്നം", "लग्न"),
+    ("Ascendant", "ലഗ്നം", "लग्न"),
+    ("Asc", "ലഗ്നം", "लग्न"),
+    ("Midheaven", "മധ്യാകാശം", "मध्याकाश"),
+    ("MC", "മധ്യാകാശം", "मध्याकाश"),
+    ("Uranus", "യുറാനസ്", "अरुण"),
+    ("Neptune", "നെപ്റ്റ്യൂൺ", "वरुण"),
+    ("Pluto", "പ്ലൂട്ടോ", "यम"),
+];
+
+/// Every lexicon name found in `text`, rewritten in `lang`, for short lists and labels the
+/// engine joins from names alone (`"Sun, Moon and Mars"`, `"Aries · Ashwini"`,
+/// `"Venus / Saturn"`). Only whole words are replaced, longest first, so `"Uttara Ashadha"`
+/// is one name and `"Sunday"` is not read as `"Sun"`. English comes back unchanged. Do not
+/// pass sentences: grammar around a name is not adjusted; use it for name lists and labels.
+pub fn names_in(text: &str, lang: Lang) -> String {
+    if lang == Lang::En || text.is_empty() {
+        return text.to_string();
+    }
+    let col = Language::from(lang).column();
+    let mut keys: Vec<(&'static str, &'static str)> = EXTRA
+        .iter()
+        .map(|(k, ml, hi)| (*k, if lang == Lang::Ml { *ml } else { *hi }))
+        .chain(
+            tables()
+                .iter()
+                .flat_map(|(_, rows)| rows.iter())
+                .filter(|row| !row.cells[col].0.is_empty())
+                .map(|row| (row.key, row.cells[col].0)),
+        )
+        .chain(
+            ALIASES
+                .iter()
+                .filter(|(alias, _)| !EXTRA.iter().any(|(k, _, _)| k == alias))
+                .filter_map(|(alias, key)| find(key).map(|row| (*alias, row.cells[col].0)))
+                .filter(|(_, n)| !n.is_empty()),
+        )
+        .chain(
+            // The English display names (`Sunday`, …) of the weekday rows.
+            VARA.iter().map(|row| (row.cells[0].0, row.cells[col].0)),
+        )
+        .collect();
+    keys.sort_by_key(|(k, _)| std::cmp::Reverse(k.len()));
+    let mut out = String::with_capacity(text.len());
+    let bytes = text.as_bytes();
+    let mut i = 0;
+    'outer: while i < text.len() {
+        let boundary_before = i == 0 || !(bytes[i - 1] as char).is_ascii_alphanumeric();
+        if boundary_before && bytes[i].is_ascii_alphabetic() {
+            for (k, n) in &keys {
+                let end = i + k.len();
+                if end <= text.len()
+                    && text.is_char_boundary(end)
+                    && &text[i..end] == *k
+                    && (end == text.len() || !(bytes[end] as char).is_ascii_alphanumeric())
+                {
+                    out.push_str(n);
+                    i = end;
+                    continue 'outer;
+                }
+            }
+        }
+        let ch = text[i..].chars().next().unwrap_or(' ');
+        out.push(ch);
+        i += ch.len_utf8();
+    }
+    out
+}
+
 /// Every term in `lang`, family by family in [`FAMILIES`] order. Unverified cells come back
 /// empty here (not substituted), so a screen can show them as missing.
 pub fn lexicon(lang: Language) -> Vec<LexiconEntry> {
@@ -2478,7 +2613,7 @@ mod tests {
         assert_eq!(term("House 7", Language::Hindi), "युवति");
         assert_eq!(term("Guru", Language::Kannada), "ಗುರು");
         // Unverified cell: English fallback.
-        assert_eq!(term("Choghadiya", Language::Malayalam), "Choghadiya");
+        assert_eq!(term("Choghadiya", Language::Tamil), "Choghadiya");
         assert_eq!(term("Sahaja", Language::Kannada), "3rd house");
         assert_eq!(term_latin("Sahaja", Language::Kannada), "Sahaja");
         // Unknown key.
@@ -2491,6 +2626,27 @@ mod tests {
         let sahaja = kn.iter().find(|e| e.key == "Sahaja").unwrap();
         assert_eq!(sahaja.native, "");
         assert_eq!(sahaja.english, "3rd house");
+    }
+
+    #[test]
+    fn names_in_the_readers_language() {
+        assert_eq!(name("Aries", Lang::En), "Aries");
+        assert_eq!(name("Aries", Lang::Ml), "മേടം");
+        assert_eq!(name("Ashwini", Lang::Hi), "अश्विनी");
+        assert_eq!(name("Lagna", Lang::Ml), "ലഗ്നം");
+        assert_eq!(name("not a term", Lang::Hi), "not a term");
+        assert_eq!(graha(DashaLord::Sun, Lang::Ml), "സൂര്യൻ");
+        assert_eq!(graha(DashaLord::Sun, Lang::Hi), "सूर्य");
+        assert_eq!(graha(DashaLord::Jupiter, Lang::En), "Jupiter");
+        assert_eq!(sign(0, Lang::Hi), "मेष");
+        assert_eq!(star(0, Lang::Ml), "അശ്വതി");
+        assert_eq!(weekday(0, Lang::En), "Sunday");
+        assert_eq!(weekday(0, Lang::Hi), "रविवार");
+        assert_eq!(names_in("Sun, Moon and Mars", Lang::En), "Sun, Moon and Mars");
+        assert_eq!(names_in("Sun / Moon", Lang::Hi), "सूर्य / चंद्र");
+        assert_eq!(names_in("Capricorn · Uttara Ashadha", Lang::Ml), "മകരം · ഉത്രാടം");
+        assert_eq!(names_in("Sunday", Lang::Hi), "रविवार");
+        assert_eq!(names_in("Sunny", Lang::Hi), "Sunny");
     }
 
     #[test]
