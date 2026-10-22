@@ -43,10 +43,10 @@ private fun askedUntil(t: TakenRemedy): Long {
 
 /** What Kshana says back, humanely, to each answer. Never a claim that the remedy did it. */
 private fun replyTo(answer: String): String = when (answer) {
-    FollowThrough.EASED -> "Good. Things eased while you kept it. Keep the parts that helped; they are yours now."
-    FollowThrough.SAME -> "Thank you for saying so. Holding steady through a hard stretch is something. You can keep it going, or try another way below."
-    FollowThrough.HARDER -> "Thank you for telling it straight. A harder stretch is not your failing, and it does pass. Lean on the people near you, keep one small good deed going, and look at what else helps."
-    else -> "That is all right; life gets full. If you want, begin again at the next good hour. Even one small step counts."
+    FollowThrough.EASED -> tr("Good. Things eased while you kept it. Keep the parts that helped; they are yours now.")
+    FollowThrough.SAME -> tr("Thank you for saying so. Holding steady through a hard stretch is something. You can keep it going, or try another way below.")
+    FollowThrough.HARDER -> tr("Thank you for telling it straight. A harder stretch is not your failing, and it does pass. Lean on the people near you, keep one small good deed going, and look at what else helps.")
+    else -> tr("That is all right; life gets full. If you want, begin again at the next good hour. Even one small step counts.")
 }
 
 /**
@@ -70,14 +70,14 @@ private fun CheckInBlock(profileName: String, version: Int, onChange: () -> Unit
     val reply = replied
     if (t == null && reply == null) return
     Column(Modifier.fillMaxWidth().glass(16.dp).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("A GENTLE CHECK-IN", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(tr("A GENTLE CHECK-IN"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         if (reply != null) {
             Text(reply.first, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             Text(replyTo(reply.second), fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (onOpen != null) QuietButton(if (reply.second == FollowThrough.EASED) "SEE YOUR REMEDIES" else "SEE WHAT HELPS", onClick = onOpen)
+                if (onOpen != null) QuietButton(if (reply.second == FollowThrough.EASED) tr("SEE YOUR REMEDIES") else tr("SEE WHAT HELPS"), onClick = onOpen)
                 Text(
-                    if (t != null) "NEXT ›" else "CLOSE",
+                    if (t != null) tr("NEXT ›") else tr("CLOSE"),
                     style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted,
                     modifier = Modifier.clickable { replied = null }.padding(12.dp),
                 )
@@ -86,13 +86,13 @@ private fun CheckInBlock(profileName: String, version: Int, onChange: () -> Unit
         }
         t ?: return@Column
         Text(
-            "Did things ease between ${shortDate(t.startMillis)} and ${shortDate(askedUntil(t))}, while you kept “${t.title}”?",
+            trf("Did things ease between {0} and {1}, while you kept “{2}”?", shortDate(t.startMillis), shortDate(askedUntil(t)), t.title),
             fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 25.sp, color = KshanaColors.Text,
         )
         if (t.forStretch.isNotBlank()) Text(t.forStretch, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for ((label, answer) in listOf("EASED" to FollowThrough.EASED, "SAME" to FollowThrough.SAME, "HARDER" to FollowThrough.HARDER, "DIDN'T DO IT" to FollowThrough.SKIPPED)) {
-                Chip(label, selected = false, onClick = {
+                Chip(tr(label), selected = false, onClick = {
                     FollowThrough.answer(context, profileName, t.remedyId, answer)
                     replied = "“${t.title}”" to answer
                     onChange()
@@ -100,7 +100,7 @@ private fun CheckInBlock(profileName: String, version: Int, onChange: () -> Unit
             }
         }
         Text(
-            "There is no wrong answer; it only keeps your own record honest. ASK ME LATER",
+            tr("There is no wrong answer; it only keeps your own record honest. ASK ME LATER"),
             style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
             modifier = Modifier.clickable { FollowThrough.later(context, profileName, t.remedyId); onChange() },
         )
@@ -120,11 +120,11 @@ internal fun RemedyRecordCard(profileName: String, version: Int, onChange: () ->
     val words = FollowThrough.recordWords(FollowThrough.record(all)) ?: return
     val open = all.count { it.answer == null }
     Column(Modifier.fillMaxWidth().glass(16.dp).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("YOUR RECORD", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(tr("YOUR RECORD"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         Text(words, fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text)
-        if (open > 0) Text("$open still under way.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
+        if (open > 0) Text(trf("{0} still under way.", open), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
         Text(
-            "This is what you saw while keeping them, in your own words. It is not proof that a remedy caused it, and the record is only on your phone.",
+            tr("This is what you saw while keeping them, in your own words. It is not proof that a remedy caused it, and the record is only on your phone."),
             style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
         )
     }
@@ -148,14 +148,14 @@ private fun KeptWeeksBlock(version: Int) {
     }
     if (rows.isEmpty()) return
     Column(Modifier.fillMaxWidth().glass(16.dp).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("WEEKS KEPT, WEEKS MISSED", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(tr("WEEKS KEPT, WEEKS MISSED"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         for ((p, c) in rows) {
             Text(p.title, fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 22.sp, color = KshanaColors.Text)
             Text(c.words, style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
             if (c.suggestion.isNotBlank()) Text(c.suggestion, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
         }
         Text(
-            "Set beside each other from your own ticks and your own record. It is not proof that a remedy caused anything; it only shows what you saw.",
+            tr("Set beside each other from your own ticks and your own record. It is not proof that a remedy caused anything; it only shows what you saw."),
             style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
         )
     }
@@ -171,19 +171,19 @@ internal fun RemedyStartBlock(profileName: String, s: RemedyScheduleRecord, onTa
     var taken by remember(s.remedyId) { mutableStateOf(FollowThrough.open(context, profileName, s.remedyId) != null) }
     var why by remember(s.remedyId) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("BEGIN", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(tr("BEGIN"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         Text(s.startWords, fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky)
-        Text("Keep it ${s.keepWords}, ${s.untilWords}.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
+        Text(trf("Keep it {0}, {1}.", s.keepWords, s.untilWords), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
         Text(s.keepBasisWords.replaceFirstChar { it.uppercase() } + ".", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         Text(s.forStretchWords, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
         Text(
-            if (why) "WHY THIS HOUR −" else "WHY THIS HOUR +",
+            if (why) tr("WHY THIS HOUR −") else tr("WHY THIS HOUR +"),
             style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
             modifier = Modifier.clickable { why = !why }.padding(vertical = 4.dp),
         )
         if (why) Text(s.whyNow, style = MaterialTheme.typography.bodySmall, lineHeight = 18.sp, color = KshanaColors.TextSoft)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            QuietButton(if (taken) "TAKEN ON ✓" else "TAKE IT ON", onClick = {
+            QuietButton(if (taken) tr("TAKEN ON ✓") else tr("TAKE IT ON"), onClick = {
                 if (taken) {
                     FollowThrough.drop(context, profileName, s.remedyId)
                     taken = false

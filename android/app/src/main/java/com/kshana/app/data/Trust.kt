@@ -166,7 +166,7 @@ object Trust {
             engine.familyProof(
                 profile.birthInstant(), profile.latitude, profile.longitude, male,
                 people.map { FamilyMemberInput(it.name, relations.optString(it.name, "Other"), it.birthInstant(), it.latitude, it.longitude) },
-                place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), 6u,
+                place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), 6u, Lang.code,
             )
         }
         return r.aboutYou

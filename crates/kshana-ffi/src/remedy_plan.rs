@@ -11,14 +11,17 @@
 //!
 //! What the person reads: `title`, `start_words`, `keep_words`, `keep_basis_words`,
 //! `until_words`, `for_stretch_words`, `why_now` and `reminder_text`, all in plain words
-//! (English for now). `remedy_id`, `branch`, `keep_basis`, `keep_source` and `start_iso`
+//! (in the reader's language). `remedy_id`, `branch`, `keep_basis`, `keep_source` and `start_iso`
 //! are for the app and the expert layer (see `plain_audit` below). Remedies are steadying
 //! good acts begun at a good hour; nothing here promises they change what is coming.
 
-use kshana_rules::remedy_timing::{keep_for, Keep, StartChoice, TimingTable, WEEKDAY_NAMES};
+use kshana_rules::remedy_timing::{
+    basis_words, day_words, keep_for, keep_words, reminder_text, span_words, stretch_words, until_words, why_now, TimingTable,
+};
 use kshana_rules::{Lang, Life};
 use kshana_sky::Observer;
 use kshana_time::{Instant, Utc, NS_PER_DAY, NS_PER_SEC};
+#[cfg(test)]
 use kshana_vedic::DashaLord;
 
 use crate::{focus_of, lord_name, to_house_system, AyanamsaChoice, Engine, ExactInstant, HouseSystem, KshanaError};
@@ -98,44 +101,6 @@ fn local(t: Instant, offset_min: i32) -> Utc {
     Utc::from_instant(t.add_ns(offset_min as i128 * 60 * NS_PER_SEC))
 }
 
-const MONTHS: [&str; 12] = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-fn weekday_of_local(u: &Utc) -> usize {
-    (u.utc_day() + 4).rem_euclid(7) as usize
-}
-
-/// "Saturday 24 Oct".
-fn day_words(t: Instant, offset_min: i32) -> String {
-    let u = local(t, offset_min);
-    format!("{} {} {}", WEEKDAY_NAMES[weekday_of_local(&u)], u.day, MONTHS[(u.month as usize).clamp(1, 12) - 1])
-}
-
-/// "24 Oct 2026".
-fn date_words(t: Instant, offset_min: i32) -> String {
-    let u = local(t, offset_min);
-    format!("{} {} {}", u.day, MONTHS[(u.month as usize).clamp(1, 12) - 1], u.year)
-}
-
-/// (hour 1–12, minute, "am"/"pm") of a local time.
-fn clock(u: &Utc) -> (u32, u32, &'static str) {
-    let h = u.hour % 12;
-    (if h == 0 { 12 } else { h }, u.minute, if u.hour < 12 { "am" } else { "pm" })
-}
-
-/// "7:13–8:10 am" or "11:40 am–12:38 pm": the start rounded up to the minute so the
-/// person is never early, the end rounded down.
-fn span_words(a: Instant, b: Instant, offset_min: i32) -> String {
-    let up = a.add_ns(NS_PER_SEC * 60 - 1);
-    let (ua, ub) = (local(up, offset_min), local(b, offset_min));
-    let (ha, ma, pa) = clock(&ua);
-    let (hb, mb, pb) = clock(&ub);
-    if pa == pb {
-        format!("{ha}:{ma:02}–{hb}:{mb:02} {pb}")
-    } else {
-        format!("{ha}:{ma:02} {pa}–{hb}:{mb:02} {pb}")
-    }
-}
-
 fn iso(t: Instant, offset_min: i32) -> String {
     let u = local(t, offset_min);
     let sign = if offset_min < 0 { '-' } else { '+' };
@@ -151,70 +116,6 @@ fn iso(t: Instant, offset_min: i32) -> String {
         o / 60,
         o % 60
     )
-}
-
-fn plural_day(wd: usize) -> String {
-    format!("{}s", WEEKDAY_NAMES[wd % 7])
-}
-
-/// The length in plain words.
-fn keep_words(k: &Keep, wd: usize, on_weekday: bool) -> String {
-    match (k.every, k.times) {
-        (0, _) if k.days >= 28 => "once, within the month".into(),
-        (0, _) if k.days >= 7 => "once, within the week".into(),
-        (0, _) => "once".into(),
-        (1, n) => format!("{n} days in a row"),
-        (7, n) if on_weekday => format!("{n} {} in a row", plural_day(wd)),
-        (7, n) => format!("once a week for {n} weeks"),
-        (2, n) => format!("three times a week for {} weeks", n / 3),
-        (_, n) => format!("once a month for {n} months"),
-    }
-}
-
-fn basis_words(basis: &str) -> &'static str {
-    match basis {
-        "text" => "a length the old books give",
-        "custom" => "the count kept in temples and homes",
-        _ => "the tradition sets no count; this is long enough to notice a change",
-    }
-}
-
-/// Why this hour.
-fn why_now(c: &StartChoice, offset_min: i32) -> String {
-    let wd = WEEKDAY_NAMES[c.weekday as usize % 7];
-    let part = if c.hora.hora_index == 1 { "the first hour after sunrise" } else { "a good hour" };
-    let mut s = format!("It begins in {part} on {wd}, the day kept for this kind of help.");
-    match (c.tithi_supports, c.star_supports) {
-        (true, true) => s.push_str(" The date in the old calendar and the day's star both favour a start."),
-        (true, false) => s.push_str(" The date in the old calendar favours a start."),
-        (false, true) => s.push_str(" The day's star favours a start."),
-        _ => {}
-    }
-    if c.waxing {
-        s.push_str(" It falls in the bright half of the month, when vows are begun.");
-    }
-    if c.weeks_later > 0 {
-        s.push_str(&format!(
-            " It waits {} for the {wd} that suits best.",
-            if c.weeks_later == 1 { "a week" } else { "two weeks" }
-        ));
-    }
-    s.push_str(&format!(
-        " It keeps clear of {}, the part of that day the tradition avoids for new starts.",
-        span_words(c.rahu_kala.0, c.rahu_kala.1, offset_min)
-    ));
-    s
-}
-
-/// The stretch in plain words.
-fn stretch_words(lord: DashaLord, kind: &str, life: Life, until: Option<Instant>, offset_min: i32) -> String {
-    let p = kshana_rules::plain::pressure(lord);
-    let life = life.name().to_ascii_lowercase();
-    match until {
-        Some(u) => format!("For the {p} weighing on your {life} now, easing around {}.", date_words(u, offset_min)),
-        None if kind == "natal" => format!("For the {p} your {life} has carried from birth; keep it as long as it steadies you."),
-        None => format!("For the {p} weighing on your {life}; no end is in sight within two years, so this is what you can do."),
-    }
 }
 
 #[uniffi::export]
@@ -267,8 +168,8 @@ impl Engine {
             let Some(start) = table.best_start(&obs, c.key, at_i, 3) else { continue };
             let s = start.hora.start;
             let wd = start.weekday as usize;
-            let stretch = stretch_words(c.key, c.source, tree.life, c.until, offset);
-            let why = why_now(&start, offset);
+            let stretch = stretch_words(lang, c.key, c.source, tree.life, c.until, offset);
+            let why = why_now(lang, &start, offset);
             for b in &c.branches {
                 for (ii, r) in b.items.iter().enumerate() {
                     let on_weekday = r.day != any_day;
@@ -279,7 +180,7 @@ impl Engine {
                     let start_ms = unix_ms(s);
                     let stretch_end_ms = c.until.map(unix_ms);
                     let check = stretch_end_ms.map_or(until_ms, |e| e.min(until_ms)).max(start_ms + 7 * 86_400_000);
-                    let kw = keep_words(&k, wd, on_weekday);
+                    let kw = keep_words(lang, &k, wd, on_weekday);
                     out.push(RemedyScheduleRecord {
                         remedy_id: format!("T:{}:{}:{}:{ii}", tree.life.name(), lord_name(c.key), b.key),
                         title: r.title.clone(),
@@ -290,26 +191,22 @@ impl Engine {
                         start_iso: iso(s, offset),
                         start_ms,
                         start_end_ms: unix_ms(start.hora.end),
-                        start_words: format!("{}, {}", day_words(s, offset), span_words(s, start.hora.end, offset)),
+                        start_words: format!("{}, {}", day_words(lang, s, offset), span_words(lang, s, start.hora.end, offset)),
                         days: k.days,
                         times: k.times,
                         every_days: k.every,
                         weekday_iso: if k.every == 7 && on_weekday { if wd == 0 { 7 } else { wd as u8 } } else { 0 },
                         keep_basis: k.basis.to_string(),
-                        keep_basis_words: if k.times <= 1 { "one act; no count is needed".to_string() } else { basis_words(k.basis).to_string() },
+                        keep_basis_words: basis_words(lang, &k).to_string(),
                         keep_source: k.source.to_string(),
                         until_ms,
-                        until_words: match (k.times, k.days) {
-                            (0 | 1, 0 | 1) => format!("on {}", day_words(last, offset)),
-                            (0 | 1, _) => format!("by {}", day_words(last, offset)),
-                            _ => format!("until {}", day_words(last, offset)),
-                        },
+                        until_words: until_words(lang, &k, last, offset),
                         stretch_start_ms: c.since.map(unix_ms),
                         stretch_end_ms,
                         for_stretch_words: stretch.clone(),
                         check_in_ms: check,
                         why_now: why.clone(),
-                        reminder_text: format!("Time to begin: {}. Keep it {kw}.", r.title.trim_end_matches('.')),
+                        reminder_text: reminder_text(lang, &r.title, &kw),
                         keep_words: kw,
                         source_keys: r
                             .source_keys
@@ -366,6 +263,33 @@ mod plain_audit {
         let b = at(1990, 2, 20, 5);
         e.remedy_schedule(b, 9.9312, 76.2673, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, life.map(Into::into), now, "en".into(), vec![], 330)
             .unwrap()
+    }
+
+    #[test]
+    fn remedy_schedule_reads_in_three_languages() {
+        let e = engine();
+        let b = at(1990, 2, 20, 5);
+        let mut counts = Vec::new();
+        for lang in ["en", "ml", "hi"] {
+            let l = Lang::parse(lang);
+            let rs = e
+                .remedy_schedule(b.clone(), 9.9312, 76.2673, 28.6139, 77.2090, HouseSystem::Placidus, AyanamsaChoice::Lahiri, Some("Career".into()), at(2026, 10, 21, 6), lang.into(), vec![], 330)
+                .unwrap();
+            assert!(!rs.is_empty());
+            counts.push(rs.iter().map(|r| (r.start_ms, r.until_ms, r.times)).collect::<Vec<_>>());
+            for r in &rs {
+                for v in [&r.start_words, &r.keep_words, &r.keep_basis_words, &r.until_words, &r.for_stretch_words, &r.why_now] {
+                    assert_eq!(kshana_rules::plain::jargon_in(l, v), None, "{lang}: {v}");
+                    let latin = v.split(|c: char| !c.is_ascii_alphabetic()).any(|w| w.len() >= 2);
+                    match l {
+                        Lang::En => {}
+                        Lang::Ml => assert!(v.chars().any(|c| ('\u{0D00}'..='\u{0D7F}').contains(&c)) && !latin, "{v}"),
+                        Lang::Hi => assert!(v.chars().any(|c| ('\u{0900}'..='\u{097F}').contains(&c)) && !latin, "{v}"),
+                    }
+                }
+            }
+        }
+        assert!(counts.windows(2).all(|c| c[0] == c[1]));
     }
 
     #[test]
@@ -450,10 +374,10 @@ mod plain_audit {
         use kshana_rules::remedy_timing::keep_for;
         let k = keep_for("weekly", "deeds", DashaLord::Saturn, true);
         assert_eq!((k.times, k.days, k.every, k.basis), (7, 43, 7, "custom"));
-        assert_eq!(keep_words(&k, 6, true), "7 Saturdays in a row");
+        assert_eq!(keep_words(Lang::En, &k, 6, true), "7 Saturdays in a row");
         let k = keep_for("weekly", "giving", DashaLord::Moon, true);
         assert_eq!((k.times, k.days), (16, 106));
-        assert_eq!(keep_words(&k, 1, true), "16 Mondays in a row");
+        assert_eq!(keep_words(Lang::En, &k, 1, true), "16 Mondays in a row");
         let k = keep_for("weekly", "giving", DashaLord::Rahu, true);
         assert_eq!((k.times, k.basis), (8, "default"));
         let k = keep_for("daily", "deeds", DashaLord::Mars, false);
@@ -463,9 +387,9 @@ mod plain_audit {
         let k = keep_for("40", "habits", DashaLord::Sun, false);
         assert_eq!((k.days, k.basis), (40, "text"));
         let k = keep_for("week", "deeds", DashaLord::Sun, false);
-        assert_eq!(keep_words(&k, 0, false), "once, within the week");
-        assert_eq!(keep_words(&keep_for("monthly", "nature", DashaLord::Sun, false), 0, false), "once a month for 3 months");
-        assert_eq!(keep_words(&keep_for("3w", "habits", DashaLord::Sun, false), 0, false), "three times a week for 8 weeks");
+        assert_eq!(keep_words(Lang::En, &k, 0, false), "once, within the week");
+        assert_eq!(keep_words(Lang::En, &keep_for("monthly", "nature", DashaLord::Sun, false), 0, false), "once a month for 3 months");
+        assert_eq!(keep_words(Lang::En, &keep_for("3w", "habits", DashaLord::Sun, false), 0, false), "three times a week for 8 weeks");
         // Every effort in every tree branch maps to a known key, in all three languages.
         for lang in [Lang::En, Lang::Ml, Lang::Hi] {
             for g in DashaLord::ORDER {
@@ -501,10 +425,10 @@ mod plain_audit {
     #[test]
     fn words_read_right() {
         let t: Instant = at(2026, 10, 24, 1).into(); // 06:30 IST
-        assert_eq!(day_words(t, 330), "Saturday 24 Oct");
-        assert_eq!(span_words(t, t.add_ns(58 * 60 * NS_PER_SEC), 330), "6:30–7:28 am");
+        assert_eq!(day_words(Lang::En, t, 330), "Saturday 24 Oct");
+        assert_eq!(span_words(Lang::En, t, t.add_ns(58 * 60 * NS_PER_SEC), 330), "6:30–7:28 am");
         let noon: Instant = at(2026, 10, 24, 6).into(); // 11:30 IST
-        assert_eq!(span_words(noon, noon.add_ns(60 * 60 * NS_PER_SEC), 330), "11:30 am–12:30 pm");
+        assert_eq!(span_words(Lang::En, noon, noon.add_ns(60 * 60 * NS_PER_SEC), 330), "11:30 am–12:30 pm");
         assert_eq!(iso(t, 330), "2026-10-24T06:30:00+05:30");
         assert_eq!(unix_ms(t), 1_792_803_600_000);
     }

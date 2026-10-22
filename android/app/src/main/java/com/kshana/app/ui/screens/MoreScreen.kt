@@ -151,24 +151,24 @@ fun MoreScreen(profile: BirthProfile?, onOpen: (String) -> Unit) {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(top = 44.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text("EXPLORE", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-        Text(profile?.name?.takeIf { it.isNotBlank() } ?: "You", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+        Text(tr("EXPLORE"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(profile?.name?.takeIf { it.isNotBlank() } ?: tr("You"), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         if (profile != null) {
             Text(
-                "%d %s %d · %02d:%02d · %s".format(profile.day, MONTHS[(profile.month - 1).coerceIn(0, 11)], profile.year, profile.hour, profile.minute, profile.placeName),
+                "%d %s %d · %02d:%02d · %s".format(profile.day, tr(MONTHS[(profile.month - 1).coerceIn(0, 11)]), profile.year, profile.hour, profile.minute, profile.placeName),
                 style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
             )
         }
         Text(
-            "Find the page for what you need. A gold dot marks the ones you have not opened yet; tap ☆ to keep a page in Favorites.",
+            tr("Find the page for what you need. A gold dot marks the ones you have not opened yet; tap ☆ to keep a page in Favorites."),
             style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
         )
 
         val clock = rememberAncientClock()
         val visible = MORE_PAGES.filter { !it.expert || expert }
         for ((section, pages) in visible.groupBy { it.section }) {
-            SectionLabel(section)
-            SECTION_LINES[section]?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft) }
+            SectionLabel(tr(section))
+            SECTION_LINES[section]?.let { Text(tr(it), style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft) }
             PageGrid(pages, clock, open) { p -> p.section in NEED_SECTIONS && com.kshana.app.data.Discover.isNew(p.route) }
         }
     }
@@ -239,7 +239,7 @@ internal fun PageCard(
             Spacer(Modifier.weight(1f))
             Box(
                 Modifier.size(40.dp).clickable { Favorites.toggle(context, page.route) }
-                    .semantics { contentDescription = if (starred) "Remove ${page.title} from favorites" else "Add ${page.title} to favorites" },
+                    .semantics { contentDescription = if (starred) trf("Remove {0} from favorites", tr(page.title)) else trf("Add {0} to favorites", tr(page.title)) },
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -249,16 +249,16 @@ internal fun PageCard(
                 )
             }
         }
-        Text(page.title, fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 21.sp, color = KshanaColors.Text, modifier = Modifier.padding(end = 8.dp))
+        Text(tr(page.title), fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 21.sp, color = KshanaColors.Text, modifier = Modifier.padding(end = 8.dp))
         Text(
-            page.detail, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
+            tr(page.detail), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
             maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(end = 8.dp),
         )
         Spacer(Modifier.weight(1f))
         if (fresh) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(7.dp).background(KshanaColors.Gold, CircleShape))
-                Text("  NEW TO YOU", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+                Text("  " + tr("NEW TO YOU"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
             }
         }
         footer?.invoke()

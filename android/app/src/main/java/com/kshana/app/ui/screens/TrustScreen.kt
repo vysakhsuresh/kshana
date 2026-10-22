@@ -210,7 +210,7 @@ fun TrustScreen(profile: BirthProfile?, settings: EngineSettings, onBack: () -> 
             MonoRow("models", c.provenanceModels)
         }
 
-        SectionLabel("Your record")
+        SectionLabel(tr("Your record"))
         if (profile != null) {
             // The one honest number: sealed predictions answered after their dates only; the
             // past tuned the birth time, so it sits on its own line and never counts.
@@ -227,12 +227,12 @@ fun TrustScreen(profile: BirthProfile?, settings: EngineSettings, onBack: () -> 
         Text(record.words, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
         for (l in record.lives.filter { it.n > 0u }) {
             Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("${lifeGlyph(l.life)} ${l.life}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1f))
+                Text("${lifeGlyph(l.life)} ${lifeName(l.life)}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1f))
                 Text("${l.hits} / ${l.n}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky)
                 if (l.offset != 0.0) Text("  ${signedPoints(l.offset)}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Gold)
             }
         }
-        Text("Every window the app names on a life page can be judged after it passes. Five answers for a life make a record; a record moves nothing silently, it is shown beside the score.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        Text(tr("Every window the app names on a life page can be judged after it passes. Five answers for a life make a record; a record moves nothing silently, it is shown beside the score."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
 
         SectionLabel("Rules")
         Text("Every sentence traces to a rule. docs/RULES.md in the repository lists them.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)

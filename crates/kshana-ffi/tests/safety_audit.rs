@@ -444,7 +444,7 @@ fn feeds(range: std::ops::Range<usize>, name: &str) {
                     a.run(&tag(&format!("explain_{life}")), || e.explain(b, la, lo, hla, hlo, HS, AY, life.clone(), t));
                 }
             }
-            // The family's shared windows (no language parameter: English).
+            // The family's shared windows, one language per chart in turn.
             let fam: Vec<FamilyMemberInput> = (1..=4)
                 .map(|k| {
                     let (rb, rla, rlo, _) = cs[(ci + k * 3) % cs.len()];
@@ -452,7 +452,8 @@ fn feeds(range: std::ops::Range<usize>, name: &str) {
                 })
                 .collect();
             let main_male = [Some(male), None, Some(!male)][ci % 3];
-            a.run(&tag("family"), || e.family_proof(b, la, lo, main_male, fam, hla, hlo, HS, AY, t, 24));
+            let flang = LANGS[ci % LANGS.len()];
+            a.run(&tag(&format!("family.{flang}")), || e.family_proof(b, la, lo, main_male, fam, hla, hlo, HS, AY, t, 24, flang.into()));
         }
         // Once per chart: the natal pages and the match with another chart.
         let t = ds[0];

@@ -73,7 +73,7 @@ private fun scoreOf(context: android.content.Context, profile: BirthProfile): Sc
  */
 private fun blindQuestionOf(c: ClaimRecord, lon: Double): String =
     runCatching { blindQuestion(Lang.code, c.area, c.windowStart, c.windowEnd, lon) }.getOrNull()?.takeIf { it.isNotBlank() }
-        ?: "Did anything happen between ${localText(c.windowStart, DATE_ONLY)} and ${localText(c.windowEnd, DATE_ONLY)}? Good, hard, or nothing much?"
+        ?: trf("Did anything happen between {0} and {1}? Good, hard, or nothing much?", localText(c.windowStart, DATE_ONLY), localText(c.windowEnd, DATE_ONLY))
 
 /**
  * The plain scoreboard: one honest number ("For you, Kshana has been right 38 times out
@@ -105,10 +105,10 @@ fun ScoreboardScreen(profile: BirthProfile, settings: EngineSettings, onBack: ()
     fun share(b: ScoreboardRecord) {
         val send = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, "My score with Kshana")
-            putExtra(Intent.EXTRA_TEXT, "${b.shareText}\n\nKshana · your time, read plainly")
+            putExtra(Intent.EXTRA_SUBJECT, tr("My score with Kshana"))
+            putExtra(Intent.EXTRA_TEXT, "${b.shareText}\n\n${tr("Kshana · your time, read plainly")}")
         }
-        runCatching { context.startActivity(Intent.createChooser(send, "Share my score")) }
+        runCatching { context.startActivity(Intent.createChooser(send, tr("Share my score"))) }
     }
 
     Column(
@@ -116,27 +116,27 @@ fun ScoreboardScreen(profile: BirthProfile, settings: EngineSettings, onBack: ()
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("YOUR SCORE", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-            Text("BACK", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onBack).padding(12.dp))
+            Text(tr("YOUR SCORE"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            Text(tr("BACK"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onBack).padding(12.dp))
         }
-        Text("How right has it been?", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+        Text(tr("How right has it been?"), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
 
         Column(Modifier.fillMaxWidth().glass(18.dp).padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("THE SCORE, HONESTLY", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            Text(tr("THE SCORE, HONESTLY"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
             if (board == null) {
-                Working("adding up your answers…")
+                Working(tr("adding up your answers…"))
             } else {
                 Text(board.headline, fontFamily = FontFamily.Serif, fontSize = if (board.total > 0u) 24.sp else 18.sp, lineHeight = if (board.total > 0u) 32.sp else 26.sp, color = if (board.total > 0u) KshanaColors.Gold else KshanaColors.Text)
                 if (board.chanceLine.isNotEmpty()) Text(board.chanceLine, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
                 if (board.note.isNotEmpty()) Text(board.note, style = MaterialTheme.typography.bodySmall, color = if (board.beatsChance) KshanaColors.Leaf else KshanaColors.Sky)
                 if (board.total > 0u) {
-                    Text("SHARE MY SCORE ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable { share(board) }.padding(vertical = 6.dp))
+                    Text(tr("SHARE MY SCORE ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable { share(board) }.padding(vertical = 6.dp))
                 }
             }
         }
 
         if (board != null && board.lines.isNotEmpty()) {
-            SectionLabel("Where the score comes from")
+            SectionLabel(tr("Where the score comes from"))
             for (l in board.lines) {
                 HorizontalDivider(color = KshanaColors.LineSoft)
                 Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -151,7 +151,7 @@ fun ScoreboardScreen(profile: BirthProfile, settings: EngineSettings, onBack: ()
 
         // The past, on its own line: it tuned the birth time, so it never counts.
         if (board != null && board.fitTotal > 0u) {
-            SectionLabel("How well the reading fits your past")
+            SectionLabel(tr("How well the reading fits your past"))
             Text(board.fitLine, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
             if (board.fitLines.size > 1) {
                 for (l in board.fitLines) Text("· ${l.words}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
@@ -161,7 +161,7 @@ fun ScoreboardScreen(profile: BirthProfile, settings: EngineSettings, onBack: ()
         // Cards answered here stay on screen, so the sealed words revealed after a blind answer can be read.
         val dueShown = (answeredHere + due).distinctBy { it.id }.sortedBy { it.windowStart.taiSeconds }
         if (dueShown.isNotEmpty()) {
-            SectionLabel("Waiting for your answer")
+            SectionLabel(tr("Waiting for your answer"))
             for (c in dueShown) {
                 key(c.id) {
                     ClaimAnswerCard(c, profile, onAnswered = { if (answeredHere.none { it.id == c.id }) answeredHere.add(c); version++ }, onRemedy = { onOpen("parihara") })
@@ -169,63 +169,63 @@ fun ScoreboardScreen(profile: BirthProfile, settings: EngineSettings, onBack: ()
             }
         }
 
-        SectionLabel("Sealed, still to come")
+        SectionLabel(tr("Sealed, still to come"))
         if (waiting.isEmpty()) {
-            Text("Nothing sealed is waiting right now. The app seals the firm dates of your forecast before they begin, a few at a time.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            Text(tr("Nothing sealed is waiting right now. The app seals the firm dates of your forecast before they begin, a few at a time."), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         } else {
             for (c in waiting) ClaimRow(c, nowTai)
         }
         sealNote?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky) }
-        QuietButton(if (sealing) "SEALING…" else "SEAL WHAT IS COMING", onClick = {
+        QuietButton(if (sealing) tr("SEALING…") else tr("SEAL WHAT IS COMING"), onClick = {
             if (!sealing) scope.launch {
                 sealing = true
                 val n = Trust.topUp(context, profile, settings, force = true)
-                sealNote = if (n > 0) "Sealed $n more. Each has its fingerprint below." else "Nothing new is firm enough to seal yet; the next look is in a week."
+                sealNote = if (n > 0) trf("Sealed {0} more. Each has its fingerprint below.", n) else tr("Nothing new is firm enough to seal yet; the next look is in a week.")
                 version++
                 sealing = false
             }
         }, modifier = Modifier.fillMaxWidth())
 
         if (answered.isNotEmpty()) {
-            SectionLabel("Answered")
+            SectionLabel(tr("Answered"))
             for (c in answered) ClaimRow(c, nowTai)
         }
 
         tilt?.let {
-            SectionLabel("What your answers do")
+            SectionLabel(tr("What your answers do"))
             Text(it.plain, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
         }
 
         if (confidences.isNotEmpty()) {
-            SectionLabel("How sure, in numbers only when earned")
+            SectionLabel(tr("How sure, in numbers only when earned"))
             for ((t, c) in confidences) {
                 Text(
-                    "${if (t == "strong") "The firmest predictions" else "The likely ones"}: ${c.words}",
+                    "${tr(if (t == "strong") "The firmest predictions" else "The likely ones")}: ${c.words}",
                     style = MaterialTheme.typography.bodyMedium, color = if (c.numberShown) KshanaColors.Text else KshanaColors.TextSoft,
                 )
             }
         }
 
         if (rates.isNotEmpty()) {
-            SectionLabel("Each way of reading, for you")
+            SectionLabel(tr("Each way of reading, for you"))
             for (r in rates) Text(r.words, style = MaterialTheme.typography.bodySmall, color = if (r.weighted) KshanaColors.Text else KshanaColors.Muted)
             Text(
-                "Each one is checked only on sealed predictions it agreed with, after their dates. Below 10 checks it changes nothing; after that it counts a little more or less for you, and never so much that one way of reading outweighs the rest.",
+                tr("Each one is checked only on sealed predictions it agreed with, after their dates. Below 10 checks it changes nothing; after that it counts a little more or less for you, and never so much that one way of reading outweighs the rest."),
                 style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
             )
         }
 
-        SectionLabel("How this works")
+        SectionLabel(tr("How this works"))
         board?.let { Text(it.howItWorks, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft) }
 
-        SectionLabel("How sealing works")
+        SectionLabel(tr("How sealing works"))
         Text(
-            "Each prediction is written down before its dates begin, with a fingerprint of its exact words and the moment it was sealed. If a single letter changed afterwards, the fingerprint would no longer match, and it would show here. Nothing is sealed once its dates have begun.",
+            tr("Each prediction is written down before its dates begin, with a fingerprint of its exact words and the moment it was sealed. If a single letter changed afterwards, the fingerprint would no longer match, and it would show here. Nothing is sealed once its dates have begun."),
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft,
         )
         Spacer(Modifier.height(12.dp))
         Text(
-            "A miss is shown as plainly as a hit. That is the only way the number means anything.",
+            tr("A miss is shown as plainly as a hit. That is the only way the number means anything."),
             fontFamily = KshanaFonts.serif, fontStyle = FontStyle.Italic, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text,
         )
     }
@@ -239,17 +239,17 @@ private fun ClaimRow(c: ClaimRecord, nowTai: Long) {
         Text("${lifeGlyph(c.area)} ${lifeName(c.area).uppercase()}", style = MaterialTheme.typography.labelSmall, color = if (c.good) KshanaColors.Leaf else KshanaColors.Ember)
         Text(c.statement, fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 22.sp, color = KshanaColors.Text)
         val result = when (c.outcome) {
-            "yes" -> "It came as sealed."
-            "close" -> "Close: counted half."
-            "no" -> "It did not come: counted as a miss."
-            else -> if (c.windowStart.taiSeconds > nowTai) "Sealed. Its dates are still to come." else "Running until ${localText(c.windowEnd, DATE_ONLY)}."
+            "yes" -> tr("It came as sealed.")
+            "close" -> tr("Close: counted half.")
+            "no" -> tr("It did not come: counted as a miss.")
+            else -> if (c.windowStart.taiSeconds > nowTai) tr("Sealed. Its dates are still to come.") else trf("Running until {0}.", localText(c.windowEnd, DATE_ONLY))
         }
         Text(
             result, style = MaterialTheme.typography.bodySmall,
             color = when (c.outcome) { "yes" -> KshanaColors.Leaf; "close" -> KshanaColors.Gold; "no" -> KshanaColors.Sky; else -> KshanaColors.TextSoft },
         )
         Text(
-            "Sealed ${localText(c.createdAt, DATE_ONLY)} · ${c.code()} · ${if (c.verified) "fingerprint matches" else "FINGERPRINT DOES NOT MATCH"}",
+            "${trf("Sealed {0}", localText(c.createdAt, DATE_ONLY))} · ${c.code()} · ${tr(if (c.verified) "fingerprint matches" else "FINGERPRINT DOES NOT MATCH")}",
             fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = if (c.verified) KshanaColors.Muted else KshanaColors.Ember,
         )
     }
@@ -269,12 +269,12 @@ private fun ClaimAnswerCard(c: ClaimRecord, profile: BirthProfile, onAnswered: (
     val question = remember(c.id) { blindQuestionOf(c, profile.longitude) }
     val buttons = remember { runCatching { blindAnswers(Lang.code) }.getOrDefault(emptyList()) }
     Column(Modifier.fillMaxWidth().glass(16.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("A SEALED PREDICTION HAS CLOSED", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(tr("A SEALED PREDICTION HAS CLOSED"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         val s = said
         if (s == null) {
             Text(question, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 25.sp, color = KshanaColors.Text)
             Text(
-                "Sealed ${localText(c.createdAt, DATE_ONLY)}, before it began · ${c.code()}. What it said stays hidden until you answer, so your answer is your own.",
+                trf("Sealed {0}, before it began · {1}. What it said stays hidden until you answer, so your answer is your own.", localText(c.createdAt, DATE_ONLY), c.code()),
                 fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted,
             )
             val main = buttons.filter { it.key != "unsure" }
@@ -295,13 +295,13 @@ private fun ClaimAnswerCard(c: ClaimRecord, profile: BirthProfile, onAnswered: (
             }
         } else {
             Text(s.reveal, fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 23.sp, color = KshanaColors.Text)
-            Text("Sealed ${localText(c.createdAt, DATE_ONLY)} · ${c.code()} · ${if (c.verified) "fingerprint matches" else "FINGERPRINT DOES NOT MATCH"}", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = if (c.verified) KshanaColors.Muted else KshanaColors.Ember)
+            Text("${trf("Sealed {0}", localText(c.createdAt, DATE_ONLY))} · ${c.code()} · ${tr(if (c.verified) "fingerprint matches" else "FINGERPRINT DOES NOT MATCH")}", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = if (c.verified) KshanaColors.Muted else KshanaColors.Ember)
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                 if (!c.good || saidKey == "hard" || saidKey == "mixed") {
-                    Text("WHAT HELPS ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRemedy).padding(vertical = 4.dp))
+                    Text(tr("WHAT HELPS ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRemedy).padding(vertical = 4.dp))
                 }
                 if (onScore != null) {
-                    Text("YOUR SCORE ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onScore).padding(vertical = 4.dp))
+                    Text(tr("YOUR SCORE ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onScore).padding(vertical = 4.dp))
                 }
             }
         }
@@ -324,11 +324,11 @@ fun BlindSealCard(seal: com.kshana.app.data.PastReveal.Seal, lon: Double, onAnsw
     }
     val sealedAt = remember(seal.fingerprint) { Instants.fromInstant(java.time.Instant.ofEpochMilli(seal.sealedAt)) }
     Column(Modifier.fillMaxWidth().glass(16.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("A SEALED PREDICTION HAS CLOSED", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(tr("A SEALED PREDICTION HAS CLOSED"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         val s = said
         if (s == null) {
             Text(question, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 25.sp, color = KshanaColors.Text)
-            Text("Sealed before it began · ${seal.shortCode()}. What it said stays hidden until you answer.", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
+            Text(trf("Sealed before it began · {0}. What it said stays hidden until you answer.", seal.shortCode()), fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
             for (row in buttons.chunked(2)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     for (b in row) {
@@ -347,12 +347,12 @@ fun BlindSealCard(seal: com.kshana.app.data.PastReveal.Seal, lon: Double, onAnsw
             Text(s.reveal, fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 23.sp, color = KshanaColors.Text)
             if (s.outcome == "no" || s.outcome == "close") {
                 Text(
-                    "A wrong guess still helps, because it narrows down the birth time.",
+                    tr("A wrong guess still helps, because it narrows down the birth time."),
                     style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft,
                 )
             }
             if (!seal.good || saidKey == "hard" || saidKey == "mixed") {
-                Text("WHAT HELPS ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRemedy).padding(vertical = 4.dp))
+                Text(tr("WHAT HELPS ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRemedy).padding(vertical = 4.dp))
             }
         }
     }
@@ -387,7 +387,7 @@ fun ResolveDueCard(profile: BirthProfile, onOpen: (String) -> Unit) {
         onScore = { onOpen("scoreboard") },
     )
     if (current != null && next != null && next.id != current?.id) {
-        Text("NEXT ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable { current = null; version++ }.padding(vertical = 4.dp))
+        Text(tr("NEXT ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable { current = null; version++ }.padding(vertical = 4.dp))
     }
 }
 
@@ -412,7 +412,7 @@ fun ScoreChip(profile: BirthProfile, onClick: () -> Unit, modifier: Modifier = M
     ) {
         val t = board?.takeIf { it.total > 0u }
         Text(
-            if (t == null) "YOUR SCORE" else "${t.rightText} OF ${t.total} RIGHT",
+            if (t == null) tr("YOUR SCORE") else trf("{0} OF {1} RIGHT", t.rightText, t.total),
             fontFamily = KshanaFonts.mono, fontSize = 10.sp, letterSpacing = 1.sp,
             color = if (t != null && !t.beatsChance) KshanaColors.Sky else KshanaColors.Gold,
         )

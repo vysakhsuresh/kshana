@@ -14,8 +14,15 @@ object Discover {
     private const val K_SINCE = "disc.since"
     private const val K_SKIP = "disc.skip"
 
-    /** One door: a page, why it is worth opening, and the button's words. */
-    data class Door(val route: String, val title: String, val why: String, val go: String)
+    /**
+     * One door: a page, why it is worth opening, and the button's words. The English is
+     * stored; [title], [why] and [go] give it in the chosen language each time they are drawn.
+     */
+    data class Door(val route: String, private val titleEn: String, private val whyEn: String, private val goEn: String) {
+        val title: String get() = Lang.t(titleEn)
+        val why: String get() = Lang.t(whyEn)
+        val go: String get() = Lang.t(goEn)
+    }
 
     /** The first week: one door a day, in this order. */
     val WEEK = listOf(

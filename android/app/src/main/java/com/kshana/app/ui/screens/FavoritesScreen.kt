@@ -48,26 +48,26 @@ fun FavoritesScreen(onOpen: (String) -> Unit) {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(top = 44.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text("FAVORITES", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-        Text("Kept close", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+        Text(tr("FAVORITES"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(tr("Kept close"), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
 
         if (pinned.isEmpty()) {
             Column(Modifier.fillMaxWidth().glass(14.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("YOUR SHELF IS EMPTY", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+                Text(tr("YOUR SHELF IS EMPTY"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
                 Text(
-                    "Tap the ☆ beside any page here or under Explore, and it stays on this tab, one tap away.",
+                    tr("Tap the ☆ beside any page here or under Explore, and it stays on this tab, one tap away."),
                     fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 24.sp, color = KshanaColors.Text,
                 )
             }
         } else {
-            SectionLabel("Starred")
+            SectionLabel(tr("Starred"))
             PageGrid(pinned, clock, open, footer = { p ->
                 val i = pinned.indexOf(p)
                 if (pinned.size > 1) {
                     Row(Modifier.fillMaxWidth().padding(end = 8.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                        if (i > 0) Text("‹ EARLIER", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted,
+                        if (i > 0) Text("‹ " + tr("EARLIER"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted,
                             modifier = Modifier.clickable { Favorites.move(context, p.route, -1) }.padding(horizontal = 6.dp, vertical = 6.dp))
-                        if (i < pinned.lastIndex) Text("LATER ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted,
+                        if (i < pinned.lastIndex) Text(tr("LATER") + " ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted,
                             modifier = Modifier.clickable { Favorites.move(context, p.route, 1) }.padding(horizontal = 6.dp, vertical = 6.dp))
                     }
                 }
@@ -75,16 +75,16 @@ fun FavoritesScreen(onOpen: (String) -> Unit) {
         }
 
         if (often.isNotEmpty()) {
-            SectionLabel("You open these often")
+            SectionLabel(tr("You open these often"))
             PageGrid(often, clock, open)
         }
 
         val suggestions = SUGGESTED.filter { !Favorites.isPinned(it) && often.none { o -> o.route == it } }.mapNotNull { visible[it] }
         if (pinned.size < 3 && suggestions.isNotEmpty()) {
-            SectionLabel("Worth keeping close")
+            SectionLabel(tr("Worth keeping close"))
             PageGrid(suggestions, clock, open)
         }
 
-        QuietButton("SEE EVERY PAGE UNDER EXPLORE", onClick = { onOpen("more") }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
+        QuietButton(tr("SEE EVERY PAGE UNDER EXPLORE"), onClick = { onOpen("more") }, modifier = Modifier.fillMaxWidth().padding(top = 12.dp))
     }
 }

@@ -188,13 +188,13 @@ private fun PariharaPlainScreen(profile: BirthProfile, settings: EngineSettings,
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("WHAT TO DO", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-            Text("BACK", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onBack).padding(12.dp))
+            Text(tr("WHAT TO DO"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            Text(tr("BACK"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onBack).padding(12.dp))
         }
-        Text("What will help", style = MaterialTheme.typography.displayLarge, color = KshanaColors.Text)
+        Text(tr("What will help"), style = MaterialTheme.typography.displayLarge, color = KshanaColors.Text)
         if (onFull != null) {
             Text(
-                "OPEN THE FULL REMEDY LEDGER",
+                tr("OPEN THE FULL REMEDY LEDGER"),
                 style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
                 modifier = Modifier.clickable(onClick = onFull).padding(vertical = 8.dp),
             )
@@ -202,7 +202,7 @@ private fun PariharaPlainScreen(profile: BirthProfile, settings: EngineSettings,
         ErrorLine(error)
         val rec = record
         if (rec == null) {
-            if (error == null) Working("finding what will help…")
+            if (error == null) Working(tr("finding what will help…"))
         } else {
             // What costs money is never "required" and never counts against the effort.
             val required = rec.remedies.filter { !it.optional && !it.costsMoney }
@@ -213,22 +213,22 @@ private fun PariharaPlainScreen(profile: BirthProfile, settings: EngineSettings,
                 WorthinessRing(worthiness)
                 Spacer(Modifier.width(20.dp))
                 Column {
-                    Text("YOUR EFFORT", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
+                    Text(tr("YOUR EFFORT"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
                     Text("$keptRequired / ${required.size}", style = MaterialTheme.typography.headlineLarge, color = KshanaColors.Text)
-                    Text("of the main remedies you are keeping", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                    Text(tr("of the main remedies you are keeping"), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
                 }
             }
             Text(
                 since?.let { d ->
                     val days = ChronoUnit.DAYS.between(d, LocalDate.now()) + 1
-                    "day $days of keeping it up · ${kept.size} remedies held"
-                } ?: "No commitment yet. Tap a remedy to hold it.",
+                    trf("day {0} of keeping it up · {1} remedies held", days, kept.size)
+                } ?: tr("No commitment yet. Tap a remedy to hold it."),
                 fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky,
             )
 
-            SectionLabel("What is pressing on you")
+            SectionLabel(tr("What is pressing on you"))
             Column(Modifier.fillMaxWidth().glass(8.dp).padding(16.dp)) {
-                Text(when { rec.severity >= 0.66 -> "PRESSING HARD"; rec.severity >= 0.33 -> "PRESSING MODERATELY"; else -> "PRESSING LIGHTLY" }, style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+                Text(when { rec.severity >= 0.66 -> tr("PRESSING HARD"); rec.severity >= 0.33 -> tr("PRESSING MODERATELY"); else -> tr("PRESSING LIGHTLY") }, style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
                 Text(rec.cause, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text, modifier = Modifier.padding(top = 6.dp))
             }
             HowThisHelps(remember(rec.planet, life) { uniffi.kshana_ffi.remedyHowItHelps(rec.planet, if (rec.runningLevel != null) "dasha" else "natal", life) })
@@ -239,46 +239,46 @@ private fun PariharaPlainScreen(profile: BirthProfile, settings: EngineSettings,
             val today = java.time.LocalDate.now().dayOfWeek
             val pd = planetDay(rec.planet)
             if (pd == today) {
-                Text("Today is ${today.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH)}, the day these remedies work best. What you keep today counts double; tick what you did.", fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Gold)
+                Text(trf("Today is {0}, the day these remedies work best. What you keep today counts double; tick what you did.", tr(today.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH))), fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Gold)
             }
             if (kept.isNotEmpty()) {
                 Row(Modifier.fillMaxWidth().glass(12.dp).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("🔥", fontSize = 22.sp)
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("$bestStreak-day streak", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
-                        Text("Tick TODAY on a held remedy once you have done it. The run counts consecutive days; a morning tick keeps yesterday's run alive.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                        Text(trf("{0}-day streak", bestStreak), style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
+                        Text(tr("Tick TODAY on a held remedy once you have done it. The run counts consecutive days; a morning tick keeps yesterday's run alive."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
                     }
                 }
             }
             var group by remember { mutableStateOf("ALL") }
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                for ((label, _) in GROUPS) Chip(label, selected = group == label, onClick = { group = label })
+                for ((label, _) in GROUPS) Chip(tr(label), selected = group == label, onClick = { group = label })
             }
             val set = GROUPS.firstOrNull { it.first == group }?.second
             val inGroup = rec.remedies.withIndex().filter { set == null || it.value.kind in set }
             val shown = inGroup.filter { !it.value.costsMoney }
             val paid = inGroup.filter { it.value.costsMoney }
-            SectionLabel("What helps most, first · ${shown.size} of ${rec.remedies.size}")
-            if (shown.isEmpty()) Text("None of this kind for you right now.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            SectionLabel(trf("What helps most, first · {0} of {1}", shown.size, rec.remedies.size))
+            if (shown.isEmpty()) Text(tr("None of this kind for you right now."), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             for ((i, r) in shown) RemedyRow(i + 1, r, r.title in kept, rec.planet, streakVersion, { streakVersion++ }) { toggle(rec, r) }
             // Whatever costs money (a stone, a paid rite, a costly gift) waits behind its own door.
             if (paid.isNotEmpty()) {
                 var showPaid by remember { mutableStateOf(false) }
                 Text(
-                    if (showPaid) "WAYS THAT COST MONEY −" else "WAYS THAT COST MONEY +  ·  ${paid.size}, only if you choose",
+                    if (showPaid) tr("WAYS THAT COST MONEY −") else trf("WAYS THAT COST MONEY +  ·  {0}, only if you choose", paid.size),
                     style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted,
                     modifier = Modifier.clickable { showPaid = !showPaid }.padding(vertical = 10.dp),
                 )
                 if (showPaid) {
                     Text(
-                        "None of these is needed: the steps above do the work. A gemstone only with a qualified astrologer's advice; never necessary. Spend only what you can spare, never on anyone's insistence.",
+                        tr("None of these is needed: the steps above do the work. A gemstone only with a qualified astrologer's advice; never necessary. Spend only what you can spare, never on anyone's insistence."),
                         style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
                     )
                     for ((i, r) in paid) RemedyRow(i + 1, r, r.title in kept, rec.planet, streakVersion, { streakVersion++ }) { toggle(rec, r) }
                 }
             }
-            Text("Doing, serving and good habits do the real work. Giving and fasting support them. Chanting and prayer are optional, never required.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(top = 8.dp))
+            Text(tr("Doing, serving and good habits do the real work. Giving and fasting support them. Chanting and prayer are optional, never required."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(top = 8.dp))
         }
     }
 }
@@ -312,7 +312,7 @@ private fun RemedyRow(rank: Int, r: RemedyRecord, committed: Boolean, planet: St
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(kindWords(r.kind), style = MaterialTheme.typography.labelSmall, color = colour)
-                if (r.optional) Text(" · OPTIONAL · NOT REQUIRED", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
+                if (r.optional) Text(" · " + tr("OPTIONAL · NOT REQUIRED"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
             }
             Text(r.title, fontFamily = FontFamily.Serif, fontSize = 18.sp, color = if (r.optional) KshanaColors.TextSoft else KshanaColors.Text)
             Text(r.why, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
@@ -322,7 +322,7 @@ private fun RemedyRow(rank: Int, r: RemedyRecord, committed: Boolean, planet: St
                 val ticked = remember(streakVersion) { com.kshana.app.data.StreakStore.tickedToday(context, planet, r.title) }
                 val streak = remember(streakVersion) { com.kshana.app.data.StreakStore.streak(context, planet, r.title) }
                 Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Chip(if (ticked) "✓ DONE TODAY" else "TODAY", selected = ticked, onClick = { com.kshana.app.data.StreakStore.toggleToday(context, planet, r.title); onTicked() })
+                    Chip(if (ticked) tr("✓ DONE TODAY") else tr("TODAY"), selected = ticked, onClick = { com.kshana.app.data.StreakStore.toggleToday(context, planet, r.title); onTicked() })
                     if (streak > 0) Text("🔥 $streak", fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = KshanaColors.Gold)
                 }
             }
@@ -388,47 +388,47 @@ fun PariharaLedgerScreen(profile: BirthProfile, settings: EngineSettings, onBack
     ) {
         Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("PARIHARA", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-                QuietButton("BACK", onClick = onBack)
+                Text(tr("PARIHARA"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+                QuietButton(tr("BACK"), onClick = onBack)
             }
-            Text("Earn the period.", style = MaterialTheme.typography.displayLarge, color = KshanaColors.Text)
+            Text(tr("Earn the period."), style = MaterialTheme.typography.displayLarge, color = KshanaColors.Text)
             Text(
-                "The cause the running lords locate, what the texts let a remedy claim, and the ledger of what you did · ${profile.placeName}",
+                trf("The cause the running lords locate, what the texts let a remedy claim, and the ledger of what you did · {0}", profile.placeName),
                 style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
             )
             ErrorLine(error)
         }
 
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 24.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            for (a in listOf(ALL) + AREAS) Chip(a.uppercase(), selected = a == area, onClick = { area = a })
+            for (a in listOf(ALL) + AREAS) Chip(tr(a.uppercase()), selected = a == area, onClick = { area = a })
         }
 
         Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SectionLabel("The ledger")
+            SectionLabel(tr("The ledger"))
             LedgerCard(metrics, commitments, rec, nowMillis, zone)
 
             if (rec == null) {
                 if (loading || error == null) {
                     Text(
-                        if (area == ALL) "weighing the running lords…" else "weighing the running lords and the lord of ${area.lowercase()}…",
+                        if (area == ALL) tr("weighing the running lords…") else trf("weighing the running lords and the lord of {0}…", tr(area.uppercase()).lowercase()),
                         style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
                     )
                 }
             } else {
-                SectionLabel("The cause")
+                SectionLabel(tr("The cause"))
                 CauseCard(rec, zone)
 
-                SectionLabel("Doshas present")
+                SectionLabel(tr("Doshas present"))
                 val present = rec.doshas.filter { it.present }
                 if (present.isEmpty()) {
-                    Text("No curse yoga or dosha stands in this chart.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+                    Text(tr("No curse yoga or dosha stands in this chart."), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
                 } else {
                     for (d in present) DoshaRow(d)
                 }
 
-                SectionLabel("Remedies, ranked")
+                SectionLabel(tr("Remedies, ranked"))
                 if (rec.remedies.isEmpty()) {
-                    Text("The engine names no remedy for this period.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+                    Text(tr("The engine names no remedy for this period."), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
                 }
                 var lastRung = -1
                 for (r in rec.remedies) {
@@ -489,7 +489,7 @@ private fun ThinBar(fraction: Float, colour: Color, modifier: Modifier = Modifie
 @Composable
 private fun ToggleLabel(open: Boolean, label: String, onToggle: () -> Unit) {
     Text(
-        if (open) "HIDE" else label.uppercase(),
+        if (open) tr("HIDE") else tr(label.uppercase()),
         style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
         modifier = Modifier.clickable(onClick = onToggle).padding(vertical = 8.dp),
     )
@@ -502,13 +502,13 @@ private fun ToggleLabel(open: Boolean, label: String, onToggle: () -> Unit) {
 private fun LedgerCard(m: Metrics, commitments: List<Commitment>, rec: PariharaRecord?, nowMillis: Long, zone: ZoneId) {
     NightCard {
         if (commitments.isEmpty()) {
-            Text("You hold no remedy yet.", fontFamily = KshanaFonts.serif, fontSize = 18.sp, lineHeight = 24.sp, color = KshanaColors.Text)
-            Text("Hold one below and the ledger opens at its first window.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            Text(tr("You hold no remedy yet."), fontFamily = KshanaFonts.serif, fontSize = 18.sp, lineHeight = 24.sp, color = KshanaColors.Text)
+            Text(tr("Hold one below and the ledger opens at its first window."), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             return@NightCard
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            LedgerCount("7 DAYS", m.kept7, m.planned7, Modifier.weight(1f))
-            LedgerCount("40 DAYS", m.kept40, m.planned40, Modifier.weight(1f))
+            LedgerCount(tr("7 DAYS"), m.kept7, m.planned7, Modifier.weight(1f))
+            LedgerCount(tr("40 DAYS"), m.kept40, m.planned40, Modifier.weight(1f))
         }
         Text("kept over planned · a log counts as kept; no streak is counted", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
         HorizontalDivider(color = KshanaColors.LineSoft)
@@ -521,14 +521,14 @@ private fun LedgerCard(m: Metrics, commitments: List<Commitment>, rec: PariharaR
                 ?.map { CommitmentStore.millisOf(it.start) }
                 ?.filter { it > nowMillis }
                 ?.minOrNull()
-        val nextWords = next?.let { "The next window is ${whenWords(it, zone)}." }
-            ?: "No further window is planned; open this screen after the next sunrise and the plan extends."
+        val nextWords = next?.let { trf("The next window is {0}.", whenWords(it, zone)) }
+            ?: tr("No further window is planned; open this screen after the next sunrise and the plan extends.")
         val lapse = m.lapses.lastOrNull()
         Text(
             when {
-                lapse != null -> "You missed ${dayWords(lapse, zone)}. $nextWords Repair it there; one missed day does not void the vow."
-                m.planned40 == 0 -> "Nothing has come due yet. $nextWords"
-                else -> "You missed nothing in the last 40 days. $nextWords"
+                lapse != null -> trf("You missed {0}. {1} Repair it there; one missed day does not void the vow.", dayWords(lapse, zone), nextWords)
+                m.planned40 == 0 -> trf("Nothing has come due yet. {0}", nextWords)
+                else -> trf("You missed nothing in the last 40 days. {0}", nextWords)
             },
             fontFamily = KshanaFonts.serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text,
         )
@@ -659,9 +659,9 @@ private fun RemedyCard(
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(r.kind.uppercase(), style = MaterialTheme.typography.labelSmall, color = colour)
             if (gem) {
-                Text(" · INFORMATION ONLY", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
+                Text(" · " + tr("INFORMATION ONLY"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
             } else if (r.optional) {
-                Text(" · OPTIONAL, NEVER REQUIRED", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
+                Text(" · " + tr("OPTIONAL, NEVER REQUIRED"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
             }
             Spacer(Modifier.weight(1f))
             Text("fit ${"%.2f".format(r.fit)} · ${r.effort}", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
@@ -682,7 +682,7 @@ private fun RemedyCard(
 
         if (!gem && r.windows.isNotEmpty()) {
             HorizontalDivider(color = KshanaColors.LineSoft)
-            Text("NEXT WINDOWS", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
+            Text(tr("NEXT WINDOWS"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
             for (w in r.windows.take(3)) WindowRow(r, w, zone)
         }
 
@@ -693,7 +693,7 @@ private fun RemedyCard(
         if (gem) return@NightCard
         HorizontalDivider(color = KshanaColors.LineSoft)
         if (held == null) {
-            QuietButton("HOLD THIS", onClick = onHold, modifier = Modifier.fillMaxWidth())
+            QuietButton(tr("HOLD THIS"), onClick = onHold, modifier = Modifier.fillMaxWidth())
         } else {
             val last = held.doneInstants.lastOrNull()
             Text(
@@ -703,8 +703,8 @@ private fun RemedyCard(
                 fontFamily = KshanaFonts.mono, fontSize = 10.sp, lineHeight = 15.sp, color = KshanaColors.Gold,
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                GoldButton("DID IT NOW", onClick = onDone, modifier = Modifier.weight(1f))
-                QuietButton("RELEASE", onClick = onRelease)
+                GoldButton(tr("DID IT NOW"), onClick = onDone, modifier = Modifier.weight(1f))
+                QuietButton(tr("RELEASE"), onClick = onRelease)
             }
         }
     }

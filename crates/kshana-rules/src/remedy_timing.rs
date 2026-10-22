@@ -36,6 +36,10 @@ use kshana_sky::{apparent, Observer};
 use kshana_time::{EopTable, Instant, Utc, NS_PER_DAY, NS_PER_SEC};
 use kshana_vedic::{ayanamsa_degrees, nakshatra, sidereal, Ayanamsa, DashaLord, Tithi};
 
+use crate::forecast::Life;
+use crate::lang;
+use crate::plain::Lang;
+
 /// One exact window a remedy can be scheduled into.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RemedyWindow {
@@ -698,6 +702,248 @@ pub fn keep_for(effort_key: &str, branch: &str, planet: DashaLord, on_weekday: b
     }
 }
 
+// ---------------------------------------------------------------------------------
+// Plain words for the person: when to begin, how long to keep it, what it is for.
+// English, Malayalam and Hindi; the English is the source and reads as it always has.
+// ---------------------------------------------------------------------------------
+
+fn local_at(t: Instant, offset_min: i32) -> Utc {
+    Utc::from_instant(t.add_ns(offset_min as i128 * 60 * NS_PER_SEC))
+}
+
+fn weekday_of_local(u: &Utc) -> usize {
+    (u.utc_day() + 4).rem_euclid(7) as usize
+}
+
+/// "Saturday 24 Oct", "ഒക്ടോബർ 24, ശനിയാഴ്ച", "24 अक्टूबर, शनिवार".
+pub fn day_words(lang: Lang, t: Instant, offset_min: i32) -> String {
+    let u = local_at(t, offset_min);
+    let wd = weekday_of_local(&u);
+    let month = lang::month_name(lang, u.month);
+    match lang {
+        Lang::En => format!("{} {} {}", WEEKDAY_NAMES[wd], u.day, month),
+        Lang::Ml => format!("{month} {}, {}", u.day, lang::weekday(lang, wd)),
+        Lang::Hi => format!("{} {month}, {}", u.day, lang::weekday(lang, wd)),
+    }
+}
+
+/// "24 Oct 2026", "2026 ഒക്ടോബർ 24", "24 अक्टूबर 2026".
+pub fn date_words(lang: Lang, t: Instant, offset_min: i32) -> String {
+    let u = local_at(t, offset_min);
+    let month = lang::month_name(lang, u.month);
+    match lang {
+        Lang::Ml => format!("{} {month} {}", u.year, u.day),
+        _ => format!("{} {month} {}", u.day, u.year),
+    }
+}
+
+/// (hour 1–12, minute, "am"/"pm") of a local time.
+fn clock(u: &Utc) -> (u32, u32, &'static str) {
+    let h = u.hour % 12;
+    (if h == 0 { 12 } else { h }, u.minute, if u.hour < 12 { "am" } else { "pm" })
+}
+
+/// The part of the day an hour falls in, as Malayalam and Hindi say the time.
+fn day_part(lang: Lang, hour: u32) -> &'static str {
+    let t = match hour {
+        4..=11 => ["am", "രാവിലെ", "सुबह"],
+        12..=15 => ["pm", "ഉച്ചയ്ക്ക്", "दोपहर"],
+        16..=18 => ["pm", "വൈകുന്നേരം", "शाम"],
+        _ => [if hour < 12 { "am" } else { "pm" }, "രാത്രി", "रात"],
+    };
+    lang.pick(t)
+}
+
+/// "7:13–8:10 am" or "11:40 am–12:38 pm" ("രാവിലെ 7:13–8:10", "सुबह 7:13–8:10"): the
+/// start rounded up to the minute so the person is never early, the end rounded down.
+pub fn span_words(lang: Lang, a: Instant, b: Instant, offset_min: i32) -> String {
+    let up = a.add_ns(NS_PER_SEC * 60 - 1);
+    let (ua, ub) = (local_at(up, offset_min), local_at(b, offset_min));
+    let (ha, ma, pa) = clock(&ua);
+    let (hb, mb, pb) = clock(&ub);
+    if lang == Lang::En {
+        return if pa == pb { format!("{ha}:{ma:02}–{hb}:{mb:02} {pb}") } else { format!("{ha}:{ma:02} {pa}–{hb}:{mb:02} {pb}") };
+    }
+    let (qa, qb) = (day_part(lang, ua.hour), day_part(lang, ub.hour));
+    if qa == qb {
+        format!("{qa} {ha}:{ma:02}–{hb}:{mb:02}")
+    } else {
+        format!("{qa} {ha}:{ma:02} – {qb} {hb}:{mb:02}")
+    }
+}
+
+/// How long to keep it: "7 Saturdays in a row", "21 days in a row", "once, within the week".
+pub fn keep_words(lang: Lang, k: &Keep, wd: usize, on_weekday: bool) -> String {
+    let day = lang::weekday(lang, wd);
+    match lang {
+        Lang::En => match (k.every, k.times) {
+            (0, _) if k.days >= 28 => "once, within the month".into(),
+            (0, _) if k.days >= 7 => "once, within the week".into(),
+            (0, _) => "once".into(),
+            (1, n) => format!("{n} days in a row"),
+            (7, n) if on_weekday => format!("{n} {}s in a row", WEEKDAY_NAMES[wd % 7]),
+            (7, n) => format!("once a week for {n} weeks"),
+            (2, n) => format!("three times a week for {} weeks", n / 3),
+            (_, n) => format!("once a month for {n} months"),
+        },
+        Lang::Ml => match (k.every, k.times) {
+            (0, _) if k.days >= 28 => "ഒരു തവണ, ഈ മാസത്തിനുള്ളിൽ".into(),
+            (0, _) if k.days >= 7 => "ഒരു തവണ, ഈ ആഴ്ചയ്ക്കുള്ളിൽ".into(),
+            (0, _) => "ഒരു തവണ".into(),
+            (1, n) => format!("തുടർച്ചയായി {n} ദിവസം"),
+            (7, n) if on_weekday => format!("തുടർച്ചയായി {n} {day}കൾ"),
+            (7, n) => format!("{n} ആഴ്ച, ആഴ്ചയിൽ ഒരിക്കൽ"),
+            (2, n) => format!("{} ആഴ്ച, ആഴ്ചയിൽ മൂന്നു തവണ", n / 3),
+            (_, n) => format!("{n} മാസം, മാസത്തിൽ ഒരിക്കൽ"),
+        },
+        Lang::Hi => match (k.every, k.times) {
+            (0, _) if k.days >= 28 => "एक बार, महीने के भीतर".into(),
+            (0, _) if k.days >= 7 => "एक बार, हफ़्ते के भीतर".into(),
+            (0, _) => "एक बार".into(),
+            (1, n) => format!("लगातार {n} दिन"),
+            (7, n) if on_weekday => format!("लगातार {n} {day}"),
+            (7, n) => format!("{n} हफ़्ते तक, हफ़्ते में एक बार"),
+            (2, n) => format!("{} हफ़्ते तक, हफ़्ते में तीन बार", n / 3),
+            (_, n) => format!("{n} महीने तक, महीने में एक बार"),
+        },
+    }
+}
+
+/// The count's standing in plain words: "the count kept in temples and homes".
+pub fn basis_words(lang: Lang, k: &Keep) -> &'static str {
+    let t = if k.times <= 1 {
+        ["one act; no count is needed", "ഒറ്റത്തവണ ചെയ്യുന്ന കാര്യം; എണ്ണം വേണ്ട", "एक ही बार का काम; गिनती की ज़रूरत नहीं"]
+    } else {
+        match k.basis {
+            "text" => ["a length the old books give", "പഴയ ഗ്രന്ഥങ്ങൾ പറയുന്ന കാലയളവ്", "पुरानी किताबों में बताई गई अवधि"],
+            "custom" => ["the count kept in temples and homes", "ക്ഷേത്രങ്ങളിലും വീടുകളിലും പാലിച്ചുവരുന്ന എണ്ണം", "मंदिरों और घरों में निभाई जाने वाली गिनती"],
+            _ => [
+                "the tradition sets no count; this is long enough to notice a change",
+                "പാരമ്പര്യം എണ്ണം നിശ്ചയിക്കുന്നില്ല; ഒരു മാറ്റം തിരിച്ചറിയാൻ ഇത്രയും കാലം മതി",
+                "परंपरा कोई गिनती तय नहीं करती; बदलाव महसूस करने के लिए इतना समय काफ़ी है",
+            ],
+        }
+    };
+    lang.pick(t)
+}
+
+/// The last day in words: "until Saturday 5 Dec", "by …" for a single act over days,
+/// "on …" for a single act on one day.
+pub fn until_words(lang: Lang, k: &Keep, last: Instant, offset_min: i32) -> String {
+    let d = day_words(lang, last, offset_min);
+    let i = match (k.times, k.days) {
+        (0 | 1, 0 | 1) => 0,
+        (0 | 1, _) => 1,
+        _ => 2,
+    };
+    match lang {
+        Lang::En => format!("{} {d}", ["on", "by", "until"][i]),
+        Lang::Ml => format!("{d} {}", ["ദിവസം", "ആകുമ്പോഴേക്കും", "വരെ"][i]),
+        Lang::Hi => format!("{d} {}", ["को", "तक", "तक"][i]),
+    }
+}
+
+/// What the start reminder says: "Time to begin: … Keep it 21 days in a row."
+pub fn reminder_text(lang: Lang, title: &str, keep: &str) -> String {
+    let title = title.trim_end_matches(['.', '।']);
+    match lang {
+        Lang::En => format!("Time to begin: {title}. Keep it {keep}."),
+        Lang::Ml => format!("തുടങ്ങാൻ സമയമായി: {title}. ഇങ്ങനെ തുടരുക: {keep}."),
+        Lang::Hi => format!("शुरू करने का समय आ गया: {title}। इसे ऐसे निभाएँ: {keep}।"),
+    }
+}
+
+/// Why this hour, in plain words.
+pub fn why_now(lang: Lang, c: &StartChoice, offset_min: i32) -> String {
+    let span = span_words(lang, c.rahu_kala.0, c.rahu_kala.1, offset_min);
+    let first = c.hora.hora_index == 1;
+    let wd_i = c.weekday as usize % 7;
+    match lang {
+        Lang::En => {
+            let wd = WEEKDAY_NAMES[wd_i];
+            let part = if first { "the first hour after sunrise" } else { "a good hour" };
+            let mut s = format!("It begins in {part} on {wd}, the day kept for this kind of help.");
+            match (c.tithi_supports, c.star_supports) {
+                (true, true) => s.push_str(" The date in the old calendar and the day's star both favour a start."),
+                (true, false) => s.push_str(" The date in the old calendar favours a start."),
+                (false, true) => s.push_str(" The day's star favours a start."),
+                _ => {}
+            }
+            if c.waxing {
+                s.push_str(" It falls in the bright half of the month, when vows are begun.");
+            }
+            if c.weeks_later > 0 {
+                s.push_str(&format!(" It waits {} for the {wd} that suits best.", if c.weeks_later == 1 { "a week" } else { "two weeks" }));
+            }
+            s.push_str(&format!(" It keeps clear of {span}, the part of that day the tradition avoids for new starts."));
+            s
+        }
+        Lang::Ml => {
+            let wd = lang::weekday(lang, wd_i);
+            let part = if first { "സൂര്യോദയത്തിനു ശേഷമുള്ള ആദ്യ മണിക്കൂറിൽ" } else { "ഒരു നല്ല മണിക്കൂറിൽ" };
+            let mut s = format!("{wd} ഇത്തരം സഹായത്തിനായി കരുതുന്ന ദിവസമാണ്; അന്ന് {part} ഇതു തുടങ്ങുന്നു.");
+            match (c.tithi_supports, c.star_supports) {
+                (true, true) => s.push_str(" പഴയ കലണ്ടറിലെ തീയതിയും അന്നത്തെ നാളും തുടങ്ങാൻ അനുകൂലമാണ്."),
+                (true, false) => s.push_str(" പഴയ കലണ്ടറിലെ തീയതി തുടങ്ങാൻ അനുകൂലമാണ്."),
+                (false, true) => s.push_str(" അന്നത്തെ നാൾ തുടങ്ങാൻ അനുകൂലമാണ്."),
+                _ => {}
+            }
+            if c.waxing {
+                s.push_str(" വ്രതങ്ങൾ തുടങ്ങുന്ന, മാസത്തിലെ വെളുത്ത പക്ഷത്തിലാണ് ഇത്.");
+            }
+            if c.weeks_later > 0 {
+                s.push_str(&format!(" ഏറ്റവും യോജിച്ച {wd}യ്ക്കായി ഇത് {} കാത്തിരിക്കുന്നു.", if c.weeks_later == 1 { "ഒരാഴ്ച" } else { "രണ്ടാഴ്ച" }));
+            }
+            s.push_str(&format!(" ആ ദിവസം പുതിയ തുടക്കങ്ങൾക്കായി പാരമ്പര്യം ഒഴിവാക്കുന്ന {span} എന്ന സമയം ഇതു ഒഴിവാക്കുന്നു."));
+            s
+        }
+        Lang::Hi => {
+            let wd = lang::weekday(lang, wd_i);
+            let part = if first { "सूर्योदय के बाद के पहले घंटे में" } else { "एक अच्छे घंटे में" };
+            let mut s = format!("यह {wd} को {part} शुरू होता है, जो इस तरह की मदद के लिए रखा गया दिन है।");
+            match (c.tithi_supports, c.star_supports) {
+                (true, true) => s.push_str(" पुराने कैलेंडर की तारीख़ और उस दिन का तारा, दोनों शुरुआत के अनुकूल हैं।"),
+                (true, false) => s.push_str(" पुराने कैलेंडर की तारीख़ शुरुआत के अनुकूल है।"),
+                (false, true) => s.push_str(" उस दिन का तारा शुरुआत के अनुकूल है।"),
+                _ => {}
+            }
+            if c.waxing {
+                s.push_str(" यह महीने के उजले पखवाड़े में पड़ता है, जब व्रत शुरू किए जाते हैं।");
+            }
+            if c.weeks_later > 0 {
+                s.push_str(&format!(" सबसे सही {wd} के लिए यह {} रुकता है।", if c.weeks_later == 1 { "एक हफ़्ता" } else { "दो हफ़्ते" }));
+            }
+            s.push_str(&format!(" यह {span} से दूर रहता है, उस दिन का वह हिस्सा जिसे परंपरा नई शुरुआत के लिए टालती है।"));
+            s
+        }
+    }
+}
+
+/// The hard stretch a remedy answers: "For the delays, heavy duty and tiredness weighing
+/// on your career now, easing around 3 Mar 2027." `kind` is the cause's source
+/// (`"natal"` for what the person was born with).
+pub fn stretch_words(lang: Lang, lord: DashaLord, kind: &str, life: Life, until: Option<Instant>, offset_min: i32) -> String {
+    let p = lang::pressure(lang, lord);
+    let life = lang::life_lower(lang, life);
+    match lang {
+        Lang::En => match until {
+            Some(u) => format!("For the {p} weighing on your {life} now, easing around {}.", date_words(lang, u, offset_min)),
+            None if kind == "natal" => format!("For the {p} your {life} has carried from birth; keep it as long as it steadies you."),
+            None => format!("For the {p} weighing on your {life}; no end is in sight within two years, so this is what you can do."),
+        },
+        Lang::Ml => match until {
+            Some(u) => format!("ഇപ്പോൾ നിങ്ങളുടെ {life} കാര്യങ്ങളിൽ ഭാരമാകുന്ന {p} എന്നിവയ്ക്കായി; {}-ഓടെ ഇത് അയഞ്ഞുതുടങ്ങും.", date_words(lang, u, offset_min)),
+            None if kind == "natal" => format!("ജനനം മുതൽ നിങ്ങളുടെ {life} കാര്യങ്ങളിൽ ഉള്ള {p} എന്നിവയ്ക്കായി; മനസ്സിന് സ്ഥിരത തരുന്നിടത്തോളം ഇതു തുടരുക."),
+            None => format!("നിങ്ങളുടെ {life} കാര്യങ്ങളിൽ ഭാരമാകുന്ന {p} എന്നിവയ്ക്കായി; രണ്ടു വർഷത്തിനുള്ളിൽ ഇതു പൂർണ്ണമായി മാറുന്നതായി കാണുന്നില്ല, അതിനാൽ ഈ ചെറിയ നന്മ ഇപ്പോൾ തന്നെ തുടങ്ങാം."),
+        },
+        Lang::Hi => match until {
+            Some(u) => format!("अभी आपके {life} पर भारी पड़ रहे {p} के लिए; {} के आसपास यह हल्का होने लगेगा।", date_words(lang, u, offset_min)),
+            None if kind == "natal" => format!("जन्म से आपके {life} के साथ चल रहे {p} के लिए; जब तक यह मन को स्थिर रखे, इसे जारी रखें।"),
+            None => format!("आपके {life} पर भारी पड़ रहे {p} के लिए; दो साल के भीतर यह पूरी तरह हटता नहीं दिखता, इसलिए यह छोटा-सा अच्छा काम अभी से शुरू किया जा सकता है।"),
+        },
+    }
+}
+
 /// The planet's next windows from `from`: `count` of its weekdays with every hora of
 /// the planet on each (the first after sunrise is the day's cue), the Rahu kala to
 /// avoid and the Brahma muhurta before that sunrise, plus up to `count` of its tithis
@@ -872,6 +1118,82 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// True when `s` holds a run of two or more Latin letters: an English word.
+    fn has_english(s: &str) -> bool {
+        s.split(|c: char| !c.is_ascii_alphabetic()).any(|w| w.len() >= 2)
+    }
+
+    #[test]
+    fn the_plain_words_read_in_three_languages() {
+        let t = Utc::new(2026, 10, 24, 1, 0, 0, 0).unwrap().to_instant().unwrap(); // 06:30 IST
+        let h = 60 * 60 * NS_PER_SEC;
+        let hora = RemedyWindow { start: t, end: t.add_ns(58 * 60 * NS_PER_SEC), kind: "weekday hora", words: String::new(), hora_index: 1 };
+        let choice = |first: bool, tithi: bool, star: bool, waxing: bool, weeks: u32| StartChoice {
+            hora: RemedyWindow { hora_index: if first { 1 } else { 4 }, ..hora.clone() },
+            day: SolarDay { sunrise: t, sunset: t.add_ns(12 * h), next_sunrise: t.add_ns(24 * h) },
+            weekday: 6,
+            rahu_kala: (t.add_ns(3 * h), t.add_ns(9 * h / 2)),
+            tithi: Some(4),
+            tithi_supports: tithi,
+            star: Some(7),
+            star_supports: star,
+            waxing,
+            weeks_later: weeks,
+            score: 0,
+        };
+        let keeps: Vec<Keep> = ["40", "30", "daily", "weekly", "wish", "3w", "monthly", "week", "month", "once"]
+            .iter()
+            .flat_map(|e| [keep_for(e, "tradition", DashaLord::Saturn, true), keep_for(e, "deeds", DashaLord::Rahu, false)])
+            .collect();
+        for lang in ["en", "ml", "hi"] {
+            let l = Lang::parse(lang);
+            let mut lines = vec![day_words(l, t, 330), date_words(l, t, 330), span_words(l, t, t.add_ns(h), 330), span_words(l, t.add_ns(5 * h), t.add_ns(6 * h), 330)];
+            for k in &keeps {
+                lines.push(keep_words(l, k, 6, true));
+                lines.push(keep_words(l, k, 3, false));
+                lines.push(basis_words(l, k).to_string());
+                lines.push(until_words(l, k, t, 330));
+            }
+            for bits in 0..32u32 {
+                let c = choice(bits & 1 != 0, bits & 2 != 0, bits & 4 != 0, bits & 8 != 0, (bits >> 4) + (bits & 1));
+                lines.push(why_now(l, &c, 330));
+            }
+            for g in DashaLord::ORDER {
+                for life in Life::ALL {
+                    lines.push(stretch_words(l, g, "dasha", life, Some(t), 330));
+                    lines.push(stretch_words(l, g, "natal", life, None, 330));
+                    lines.push(stretch_words(l, g, "transit", life, None, 330));
+                }
+            }
+            let kw = keep_words(l, &keeps[0], 6, true);
+            lines.push(reminder_text(l, lang::weekday(l, 6), &kw));
+            for s in &lines {
+                assert_eq!(crate::plain::jargon_in(l, s), None, "{lang}: {s}");
+                for bad in ["guarantee", "certain", "will fix", "curse"] {
+                    assert!(!s.to_lowercase().contains(bad), "{lang}: {s}");
+                }
+                match l {
+                    Lang::En => {}
+                    Lang::Ml => assert!(s.chars().any(|c| ('\u{0D00}'..='\u{0D7F}').contains(&c)) && !has_english(s), "{lang}: {s}"),
+                    Lang::Hi => assert!(s.chars().any(|c| ('\u{0900}'..='\u{097F}').contains(&c)) && !has_english(s), "{lang}: {s}"),
+                }
+            }
+        }
+        // English is unchanged.
+        assert_eq!(day_words(Lang::En, t, 330), "Saturday 24 Oct");
+        assert_eq!(span_words(Lang::En, t, t.add_ns(58 * 60 * NS_PER_SEC), 330), "6:30–7:28 am");
+        assert_eq!(keep_words(Lang::En, &keep_for("weekly", "deeds", DashaLord::Saturn, true), 6, true), "7 Saturdays in a row");
+        assert_eq!(day_words(Lang::Ml, t, 330), "ഒക്ടോബർ 24, ശനിയാഴ്ച");
+        assert_eq!(day_words(Lang::Hi, t, 330), "24 अक्टूबर, शनिवार");
+        assert_eq!(span_words(Lang::Hi, t, t.add_ns(58 * 60 * NS_PER_SEC), 330), "सुबह 6:30–7:28");
+        assert_eq!(keep_words(Lang::Ml, &keep_for("weekly", "deeds", DashaLord::Saturn, true), 6, true), "തുടർച്ചയായി 7 ശനിയാഴ്ചകൾ");
+        let c = choice(true, true, true, true, 1);
+        assert_eq!(
+            why_now(Lang::En, &c, 330),
+            "It begins in the first hour after sunrise on Saturday, the day kept for this kind of help. The date in the old calendar and the day's star both favour a start. It falls in the bright half of the month, when vows are begun. It waits a week for the Saturday that suits best. It keeps clear of 9:30–11:00 am, the part of that day the tradition avoids for new starts."
+        );
     }
 
     #[test]

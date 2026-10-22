@@ -98,7 +98,7 @@ fun SureScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(top = 44.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("‹ BACK", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onBack).padding(vertical = 4.dp))
+        Text(tr("‹ BACK"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onBack).padding(vertical = 4.dp))
         Text(tr("WHAT'S COMING, IN DATES"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         Text(tr("When the signs agree"), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         Text(
@@ -122,7 +122,7 @@ fun SureScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
             )
         }
         if (faint.isNotEmpty()) {
-            Door(if (showFaint) tr("Hide the fainter signs") else "${tr("The fainter signs")} (${faint.size})", onClick = { showFaint = !showFaint })
+            Door(if (showFaint) tr("Hide the fainter signs") else trf("The fainter signs ({0})", faint.size), onClick = { showFaint = !showFaint })
             AnimatedVisibility(showFaint, enter = fadeIn() + expandVertically()) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     for (w in faint) SureCard(w, profile, place, settings, expert, onRemedy)
@@ -149,7 +149,7 @@ private fun SureCard(w: SureWindowRecord, profile: BirthProfile, place: Place, s
     Column(Modifier.fillMaxWidth().glass(if (strong) 18.dp else 16.dp).padding(if (strong) 18.dp else 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row {
             Text(
-                (listOf("${lifeGlyph(w.area)} ${w.areaName.uppercase()}") + w.alsoNames.take(2).map { it.uppercase() } + listOfNotNull((w.alsoNames.size - 2).takeIf { it > 0 }?.let { "+$it MORE" })).joinToString(" · "),
+                (listOf("${lifeGlyph(w.area)} ${w.areaName.uppercase()}") + w.alsoNames.take(2).map { it.uppercase() } + listOfNotNull((w.alsoNames.size - 2).takeIf { it > 0 }?.let { trf("+{0} MORE", it) })).joinToString(" · "),
                 style = MaterialTheme.typography.labelSmall, color = tone, modifier = Modifier.weight(1f),
             )
             Text("●".repeat(w.agree.toInt().coerceIn(1, 9)) + "○".repeat((w.of.toInt() - w.agree.toInt()).coerceIn(0, 9)), fontSize = 9.sp, color = if (strong) KshanaColors.Gold else KshanaColors.Muted)

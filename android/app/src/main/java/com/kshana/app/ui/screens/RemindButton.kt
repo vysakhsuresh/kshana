@@ -59,7 +59,7 @@ internal fun RemindButton(key: String, atMillis: Long, title: String, text: Stri
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            if (set) "REMINDER SET" else "REMIND ME",
+            tr(if (set) "REMINDER SET" else "REMIND ME"),
             style = MaterialTheme.typography.labelSmall,
             color = if (set) KshanaColors.Gold else KshanaColors.Muted,
         )

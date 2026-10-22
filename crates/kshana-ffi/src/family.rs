@@ -8,7 +8,8 @@
 //! `expert` the astrologer's reading, shown only behind the chart-pages setting (see
 //! `plain_audit` below).
 
-use kshana_rules::family::{family_proof, Kin, Member, ProofWindow};
+use kshana_rules::family::{family_proof, summary, Kin, Member, ProofWindow};
+use kshana_rules::Lang;
 use kshana_sky::Observer;
 
 use crate::{AyanamsaChoice, Engine, ExactInstant, HouseSystem, KshanaError};
@@ -107,7 +108,9 @@ impl Engine {
         ayanamsa: AyanamsaChoice,
         from: ExactInstant,
         months: u32,
+        lang: String,
     ) -> Result<FamilyProofResult, KshanaError> {
+        let lang = Lang::parse(&lang);
         let mut members = vec![Member { natal: self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?, kin: None, male: main_is_male }];
         let mut names = vec![String::new()];
         let mut not_read = Vec::new();
@@ -121,10 +124,10 @@ impl Engine {
             }
         }
         let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
-        let p = family_proof(&self.spk, self.eop.as_ref(), &members, &obs, ayanamsa.into(), from.into(), months as usize).map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        let p = family_proof(&self.spk, self.eop.as_ref(), &members, &obs, ayanamsa.into(), from.into(), months as usize, lang).map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         let record = |w: &ProofWindow| FamilyProofRecord {
             person: names[w.person].clone(),
-            relation: members[w.person].words().to_string(),
+            relation: members[w.person].words_in(lang),
             area: w.event.key().to_string(),
             start: w.start.into(),
             end: w.end.into(),
@@ -132,7 +135,7 @@ impl Engine {
             headline: w.headline.clone(),
             detail: w.detail.clone(),
             confirmed_line: w.confirmed_line.clone(),
-            confirmed_by: w.confirmed_by.iter().map(|&r| members[r].words().to_string()).collect(),
+            confirmed_by: w.confirmed_by.iter().map(|&r| members[r].words_in(lang)).collect(),
             confirmed_names: w.confirmed_by.iter().map(|&r| names[r].clone()).collect(),
             strength: w.pooled * 100.0,
             strength_words: w.strength_words.clone(),
@@ -145,15 +148,7 @@ impl Engine {
         let about_family: Vec<FamilyProofRecord> = p.about_family.iter().map(record).collect();
         let total = about_you.len() + about_family.len();
         let months = (months as usize).clamp(3, 36);
-        let plain = if members.len() < 2 {
-            "Add your family's births and the app will look for the times their charts and yours agree on.".to_string()
-        } else if total == 0 {
-            format!("In the next {months} months no single time stands out in more than one chart; the family's charts each tell their own story for now.")
-        } else if total == 1 {
-            format!("In the next {months} months your family's charts agree on one time.")
-        } else {
-            format!("In the next {months} months your family's charts agree on {total} times.")
-        };
+        let plain = summary(lang, members.len(), total, months);
         Ok(FamilyProofResult { about_you, about_family, charts_read: p.charts_read as u32, not_read, plain })
     }
 }
@@ -204,7 +199,7 @@ mod plain_audit {
         let mut windows = 0;
         for male in [Some(true), Some(false), None] {
             let r = engine
-                .family_proof(at(1990, 2, 20, 5), la, lo, male, family.clone(), la, lo, HouseSystem::Placidus, AyanamsaChoice::Lahiri, at(2026, 10, 21, 6), 24)
+                .family_proof(at(1990, 2, 20, 5), la, lo, male, family.clone(), la, lo, HouseSystem::Placidus, AyanamsaChoice::Lahiri, at(2026, 10, 21, 6), 24, "en".into())
                 .unwrap();
             assert_eq!(r.not_read, vec!["Joseph".to_string()]);
             assert_eq!(r.charts_read, 5);
@@ -240,7 +235,7 @@ mod plain_audit {
         assert!(windows > 0);
         assert!(hits.is_empty(), "{hits:#?}");
         // No family: an invitation, nothing else.
-        let r = engine.family_proof(at(1990, 2, 20, 5), la, lo, None, vec![], la, lo, HouseSystem::Placidus, AyanamsaChoice::Lahiri, at(2026, 10, 21, 6), 12).unwrap();
+        let r = engine.family_proof(at(1990, 2, 20, 5), la, lo, None, vec![], la, lo, HouseSystem::Placidus, AyanamsaChoice::Lahiri, at(2026, 10, 21, 6), 12, "en".into()).unwrap();
         assert!(r.about_you.is_empty() && r.about_family.is_empty());
         check("result", "plain", &r.plain, &mut hits);
         assert!(hits.is_empty(), "{hits:#?}");

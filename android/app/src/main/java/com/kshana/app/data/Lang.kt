@@ -70,10 +70,23 @@ object Lang {
         "Everything is worked out on this phone from your birth time. Nothing leaves it." to "सब कुछ इसी फ़ोन पर आपके जन्म समय से गिना जाता है। कुछ भी बाहर नहीं जाता।",
     )
 
+    private val mlAll: Map<String, String> by lazy { LangExplore.ml + LangTrust.ml + LangTrust2.ml + ml }
+    private val hiAll: Map<String, String> by lazy { LangExplore.hi + LangTrust.hi + LangTrust2.hi + hi }
+
     /** The word in the chosen language, or the English when there is none yet. */
     fun t(s: String): String = when (code) {
-        "ml" -> ml[s] ?: s
-        "hi" -> hi[s] ?: s
+        "ml" -> mlAll[s] ?: s
+        "hi" -> hiAll[s] ?: s
         else -> s
+    }
+
+    /**
+     * A sentence with blanks: the English [template] uses {0}, {1}… for the parts that change
+     * ("Keep it {0} Wednesdays"). The template is translated first, then the blanks are filled.
+     */
+    fun f(template: String, vararg args: Any): String {
+        var out = t(template)
+        args.forEachIndexed { i, a -> out = out.replace("{$i}", a.toString()) }
+        return out
     }
 }

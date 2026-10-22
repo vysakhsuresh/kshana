@@ -205,12 +205,12 @@ fun LoopScreen(
             Column(Modifier.padding(horizontal = 24.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column {
-                        Text("K S H A N A", fontFamily = FontFamily.Serif, fontSize = 20.sp, letterSpacing = 4.sp, color = KshanaColors.Gold)
-                        Text("क्षण · the moment", fontFamily = FontFamily.Serif, fontSize = 11.sp, letterSpacing = 1.sp, color = KshanaColors.Gold.copy(alpha = 0.55f))
+                        Text(tr("K S H A N A"), fontFamily = FontFamily.Serif, fontSize = 20.sp, letterSpacing = 4.sp, color = KshanaColors.Gold)
+                        Text(tr("क्षण · the moment"), fontFamily = FontFamily.Serif, fontSize = 11.sp, letterSpacing = 1.sp, color = KshanaColors.Gold.copy(alpha = 0.55f))
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         ScoreChip(profile, onClick = { onOpen("scoreboard") })
-                        Icon(Icons.Filled.Settings, contentDescription = "settings", tint = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onSettings).padding(8.dp))
+                        Icon(Icons.Filled.Settings, contentDescription = tr("settings"), tint = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onSettings).padding(8.dp))
                     }
                 }
                 val local = ZonedDateTime.ofInstant(shownTick, java.time.ZoneId.systemDefault())
@@ -248,12 +248,12 @@ fun LoopScreen(
                         )
                     }
                     Text(
-                        "DATE", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Gold,
+                        tr("DATE"), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Gold,
                         modifier = Modifier.glass(10.dp).border(1.dp, KshanaColors.Gold.copy(alpha = 0.6f), RoundedCornerShape(10.dp)).clickable { pickDate = true }.padding(horizontal = 10.dp, vertical = 6.dp),
                     )
                     if (travelling) {
                         Text(
-                            "NOW", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Night,
+                            tr("NOW"), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Night,
                             modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(KshanaColors.Gold).clickable { travelSeconds = 0L; moment = null }.padding(horizontal = 10.dp, vertical = 6.dp),
                         )
                     }
@@ -272,9 +272,9 @@ fun LoopScreen(
                                     moment = null
                                 }
                                 pickDate = false
-                            }) { Text("GO", color = KshanaColors.Gold) }
+                            }) { Text(tr("GO"), color = KshanaColors.Gold) }
                         },
-                        dismissButton = { TextButton(onClick = { pickDate = false }) { Text("CANCEL", color = KshanaColors.Muted) } },
+                        dismissButton = { TextButton(onClick = { pickDate = false }) { Text(tr("CANCEL"), color = KshanaColors.Muted) } },
                     ) { DatePicker(state = state, title = null, headline = null, showModeToggle = false) }
                 }
             }
@@ -282,7 +282,7 @@ fun LoopScreen(
 
         item {
             if (m == null) {
-                Working("reading the sky for this second…", modifier = Modifier.padding(horizontal = 24.dp))
+                Working(tr("reading the sky for this second…"), modifier = Modifier.padding(horizontal = 24.dp))
             } else {
                 HeroCard(m, shownTick, travelling, sky, onLife)
             }
@@ -345,7 +345,7 @@ fun LoopScreen(
             item {
                 Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     var readOpen by remember { mutableStateOf(false) }
-                    Text(if (readOpen) "YOUR READING −" else "YOUR READING IN FULL +", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable { readOpen = !readOpen }.padding(vertical = 6.dp))
+                    Text(if (readOpen) tr("YOUR READING −") else tr("YOUR READING IN FULL +"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable { readOpen = !readOpen }.padding(vertical = 6.dp))
                     if (readOpen) {
                         Text(m.taraWords.replaceFirstChar { it.uppercase() }.trimEnd('.') + ".", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
                         BriefingCard(profile, place, settings, travelSeconds, onLife, onRemedy, onLoaded = { brief = it })
@@ -353,11 +353,11 @@ fun LoopScreen(
                     Spacer(Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         GoldButton(tr("ASK"), onClick = onAsk, modifier = Modifier.weight(1f))
-                        QuietButton("WHAT TO DO", onClick = onRemedy, modifier = Modifier.weight(1f))
+                        QuietButton(tr("WHAT TO DO"), onClick = onRemedy, modifier = Modifier.weight(1f))
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        QuietButton("THE WEEK, MONTH, YEAR", onClick = onAhead, modifier = Modifier.weight(1f))
-                        QuietButton("DID IT HAPPEN?", onClick = onRecord, modifier = Modifier.weight(1f))
+                        QuietButton(tr("THE WEEK, MONTH, YEAR"), onClick = onAhead, modifier = Modifier.weight(1f))
+                        QuietButton(tr("DID IT HAPPEN?"), onClick = onRecord, modifier = Modifier.weight(1f))
                     }
                     Text(tr("Everything is worked out on this phone from your birth time. Nothing leaves it."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
                 }
@@ -396,12 +396,12 @@ private fun WallStrip(profile: BirthProfile, place: Place, settings: EngineSetti
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            SectionLabel("What you are waiting for")
-            Text("THE WALL ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onWall).padding(top = 18.dp, bottom = 6.dp))
+            SectionLabel(tr("What you are waiting for"))
+            Text(tr("THE WALL ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onWall).padding(top = 18.dp, bottom = 6.dp))
         }
         val list = items
         if (list == null) {
-            Text("solving the sky ahead…", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(horizontal = 24.dp))
+            Text(tr("solving the sky ahead…"), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(horizontal = 24.dp))
         } else {
             LazyRow(contentPadding = PaddingValues(horizontal = 24.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(list.take(6)) { c ->
@@ -420,7 +420,7 @@ private fun WallStrip(profile: BirthProfile, place: Place, settings: EngineSetti
         val f = fest?.filter { Instants.toLocal(it.at).toInstant().isBefore(tick.plusSeconds(7 * 86_400)) && Instants.toLocal(it.at).toInstant().isAfter(tick.minusSeconds(86_400)) }
         if (!f.isNullOrEmpty()) {
             Text(
-                "This week: " + f.joinToString(" · ") { "${it.name} ${localText(it.at, java.time.format.DateTimeFormatter.ofPattern("EEE"))}" },
+                tr("This week:") + " " + f.joinToString(" · ") { "${it.name} ${localText(it.at, java.time.format.DateTimeFormatter.ofPattern("EEE"))}" },
                 style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft, modifier = Modifier.padding(horizontal = 24.dp),
             )
         }
@@ -467,8 +467,8 @@ private fun PeopleToday(profile: BirthProfile, place: Place, settings: EngineSet
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            SectionLabel("Your people today")
-            Text("US ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onTogether).padding(top = 18.dp, bottom = 6.dp))
+            SectionLabel(tr("Your people today"))
+            Text(tr("US ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onTogether).padding(top = 18.dp, bottom = 6.dp))
         }
         for (p in people.take(4)) {
             val pm = moments[p.name]
@@ -480,14 +480,14 @@ private fun PeopleToday(profile: BirthProfile, place: Place, settings: EngineSet
                 Column(Modifier.weight(1f)) {
                     Text("${p.name.substringBefore(' ')} · $rel", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
                     if (pm == null) {
-                        Text("reading…", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                        Text(tr("reading…"), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
                     } else {
                         val top = pm.lives.maxByOrNull { it.score }
                         val low = pm.lives.minByOrNull { it.score }
-                        Text("Going well for them: ${top?.life?.let { lifeName(it).lowercase() }}. Go gently today with: ${low?.life?.let { lifeName(it).lowercase() }}.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
+                        Text(trf("Going well for them: {0}. Go gently today with: {1}.", top?.life?.let { lifeName(it).lowercase() } ?: "", low?.life?.let { lifeName(it).lowercase() } ?: ""), style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
                         if (pm.saturnActive) {
                             Text(firstSentence(pm.saturnWords.replaceFirstChar { it.uppercase() }), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Ember)
-                            Text("WHAT HELPS THEM ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onTogether).padding(vertical = 4.dp))
+                            Text(tr("WHAT HELPS THEM ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onTogether).padding(vertical = 4.dp))
                         }
                     }
                 }
@@ -499,11 +499,11 @@ private fun PeopleToday(profile: BirthProfile, place: Place, settings: EngineSet
             val s = Instants.toLocal(w.start).toInstant()
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(KshanaColors.Gold.copy(alpha = 0.10f)).border(1.dp, KshanaColors.Gold.copy(alpha = 0.5f), RoundedCornerShape(12.dp)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("THE TALK WINDOW", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+                    Text(tr("THE TALK WINDOW"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
                     Text("${localText(w.start, WEEKDAY_DAY)} · ${hm(w.start)} – ${hm(w.end)}", fontFamily = FontFamily.Monospace, fontSize = 15.sp, color = KshanaColors.Text)
-                    Text("The best hour this week for the two of you to talk: both of you will be at your warmest and most patient.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
+                    Text(tr("The best hour this week for the two of you to talk: both of you will be at your warmest and most patient."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
                 }
-                Text(if (s.isAfter(tick)) "in ${countdown(tick, s)}" else "now", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Gold)
+                Text(if (s.isAfter(tick)) trf("in {0}", countdown(tick, s)) else tr("now"), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Gold)
             }
         }
     }
@@ -563,28 +563,28 @@ private fun BriefingCard(
         Modifier.fillMaxWidth().glass(18.dp).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text("YOUR READING", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(tr("YOUR READING"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         ErrorLine(error)
         val r = b
         if (r == null) {
-            if (error == null) Working("writing your reading…")
+            if (error == null) Working(tr("writing your reading…"))
             return@Column
         }
         val shown = if (open) r.paragraphs else r.paragraphs.take(1)
         for (p in shown) Text(p, fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 25.sp, color = KshanaColors.Text)
         Text(
-            if (open) "LESS −" else "THE WHOLE READING +",
+            if (open) tr("LESS −") else tr("THE WHOLE READING +"),
             style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
             modifier = Modifier.clickable { open = !open }.padding(vertical = 2.dp),
         )
         if (open) {
             HorizontalDivider(color = KshanaColors.LineSoft)
-            Text("YOUR BEST DAYS · THE NEXT THIRTY", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            Text(tr("YOUR BEST DAYS · THE NEXT THIRTY"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
             for (c in r.circled) {
                 Row(Modifier.fillMaxWidth().clickable { onLife(c.life) }.padding(vertical = 3.dp), verticalAlignment = Alignment.Top) {
                     Text(lifeGlyph(c.life), fontSize = 14.sp, color = scoreColor(c.score), modifier = Modifier.width(22.dp).padding(top = 2.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("${c.life} · ${localText(c.at, WEEKDAY_DAY)}", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
+                        Text("${lifeName(c.life)} · ${localText(c.at, WEEKDAY_DAY)}", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
                         Text(c.words.substringAfter(". ", c.words), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
                     }
                     Text(c.score.toInt().toString(), fontFamily = FontFamily.Monospace, fontSize = 16.sp, color = scoreColor(c.score))
@@ -592,18 +592,18 @@ private fun BriefingCard(
             }
             r.remedy?.let { rem ->
                 HorizontalDivider(color = KshanaColors.LineSoft)
-                Text("WHAT TO DO ABOUT IT", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+                Text(tr("WHAT TO DO ABOUT IT"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
                 Text(rem.cause, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
                 for (t in rem.top) {
                     Row(Modifier.padding(vertical = 2.dp), verticalAlignment = Alignment.Top) {
-                        Text(kindWord(t.kind), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.width(78.dp).padding(top = 3.dp))
+                        Text(tr(kindWord(t.kind)), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.width(78.dp).padding(top = 3.dp))
                         Column(Modifier.weight(1f)) {
                             Text(t.title, style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
                             Text(t.why, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
                         }
                     }
                 }
-                QuietButton("ALL ${rem.total} REMEDIES", onClick = onRemedy, modifier = Modifier.fillMaxWidth())
+                QuietButton(trf("ALL {0} REMEDIES", rem.total), onClick = onRemedy, modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -618,26 +618,26 @@ private fun HourLoreCard(h: uniffi.kshana_ffi.HoraRecord, tick: Instant) {
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("This hour: ${hourShort(h.lord).lowercase()}", fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
-            Text("${hm(h.start)} – ${hm(h.end)} · ${countdown(tick, h.end.toJava())} left", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
+            Text(trf("This hour: {0}", tr(hourShort(h.lord)).lowercase()), fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text, modifier = Modifier.weight(1f))
+            Text("${hm(h.start)} – ${hm(h.end)} · ${trf("{0} left", countdown(tick, h.end.toJava()))}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
         }
-        Text(hourNature(h.lord).replaceFirstChar { it.uppercase() } + ".", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
-        Text("To pray to: ${h.deity} · wear ${h.colour.lowercase()} · face ${h.direction.lowercase()}", style = MaterialTheme.typography.labelMedium, color = KshanaColors.Gold)
+        Text(tr(hourNature(h.lord)).replaceFirstChar { it.uppercase() } + ".", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+        Text(trf("To pray to: {0} · wear {1} · face {2}", h.deity, h.colour.lowercase(), h.direction.lowercase()), style = MaterialTheme.typography.labelMedium, color = KshanaColors.Gold)
         if (open) {
             Text(h.mantra, fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text)
-            Text("Good for ${h.forWords}. Keep away from ${h.avoid}.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            Text(trf("Good for {0}. Keep away from {1}.", h.forWords, h.avoid), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             val context = LocalContext.current
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (com.kshana.app.system.Chant.running) {
-                    QuietButton("STOP · ${com.kshana.app.system.Chant.count} OF 108", onClick = { com.kshana.app.system.Chant.stop() }, modifier = Modifier.weight(1f))
+                    QuietButton(trf("STOP · {0} OF 108", com.kshana.app.system.Chant.count), onClick = { com.kshana.app.system.Chant.stop() }, modifier = Modifier.weight(1f))
                 } else {
-                    QuietButton("CHANT IT ×108 · SPOKEN", onClick = { com.kshana.app.system.Chant.start(context, h.mantra) }, modifier = Modifier.weight(1f))
+                    QuietButton(tr("CHANT IT ×108 · SPOKEN"), onClick = { com.kshana.app.system.Chant.start(context, h.mantra) }, modifier = Modifier.weight(1f))
                     QuietButton("×11", onClick = { com.kshana.app.system.Chant.start(context, h.mantra, 11) })
                 }
             }
-            Text("Spoken slowly by the phone's own voice; no recording, no network.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            Text(tr("Spoken slowly by the phone's own voice; no recording, no network."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         }
-        Text(if (open) "LESS −" else "THE MANTRA +", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(if (open) tr("LESS −") else tr("THE MANTRA +"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
     }
 }
 
@@ -650,7 +650,7 @@ private fun seasonLine(b: BriefingRecord): String {
     val antar = b.dasha.split(" › ").getOrNull(1)
     val antarLord = antar?.substringBefore(" ")?.trim()
     val antarEnd = antar?.substringAfter("(to ")?.substringBefore(")")?.trim()
-    val first = if (!antarEnd.isNullOrBlank() && antarLord != null) "Until $antarEnd, life moves through ${chapterTheme(antarLord)}." else ""
+    val first = if (!antarEnd.isNullOrBlank() && antarLord != null) trf("Until {0}, life moves through {1}.", antarEnd, tr(chapterTheme(antarLord))) else ""
     val saturn = if (b.saturnActive) " " + firstSentence(b.saturnWords.replaceFirstChar { it.uppercase() }) else ""
     return (first + saturn).trim()
 }
@@ -679,9 +679,9 @@ private fun HeroCard(m: MomentRecord, tick: Instant, travelling: Boolean, sky: u
                 Text(m.headline.substringBefore(" ·"), style = MaterialTheme.typography.titleLarge, color = bandColor(m.band))
                 if (travelling) {
                     Spacer(Modifier.height(6.dp))
-                    Text("you are looking at", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Ember)
+                    Text(tr("you are looking at"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Ember)
                     Text(localText(m.at, DATE_TIME), fontFamily = FontFamily.Monospace, fontSize = 18.sp, color = KshanaColors.Gold)
-                    if (next != null) Text("then: ${hm(next.at)} · ${next.what}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
+                    if (next != null) Text(trf("then: {0}", "${hm(next.at)} · ${next.what}"), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
                 } else if (next != null) {
                     Spacer(Modifier.height(6.dp))
                     Text(tr("changes in"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
@@ -694,13 +694,13 @@ private fun HeroCard(m: MomentRecord, tick: Instant, travelling: Boolean, sky: u
         val low = m.lives.filter { com.kshana.app.data.Focus.has(it.life) }.minByOrNull { it.score }
         if (top != null && low != null) {
             Text(top.headline, fontFamily = FontFamily.Serif, fontSize = 19.sp, lineHeight = 26.sp, color = KshanaColors.Text)
-            Text("${lifeGlyph(top.life)} ${top.life} is your strongest now · go gently with ${low.life.lowercase()}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            Text("${lifeGlyph(top.life)} ${trf("{0} is your strongest now · go gently with {1}", lifeName(top.life), lifeName(low.life).lowercase())}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             val ctx = LocalContext.current
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("SHARE ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable {
+                Text(tr("SHARE ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable {
                     com.kshana.app.system.ShareCard.share(ctx, m.dayTitle, top.headline, localText(m.at, DATE_TIME))
                 }.padding(vertical = 2.dp))
-                Text("READ IT ALOUD ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable {
+                Text(tr("READ IT ALOUD ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable {
                     com.kshana.app.system.Speak.say(ctx, "${m.dayTitle}. ${top.headline}", com.kshana.app.data.Lang.code)
                 }.padding(vertical = 2.dp))
             }
@@ -715,14 +715,14 @@ private fun HeroCard(m: MomentRecord, tick: Instant, travelling: Boolean, sky: u
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text("YOUR NEXT GOOD MINUTE FOR ${focus.uppercase()}", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+                Text(trf("YOUR NEXT GOOD MINUTE FOR {0}", lifeName(focus).uppercase()), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
                 if (g == null) {
-                    Text("None left today; tomorrow's sunrise starts a new set.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+                    Text(tr("None left today; tomorrow's sunrise starts a new set."), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
                 } else {
-                    Text(if (g.now) "Now, until ${hm(g.end)} · ${hourShort(g.lord).lowercase()}" else "${hm(g.start)} – ${hm(g.end)} · ${hourShort(g.lord).lowercase()}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
+                    Text(if (g.now) trf("Now, until {0} · {1}", hm(g.end), tr(hourShort(g.lord)).lowercase()) else "${hm(g.start)} – ${hm(g.end)} · ${tr(hourShort(g.lord)).lowercase()}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
                 }
             }
-            if (g != null) Text(if (g.now) "now" else countdown(tick, g.start.toJava()), fontFamily = FontFamily.Monospace, fontSize = 20.sp, color = KshanaColors.Gold.copy(alpha = com.kshana.app.ui.theme.breath()))
+            if (g != null) Text(if (g.now) tr("now") else countdown(tick, g.start.toJava()), fontFamily = FontFamily.Monospace, fontSize = 20.sp, color = KshanaColors.Gold.copy(alpha = com.kshana.app.ui.theme.breath()))
         }
     }
     }
@@ -840,7 +840,7 @@ private fun LivesGrid(lives: List<LifeScoreRecord>, onLife: (String) -> Unit) {
         }
         if (rest.isNotEmpty()) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("ALSO", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
+                Text(tr("ALSO"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted)
                 for (l in rest) {
                     Text(
                         "${lifeGlyph(l.life)} ${lifeName(l.life)} ${l.score.toInt()}",
@@ -898,9 +898,9 @@ private fun HoursStrip(hours: List<HourRecord>, tick: Instant, lives: List<LifeS
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 Text(hm(h.start), fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = if (past) KshanaColors.Muted.copy(alpha = 0.5f) else KshanaColors.Muted)
-                Text(hourShort(h.lord), fontFamily = FontFamily.Serif, fontSize = 13.sp, lineHeight = 15.sp, textAlign = TextAlign.Center, color = if (past) KshanaColors.TextSoft.copy(alpha = 0.5f) else KshanaColors.Text)
+                Text(tr(hourShort(h.lord)), fontFamily = FontFamily.Serif, fontSize = 13.sp, lineHeight = 15.sp, textAlign = TextAlign.Center, color = if (past) KshanaColors.TextSoft.copy(alpha = 0.5f) else KshanaColors.Text)
                 Box(Modifier.size(8.dp).clip(CircleShape).background(if (h.caution) KshanaColors.Ember else scoreColor(mean)))
-                Text(if (h.caution) "pause" else best, style = MaterialTheme.typography.labelSmall, color = if (h.caution) KshanaColors.Ember else KshanaColors.Muted, textAlign = TextAlign.Center)
+                Text(if (h.caution) tr("pause") else lifeName(best), style = MaterialTheme.typography.labelSmall, color = if (h.caution) KshanaColors.Ember else KshanaColors.Muted, textAlign = TextAlign.Center)
             }
         }
     }
@@ -917,17 +917,17 @@ private fun WindowRow(w: WindowRecord, tick: Instant, onPlan: () -> Unit = {}) {
         Spacer(Modifier.width(10.dp))
         Text(w.label, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text.copy(alpha = alpha), modifier = Modifier.weight(1f))
         Text("${hm(w.start)} – ${hm(w.end)}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = if (active) c else KshanaColors.Muted.copy(alpha = alpha))
-        if (active) Text("  now", style = MaterialTheme.typography.labelSmall, color = c)
-        if (past) Text("  done", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted.copy(alpha = alpha))
+        if (active) Text("  " + tr("now"), style = MaterialTheme.typography.labelSmall, color = c)
+        if (past) Text("  " + tr("done"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted.copy(alpha = alpha))
     }
     if (!past) {
         Text(
-            if (w.caution) "Finish things, start nothing new. A good use of it: settle a small debt, or make the call you owe someone." else "The best minutes of the day to begin.",
+            tr(if (w.caution) "Finish things, start nothing new. A good use of it: settle a small debt, or make the call you owe someone." else "The best minutes of the day to begin."),
             style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted, modifier = Modifier.padding(start = 18.dp),
         )
         if (w.caution) {
             Text(
-                "SOMETHING TO DO TODAY? PLAN AROUND IT ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
+                tr("SOMETHING TO DO TODAY? PLAN AROUND IT ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
                 modifier = Modifier.padding(start = 18.dp).clickable(onClick = onPlan).padding(vertical = 4.dp),
             )
         }
@@ -947,7 +947,7 @@ private fun SealOnNow(profile: BirthProfile, onRemedy: () -> Unit, onOpen: (Stri
         if (v == "yes" || v == "close" || v == "no") com.kshana.app.data.PastReveal.resolve(context, seal, v)
     }, onRemedy = onRemedy)
     Text(
-        "SOMETHING HAPPENED? TELL IT FIRST ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
+        tr("SOMETHING HAPPENED? TELL IT FIRST ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
         modifier = Modifier.clickable { onOpen("whathappened") }.padding(vertical = 4.dp),
     )
 }
@@ -962,13 +962,13 @@ private fun WhatHelpsCard(testing: Boolean, onRemedy: () -> Unit) {
         Modifier.fillMaxWidth().glass(16.dp).clickable(onClick = onRemedy).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text("WHAT HELPS", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(tr("WHAT HELPS"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         Text(
-            if (testing) "A testing time is running. There are deeds, gifts and prayers that ease it, and each one says why."
-            else "Small deeds, gifts and prayers for whatever weighs on you, and for keeping a good stretch good.",
+            if (testing) tr("A testing time is running. There are deeds, gifts and prayers that ease it, and each one says why.")
+            else tr("Small deeds, gifts and prayers for whatever weighs on you, and for keeping a good stretch good."),
             fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 22.sp, color = KshanaColors.Text,
         )
-        Text("SEE WHAT HELPS ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.padding(top = 2.dp))
+        Text(tr("SEE WHAT HELPS ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.padding(top = 2.dp))
     }
 }
 
@@ -990,7 +990,7 @@ private fun DiscoverCard(testing: Boolean, onOpen: (String) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
-            if (day != null) "YOUR FIRST WEEK · DAY $day OF 7" else "TRY THIS",
+            if (day != null) trf("YOUR FIRST WEEK · DAY {0} OF 7", day) else tr("TRY THIS"),
             style = MaterialTheme.typography.labelSmall, color = KshanaColors.Sky,
         )
         if (day != null) {
@@ -1013,7 +1013,7 @@ private fun DiscoverCard(testing: Boolean, onOpen: (String) -> Unit) {
             )
             if (day == null) {
                 Text(
-                    "NOT NOW", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted,
+                    tr("NOT NOW"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted,
                     modifier = Modifier.clickable { com.kshana.app.data.Discover.skip(context, door.route); skippedNow++ }.padding(vertical = 6.dp),
                 )
             }
@@ -1035,7 +1035,7 @@ private fun ShiftRow(s: ShiftRecord, tick: Instant) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(hm(s.at), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Muted, modifier = Modifier.width(52.dp))
         Text(s.what, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1f))
-        Text("in ${countdown(tick, s.at.toJava())}", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = c)
+        Text(trf("in {0}", countdown(tick, s.at.toJava())), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = c)
         Text(
             if (set) "🔔" else "🔕", fontSize = 13.sp,
             modifier = Modifier.clickable { set = com.kshana.app.system.Alerts.toggle(context, at, s.what, "${hm(s.at)} · ${s.what}") }.padding(start = 10.dp, top = 4.dp, bottom = 4.dp),
@@ -1060,18 +1060,18 @@ private fun ProofStrip(onRecord: () -> Unit, onJournal: () -> Unit, onCalendar: 
         Modifier.fillMaxWidth().glass(16.dp).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text("HOW RIGHT HAS IT BEEN FOR YOU?", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(tr("HOW RIGHT HAS IT BEEN FOR YOU?"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         Text(
             when {
-                graded.isEmpty() -> "Nothing graded yet. When a reading's day has passed, say whether it went that way; the score is shown here, right or wrong."
-                else -> "Right $right of ${graded.size} times you checked (${right * 100 / graded.size}%)."
+                graded.isEmpty() -> tr("Nothing graded yet. When a reading's day has passed, say whether it went that way; the score is shown here, right or wrong.")
+                else -> trf("Right {0} of {1} times you checked ({2}%).", right, graded.size, right * 100 / graded.size)
             },
             fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 22.sp, color = KshanaColors.Text,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(if (waiting > 0) "$waiting TO CHECK ›" else "YOUR RECORD ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRecord).padding(vertical = 4.dp))
-            Text(if (journal > 0) "JOURNAL · $journal ›" else "+ SOMETHING HAPPENED", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onJournal).padding(vertical = 4.dp))
-            Text("MY CALENDAR ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onCalendar).padding(vertical = 4.dp))
+            Text(if (waiting > 0) trf("{0} TO CHECK ›", waiting) else tr("YOUR RECORD ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRecord).padding(vertical = 4.dp))
+            Text(if (journal > 0) trf("JOURNAL · {0} ›", journal) else tr("+ SOMETHING HAPPENED"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onJournal).padding(vertical = 4.dp))
+            Text(tr("MY CALENDAR ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onCalendar).padding(vertical = 4.dp))
         }
     }
 }
@@ -1086,7 +1086,7 @@ private fun OnYourMind(m: MomentRecord, onReading: () -> Unit) {
     val mine = com.kshana.app.data.Situations.mine.filter { it.key != com.kshana.app.data.Situations.CHART_FEAR }
     if (mine.isEmpty()) return
     Column(Modifier.fillMaxWidth().glass(16.dp).clickable(onClick = onReading).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("ON YOUR MIND", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(tr("ON YOUR MIND"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         for (s in mine.take(3)) {
             val kind = com.kshana.app.data.Situations.kind(s.key) ?: continue
             val today = m.lives.firstOrNull { it.life == kind.life }
@@ -1095,13 +1095,13 @@ private fun OnYourMind(m: MomentRecord, onReading: () -> Unit) {
                 Text(kind.says, style = MaterialTheme.typography.bodyLarge, color = KshanaColors.Text)
                 Text(
                     listOfNotNull(
-                        today?.let { "Today: ${bandWord(it.band).lowercase()} for ${lifeName(kind.life).lowercase()}." },
+                        today?.let { trf("Today: {0} for {1}.", bandWord(it.band).lowercase(), lifeName(kind.life).lowercase()) },
                         a?.let { r -> r.whenStart?.let { "${r.verdict}; ${r.whenWords.lowercase()} ${whenText(it)}." } ?: "${r.verdict}." },
                     ).joinToString(" "),
                     style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft,
                 )
             }
         }
-        Text("YOUR READING ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(tr("YOUR READING ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
     }
 }

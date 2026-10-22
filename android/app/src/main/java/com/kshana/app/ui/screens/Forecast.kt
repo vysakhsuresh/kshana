@@ -49,6 +49,9 @@ internal fun lifeName(life: String): String = com.kshana.app.data.Lang.t(life)
 /** A word of the app's own in the chosen language. */
 internal fun tr(s: String): String = com.kshana.app.data.Lang.t(s)
 
+/** A sentence with blanks {0}, {1}… in the chosen language: `trf("Keep it {0} Wednesdays", 21)`. */
+internal fun trf(template: String, vararg args: Any): String = com.kshana.app.data.Lang.f(template, *args)
+
 internal fun scoreColor(score: Double): Color = when {
     score >= 70 -> KshanaColors.Gold
     score >= 56 -> KshanaColors.Leaf

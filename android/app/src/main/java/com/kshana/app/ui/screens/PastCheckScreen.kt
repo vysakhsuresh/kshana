@@ -116,7 +116,7 @@ fun PastCheckScreen(
                     )
                 }
                 for (c in got) items.add(PastReveal.Item(c.from.taiSeconds, c.from.nanos.toInt(), c.to.taiSeconds, c.to.nanos.toInt(), c.life, c.good, c.statement, ""))
-                if (got.isEmpty()) error = "There are no more stretches strong enough to ask about. Your answers so far are what the birth time rests on."
+                if (got.isEmpty()) error = tr("There are no more stretches strong enough to ask about. Your answers so far are what the birth time rests on.")
                 store()
             } catch (e: Exception) {
                 error = e.message ?: e.toString()
@@ -190,10 +190,10 @@ fun PastCheckScreen(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(top = 56.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("FIRST, YOUR PAST", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-        Text("Let me tell you what has already happened.", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+        Text(tr("FIRST, YOUR PAST"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(tr("Let me tell you what has already happened."), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         Text(
-            "Before I tell you anything about what is coming, here are a few stretches of your own life, read from your birth time alone. You tell me if I am right. $WRONG_HELPS",
+            tr("Before I tell you anything about what is coming, here are a few stretches of your own life, read from your birth time alone. You tell me if I am right.") + " " + tr(WRONG_HELPS),
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
         )
 
@@ -205,9 +205,9 @@ fun PastCheckScreen(
         }
         val factOpen = facts.any { it.verdict.isEmpty() }
         if (facts.isNotEmpty() || factsLoading) {
-            Text("THINGS NOBODY TOLD ME", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            Text(tr("THINGS NOBODY TOLD ME"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
             Text(
-                "You never told me these. They come from your birth time alone. Yes or no? $WRONG_HELPS",
+                tr("You never told me these. They come from your birth time alone. Yes or no?") + " " + tr(WRONG_HELPS),
                 style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
             )
         }
@@ -220,14 +220,14 @@ fun PastCheckScreen(
                 })
             }
         }
-        if (factsLoading) Working("reading what your birth time says about you…")
+        if (factsLoading) Working(tr("reading what your birth time says about you…"))
         val counted = items.count { it.verdict in setOf("yes", "close", "no") } + facts.count { it.verdict == "yes" || it.verdict == "no" }
         if (counted > 0 || logged.isNotEmpty()) {
             Text(
                 buildString {
-                    append("$counted answer${if (counted == 1) "" else "s"} so far")
-                    if (logged.isNotEmpty()) append(", and ${logged.size} event${if (logged.size == 1) "" else "s"} you logged")
-                    append(". Every one sharpens your birth time.")
+                    append(if (counted == 1) tr("1 answer so far") else trf("{0} answers so far", counted))
+                    if (logged.isNotEmpty()) append(if (logged.size == 1) tr(", and 1 event you logged") else trf(", and {0} events you logged", logged.size))
+                    append(tr(". Every one sharpens your birth time."))
                 },
                 style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky,
             )
@@ -250,7 +250,7 @@ fun PastCheckScreen(
                 })
             }
         }
-        if (loading) Working(if (items.isEmpty()) "reading your life from your birth time…" else "finding the stretches that will tell your birth time apart…")
+        if (loading) Working(if (items.isEmpty()) tr("reading your life from your birth time…") else tr("finding the stretches that will tell your birth time apart…"))
         ErrorLine(error)
 
         if (allAnswered) {
@@ -261,24 +261,24 @@ fun PastCheckScreen(
                     val local = Instants.toLocal(fit.birth, profile.birthZone())
                     val p = profile.copy(year = local.year, month = local.monthValue, day = local.dayOfMonth, hour = local.hour, minute = local.minute, second = local.second)
                     ProfileStore.save(context, p)
-                    timeNote = "Your birth time is now ${"%02d:%02d".format(p.hour, p.minute)}. Every reading in the app uses it from now on."
+                    timeNote = trf("Your birth time is now {0}. Every reading in the app uses it from now on.", "%02d:%02d".format(p.hour, p.minute))
                     refine = null
                     nowLine = null
                     onProfile(p)
                 },
             )
             QuietButton(
-                if (loading) "FINDING MORE…" else "ASK ME MORE QUESTIONS", onClick = { fetch(3, true) }, modifier = Modifier.fillMaxWidth(),
+                if (loading) tr("FINDING MORE…") else tr("ASK ME MORE QUESTIONS"), onClick = { fetch(3, true) }, modifier = Modifier.fillMaxWidth(),
             )
             Text(
-                "Each question is chosen so that its answer tells nearby birth times apart. Answer as many as you like; the more you answer, the surer the birth time.",
+                tr("Each question is chosen so that its answer tells nearby birth times apart. Answer as many as you like; the more you answer, the surer the birth time."),
                 style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
             )
             seal?.let { SealCard(it, onRemedy) }
         }
 
-        GoldButton(if (allAnswered) "NOW, MY DAY" else if (items.any { it.verdict.isNotEmpty() }) "FINISH LATER" else "SKIP FOR NOW", onClick = onDone, modifier = Modifier.fillMaxWidth())
-        Text("Your answers stay on this phone.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        GoldButton(if (allAnswered) tr("NOW, MY DAY") else if (items.any { it.verdict.isNotEmpty() }) tr("FINISH LATER") else tr("SKIP FOR NOW"), onClick = onDone, modifier = Modifier.fillMaxWidth())
+        Text(tr("Your answers stay on this phone."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
     }
 }
 
@@ -288,19 +288,19 @@ private fun StretchCard(item: PastReveal.Item, onAnswer: (String) -> Unit) {
         Text("${lifeGlyph(item.life)} ${lifeName(item.life).uppercase()}", style = MaterialTheme.typography.labelSmall, color = if (item.good) KshanaColors.Leaf else KshanaColors.Ember)
         Text(item.statement, fontFamily = FontFamily.Serif, fontSize = 19.sp, lineHeight = 27.sp, color = KshanaColors.Text)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            OptionBox("Yes", selected = item.verdict == "yes", onClick = { onAnswer("yes") }, modifier = Modifier.weight(1f))
-            OptionBox("Close", selected = item.verdict == "close", onClick = { onAnswer("close") }, modifier = Modifier.weight(1f))
-            OptionBox("No", selected = item.verdict == "no", onClick = { onAnswer("no") }, modifier = Modifier.weight(1f))
+            OptionBox(tr("Yes"), selected = item.verdict == "yes", onClick = { onAnswer("yes") }, modifier = Modifier.weight(1f))
+            OptionBox(tr("Close"), selected = item.verdict == "close", onClick = { onAnswer("close") }, modifier = Modifier.weight(1f))
+            OptionBox(tr("No"), selected = item.verdict == "no", onClick = { onAnswer("no") }, modifier = Modifier.weight(1f))
         }
         Text(
-            if (item.verdict == "unsure") "NOT SURE ✓" else "NOT SURE",
+            if (item.verdict == "unsure") tr("NOT SURE ✓") else tr("NOT SURE"),
             style = MaterialTheme.typography.labelSmall, color = if (item.verdict == "unsure") KshanaColors.Gold else KshanaColors.Muted,
             modifier = Modifier.clickable { onAnswer("unsure") }.padding(vertical = 4.dp),
         )
         when (item.verdict) {
-            "no" -> Text("Not this one? That tells me your birth time is a little different. $WRONG_HELPS", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
-            "close" -> Text("Close counts too: something like it, or near that time. It helps place your birth time.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
-            "unsure" -> Text("That is fine. This one is left out of the score and the birth time.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            "no" -> Text(tr("Not this one? That tells me your birth time is a little different.") + " " + tr(WRONG_HELPS), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
+            "close" -> Text(tr("Close counts too: something like it, or near that time. It helps place your birth time."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
+            "unsure" -> Text(tr("That is fine. This one is left out of the score and the birth time."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         }
     }
 }
@@ -309,21 +309,21 @@ private fun StretchCard(item: PastReveal.Item, onAnswer: (String) -> Unit) {
 @Composable
 private fun FactCard(fact: PastReveal.Fact, onAnswer: (String) -> Unit) {
     Column(Modifier.fillMaxWidth().glass(16.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(factLabel(fact.topic), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(tr(factLabel(fact.topic)), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         Text(fact.statement, fontFamily = FontFamily.Serif, fontSize = 19.sp, lineHeight = 27.sp, color = KshanaColors.Text)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            OptionBox("Yes", selected = fact.verdict == "yes", onClick = { onAnswer("yes") }, modifier = Modifier.weight(1f))
-            OptionBox("No", selected = fact.verdict == "no", onClick = { onAnswer("no") }, modifier = Modifier.weight(1f))
+            OptionBox(tr("Yes"), selected = fact.verdict == "yes", onClick = { onAnswer("yes") }, modifier = Modifier.weight(1f))
+            OptionBox(tr("No"), selected = fact.verdict == "no", onClick = { onAnswer("no") }, modifier = Modifier.weight(1f))
         }
         Text(
-            if (fact.verdict == "unsure") "NOT SURE ✓" else "NOT SURE",
+            if (fact.verdict == "unsure") tr("NOT SURE ✓") else tr("NOT SURE"),
             style = MaterialTheme.typography.labelSmall, color = if (fact.verdict == "unsure") KshanaColors.Gold else KshanaColors.Muted,
             modifier = Modifier.clickable { onAnswer("unsure") }.padding(vertical = 4.dp),
         )
         when (fact.verdict) {
-            "yes" -> Text(if (fact.sensitive) "Good. This one depends on the exact minute you were born, so it helps place your birth time." else "Good. This one holds for every nearby birth time.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
-            "no" -> Text("Not this one? That tells me your birth time is a little different. $WRONG_HELPS", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
-            "unsure" -> Text("That is fine. This one is left out of the birth time.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            "yes" -> Text(if (fact.sensitive) tr("Good. This one depends on the exact minute you were born, so it helps place your birth time.") else tr("Good. This one holds for every nearby birth time."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
+            "no" -> Text(tr("Not this one? That tells me your birth time is a little different.") + " " + tr(WRONG_HELPS), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
+            "unsure" -> Text(tr("That is fine. This one is left out of the birth time."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         }
         // The stored fact keeps only its topic; the registry's `fact.<topic>` alias names its books.
         if (fact.topic.isNotBlank()) WhereFrom(listOf("fact.${fact.topic}"))
@@ -347,26 +347,26 @@ private fun ScoreCard(items: List<PastReveal.Item>) {
     val (right, close, asked) = PastReveal.score(items.filter { it.verdict != "unsure" })
     if (asked == 0) return
     val line = buildString {
-        append("I read $right of $asked stretches of your past right")
-        if (close > 0) append(", and $close close")
+        append(trf("I read {0} of {1} stretches of your past right", right, asked))
+        if (close > 0) append(trf(", and {0} close", close))
         append(".")
     }
     Column(Modifier.fillMaxWidth().glass(18.dp).padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("THE SCORE, HONESTLY", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(tr("THE SCORE, HONESTLY"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         Text(line, fontFamily = FontFamily.Serif, fontSize = 24.sp, lineHeight = 32.sp, color = KshanaColors.Gold)
         Text(
-            if ((right + close) * 2 >= asked) "From your birth time alone. Now I can tell you about what is coming, and you know how far to trust it."
-            else "Fewer than half matched, which usually means the birth time is a little off. $WRONG_HELPS Answer a few more below and I will find the time that fits your life.",
+            if ((right + close) * 2 >= asked) tr("From your birth time alone. Now I can tell you about what is coming, and you know how far to trust it.")
+            else tr("Fewer than half matched, which usually means the birth time is a little off.") + " " + tr(WRONG_HELPS) + " " + tr("Answer a few more below and I will find the time that fits your life."),
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft,
         )
         if (right + close > 0) {
             Text(
-                "SHARE MY SCORE ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
+                tr("SHARE MY SCORE ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
                 modifier = Modifier.clickable {
                     com.kshana.app.system.ShareCard.share(
-                        context, "MY PAST, READ BY KSHANA",
-                        "Kshana read $right of $asked stretches of my past right${if (close > 0) ", and $close close" else ""}, from my birth time alone.",
-                        "Kshana · your time, read plainly",
+                        context, tr("MY PAST, READ BY KSHANA"),
+                        if (close > 0) trf("Kshana read {0} of {1} stretches of my past right, and {2} close, from my birth time alone.", right, asked, close) else trf("Kshana read {0} of {1} stretches of my past right, from my birth time alone.", right, asked),
+                        tr("Kshana · your time, read plainly"),
                     )
                 }.padding(vertical = 6.dp),
             )
@@ -378,36 +378,36 @@ private fun ScoreCard(items: List<PastReveal.Item>) {
 private fun BirthTimeCard(profile: BirthProfile, r: BirthRefineRecord?, working: Boolean, note: String?, learnLine: String?, nowLine: String?, onUse: (uniffi.kshana_ffi.BirthFitRecord) -> Unit) {
     val recorded = "%02d:%02d".format(profile.hour, profile.minute)
     Column(Modifier.fillMaxWidth().glass(16.dp).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("YOUR BIRTH TIME", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Sky)
+        Text(tr("YOUR BIRTH TIME"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Sky)
         when {
             note != null -> Text(note, fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text)
-            working -> Working("checking every minute around $recorded against your answers…")
-            r == null -> Text("Answer at least three questions and I will check your recorded time, $recorded, against your life.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+            working -> Working(trf("checking every minute around {0} against your answers…", recorded))
+            r == null -> Text(trf("Answer at least three questions and I will check your recorded time, {0}, against your life.", recorded), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
             r.suggested != null -> {
                 val s = r.suggested!!
                 val t = Instants.toLocal(s.birth, profile.birthZone())
                 val mins = kotlin.math.abs(s.shiftMin).toInt()
                 Text(
-                    "Your answers fit a birth time of ${"%02d:%02d".format(t.hour, t.minute)} better than $recorded: $mins minute${if (mins == 1) "" else "s"} ${if (s.shiftMin > 0) "later" else "earlier"}.",
+                    trf(if (s.shiftMin > 0) (if (mins == 1) "Your answers fit a birth time of {0} better than {1}: 1 minute later." else "Your answers fit a birth time of {0} better than {1}: {2} minutes later.") else (if (mins == 1) "Your answers fit a birth time of {0} better than {1}: 1 minute earlier." else "Your answers fit a birth time of {0} better than {1}: {2} minutes earlier."), "%02d:%02d".format(t.hour, t.minute), recorded, mins),
                     fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text,
                 )
                 Text(
-                    "That time explains ${s.explained} of your answers; $recorded explains ${r.recordedExplains}. Recorded times are often rounded or noted a little late. You can always change it back under Birth details.",
+                    trf("That time explains {0} of your answers; {1} explains {2}. Recorded times are often rounded or noted a little late. You can always change it back under Birth details.", s.explained, recorded, r.recordedExplains),
                     style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    GoldButton("USE ${"%02d:%02d".format(t.hour, t.minute)}", onClick = { onUse(s) }, modifier = Modifier.weight(1f))
+                    GoldButton(trf("USE {0}", "%02d:%02d".format(t.hour, t.minute)), onClick = { onUse(s) }, modifier = Modifier.weight(1f))
                 }
-                Text("Not sure yet? Answer more questions below; the suggestion firms up or goes away.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                Text(tr("Not sure yet? Answer more questions below; the suggestion firms up or goes away."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             }
             else -> {
                 val best = r.fits.firstOrNull()
                 Text(
-                    if (best == null || kotlin.math.abs(best.shiftMin) < 2.0) "Your answers agree with your recorded time, $recorded."
-                    else "Your answers lean a little toward ${"%02d:%02d".format(Instants.toLocal(best.birth, profile.birthZone()).hour, Instants.toLocal(best.birth, profile.birthZone()).minute)}, but not clearly enough to change $recorded yet.",
+                    if (best == null || kotlin.math.abs(best.shiftMin) < 2.0) trf("Your answers agree with your recorded time, {0}.", recorded)
+                    else trf("Your answers lean a little toward {0}, but not clearly enough to change {1} yet.", "%02d:%02d".format(Instants.toLocal(best.birth, profile.birthZone()).hour, Instants.toLocal(best.birth, profile.birthZone()).minute), recorded),
                     fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text,
                 )
-                Text("More answers make this surer. $WRONG_HELPS", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                Text(tr("More answers make this surer.") + " " + tr(WRONG_HELPS), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             }
         }
         // The stretch of birth times the answers point to, once they point anywhere firmly.
@@ -420,7 +420,7 @@ private fun BirthTimeCard(profile: BirthProfile, r: BirthRefineRecord?, working:
             if (a != null && b != null && r.log10Bayes >= 1.0) {
                 val f = { e: uniffi.kshana_ffi.ExactInstant -> Instants.toLocal(e, profile.birthZone()).let { "%02d:%02d".format(it.hour, it.minute) } }
                 Text(
-                    "Your answers place your birth between ${f(a)} and ${f(b)}: inside that stretch, everything they rest on holds.",
+                    trf("Your answers place your birth between {0} and {1}: inside that stretch, everything they rest on holds.", f(a), f(b)),
                     style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky,
                 )
             }
@@ -436,33 +436,40 @@ internal fun SealCard(seal: PastReveal.Seal, onRemedy: () -> Unit, onAnswer: ((S
     val opens = java.time.Instant.ofEpochMilli(seal.opensAt()).atZone(java.time.ZoneId.systemDefault())
     val days = java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), opens.toLocalDate())
     Column(Modifier.fillMaxWidth().glass(18.dp).padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("A SEALED PREDICTION", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(tr("A SEALED PREDICTION"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         if (!seal.isOpen(now)) {
             Text(
-                "I have written down one thing about the coming weeks and sealed it. It opens on ${opens.format(java.time.format.DateTimeFormatter.ofPattern("d MMM uuuu"))}${if (days > 0) ", in $days day${if (days == 1L) "" else "s"}" else ""}. Then you will see if I was right.",
+                run {
+                    val on = opens.format(java.time.format.DateTimeFormatter.ofPattern("d MMM uuuu"))
+                    when {
+                        days == 1L -> trf("I have written down one thing about the coming weeks and sealed it. It opens on {0}, in 1 day. Then you will see if I was right.", on)
+                        days > 1L -> trf("I have written down one thing about the coming weeks and sealed it. It opens on {0}, in {1} days. Then you will see if I was right.", on, days)
+                        else -> trf("I have written down one thing about the coming weeks and sealed it. It opens on {0}. Then you will see if I was right.", on)
+                    }
+                },
                 fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text,
             )
             Text(
-                "Seal ${seal.shortCode()} · sealed ${java.time.Instant.ofEpochMilli(seal.sealedAt).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("d MMM uuuu, HH:mm"))}. The code is a fingerprint of the words: if a single letter changed, it would not match.",
+                trf("Seal {0} · sealed {1}. The code is a fingerprint of the words: if a single letter changed, it would not match.", seal.shortCode(), java.time.Instant.ofEpochMilli(seal.sealedAt).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("d MMM uuuu, HH:mm"))),
                 style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
             )
         } else {
-            Text("Opened today. Sealed ${java.time.Instant.ofEpochMilli(seal.sealedAt).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("d MMM uuuu"))}, seal ${seal.shortCode()}:", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            Text(trf("Opened today. Sealed {0}, seal {1}:", java.time.Instant.ofEpochMilli(seal.sealedAt).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("d MMM uuuu")), seal.shortCode()), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             Text(seal.statement, fontFamily = FontFamily.Serif, fontSize = 19.sp, lineHeight = 27.sp, color = KshanaColors.Text)
             if (seal.verdict.isEmpty() && onAnswer != null) {
-                Text("Did it happen?", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+                Text(tr("Did it happen?"), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OptionBox("Yes", selected = false, onClick = { onAnswer("yes") }, modifier = Modifier.weight(1f))
-                    OptionBox("Close", selected = false, onClick = { onAnswer("close") }, modifier = Modifier.weight(1f))
-                    OptionBox("No", selected = false, onClick = { onAnswer("no") }, modifier = Modifier.weight(1f))
+                    OptionBox(tr("Yes"), selected = false, onClick = { onAnswer("yes") }, modifier = Modifier.weight(1f))
+                    OptionBox(tr("Close"), selected = false, onClick = { onAnswer("close") }, modifier = Modifier.weight(1f))
+                    OptionBox(tr("No"), selected = false, onClick = { onAnswer("no") }, modifier = Modifier.weight(1f))
                 }
-                Text(WRONG_HELPS, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                Text(tr(WRONG_HELPS), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             }
         }
         // Only once opened: before that, the hint would give away what it says.
         if (seal.isOpen(now) && !seal.good) {
             Text(
-                "Whatever it says, nothing is fixed: What helps has the deeds that ease a hard stretch. WHAT HELPS ›",
+                tr("Whatever it says, nothing is fixed: What helps has the deeds that ease a hard stretch. WHAT HELPS ›"),
                 style = MaterialTheme.typography.bodySmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRemedy),
             )
         }

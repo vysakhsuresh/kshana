@@ -113,7 +113,7 @@ fun FamilyProofScreen(
     var error by remember { mutableStateOf<String?>(null) }
     val zone = remember(place) { runCatching { CityClocks.of(place.zoneId) }.getOrDefault(java.time.ZoneId.systemDefault()) }
 
-    val key = "${profile.name}|${profile.birthInstant().taiSeconds}|${readable.joinToString(",") { it.name + ":" + relations[it.name] + ":" + it.birthInstant().taiSeconds }}|${java.time.LocalDate.now()}|${settings.ayanamsa}|${settings.houseSystem}"
+    val key = "${profile.name}|${profile.birthInstant().taiSeconds}|${readable.joinToString(",") { it.name + ":" + relations[it.name] + ":" + it.birthInstant().taiSeconds }}|${java.time.LocalDate.now()}|${settings.ayanamsa}|${settings.houseSystem}|${com.kshana.app.data.Lang.code}"
     LaunchedEffect(key) {
         if (readable.isEmpty()) { result = null; return@LaunchedEffect }
         if (FamilyProofCache.key == key) { result = FamilyProofCache.result; return@LaunchedEffect }
@@ -123,7 +123,7 @@ fun FamilyProofScreen(
             val engine = EngineProvider.get(context)
             val inputs = readable.map { FamilyMemberInput(it.name, relations[it.name] ?: "Other", it.birthInstant(), it.latitude, it.longitude) }
             val r = withContext(Dispatchers.Default) {
-                engine.familyProof(profile.birthInstant(), profile.latitude, profile.longitude, selfIsMale(context), inputs, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), 12u)
+                engine.familyProof(profile.birthInstant(), profile.latitude, profile.longitude, selfIsMale(context), inputs, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), 12u, com.kshana.app.data.Lang.code)
             }
             FamilyProofCache.key = key
             FamilyProofCache.result = r
@@ -135,11 +135,11 @@ fun FamilyProofScreen(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(top = 44.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("‹ BACK", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onBack).padding(vertical = 4.dp))
-        Text("FAMILY PROOF", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-        Text("When the family agrees", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+        Text(tr("‹ BACK"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onBack).padding(vertical = 4.dp))
+        Text(tr("FAMILY PROOF"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+        Text(tr("When the family agrees"), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         Text(
-            "A child's wedding shows in the parents' charts too, and a father's change of work in his children's. These are the times in the next year that more than one chart in your family points to.",
+            tr("A child's wedding shows in the parents' charts too, and a father's change of work in his children's. These are the times in the next year that more than one chart in your family points to."),
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
         )
 
@@ -154,10 +154,10 @@ fun FamilyProofScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Initials(initials(p.name), lit = false)
                     Spacer(Modifier.width(10.dp))
-                    Text("Who is ${p.name.substringBefore(' ')} to you?", fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text)
+                    Text(trf("Who is {0} to you?", p.name.substringBefore(' ')), fontFamily = FontFamily.Serif, fontSize = 17.sp, color = KshanaColors.Text)
                 }
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (rel in PROOF_RELATIONS) Chip(rel.uppercase(), selected = false, onClick = {
+                    for (rel in PROOF_RELATIONS) Chip(tr(rel.uppercase()), selected = false, onClick = {
                         ProfileStore.saveRelation(context, p.name, rel)
                         relVersion++
                     })
@@ -170,26 +170,26 @@ fun FamilyProofScreen(
             if (unplaced.isEmpty()) EmptyFamily(onAddFamily)
             return@Column
         }
-        val r = result ?: run { if (error == null) Working("reading every chart in the family against the others…"); return@Column }
+        val r = result ?: run { if (error == null) Working(tr("reading every chart in the family against the others…")); return@Column }
         val nameOf: (String) -> String = { n -> n.ifEmpty { profile.name } }
 
         Text(r.plain, fontFamily = KshanaFonts.serif, fontSize = 18.sp, lineHeight = 25.sp, color = KshanaColors.TextSoft)
 
-        if (r.aboutYou.isNotEmpty()) SectionLabel("Your year, confirmed by family")
+        if (r.aboutYou.isNotEmpty()) SectionLabel(tr("Your year, confirmed by family"))
         for (w in r.aboutYou) ProofCard(w, nameOf, zone, expert, onRemedy)
 
-        if (r.aboutFamily.isNotEmpty()) SectionLabel("What your chart says about them")
+        if (r.aboutFamily.isNotEmpty()) SectionLabel(tr("What your chart says about them"))
         for (w in r.aboutFamily) ProofCard(w, nameOf, zone, expert, onRemedy)
 
         if (r.aboutYou.isEmpty() && r.aboutFamily.isEmpty()) {
-            Text("Each chart tells its own story for now. Come back as the months turn; adding more of the family gives the charts more to agree on.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+            Text(tr("Each chart tells its own story for now. Come back as the months turn; adding more of the family gives the charts more to agree on."), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
         }
         if (r.notRead.isNotEmpty()) {
-            Text("Friends are not read here: ${r.notRead.joinToString(", ")}. Only family charts confirm each other.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            Text(trf("Friends are not read here: {0}. Only family charts confirm each other.", r.notRead.joinToString(", ")), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         }
         Spacer(Modifier.height(4.dp))
-        Door("Add or change family", onClick = onAddFamily)
-        Text("Agreement makes a time much more likely, never certain. Use it to prepare, not to fear.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        Door(tr("Add or change family"), onClick = onAddFamily)
+        Text(tr("Agreement makes a time much more likely, never certain. Use it to prepare, not to fear."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
     }
 }
 
@@ -199,13 +199,13 @@ private fun EmptyFamily(onAddFamily: () -> Unit) {
         Row(horizontalArrangement = Arrangement.spacedBy((-8).dp)) {
             for (s in listOf("M", "F", "S")) Initials(s, lit = false)
         }
-        Text("Your family's charts can confirm yours", fontFamily = FontFamily.Serif, fontSize = 19.sp, lineHeight = 25.sp, color = KshanaColors.Text)
+        Text(tr("Your family's charts can confirm yours"), fontFamily = FontFamily.Serif, fontSize = 19.sp, lineHeight = 25.sp, color = KshanaColors.Text)
         Text(
-            "Add your parents, your partner, your children, your brothers and sisters. When their charts and yours point to the same weeks, you will see it here, with who agrees.",
+            tr("Add your parents, your partner, your children, your brothers and sisters. When their charts and yours point to the same weeks, you will see it here, with who agrees."),
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft,
         )
-        GoldButton("ADD FAMILY", onClick = onAddFamily, modifier = Modifier.fillMaxWidth())
-        Text("Everything stays on this phone.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        GoldButton(tr("ADD FAMILY"), onClick = onAddFamily, modifier = Modifier.fillMaxWidth())
+        Text(tr("Everything stays on this phone."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
     }
 }
 
@@ -244,7 +244,7 @@ private fun ProofCard(w: FamilyProofRecord, nameOf: (String) -> String, zone: ja
         Text(w.detail, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
         if (w.isHard) {
             Text(w.remedyHint, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Leaf)
-            Text("WHAT HELPS ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRemedy).padding(vertical = 4.dp))
+            Text(tr("WHAT HELPS ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRemedy).padding(vertical = 4.dp))
         } else if (w.remedyHint.isNotBlank()) {
             Text(w.remedyHint, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
         }

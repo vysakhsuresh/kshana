@@ -49,21 +49,21 @@ fun RecordScreen(onBack: () -> Unit, onLife: (String) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("YOUR RECORD", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-            Text("BACK", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onBack).padding(12.dp))
+            Text(tr("YOUR RECORD"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            Text(tr("BACK"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onBack).padding(12.dp))
         }
-        Text("Did it happen?", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
-        Text("Every window the app named and that has passed. Say yes or no; the record is scored honestly, and after five answers for a life it is shown beside that life's score.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+        Text(tr("Did it happen?"), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+        Text(tr("Every window the app named and that has passed. Say yes or no; the record is scored honestly, and after five answers for a life it is shown beside that life's score."), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
 
         Column(
             Modifier.fillMaxWidth().glass(16.dp).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text("SO FAR", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            Text(tr("SO FAR"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
             Text(record.words, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)
             for (l in record.lives.filter { it.n > 0u }) {
                 Row(Modifier.fillMaxWidth().clickable { onLife(l.life) }.padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("${lifeGlyph(l.life)} ${l.life}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.width(100.dp))
+                    Text("${lifeGlyph(l.life)} ${lifeName(l.life)}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.width(100.dp))
                     Box(Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(2.dp)).background(KshanaColors.Line)) {
                         Box(Modifier.fillMaxWidth((l.rate / 100.0).toFloat().coerceIn(0.02f, 1f)).height(5.dp).background(scoreColor(l.rate)))
                     }
@@ -74,19 +74,19 @@ fun RecordScreen(onBack: () -> Unit, onLife: (String) -> Unit) {
             }
         }
 
-        SectionLabel("To grade · ${pending.size}")
-        if (pending.isEmpty()) Text("Nothing waiting. Windows are remembered from the life pages and at each sunrise; they appear here once they have passed.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+        SectionLabel(trf("To grade · {0}", pending.size))
+        if (pending.isEmpty()) Text(tr("Nothing waiting. Windows are remembered from the life pages and at each sunrise; they appear here once they have passed."), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         for (p in pending) {
             HorizontalDivider(color = KshanaColors.LineSoft)
             val s = Instant.ofEpochMilli(p.start).atZone(ZoneId.systemDefault())
             val e = Instant.ofEpochMilli(p.end - 1).atZone(ZoneId.systemDefault())
             Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("${lifeGlyph(p.life)} ${p.life} · read ${p.score.toInt()}", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
+                    Text("${lifeGlyph(p.life)} ${lifeName(p.life)} · ${trf("read {0}", p.score.toInt())}", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text)
                     Text(if (s.toLocalDate() == e.toLocalDate()) "${s.format(WEEKDAY_DAY)} · ${s.format(TIME_HM)} – ${e.format(TIME_HM)}" else "${s.format(WEEKDAY_DAY)} – ${e.format(WEEKDAY_DAY)}", fontFamily = FontFamily.Monospace, fontSize = 11.sp, color = KshanaColors.Sky)
                 }
-                Text("YES", style = MaterialTheme.typography.labelMedium, color = KshanaColors.Leaf, modifier = Modifier.clickable { PredictionStore.answer(context, p.life, p.start, true); version++ }.padding(10.dp))
-                Text("NO", style = MaterialTheme.typography.labelMedium, color = KshanaColors.Ember, modifier = Modifier.clickable { PredictionStore.answer(context, p.life, p.start, false); version++ }.padding(10.dp))
+                Text(tr("YES"), style = MaterialTheme.typography.labelMedium, color = KshanaColors.Leaf, modifier = Modifier.clickable { PredictionStore.answer(context, p.life, p.start, true); version++ }.padding(10.dp))
+                Text(tr("NO"), style = MaterialTheme.typography.labelMedium, color = KshanaColors.Ember, modifier = Modifier.clickable { PredictionStore.answer(context, p.life, p.start, false); version++ }.padding(10.dp))
             }
         }
     }

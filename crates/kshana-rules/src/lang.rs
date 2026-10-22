@@ -51,6 +51,12 @@ pub fn date(lang: Lang, t: Instant, lon: f64) -> String {
     }
 }
 
+/// A month's name, 1 = January: "Feb" in English (short), "ഫെബ്രുവരി", "फ़रवरी".
+pub fn month_name(lang: Lang, month: u32) -> &'static str {
+    let m = (month as usize).clamp(1, 12) - 1;
+    lang.pick([MONTHS_EN_SHORT[m], MONTHS_ML[m], MONTHS_HI[m]])
+}
+
 /// A month and year: "June 2025", "2025 ജൂൺ", "जून 2025".
 pub fn month_year(lang: Lang, t: Instant, lon: f64) -> String {
     let u = local(t, lon);

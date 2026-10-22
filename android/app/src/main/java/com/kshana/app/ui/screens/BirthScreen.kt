@@ -134,13 +134,13 @@ fun BirthScreen(
         val lat = latitude.toDoubleOrNull(); val lon = longitude.toDoubleOrNull()
         nzResult = null; nzLocal = null
         if (y == null || mo == null || d == null || n == null || v == null || lat == null || lon == null) { nzError = null; return@LaunchedEffect }
-        if (n > 60 || v > 59) { nzError = "Nazhika run from 0 to 60 and vinazhika from 0 to 59."; return@LaunchedEffect }
+        if (n > 60 || v > 59) { nzError = tr("Nazhika run from 0 to 60 and vinazhika from 0 to 59."); return@LaunchedEffect }
         // The clock's offset on that date (the old city clock where it applies).
         val offset = runCatching {
             val at6 = LocalDateTime.of(y, mo, d, 6, 0)
             CityClocks.zone(zoneId.trim(), at6)?.rules?.getOffset(at6)?.totalSeconds
         }.getOrNull()
-        if (offset == null) { nzError = "Check the date and the time zone first."; return@LaunchedEffect }
+        if (offset == null) { nzError = tr("Check the date and the time zone first."); return@LaunchedEffect }
         delay(250)
         try {
             val engine = EngineProvider.get(context)
@@ -152,8 +152,8 @@ fun BirthScreen(
             nzFor = nzKey
             nzError = null
         } catch (e: Exception) {
-            nzError = if ((e.message ?: "").contains("does not rise")) "The sun does not rise at this place on that date, so the count has no start. Use the clock time instead."
-            else "That date or count could not be worked out. Check the date and the place."
+            nzError = if ((e.message ?: "").contains("does not rise")) tr("The sun does not rise at this place on that date, so the count has no start. Use the clock time instead.")
+            else tr("That date or count could not be worked out. Check the date and the place.")
         }
     }
     // How sure a nazhika time is: with vinazhika within a minute or two, whole nazhika within a quarter hour.
@@ -217,8 +217,8 @@ fun BirthScreen(
         // In nazhika the clock date and time come from the count (past midnight, the date moves on).
         val fromCount = if (nzOn) {
             val at = nzLocal
-            if (nzN.toIntOrNull() == null) { problem = "Enter the nazhika from the horoscope, or switch back to the clock time."; return null }
-            if (at == null || nzFor != nzKey) { problem = nzError ?: "Working out the clock time. Try again in a moment."; return null }
+            if (nzN.toIntOrNull() == null) { problem = tr("Enter the nazhika from the horoscope, or switch back to the clock time."); return null }
+            if (at == null || nzFor != nzKey) { problem = nzError ?: tr("Working out the clock time. Try again in a moment."); return null }
             at
         } else null
         val y = fromCount?.year ?: ty; val mo = fromCount?.monthValue ?: tmo; val d = fromCount?.dayOfMonth ?: td
@@ -272,8 +272,8 @@ fun BirthScreen(
             NumberField(day, { day = it.filter(Char::isDigit).take(2) }, "Day", Modifier.weight(1f))
         }
 
-        SectionLabel(if (nzOn) "Time in nazhika" else "Clock time")
-        OptionBox("My horoscope gives the time in nazhika", selected = nzOn, onClick = {
+        SectionLabel(if (nzOn) tr("Time in nazhika") else tr("Clock time"))
+        OptionBox(tr("My horoscope gives the time in nazhika"), selected = nzOn, onClick = {
             // Going back to the clock keeps the time the count gave.
             if (nzOn) nzLocal?.let { hour = it.hour.toString(); minute = it.minute.toString(); second = it.second.toString() }
             nzOn = !nzOn
@@ -345,8 +345,8 @@ fun BirthScreen(
             NumberField(latitude, { latitude = it.filter { c -> c.isDigit() || c == '.' || c == '-' } }, "Latitude °N", Modifier.weight(1f), decimal = true)
             NumberField(longitude, { longitude = it.filter { c -> c.isDigit() || c == '.' || c == '-' } }, "Longitude °E", Modifier.weight(1f), decimal = true)
         }
-        NumberField(elevation, { elevation = it.filter(Char::isDigit).take(4) }, "Height above sea level, m (optional)", Modifier.fillMaxWidth())
-        Text(Heights.HINT, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        NumberField(elevation, { elevation = it.filter(Char::isDigit).take(4) }, tr("Height above sea level, m (optional)"), Modifier.fillMaxWidth())
+        Text(tr(Heights.HINT), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         Field(zoneId, { zoneId = it }, "Time zone (IANA id)", Modifier.fillMaxWidth())
         OldCityClock(year.toIntOrNull(), latitude.toDoubleOrNull(), longitude.toDoubleOrNull(), zoneId, placeZone) { zoneId = it }
         Field(placeName, { placeName = it }, "Place name", Modifier.fillMaxWidth())
@@ -419,25 +419,25 @@ private fun NazhikaEntryFields(
     result: NazhikaTimeRecord?, local: LocalDateTime?, error: String?,
 ) {
     Text(
-        "A nazhika is 24 minutes and a vinazhika 24 seconds, counted from that morning's sunrise at the birth place. The date above is the date on the horoscope.",
+        tr("A nazhika is 24 minutes and a vinazhika 24 seconds, counted from that morning's sunrise at the birth place. The date above is the date on the horoscope."),
         style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
     )
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        NumberField(nazhika, onNazhika, "Nazhika (0–60)", Modifier.weight(1f))
-        NumberField(vinazhika, onVinazhika, "Vinazhika (if given)", Modifier.weight(1f))
+        NumberField(nazhika, onNazhika, tr("Nazhika (0–60)"), Modifier.weight(1f))
+        NumberField(vinazhika, onVinazhika, tr("Vinazhika (if given)"), Modifier.weight(1f))
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Chip("FROM SUNRISE", selected = fromSunrise, onClick = { onFromSunrise(true) })
-        Chip("FROM 6 AM", selected = !fromSunrise, onClick = { onFromSunrise(false) })
+        Chip(tr("FROM SUNRISE"), selected = fromSunrise, onClick = { onFromSunrise(true) })
+        Chip(tr("FROM 6 AM"), selected = !fromSunrise, onClick = { onFromSunrise(false) })
     }
     Text(
-        if (fromSunrise) "Most horoscopes count from the actual sunrise of the day. The app finds that sunrise for the date and place."
-        else "Some horoscopes count from 6 o'clock in the morning by the clock instead. Use this only if yours says so.",
+        if (fromSunrise) tr("Most horoscopes count from the actual sunrise of the day. The app finds that sunrise for the date and place.")
+        else tr("Some horoscopes count from 6 o'clock in the morning by the clock instead. Use this only if yours says so."),
         style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
     )
-    OptionBox("Born after midnight, before sunrise", selected = previousDay, onClick = { onPreviousDay(!previousDay) }, modifier = Modifier.fillMaxWidth())
+    OptionBox(tr("Born after midnight, before sunrise"), selected = previousDay, onClick = { onPreviousDay(!previousDay) }, modifier = Modifier.fillMaxWidth())
     Text(
-        "A horoscope's day runs from one sunrise to the next. A birth in the small hours belongs to the day that began the morning before, so the count starts from that sunrise. Keep the date above as the birth date on the calendar.",
+        tr("A horoscope's day runs from one sunrise to the next. A birth in the small hours belongs to the day that began the morning before, so the count starts from that sunrise. Keep the date above as the birth date on the calendar."),
         style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
     )
     ErrorLine(error)
@@ -446,22 +446,22 @@ private fun NazhikaEntryFields(
             Modifier.fillMaxWidth().glass(12.dp).padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text("That is ${nzTime(local)}", fontFamily = KshanaFonts.serif, fontSize = 20.sp, color = KshanaColors.Text)
-            Text("on ${local.toLocalDate().format(NZ_DATE)}", fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky)
+            Text(trf("That is {0}", nzTime(local)), fontFamily = KshanaFonts.serif, fontSize = 20.sp, color = KshanaColors.Text)
+            Text(trf("on {0}", local.toLocalDate().format(NZ_DATE)), fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky)
             Text(result.note, style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft)
             val hint = when {
                 result.pastNextSunrise ->
-                    "That is more than the whole day holds: from this sunrise to the next is %.1f nazhika. Check the count on the horoscope.".format(result.wholeDayNazhika)
+                    tr("That is more than the whole day holds: from this sunrise to the next is %.1f nazhika. Check the count on the horoscope.").format(result.wholeDayNazhika)
                 typedDate != null && !previousDay && local.toLocalDate().isAfter(typedDate) ->
-                    "This count runs past midnight, into ${local.toLocalDate().format(NZ_DATE)}. If ${typedDate.format(NZ_DATE)} is the birth date on the calendar, the birth was after midnight and before sunrise: tick the box above. If the horoscope writes the date of the morning the count began, leave it as it is."
+                    trf("This count runs past midnight, into {0}. If {1} is the birth date on the calendar, the birth was after midnight and before sunrise: tick the box above. If the horoscope writes the date of the morning the count began, leave it as it is.", local.toLocalDate().format(NZ_DATE), typedDate.format(NZ_DATE))
                 typedDate != null && previousDay && local.toLocalDate().isBefore(typedDate) ->
-                    "Counted from the sunrise of the day before, this lands on the evening of ${local.toLocalDate().format(NZ_DATE)}, before midnight. Untick the box unless the birth was between midnight and sunrise."
+                    trf("Counted from the sunrise of the day before, this lands on the evening of {0}, before midnight. Untick the box unless the birth was between midnight and sunrise.", local.toLocalDate().format(NZ_DATE))
                 result.afterSunset ->
-                    "A night birth: the daylight that day lasted %.1f nazhika and this count is past it.".format(result.daytimeNazhika)
+                    tr("A night birth: the daylight that day lasted %.1f nazhika and this count is past it.").format(result.daytimeNazhika)
                 else -> null
             }
             if (hint != null) Text(hint, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Gold)
-            Text("This clock time is what gets saved and read.", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            Text(tr("This clock time is what gets saved and read."), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
         }
     }
 }

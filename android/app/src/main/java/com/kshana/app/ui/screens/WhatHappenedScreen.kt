@@ -70,9 +70,9 @@ fun WhatHappenedScreen(profile: BirthProfile, onBack: () -> Unit, onScore: () ->
                 TextButton(onClick = {
                     state.selectedDateMillis?.let { date = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate().coerceAtMost(LocalDate.now()) }
                     pick = false
-                }) { Text("SET", color = KshanaColors.Gold) }
+                }) { Text(tr("SET"), color = KshanaColors.Gold) }
             },
-            dismissButton = { TextButton(onClick = { pick = false }) { Text("CANCEL", color = KshanaColors.Muted) } },
+            dismissButton = { TextButton(onClick = { pick = false }) { Text(tr("CANCEL"), color = KshanaColors.Muted) } },
         ) { DatePicker(state = state, title = null, headline = null, showModeToggle = false) }
     }
 
@@ -81,39 +81,39 @@ fun WhatHappenedScreen(profile: BirthProfile, onBack: () -> Unit, onScore: () ->
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("WHAT HAPPENED?", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-            Text("BACK", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onBack).padding(12.dp))
+            Text(tr("WHAT HAPPENED?"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            Text(tr("BACK"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable(onClick = onBack).padding(12.dp))
         }
         val result = saved
         if (result == null) {
-            Text("Tell it in your own words first", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+            Text(tr("Tell it in your own words first"), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
             Text(
-                "Write down something that happened. Nothing that was predicted is shown until you have saved it, so what you write is yours alone. Afterwards, if anything sealed before that day covers it, you will see it.",
+                tr("Write down something that happened. Nothing that was predicted is shown until you have saved it, so what you write is yours alone. Afterwards, if anything sealed before that day covers it, you will see it."),
                 style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
             )
-            SectionLabel("Which part of life")
+            SectionLabel(tr("Which part of life"))
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (l in LIFE_ORDER) Chip("${lifeGlyph(l)} ${lifeName(l).uppercase()}", selected = life == l, onClick = { life = l })
             }
-            SectionLabel("When")
+            SectionLabel(tr("When"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 ValuePill(date.format(DateTimeFormatter.ofPattern("d MMM uuuu")), onClick = { pick = true })
             }
-            SectionLabel("How was it")
+            SectionLabel(tr("How was it"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OptionBox("It was good", selected = good == true, onClick = { good = true }, modifier = Modifier.weight(1f))
-                OptionBox("It was hard", selected = good == false, onClick = { good = false }, modifier = Modifier.weight(1f))
+                OptionBox(tr("It was good"), selected = good == true, onClick = { good = true }, modifier = Modifier.weight(1f))
+                OptionBox(tr("It was hard"), selected = good == false, onClick = { good = false }, modifier = Modifier.weight(1f))
             }
             OutlinedTextField(
                 value = note, onValueChange = { note = it.take(200) },
-                label = { Text("In a line (optional)") },
+                label = { Text(tr("In a line (optional)")) },
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = KshanaColors.Gold, unfocusedBorderColor = KshanaColors.Line, focusedLabelColor = KshanaColors.Gold),
                 modifier = Modifier.fillMaxWidth(),
             )
             val l = life
             val g = good
-            GoldButton(if (l == null || g == null) "PICK A PART OF LIFE AND GOOD OR HARD" else "SAVE IT", onClick = {
+            GoldButton(if (l == null || g == null) tr("PICK A PART OF LIFE AND GOOD OR HARD") else tr("SAVE IT"), onClick = {
                 if (l != null && g != null) {
                     saved = Integrity.logBlind(context, profile, date, l, g, note)
                     savedHard = !g
@@ -121,24 +121,24 @@ fun WhatHappenedScreen(profile: BirthProfile, onBack: () -> Unit, onScore: () ->
                 }
             }, modifier = Modifier.fillMaxWidth())
         } else {
-            Text("Saved, in your words", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+            Text(tr("Saved, in your words"), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
             Text(
-                "It is in your journal now, and it helps tune your birth time. It never counts toward the score itself: only predictions sealed before their dates do.",
+                tr("It is in your journal now, and it helps tune your birth time. It never counts toward the score itself: only predictions sealed before their dates do."),
                 style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
             )
             if (result.isEmpty()) {
                 Text(
-                    "Nothing sealed covered that day and part of life. That is common: most days are not foretold, and the record stays honest either way.",
+                    tr("Nothing sealed covered that day and part of life. That is common: most days are not foretold, and the record stays honest either way."),
                     style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft,
                 )
             } else {
-                SectionLabel("Sealed before it happened")
+                SectionLabel(tr("Sealed before it happened"))
                 for (m in result) {
                     HorizontalDivider(color = KshanaColors.LineSoft)
                     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(m.words, fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 22.sp, color = KshanaColors.Text)
                         Text(
-                            if (m.agrees) "Went the way it was sealed." else "Went the other way.",
+                            tr(if (m.agrees) "Went the way it was sealed." else "Went the other way."),
                             style = MaterialTheme.typography.bodySmall, color = if (m.agrees) KshanaColors.Leaf else KshanaColors.Sky,
                         )
                     }
@@ -146,12 +146,12 @@ fun WhatHappenedScreen(profile: BirthProfile, onBack: () -> Unit, onScore: () ->
             }
             if (savedHard) {
                 Column(Modifier.fillMaxWidth().glass(14.dp).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("A hard time passes. Small steady things help: a kept routine, a kind act, a word with someone you trust.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
-                    Text("WHAT HELPS ›", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRemedy).padding(vertical = 4.dp))
+                    Text(tr("A hard time passes. Small steady things help: a kept routine, a kind act, a word with someone you trust."), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+                    Text(tr("WHAT HELPS ›"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onRemedy).padding(vertical = 4.dp))
                 }
             }
-            QuietButton("WRITE ANOTHER", onClick = { saved = null; note = ""; good = null }, modifier = Modifier.fillMaxWidth())
-            QuietButton("YOUR SCORE", onClick = onScore, modifier = Modifier.fillMaxWidth())
+            QuietButton(tr("WRITE ANOTHER"), onClick = { saved = null; note = ""; good = null }, modifier = Modifier.fillMaxWidth())
+            QuietButton(tr("YOUR SCORE"), onClick = onScore, modifier = Modifier.fillMaxWidth())
         }
     }
 }

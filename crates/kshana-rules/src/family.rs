@@ -50,6 +50,8 @@
 //! helps, and death is never read.
 
 use crate::facts::Facts;
+use crate::lang;
+use crate::plain::Lang;
 use crate::forecast::{date_words, sky, slow_scores, ForecastError, Life, Natal, Sky, GRAHAS};
 use kshana_ephem::Spk;
 use kshana_houses::HouseSystem;
@@ -111,6 +113,24 @@ impl Kin {
             (Kin::Sibling, Some(true)) => "your brother",
             (Kin::Sibling, Some(false)) => "your sister",
             (Kin::Sibling, None) => "your sibling",
+        }
+    }
+
+    /// The relative in Malayalam and Hindi: (Malayalam as subject, Malayalam "of",
+    /// Malayalam "for", Hindi as subject, Hindi before a postposition).
+    fn forms(self, male: Option<bool>) -> [&'static str; 5] {
+        match (self, male) {
+            (Kin::Father, _) => ["നിങ്ങളുടെ അച്ഛൻ", "നിങ്ങളുടെ അച്ഛന്റെ", "നിങ്ങളുടെ അച്ഛന്", "आपके पिता", "आपके पिता"],
+            (Kin::Mother, _) => ["നിങ്ങളുടെ അമ്മ", "നിങ്ങളുടെ അമ്മയുടെ", "നിങ്ങളുടെ അമ്മയ്ക്ക്", "आपकी माँ", "आपकी माँ"],
+            (Kin::Spouse, Some(true)) => ["നിങ്ങളുടെ ഭർത്താവ്", "നിങ്ങളുടെ ഭർത്താവിന്റെ", "നിങ്ങളുടെ ഭർത്താവിന്", "आपके पति", "आपके पति"],
+            (Kin::Spouse, Some(false)) => ["നിങ്ങളുടെ ഭാര്യ", "നിങ്ങളുടെ ഭാര്യയുടെ", "നിങ്ങളുടെ ഭാര്യയ്ക്ക്", "आपकी पत्नी", "आपकी पत्नी"],
+            (Kin::Spouse, None) => ["നിങ്ങളുടെ പങ്കാളി", "നിങ്ങളുടെ പങ്കാളിയുടെ", "നിങ്ങളുടെ പങ്കാളിക്ക്", "आपके जीवनसाथी", "आपके जीवनसाथी"],
+            (Kin::Child, Some(true)) => ["നിങ്ങളുടെ മകൻ", "നിങ്ങളുടെ മകന്റെ", "നിങ്ങളുടെ മകന്", "आपका बेटा", "आपके बेटे"],
+            (Kin::Child, Some(false)) => ["നിങ്ങളുടെ മകൾ", "നിങ്ങളുടെ മകളുടെ", "നിങ്ങളുടെ മകൾക്ക്", "आपकी बेटी", "आपकी बेटी"],
+            (Kin::Child, None) => ["നിങ്ങളുടെ കുട്ടി", "നിങ്ങളുടെ കുട്ടിയുടെ", "നിങ്ങളുടെ കുട്ടിക്ക്", "आपकी संतान", "आपकी संतान"],
+            (Kin::Sibling, Some(true)) => ["നിങ്ങളുടെ സഹോദരൻ", "നിങ്ങളുടെ സഹോദരന്റെ", "നിങ്ങളുടെ സഹോദരന്", "आपका भाई", "आपके भाई"],
+            (Kin::Sibling, Some(false)) => ["നിങ്ങളുടെ സഹോദരി", "നിങ്ങളുടെ സഹോദരിയുടെ", "നിങ്ങളുടെ സഹോദരിക്ക്", "आपकी बहन", "आपकी बहन"],
+            (Kin::Sibling, None) => ["നിങ്ങളുടെ കൂടപ്പിറപ്പ്", "നിങ്ങളുടെ കൂടപ്പിറപ്പിന്റെ", "നിങ്ങളുടെ കൂടപ്പിറപ്പിന്", "आपके भाई या बहन", "आपके भाई या बहन"],
         }
     }
 }
@@ -286,6 +306,40 @@ impl Member {
         match self.kin {
             None => "your own chart".into(),
             Some(k) => format!("{}'s chart", k.words(self.male)),
+        }
+    }
+
+    /// "you", "your father"… in the reader's language.
+    pub fn words_in(&self, lang: Lang) -> String {
+        match (lang, self.kin) {
+            (Lang::En, _) => self.words().to_string(),
+            (Lang::Ml, None) => "നിങ്ങൾ".into(),
+            (Lang::Hi, None) => "आप".into(),
+            (Lang::Ml, Some(k)) => k.forms(self.male)[0].into(),
+            (Lang::Hi, Some(k)) => k.forms(self.male)[3].into(),
+        }
+    }
+
+    /// "For your father", in the reader's language.
+    fn for_in(&self, lang: Lang) -> String {
+        match (lang, self.kin) {
+            (Lang::En, _) => format!("For {}", self.words()),
+            (Lang::Ml, None) => "നിങ്ങൾക്ക്".into(),
+            (Lang::Hi, None) => "आपके लिए".into(),
+            (Lang::Ml, Some(k)) => k.forms(self.male)[2].into(),
+            (Lang::Hi, Some(k)) => format!("{} के लिए", k.forms(self.male)[4]),
+        }
+    }
+
+    /// "your father's chart"; in Malayalam with "-ഉം" ("and … too") when `also`.
+    fn chart_in(&self, lang: Lang, also: bool) -> String {
+        let end = if also { "വും" } else { "ം" };
+        match (lang, self.kin) {
+            (Lang::En, _) => self.chart_words(),
+            (Lang::Ml, None) => format!("നിങ്ങളുടെ സ്വന്തം ജനനസമയ{end}"),
+            (Lang::Ml, Some(k)) => format!("{} ജനനസമയ{end}", k.forms(self.male)[1]),
+            (Lang::Hi, None) => "आपका अपना जन्म-समय".into(),
+            (Lang::Hi, Some(k)) => format!("{} का जन्म-समय", k.forms(self.male)[4]),
         }
     }
 }
@@ -487,6 +541,97 @@ fn count_word(n: usize) -> &'static str {
     ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"].get(n).copied().unwrap_or("many")
 }
 
+/// "Three charts agree" in Malayalam and Hindi: the births of so many people.
+fn count_people(lang: Lang, n: usize) -> String {
+    match lang {
+        Lang::Ml => {
+            let w = ["", "ഒരാളുടെ", "രണ്ടു പേരുടെ", "മൂന്നു പേരുടെ", "നാലു പേരുടെ", "അഞ്ചു പേരുടെ", "ആറു പേരുടെ", "ഏഴു പേരുടെ", "എട്ടു പേരുടെ", "ഒമ്പതു പേരുടെ"];
+            format!("{} ജനനസമയം ഒത്തുവരുന്നു", w.get(n).copied().unwrap_or("പലരുടെ"))
+        }
+        Lang::Hi => {
+            let w = ["", "एक", "दो", "तीन", "चार", "पाँच", "छह", "सात", "आठ", "नौ"];
+            format!("{} लोगों के जन्म-समय मेल खाते हैं", w.get(n).copied().unwrap_or("कई"))
+        }
+        Lang::En => format!("{} charts agree", crate::plain::cap(count_word(n))),
+    }
+}
+
+fn phrase_in(lang: Lang, event: Event, good: bool, pos: &str) -> String {
+    let t = match (event, good) {
+        (Event::Marriage, _) => ["", "വിവാഹത്തിനോ ബന്ധത്തിൽ ഒരു വലിയ ചുവടിനോ സാധ്യതയുള്ള സമയം", "शादी या रिश्ते में किसी बड़े कदम की संभावना वाला समय"],
+        (Event::Child, _) => ["", "വീട്ടിലേക്ക് ഒരു കുഞ്ഞ് വരാൻ സാധ്യതയുള്ള സമയം", "घर में बच्चे के आने की संभावना वाला समय"],
+        (Event::Career, true) => ["", "ജോലിയിൽ ഒരു മാറ്റമോ ഉയർച്ചയോ വരാൻ സാധ്യതയുള്ള സമയം", "काम में बदलाव या तरक्की की संभावना वाला समय"],
+        (Event::Career, false) => ["", "ജോലിയിൽ കാര്യങ്ങൾ പതുക്കെ നീങ്ങുന്ന, ക്ഷമ വേണ്ട സമയം", "काम में धीमा समय, जो धैर्य माँगता है"],
+        (Event::Home, _) => ["", "വീടു മാറാനോ ഒരു വസ്തുവിന്റെ കാര്യം തീർപ്പാക്കാനോ സാധ്യതയുള്ള സമയം", "घर बदलने या ज़मीन-जायदाद का काम निपटने की संभावना वाला समय"],
+        (Event::Gains, true) => ["", "പണം വന്നുചേരാൻ സാധ്യതയുള്ള സമയം", "पैसा आने की संभावना वाला समय"],
+        (Event::Gains, false) => ["", "പണകാര്യങ്ങളിൽ ശ്രദ്ധ വേണ്ട സമയം", "पैसों के मामले में सावधानी का समय"],
+        (Event::Abroad, _) => ["", "വിദേശയാത്രയ്ക്ക് സാധ്യതയുള്ള സമയം", "विदेश यात्रा की संभावना वाला समय"],
+        (Event::Health, _) => ["", "ആരോഗ്യം കുറച്ചുകൂടി ശ്രദ്ധിക്കേണ്ട സമയം", "सेहत का थोड़ा ज़्यादा ध्यान रखने का समय"],
+    };
+    match lang {
+        Lang::En => phrase(event, good, pos),
+        _ => lang.pick(t).to_string(),
+    }
+}
+
+fn helps_in(lang: Lang, event: Event, good: bool) -> &'static str {
+    let t = match (event, good) {
+        (Event::Marriage, _) => ["", "കുടുംബമായി തുറന്നു സംസാരിക്കുക; പ്രധാനപ്പെട്ട ദിവസം ശ്രദ്ധയോടെ നിശ്ചയിക്കുക.", "परिवार में खुलकर बात करें, और ख़ास दिन सोच-समझकर तय करें।"],
+        (Event::Child, _) => ["", "വിശ്രമിക്കുക, നന്നായി കഴിക്കുക, വീട്ടിലെ അന്തരീക്ഷം ശാന്തമായി വയ്ക്കുക; നിങ്ങൾക്കറിയാവുന്ന എന്തെങ്കിലും ഒരു കുട്ടിയെ പഠിപ്പിക്കുന്നത് ഈ സമയത്തിന് അനുഗ്രഹം തേടുന്ന പഴയൊരു വഴിയാണ്.", "आराम करें, अच्छा खाएँ और घर का माहौल शांत रखें; किसी बच्चे को अपनी जानी हुई कोई बात सिखाना इस समय का आशीर्वाद पाने का पुराना तरीका है।"],
+        (Event::Career, true) => ["", "ചോദിക്കുക, അപേക്ഷിക്കുക, നിങ്ങളുടെ ജോലി മറ്റുള്ളവർ കാണട്ടെ; നീട്ടിവെച്ച ഒരു കടമ തീർത്തിട്ട് പുതിയതിലേക്ക് കടക്കുക.", "पूछिए, आवेदन कीजिए और अपना काम सामने रखिए; टला हुआ एक काम पूरा कर लें, ताकि नई शुरुआत हल्के मन से हो।"],
+        (Event::Career, false) => ["", "ഓരോ ആഴ്ചയും നീട്ടിവെച്ച ഒരു കടമ തീർക്കുക, ജോലിയിൽ വാക്കു പാലിക്കുക, കൈകൊണ്ട് അധ്വാനിക്കുന്ന ഒരാളെ സഹായിക്കുക.", "हर हफ़्ते एक टला हुआ काम पूरा करें, काम पर अपनी बात निभाएँ, और हाथ से मेहनत करने वाले किसी व्यक्ति की मदद करें।"],
+        (Event::Home, _) => ["", "രേഖകൾ രണ്ടുവട്ടം പരിശോധിക്കുക; പുതിയ സ്ഥലത്തേക്ക് മാറുമ്പോൾ അവിടെ ആർക്കെങ്കിലും ഭക്ഷണം കൊടുക്കുക.", "कागज़ दो बार जाँच लें, और नई जगह जाते समय वहाँ किसी को भोजन कराएँ।"],
+        (Event::Gains, true) => ["", "വരുന്നതിൽ ഒരു ചെറിയ പങ്ക് മറ്റുള്ളവർക്കും കൊടുക്കുക; അത് ഒഴുക്ക് നിലനിർത്തും.", "जो आए उसका छोटा-सा हिस्सा बाँटें; इससे आमद बनी रहती है।"],
+        (Event::Gains, false) => ["", "കടം കൊടുക്കുന്നതും ആവേശത്തിൽ വലിയ സാധനങ്ങൾ വാങ്ങുന്നതും ഒഴിവാക്കുക, ഒരു ചെറിയ കടം വീട്ടുക, ഉള്ളതിൽ കുറച്ച് പങ്കിടുക.", "उधार देने और जोश में बड़ी ख़रीदारी से बचें, एक छोटा कर्ज़ चुका दें, और जो है उसमें से थोड़ा बाँटें।"],
+        (Event::Abroad, _) => ["", "രേഖകൾ നേരത്തേ തയ്യാറാക്കി വയ്ക്കുക; യാത്രയിലായിരിക്കുമ്പോൾ ഇടയ്ക്കിടെ വീട്ടിലേക്ക് വിളിക്കുക.", "कागज़ात पहले से तैयार रखें, और बाहर रहते हुए घर पर अक्सर फ़ोन करें।"],
+        (Event::Health, _) => ["", "ഉറക്കവും ഭക്ഷണവും കൃത്യസമയത്താക്കുക, മാറാതെ നിൽക്കുന്ന എന്തിനും നേരത്തേ ഡോക്ടറെ കാണുക, സുഖമില്ലാത്ത ഒരാളെ പരിചരിക്കുക; അത് കുടുംബത്തിനാകെ ഈ സമയം എളുപ്പമാക്കും.", "सोना और खाना समय पर रखें, जो तकलीफ़ टिकी रहे उसके लिए जल्दी डॉक्टर को दिखाएँ, और किसी बीमार की सेवा करें; इससे पूरे परिवार के लिए यह समय हल्का होता है।"],
+    };
+    match lang {
+        Lang::En => helps(event, good),
+        _ => lang.pick(t),
+    }
+}
+
+/// The one line on the whole family proof: an invitation with no family, then how many
+/// times the family's charts agree on in the next `months`.
+pub fn summary(lang: Lang, members: usize, total: usize, months: usize) -> String {
+    match lang {
+        Lang::En => {
+            if members < 2 {
+                "Add your family's births and the app will look for the times their charts and yours agree on.".to_string()
+            } else if total == 0 {
+                format!("In the next {months} months no single time stands out in more than one chart; the family's charts each tell their own story for now.")
+            } else if total == 1 {
+                format!("In the next {months} months your family's charts agree on one time.")
+            } else {
+                format!("In the next {months} months your family's charts agree on {total} times.")
+            }
+        }
+        Lang::Ml => {
+            if members < 2 {
+                "കുടുംബാംഗങ്ങളുടെ ജനനവിവരങ്ങൾ ചേർക്കൂ; അവരുടെയും നിങ്ങളുടെയും ജനനസമയം ഒത്തുവരുന്ന കാലങ്ങൾ ആപ്പ് കണ്ടെത്തും.".to_string()
+            } else if total == 0 {
+                format!("അടുത്ത {months} മാസത്തിൽ ഒന്നിലധികം പേരുടെ ജനനസമയത്തിൽ ഒരേ കാലം തെളിഞ്ഞു കാണുന്നില്ല; തൽക്കാലം ഓരോരുത്തരുടെയും വായന അവരവരുടെ കഥ പറയുന്നു.")
+            } else if total == 1 {
+                format!("അടുത്ത {months} മാസത്തിൽ നിങ്ങളുടെ കുടുംബത്തിന്റെ ജനനസമയങ്ങൾ ഒരു കാലത്തിൽ ഒത്തുവരുന്നു.")
+            } else {
+                format!("അടുത്ത {months} മാസത്തിൽ നിങ്ങളുടെ കുടുംബത്തിന്റെ ജനനസമയങ്ങൾ {total} കാലങ്ങളിൽ ഒത്തുവരുന്നു.")
+            }
+        }
+        Lang::Hi => {
+            if members < 2 {
+                "अपने परिवार के जन्म-विवरण जोड़ें; ऐप वे समय खोजेगा जिन पर उनका और आपका जन्म-समय मेल खाते हैं।".to_string()
+            } else if total == 0 {
+                format!("अगले {months} महीनों में कोई एक समय एक से ज़्यादा जन्म-समय में साफ़ नहीं उभरता; अभी हर व्यक्ति की पढ़त अपनी कहानी कहती है।")
+            } else if total == 1 {
+                format!("अगले {months} महीनों में आपके परिवार के जन्म-समय एक समय पर मेल खाते हैं।")
+            } else {
+                format!("अगले {months} महीनों में आपके परिवार के जन्म-समय {total} समयों पर मेल खाते हैं।")
+            }
+        }
+    }
+}
+
 fn phrase(event: Event, good: bool, pos: &str) -> String {
     match (event, good) {
         (Event::Marriage, _) => "a likely time for a wedding or a big step in a relationship".into(),
@@ -525,10 +670,14 @@ fn ordinal(h: u8) -> String {
 }
 
 fn join_and(items: &[String]) -> String {
+    join_with(items, "and")
+}
+
+fn join_with(items: &[String], and: &str) -> String {
     match items.len() {
         0 => String::new(),
         1 => items[0].clone(),
-        n => format!("{} and {}", items[..n - 1].join(", "), items[n - 1]),
+        n => format!("{} {and} {}", items[..n - 1].join(", "), items[n - 1]),
     }
 }
 
@@ -591,6 +740,7 @@ pub fn family_proof(
     ayanamsa: Ayanamsa,
     from: Instant,
     months: usize,
+    lang: Lang,
 ) -> Result<FamilyProof, ForecastError> {
     let mut proof = FamilyProof::default();
     if members.len() < 2 {
@@ -685,7 +835,7 @@ pub fn family_proof(
                     };
                     let start = if a.from == 0 { times[0] } else { edge(times[a.from - 1], times[a.from])? };
                     let end = if a.to >= n { horizon_end } else { edge(times[a.to], times[a.to - 1])? };
-                    found.push(words(members, x, event, good, start, end, times[a.peak], &a, lon));
+                    found.push(words(members, x, event, good, start, end, times[a.peak], &a, lon, lang));
                 }
             }
         }
@@ -719,31 +869,74 @@ fn strength(w: &ProofWindow) -> f64 {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn words(members: &[Member], x: usize, event: Event, good: bool, start: Instant, end: Instant, peak: Instant, a: &Agreement, lon: f64) -> ProofWindow {
+fn words(members: &[Member], x: usize, event: Event, good: bool, start: Instant, end: Instant, peak: Instant, a: &Agreement, lon: f64, lang: Lang) -> ProofWindow {
     let m = &members[x];
-    let who = m.words();
-    let headline = format!("For {who}: {}.", phrase(event, good, m.possessive()));
-    let charts: Vec<String> = a.confirmers.iter().map(|&r| members[r].chart_words()).collect();
+    let what = phrase_in(lang, event, good, m.possessive());
+    let headline = match lang {
+        Lang::Hi => format!("{}: {what}।", m.for_in(lang)),
+        _ => format!("{}: {what}.", m.for_in(lang)),
+    };
     let total = a.confirmers.len() + 1;
-    let own_chart = m.chart_words();
-    let confirmed_line = if x == 0 {
-        format!("Your own chart shows it, and {} {} the same weeks.", join_and(&charts), if charts.len() == 1 { "points to" } else { "point to" })
-    } else {
-        format!("{} shows it, and {} {} the same weeks.", crate::plain::cap(&own_chart), join_and(&charts), if charts.len() == 1 { "points to" } else { "point to" })
+    let confirmed_line = match lang {
+        Lang::En => {
+            let charts: Vec<String> = a.confirmers.iter().map(|&r| members[r].chart_words()).collect();
+            let verb = if charts.len() == 1 { "points to" } else { "point to" };
+            if x == 0 {
+                format!("Your own chart shows it, and {} {verb} the same weeks.", join_and(&charts))
+            } else {
+                format!("{} shows it, and {} {verb} the same weeks.", crate::plain::cap(&m.chart_words()), join_and(&charts))
+            }
+        }
+        Lang::Ml => {
+            let charts: Vec<String> = a.confirmers.iter().map(|&r| members[r].chart_in(lang, true)).collect();
+            format!("{} ഇതു കാണിക്കുന്നു; {} ഇതേ ആഴ്ചകൾ തന്നെ കാണിക്കുന്നു.", m.chart_in(lang, false), charts.join(", "))
+        }
+        Lang::Hi => {
+            let charts: Vec<String> = a.confirmers.iter().map(|&r| members[r].chart_in(lang, false)).collect();
+            let verb = if charts.len() == 1 { "करता है" } else { "करते हैं" };
+            format!("{} यह दिखाता है, और {} भी उन्हीं हफ़्तों की ओर इशारा {verb}।", m.chart_in(lang, false), join_with(&charts, "और"))
+        }
     };
     let p = if good { a.pooled } else { 1.0 - a.pooled };
-    let strength_words = match (good, total >= 3 || p >= 0.70) {
-        (true, true) => format!("{} charts agree: very likely.", crate::plain::cap(count_word(total))),
-        (true, false) => format!("{} charts agree: likely.", crate::plain::cap(count_word(total))),
-        (false, true) => format!("{} charts agree: worth preparing for.", crate::plain::cap(count_word(total))),
-        (false, false) => format!("{} charts agree: worth a little care.", crate::plain::cap(count_word(total))),
+    let how = match (good, total >= 3 || p >= 0.70) {
+        (true, true) => ["very likely.", "നടക്കാൻ നല്ല സാധ്യതയുണ്ട്.", "काफ़ी संभावना है।"],
+        (true, false) => ["likely.", "നടക്കാൻ സാധ്യതയുണ്ട്.", "संभावना है।"],
+        (false, true) => ["worth preparing for.", "മുൻകൂട്ടി ഒരുങ്ങുന്നത് നല്ലത്.", "पहले से तैयारी रखना अच्छा है।"],
+        (false, false) => ["worth a little care.", "അൽപം ശ്രദ്ധിച്ചാൽ മതി.", "थोड़ी सावधानी काफ़ी है।"],
     };
-    let dates = format!("From {} to {}", date_words(start, lon), date_words(end, lon));
-    let peak_words = if good { format!("strongest around {}", date_words(peak, lon)) } else { format!("asking most care around {}", date_words(peak, lon)) };
-    let detail = if good {
-        format!("{dates}, {peak_words}. {confirmed_line}")
-    } else {
-        format!("{dates}, {peak_words}. {confirmed_line} Nothing here is fixed: with early care such a time passes lightly, and the family can carry it together.")
+    let strength_words = format!("{}: {}", count_people(lang, total), lang.pick(how));
+    let d = |t: Instant| match lang {
+        Lang::En => date_words(t, lon),
+        _ => lang::date(lang, t, lon),
+    };
+    let detail = match lang {
+        Lang::En => {
+            let dates = format!("From {} to {}", d(start), d(end));
+            let peak_words = if good { format!("strongest around {}", d(peak)) } else { format!("asking most care around {}", d(peak)) };
+            if good {
+                format!("{dates}, {peak_words}. {confirmed_line}")
+            } else {
+                format!("{dates}, {peak_words}. {confirmed_line} Nothing here is fixed: with early care such a time passes lightly, and the family can carry it together.")
+            }
+        }
+        Lang::Ml => {
+            let peak_words = if good { format!("{}-ഓടെ ഏറ്റവും ശക്തം", d(peak)) } else { format!("{}-ഓടെ ഏറ്റവും ശ്രദ്ധ വേണം", d(peak)) };
+            let base = format!("{} മുതൽ {} വരെ, {peak_words}. {confirmed_line}", d(start), d(end));
+            if good {
+                base
+            } else {
+                format!("{base} ഒന്നും മാറ്റാനാവാത്തതല്ല: നേരത്തേ ശ്രദ്ധിച്ചാൽ ഇങ്ങനെയുള്ള സമയം ലഘുവായി കടന്നുപോകും, കുടുംബം ഒരുമിച്ച് അതു താങ്ങും.")
+            }
+        }
+        Lang::Hi => {
+            let peak_words = if good { format!("{} के आसपास सबसे प्रबल", d(peak)) } else { format!("{} के आसपास सबसे ज़्यादा ध्यान चाहिए", d(peak)) };
+            let base = format!("{} से {} तक, {peak_words}। {confirmed_line}", d(start), d(end));
+            if good {
+                base
+            } else {
+                format!("{base} यहाँ कुछ भी पत्थर की लकीर नहीं है: समय रहते ध्यान रखने से ऐसा समय हल्के में गुज़र जाता है, और परिवार मिलकर इसे संभाल सकता है।")
+            }
+        }
     };
     let expert = a
         .confirmers
@@ -777,7 +970,7 @@ fn words(members: &[Member], x: usize, event: Event, good: bool, start: Instant,
         detail,
         confirmed_line,
         strength_words,
-        remedy_hint: helps(event, good).to_string(),
+        remedy_hint: helps_in(lang, event, good).to_string(),
         expert,
     }
 }
@@ -912,8 +1105,8 @@ mod tests {
             Member { natal: chart(1995, 8, 15, 18, &spk), kin: Some(Kin::Sibling), male: Some(true) },
         ];
         let at = Utc::new(2026, 10, 21, 6, 0, 0, 0).unwrap().to_instant().unwrap();
-        let p = family_proof(&spk, None, &fam, &obs, Ayanamsa::Lahiri, at, 18).unwrap();
-        let q = family_proof(&spk, None, &fam, &obs, Ayanamsa::Lahiri, at, 18).unwrap();
+        let p = family_proof(&spk, None, &fam, &obs, Ayanamsa::Lahiri, at, 18, Lang::En).unwrap();
+        let q = family_proof(&spk, None, &fam, &obs, Ayanamsa::Lahiri, at, 18, Lang::En).unwrap();
         assert_eq!(p, q);
         assert_eq!(p.charts_read, 3);
         let all: Vec<&ProofWindow> = p.about_you.iter().chain(&p.about_family).collect();
@@ -938,5 +1131,79 @@ mod tests {
         assert!(p.about_you.iter().all(|w| w.person == 0));
         // The parents are married to each other: no wedding windows for them.
         assert!(all.iter().all(|w| !(w.event == Event::Marriage && (w.person == 1 || w.person == 2))));
+    }
+
+    /// True when `s` holds a run of two or more Latin letters: an English word.
+    fn has_english(s: &str) -> bool {
+        s.split(|c: char| !c.is_ascii_alphabetic()).any(|w| w.len() >= 2)
+    }
+
+    fn in_script(lang: Lang, s: &str) -> bool {
+        let r = match lang {
+            Lang::Ml => '\u{0D00}'..='\u{0D7F}',
+            Lang::Hi => '\u{0900}'..='\u{097F}',
+            Lang::En => return true,
+        };
+        s.chars().any(|c| r.contains(&c))
+    }
+
+    #[test]
+    fn the_family_proof_reads_in_three_languages() {
+        // Every phrase, help and summary line, without the sky.
+        for lang in ["en", "ml", "hi"] {
+            let l = Lang::parse(lang);
+            let mut lines: Vec<String> = Vec::new();
+            for e in Event::ALL {
+                for good in [true, false] {
+                    lines.push(phrase_in(l, e, good, "his"));
+                    lines.push(helps_in(l, e, good).to_string());
+                }
+            }
+            for (m, t) in [(1, 0), (3, 0), (3, 1), (4, 5)] {
+                lines.push(summary(l, m, t, 12));
+            }
+            for n in 2..=10 {
+                lines.push(count_people(l, n));
+            }
+            for s in &lines {
+                assert_eq!(crate::plain::jargon_in(l, s), None, "{lang}: {s}");
+                if l != Lang::En {
+                    assert!(in_script(l, s) && !has_english(s), "{lang}: {s}");
+                }
+            }
+        }
+        assert_eq!(summary(Lang::En, 3, 1, 12), "In the next 12 months your family's charts agree on one time.");
+
+        let Some(spk) = spk() else { return };
+        let obs = Observer { latitude_deg: 9.9312, longitude_deg: 76.2673, height_m: 0.0 };
+        let fam = vec![
+            Member { natal: chart(1990, 2, 20, 5, &spk), kin: None, male: Some(false) },
+            Member { natal: chart(1958, 11, 2, 1, &spk), kin: Some(Kin::Father), male: Some(true) },
+            Member { natal: chart(1963, 3, 30, 12, &spk), kin: Some(Kin::Mother), male: Some(false) },
+            Member { natal: chart(1995, 8, 15, 18, &spk), kin: Some(Kin::Sibling), male: Some(true) },
+        ];
+        let at = Utc::new(2026, 10, 21, 6, 0, 0, 0).unwrap().to_instant().unwrap();
+        let mut counts = Vec::new();
+        for lang in ["en", "ml", "hi"] {
+            let l = Lang::parse(lang);
+            let p = family_proof(&spk, None, &fam, &obs, Ayanamsa::Lahiri, at, 12, l).unwrap();
+            let all: Vec<&ProofWindow> = p.about_you.iter().chain(&p.about_family).collect();
+            assert!(!all.is_empty());
+            counts.push(all.iter().map(|w| (w.start, w.end, w.event, w.good)).collect::<Vec<_>>());
+            for w in &all {
+                println!("{lang}: {} | {} | {} | {}", w.headline, w.strength_words, w.detail, w.remedy_hint);
+                let who = fam[w.person].words_in(l);
+                let mut fields = vec![w.headline.clone(), w.detail.clone(), w.confirmed_line.clone(), w.strength_words.clone(), w.remedy_hint.clone(), who];
+                fields.extend(w.confirmed_by.iter().map(|&r| fam[r].words_in(l)));
+                for s in &fields {
+                    assert_eq!(crate::plain::jargon_in(l, s), None, "{lang}: {s}");
+                    if l != Lang::En {
+                        assert!(in_script(l, s) && !has_english(s), "{lang}: {s}");
+                    }
+                }
+            }
+        }
+        // The language changes only the words, never the windows.
+        assert!(counts.windows(2).all(|c| c[0] == c[1]));
     }
 }
