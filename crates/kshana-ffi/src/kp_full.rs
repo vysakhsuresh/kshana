@@ -199,12 +199,33 @@ fn point(
     }
 }
 
-const NOTES: &[&str] = &[
-    "Placidus cusps; sub, sub-sub and sub-sub-sub lords divide each star in Vimshottari proportion from its own lord (Krishnamurti, KP Reader I).",
-    "Significators: A in the star of an occupant, B occupant, C in the star of the owner, D owner, strongest first (KP Reader III).",
-    "Rahu and Ketu stand for the grahas conjoined with them, then those aspecting them (Parashari aspects), then their sign lord, then their star lord; a node is placed before the planet it represents.",
-    "Four steps: the planet, its star lord, its sub lord, the sub lord's star lord; houses are those occupied and owned. A cusp's sub lord decides the matter through its star lord's houses.",
-    "Ruling planets: Lagna star, Lagna sign, Moon star, Moon sign, day lord (Krishnamurti's order, KP Reader VI), then Lagna and Moon sub lords; a node in the sign of, or with, a ruling planet joins it. The day runs sunrise to sunrise.",
+/// The method notes, `[en, ml, hi]`.
+const NOTES: &[[&str; 3]] = &[
+    [
+        "Placidus cusps; sub, sub-sub and sub-sub-sub lords divide each star in Vimshottari proportion from its own lord (Krishnamurti, KP Reader I).",
+        "പ്ലാസിഡസ് ഭാവസന്ധികൾ; ഓരോ നക്ഷത്രത്തെയും അതിന്റെ നാഥനിൽ നിന്നു തുടങ്ങി വിംശോത്തരി അനുപാതത്തിൽ ഉപനാഥൻ, ഉപ-ഉപനാഥൻ, ഉപ-ഉപ-ഉപനാഥൻ എന്നിങ്ങനെ വിഭജിക്കുന്നു (കൃഷ്ണമൂർത്തി, കെ.പി. റീഡർ 1).",
+        "प्लासिडस भाव संधियाँ; हर नक्षत्र को उसके अपने स्वामी से आरंभ कर विंशोत्तरी अनुपात में उप स्वामी, उप-उप स्वामी और उप-उप-उप स्वामी में बाँटा जाता है (कृष्णमूर्ति, के.पी. रीडर 1)।",
+    ],
+    [
+        "Significators: A in the star of an occupant, B occupant, C in the star of the owner, D owner, strongest first (KP Reader III).",
+        "കാരകഗ്രഹങ്ങൾ: A — ഭാവസ്ഥിതഗ്രഹത്തിന്റെ നക്ഷത്രത്തിലുള്ളവ, B — ഭാവസ്ഥിതഗ്രഹം, C — ഭാവാധിപന്റെ നക്ഷത്രത്തിലുള്ളവ, D — ഭാവാധിപൻ; ഏറ്റവും ബലമുള്ളത് ആദ്യം (കെ.പി. റീഡർ 3).",
+        "कारक ग्रह: A — भाव में स्थित ग्रह के नक्षत्र में बैठे ग्रह, B — भाव में स्थित ग्रह, C — भावेश के नक्षत्र में बैठे ग्रह, D — भावेश; सबसे बली पहले (के.पी. रीडर 3)।",
+    ],
+    [
+        "Rahu and Ketu stand for the grahas conjoined with them, then those aspecting them (Parashari aspects), then their sign lord, then their star lord; a node is placed before the planet it represents.",
+        "രാഹുവും കേതുവും ആദ്യം തങ്ങളോടു യോഗം ചെയ്ത ഗ്രഹങ്ങളെയും, പിന്നെ തങ്ങളെ ദൃഷ്ടി ചെയ്യുന്നവയെയും (പാരാശരി ദൃഷ്ടി), പിന്നെ രാശ്യാധിപനെയും, പിന്നെ നക്ഷത്രാധിപനെയും പ്രതിനിധീകരിക്കുന്നു; ഛായാഗ്രഹം താൻ പ്രതിനിധീകരിക്കുന്ന ഗ്രഹത്തിനു മുമ്പിൽ നിൽക്കും.",
+        "राहु और केतु पहले अपने साथ युत ग्रहों का, फिर उन पर दृष्टि डालने वालों का (पाराशरी दृष्टि), फिर अपने राशि स्वामी का, फिर अपने नक्षत्र स्वामी का प्रतिनिधित्व करते हैं; छाया ग्रह जिस ग्रह का प्रतिनिधि है, उससे पहले रखा जाता है।",
+    ],
+    [
+        "Four steps: the planet, its star lord, its sub lord, the sub lord's star lord; houses are those occupied and owned. A cusp's sub lord decides the matter through its star lord's houses.",
+        "നാലു പടികൾ: ഗ്രഹം, അതിന്റെ നക്ഷത്രാധിപൻ, അതിന്റെ ഉപനാഥൻ, ഉപനാഥന്റെ നക്ഷത്രാധിപൻ; ഭാവങ്ങൾ എന്നാൽ നിൽക്കുന്നതും ആധിപത്യമുള്ളതും. ഭാവസന്ധിയുടെ ഉപനാഥൻ തന്റെ നക്ഷത്രാധിപന്റെ ഭാവങ്ങളിലൂടെ ഫലം തീരുമാനിക്കുന്നു.",
+        "चार चरण: ग्रह, उसका नक्षत्र स्वामी, उसका उप स्वामी, उप स्वामी का नक्षत्र स्वामी; भाव वे हैं जिनमें वह स्थित है और जिनका वह स्वामी है। भाव संधि का उप स्वामी अपने नक्षत्र स्वामी के भावों से फल तय करता है।",
+    ],
+    [
+        "Ruling planets: Lagna star, Lagna sign, Moon star, Moon sign, day lord (Krishnamurti's order, KP Reader VI), then Lagna and Moon sub lords; a node in the sign of, or with, a ruling planet joins it. The day runs sunrise to sunrise.",
+        "ഭരണഗ്രഹങ്ങൾ: ലഗ്നനക്ഷത്രാധിപൻ, ലഗ്നരാശ്യാധിപൻ, ചന്ദ്രനക്ഷത്രാധിപൻ, ചന്ദ്രരാശ്യാധിപൻ, വാരാധിപൻ (കൃഷ്ണമൂർത്തിയുടെ ക്രമം, കെ.പി. റീഡർ 6), പിന്നെ ലഗ്നത്തിന്റെയും ചന്ദ്രന്റെയും ഉപനാഥന്മാർ; ഒരു ഭരണഗ്രഹത്തിന്റെ രാശിയിലോ അതിനോടൊപ്പമോ ഉള്ള ഛായാഗ്രഹവും ചേരും. ദിവസം ഒരു സൂര്യോദയം മുതൽ അടുത്ത സൂര്യോദയം വരെ.",
+        "शासक ग्रह: लग्न नक्षत्र स्वामी, लग्न राशि स्वामी, चंद्र नक्षत्र स्वामी, चंद्र राशि स्वामी, वार स्वामी (कृष्णमूर्ति का क्रम, के.पी. रीडर 6), फिर लग्न और चंद्र के उप स्वामी; किसी शासक ग्रह की राशि में या उसके साथ बैठा छाया ग्रह भी जुड़ता है। दिन एक सूर्योदय से अगले सूर्योदय तक।",
+    ],
 ];
 
 #[uniffi::export]
@@ -222,7 +243,9 @@ impl Engine {
         at: ExactInstant,
         now_latitude_deg: f64,
         now_longitude_deg: f64,
+        lang: String,
     ) -> Result<KpFullRecord, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let ch = natal_chart(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let f = Facts::from_chart(&ch);
         let moment = natal_chart(self, at, now_latitude_deg, now_longitude_deg, ayanamsa)?;
@@ -307,7 +330,7 @@ impl Engine {
                 ordered: names(&rp.ordered),
                 in_retro_star: names(&rp.in_retro_star),
             },
-            notes: NOTES.iter().map(|s| s.to_string()).collect(),
+            notes: NOTES.iter().map(|s| lang.pick(*s).to_string()).collect(),
         })
     }
 
@@ -390,7 +413,7 @@ mod tests {
         let Some(e) = engine() else { return };
         let (lat, lon) = (9.9312, 76.2673);
         let t = e
-            .kp_full(birth(), lat, lon, AyanamsaChoice::Krishnamurti, birth(), lat, lon)
+            .kp_full(birth(), lat, lon, AyanamsaChoice::Krishnamurti, birth(), lat, lon, "en".into())
             .unwrap();
         assert_eq!(t.cusps.len(), 12);
         assert_eq!(t.planets.len(), 9);
@@ -410,6 +433,15 @@ mod tests {
         let sun = &t.planets[0];
         assert_eq!((sun.star_lord.as_str(), sun.sub_lord.as_str(), sun.sub_sub_sub_lord.as_str()), ("Rahu", "Rahu", "Moon"));
         assert!(!t.notes.is_empty());
+        assert!(t.notes[0].starts_with("Placidus cusps;"));
+        for lang in ["ml", "hi"] {
+            let l = e.kp_full(birth(), lat, lon, AyanamsaChoice::Krishnamurti, birth(), lat, lon, lang.into()).unwrap();
+            assert_eq!(l.notes.len(), t.notes.len());
+            for n in &l.notes {
+                assert!(!n.split(|c: char| !c.is_ascii_alphabetic()).any(|w| w.len() >= 3), "{lang}: {n}");
+            }
+            assert_eq!(l.ruling.ordered, t.ruling.ordered);
+        }
     }
 
     #[test]

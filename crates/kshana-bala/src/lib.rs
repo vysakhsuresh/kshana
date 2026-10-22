@@ -63,7 +63,147 @@ use kshana_chart::Chart;
 use kshana_ephem::{Spk, SpkError};
 use kshana_events::{solar_day, EventError};
 use kshana_rules::parashari::{dignity, is_benefic};
-use kshana_rules::Facts;
+use kshana_rules::{Facts, Lang};
+
+/// One of three per-language templates; only the chosen arm is formatted.
+macro_rules! say3 {
+    ($lang:expr, $en:literal, $ml:literal, $hi:literal $(,)?) => {
+        match $lang {
+            Lang::En => format!($en),
+            Lang::Ml => format!($ml),
+            Lang::Hi => format!($hi),
+        }
+    };
+}
+
+/// The chart words this crate's text needs, in the three scripts. They match
+/// `kshana_rules::yogas::words`; kept here so the crate stands on its own.
+pub mod words {
+    use kshana_rules::parashari::Dignity;
+    use kshana_rules::Lang;
+    use kshana_vedic::DashaLord;
+
+    /// A graha's name: "Mars", "ചൊവ്വ", "मंगल".
+    pub fn graha(lang: Lang, g: DashaLord) -> &'static str {
+        lang.pick(match g {
+            DashaLord::Sun => ["Sun", "സൂര്യൻ", "सूर्य"],
+            DashaLord::Moon => ["Moon", "ചന്ദ്രൻ", "चंद्र"],
+            DashaLord::Mars => ["Mars", "ചൊവ്വ", "मंगल"],
+            DashaLord::Mercury => ["Mercury", "ബുധൻ", "बुध"],
+            DashaLord::Jupiter => ["Jupiter", "വ്യാഴം", "गुरु"],
+            DashaLord::Venus => ["Venus", "ശുക്രൻ", "शुक्र"],
+            DashaLord::Saturn => ["Saturn", "ശനി", "शनि"],
+            DashaLord::Rahu => ["Rahu", "രാഹു", "राहु"],
+            DashaLord::Ketu => ["Ketu", "കേതു", "केतु"],
+        })
+    }
+
+    const ORD: [[&str; 3]; 12] = [
+        ["1st", "ഒന്നാം", "प्रथम"],
+        ["2nd", "രണ്ടാം", "द्वितीय"],
+        ["3rd", "മൂന്നാം", "तृतीय"],
+        ["4th", "നാലാം", "चतुर्थ"],
+        ["5th", "അഞ്ചാം", "पंचम"],
+        ["6th", "ആറാം", "षष्ठ"],
+        ["7th", "ഏഴാം", "सप्तम"],
+        ["8th", "എട്ടാം", "अष्टम"],
+        ["9th", "ഒമ്പതാം", "नवम"],
+        ["10th", "പത്താം", "दशम"],
+        ["11th", "പതിനൊന്നാം", "एकादश"],
+        ["12th", "പന്ത്രണ്ടാം", "द्वादश"],
+    ];
+
+    /// An ordinal, 1-based: "7th", "ഏഴാം", "सप्तम".
+    pub fn bhava(lang: Lang, h: u8) -> &'static str {
+        lang.pick(ORD[((h.max(1) - 1) % 12) as usize])
+    }
+
+    /// A dignity: "Exalted", "ഉച്ചം", "उच्च".
+    pub fn dignity(lang: Lang, d: Dignity) -> &'static str {
+        lang.pick(match d {
+            Dignity::Debilitated => ["Debilitated", "നീചം", "नीच"],
+            Dignity::Enemy => ["Enemy", "ശത്രുക്ഷേത്രം", "शत्रु राशि"],
+            Dignity::Neutral => ["Neutral", "സമക്ഷേത്രം", "सम राशि"],
+            Dignity::Friend => ["Friend", "മിത്രക്ഷേത്രം", "मित्र राशि"],
+            Dignity::Own => ["Own", "സ്വക്ഷേത്രം", "स्वराशि"],
+            Dignity::Moolatrikona => ["Moolatrikona", "മൂലത്രികോണം", "मूलत्रिकोण"],
+            Dignity::Exalted => ["Exalted", "ഉച്ചം", "उच्च"],
+        })
+    }
+}
+
+impl Baladi {
+    /// The state's name in the reader's language: "Kumara", "കുമാര", "कुमार".
+    pub fn name_in(self, lang: Lang) -> &'static str {
+        lang.pick(match self {
+            Baladi::Bala => ["Bala", "ബാല", "बाल"],
+            Baladi::Kumara => ["Kumara", "കുമാര", "कुमार"],
+            Baladi::Yuva => ["Yuva", "യുവ", "युवा"],
+            Baladi::Vriddha => ["Vriddha", "വൃദ്ധ", "वृद्ध"],
+            Baladi::Mrita => ["Mrita", "മൃത", "मृत"],
+        })
+    }
+    /// What the state gives, in one line (BPHS ch. 45).
+    pub fn meaning_in(self, lang: Lang) -> &'static str {
+        lang.pick(match self {
+            Baladi::Bala => ["infant, a quarter of its fruit", "ശിശു, ഫലത്തിന്റെ നാലിലൊന്ന്", "शिशु, फल का चौथाई"],
+            Baladi::Kumara => ["youth, half its fruit", "കൗമാരം, പകുതി ഫലം", "किशोर, आधा फल"],
+            Baladi::Yuva => ["adult, its full fruit", "യൗവനം, പൂർണ ഫലം", "युवा, पूरा फल"],
+            Baladi::Vriddha => ["old, a trace of its fruit", "വാർധക്യം, ഫലം നാമമാത്രം", "वृद्ध, फल नाममात्र"],
+            Baladi::Mrita => ["spent, no fruit", "ക്ഷീണിച്ച നില, ഫലമില്ല", "क्षीण, कोई फल नहीं"],
+        })
+    }
+}
+
+impl Jagradadi {
+    /// The state's name in the reader's language.
+    pub fn name_in(self, lang: Lang) -> &'static str {
+        lang.pick(match self {
+            Jagradadi::Jagrat => ["Jagrat", "ജാഗ്രത്", "जाग्रत"],
+            Jagradadi::Swapna => ["Swapna", "സ്വപ്ന", "स्वप्न"],
+            Jagradadi::Sushupti => ["Sushupti", "സുഷുപ്തി", "सुषुप्ति"],
+        })
+    }
+    /// What the state gives, in one line (BPHS ch. 45).
+    pub fn meaning_in(self, lang: Lang) -> &'static str {
+        lang.pick(match self {
+            Jagradadi::Jagrat => ["awake, full results", "ഉണർന്ന നില, പൂർണ ഫലം", "जागा हुआ, पूरा फल"],
+            Jagradadi::Swapna => ["dreaming, middling results", "സ്വപ്നനില, മധ്യമ ഫലം", "स्वप्न में, मध्यम फल"],
+            Jagradadi::Sushupti => ["asleep, no results", "ഗാഢനിദ്ര, ഫലമില്ല", "गहरी नींद, कोई फल नहीं"],
+        })
+    }
+}
+
+impl Deeptadi {
+    /// The state's name in the reader's language.
+    pub fn name_in(self, lang: Lang) -> &'static str {
+        lang.pick(match self {
+            Deeptadi::Deepta => ["Deepta", "ദീപ്തം", "दीप्त"],
+            Deeptadi::Swastha => ["Swastha", "സ്വസ്ഥം", "स्वस्थ"],
+            Deeptadi::Mudita => ["Mudita", "മുദിതം", "मुदित"],
+            Deeptadi::Shanta => ["Shanta", "ശാന്തം", "शांत"],
+            Deeptadi::Deena => ["Deena", "ദീനം", "दीन"],
+            Deeptadi::Dukhita => ["Dukhita", "ദുഃഖിതം", "दुःखित"],
+            Deeptadi::Vikala => ["Vikala", "വികലം", "विकल"],
+            Deeptadi::Khala => ["Khala", "ഖലം", "खल"],
+            Deeptadi::Kopa => ["Kopa", "കോപം", "कोप"],
+        })
+    }
+    /// What the state gives, in one line (BPHS ch. 45).
+    pub fn meaning_in(self, lang: Lang) -> &'static str {
+        lang.pick(match self {
+            Deeptadi::Deepta => ["bright, exalted", "പ്രകാശമാനം, ഉച്ചത്തിൽ", "दीप्तिमान, उच्च में"],
+            Deeptadi::Swastha => ["at ease, in its own sign", "സുഖസ്ഥിതി, സ്വക്ഷേത്രത്തിൽ", "सहज, स्वराशि में"],
+            Deeptadi::Mudita => ["glad, in a friend's sign", "സന്തുഷ്ടം, മിത്രക്ഷേത്രത്തിൽ", "प्रसन्न, मित्र राशि में"],
+            Deeptadi::Shanta => ["calm, in a neutral's sign", "ശാന്തം, സമക്ഷേത്രത്തിൽ", "शांत, सम राशि में"],
+            Deeptadi::Deena => ["poor, in an enemy's sign", "ദീനം, ശത്രുക്ഷേത്രത്തിൽ", "दीन, शत्रु राशि में"],
+            Deeptadi::Dukhita => ["grieving, debilitated", "ദുഃഖിതം, നീചത്തിൽ", "दुःखी, नीच में"],
+            Deeptadi::Vikala => ["maimed, joined by a malefic", "വികലം, പാപഗ്രഹയോഗത്തിൽ", "विकल, पाप ग्रह से युत"],
+            Deeptadi::Khala => ["wicked, in a great enemy's sign", "ഖലം, അധിശത്രുക്ഷേത്രത്തിൽ", "खल, अधिशत्रु राशि में"],
+            Deeptadi::Kopa => ["angry, combust", "കോപം, മൗഢ്യത്തിൽ", "कुपित, अस्त"],
+        })
+    }
+}
 use kshana_sky::Observer;
 use kshana_time::EopTable;
 use kshana_vedic::{Ayanamsa, DashaLord};
@@ -180,6 +320,19 @@ pub fn shadbala(
     obs: &Observer,
     chart: &Chart,
     ayanamsa: Ayanamsa,
+) -> Result<Shadbala, BalaError> {
+    shadbala_in(spk, eop, obs, chart, ayanamsa, Lang::En)
+}
+
+/// [`shadbala`] with the `words` in the reader's language: the classical terms in
+/// Malayalam or Devanagari script for `ml` and `hi`, the same English for `en`.
+pub fn shadbala_in(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    obs: &Observer,
+    chart: &Chart,
+    ayanamsa: Ayanamsa,
+    lang: Lang,
 ) -> Result<Shadbala, BalaError> {
     let facts = Facts::from_chart(chart);
     let day = solar_day(spk, eop, obs, chart.instant)?.ok_or(BalaError::NoSolarDay)?;
@@ -301,6 +454,71 @@ pub fn shadbala(
                 naisargika, drik
             ),
         ];
+        let words = if lang == Lang::En {
+            words
+        } else {
+            let name = words::graha(lang, g);
+            let lon = p.sidereal;
+            let dg = words::dignity(lang, d);
+            let (u, sv, oj, ke, dr) = (sthana.uchcha, sthana.saptavargaja, sthana.ojhayugma, sthana.kendradi, sthana.drekkana);
+            let h = words::bhava(lang, p.house);
+            let dig_cusp = tables::dig_strong_cusp(g).unwrap_or(0);
+            let arc = fold(p.sidereal - chart.cusps_sidereal[dig_cusp]);
+            let dh = words::bhava(lang, (dig_cusp + 1) as u8);
+            let (na, pa, tr, ab, ma, va, ho, ay) =
+                (kala.nathonnata, kala.paksha, kala.tribhaga, kala.abda, kala.masa, kala.vara, kala.hora, kala.ayana);
+            let ben = if benefic { lang.pick(["", "ശുഭൻ", "शुभ"]) } else { lang.pick(["", "പാപൻ", "पाप"]) };
+            let th = words::bhava(lang, third as u8 + 1);
+            let dn = if is_day { lang.pick(["", "പകലിന്റെ", "दिन का"]) } else { lang.pick(["", "രാത്രിയുടെ", "रात्रि का"]) };
+            let speed = p.speed;
+            let mean = tables::mean_motion(g).unwrap_or(0.0);
+            vec![
+                say3!(
+                    lang,
+                    "",
+                    "{name} നിരയന {lon:.2}° — {dg}: ഉച്ചബലം {u:.1}, സപ്തവർഗജബലം {sv:.2}, ഓജയുഗ്മബലം {oj:.0}, കേന്ദ്രാദിബലം {ke:.0} ({h} ഭാവം), ദ്രേക്കാണബലം {dr:.0}",
+                    "{name} निरयन {lon:.2}° पर {dg}: उच्च बल {u:.1}, सप्तवर्गज बल {sv:.2}, ओजयुग्म बल {oj:.0}, केंद्रादि बल {ke:.0} ({h} भाव), द्रेष्काण बल {dr:.0}"
+                ),
+                say3!(
+                    lang,
+                    "",
+                    "ദിഗ്ബലം {dig:.1}: {dh} ഭാവസ്ഫുടത്തിൽ നിന്ന് {arc:.1}°",
+                    "दिग्बल {dig:.1}: {dh} भाव स्पष्ट से {arc:.1}°"
+                ),
+                say3!(
+                    lang,
+                    "",
+                    "കാലബലം: നതോന്നതബലം {na:.1} (സൂര്യന്റെ ഹോരാകോണം {hour_angle:.1}°), പക്ഷബലം {pa:.1} ({ben}, സൂര്യ-ചന്ദ്ര അന്തരം {elongation:.1}°), ത്രിഭാഗബലം {tr:.0} ({dn} {th} ത്രിഭാഗം), അബ്ദബലം {ab:.0}, മാസബലം {ma:.0}, വാരബലം {va:.0}, ഹോരാബലം {ho:.0}, അയനബലം {ay:.1} (ക്രാന്തി {decl:+.2}°)",
+                    "काल बल: नतोन्नत बल {na:.1} (सूर्य का होरा कोण {hour_angle:.1}°), पक्ष बल {pa:.1} ({ben}, सूर्य-चंद्र अंतर {elongation:.1}°), त्रिभाग बल {tr:.0} ({dn} {th} त्रिभाग), अब्द बल {ab:.0}, मास बल {ma:.0}, वार बल {va:.0}, होरा बल {ho:.0}, अयन बल {ay:.1} (क्रांति {decl:+.2}°)"
+                ),
+                match motion {
+                    Some(m) => {
+                        let mn = m.name_in(lang);
+                        say3!(
+                            lang,
+                            "",
+                            "ചേഷ്ടാബലം {chesta:.1}: {mn} (പ്രതിദിനം {speed:+.4}°, ശരാശരി ഗതി {mean:.4})",
+                            "चेष्टा बल {chesta:.1}: {mn} (प्रतिदिन {speed:+.4}°, माध्य गति {mean:.4})"
+                        )
+                    }
+                    None => {
+                        let by = if g == DashaLord::Sun { lang.pick(["", "അയനബലം", "अयन बल"]) } else { lang.pick(["", "പക്ഷബലം", "पक्ष बल"]) };
+                        say3!(
+                            lang,
+                            "",
+                            "ചേഷ്ടാബലം {chesta:.1}: ഇതിനു പകരം {by} എടുക്കുന്നു",
+                            "चेष्टा बल {chesta:.1}: इसके स्थान पर {by} लिया जाता है"
+                        )
+                    }
+                },
+                say3!(
+                    lang,
+                    "",
+                    "നൈസർഗികബലം {naisargika:.2}; ലഭിക്കുന്ന ദൃഷ്ടികളിൽ നിന്ന് ദൃക്ബലം {drik:+.2}",
+                    "नैसर्गिक बल {naisargika:.2}; प्राप्त दृष्टियों से दृग्बल {drik:+.2}"
+                ),
+            ]
+        };
         grahas.push(GrahaBala {
             graha: g,
             sthana,
@@ -330,23 +548,42 @@ pub fn shadbala(
     };
     let wars = wars(&positions, before);
     for w in &wars {
+        let (sep, vir) = (w.separation_deg, w.virupas);
         for b in grahas.iter_mut() {
             if b.graha == w.winner {
                 b.kala.yuddha += w.virupas;
-                b.words.push(format!(
-                    "At war with {} ({:.2}° apart) and victorious: +{:.2}",
-                    graha_name(w.loser),
-                    w.separation_deg,
-                    w.virupas
-                ));
+                let other = words::graha(lang, w.loser);
+                b.words.push(match lang {
+                    Lang::En => format!(
+                        "At war with {} ({:.2}° apart) and victorious: +{:.2}",
+                        graha_name(w.loser),
+                        w.separation_deg,
+                        w.virupas
+                    ),
+                    _ => say3!(
+                        lang,
+                        "",
+                        "ഗ്രഹയുദ്ധം, എതിരാളി {other} ({sep:.2}° അകലം): ജയം, +{vir:.2}",
+                        "{other} से ग्रहयुद्ध ({sep:.2}° की दूरी): विजयी, +{vir:.2}"
+                    ),
+                });
             } else if b.graha == w.loser {
                 b.kala.yuddha -= w.virupas;
-                b.words.push(format!(
-                    "At war with {} ({:.2}° apart) and vanquished: −{:.2}",
-                    graha_name(w.winner),
-                    w.separation_deg,
-                    w.virupas
-                ));
+                let other = words::graha(lang, w.winner);
+                b.words.push(match lang {
+                    Lang::En => format!(
+                        "At war with {} ({:.2}° apart) and vanquished: −{:.2}",
+                        graha_name(w.winner),
+                        w.separation_deg,
+                        w.virupas
+                    ),
+                    _ => say3!(
+                        lang,
+                        "",
+                        "ഗ്രഹയുദ്ധം, എതിരാളി {other} ({sep:.2}° അകലം): പരാജയം, −{vir:.2}",
+                        "{other} से ग्रहयुद्ध ({sep:.2}° की दूरी): पराजित, −{vir:.2}"
+                    ),
+                });
             }
         }
     }
@@ -359,14 +596,12 @@ pub fn shadbala(
         let (i, k) = ishta_kashta(b.sthana.uchcha, b.chesta);
         b.ishta = i;
         b.kashta = k;
-        b.words.push(format!(
-            "Shadbala {:.1} virupas = {:.2} rupas, {:.0}% of the required {:.0}; Ishta {:.1}, Kashta {:.1}",
-            b.total_virupas,
-            b.rupas,
-            b.ratio * 100.0,
-            b.required,
-            b.ishta,
-            b.kashta
+        let (tv, ru, pc, rq, is, ks) = (b.total_virupas, b.rupas, b.ratio * 100.0, b.required, b.ishta, b.kashta);
+        b.words.push(say3!(
+            lang,
+            "Shadbala {tv:.1} virupas = {ru:.2} rupas, {pc:.0}% of the required {rq:.0}; Ishta {is:.1}, Kashta {ks:.1}",
+            "ഷഡ്ബലം {tv:.1} വിരൂപ = {ru:.2} രൂപ, വേണ്ട {rq:.0} വിരൂപയുടെ {pc:.0}%; ഇഷ്ടഫലം {is:.1}, കഷ്ടഫലം {ks:.1}",
+            "षड्बल {tv:.1} विरूप = {ru:.2} रूप, आवश्यक {rq:.0} का {pc:.0}%; इष्ट फल {is:.1}, कष्ट फल {ks:.1}"
         ));
     }
 
@@ -437,6 +672,33 @@ mod tests {
         )
         .unwrap();
         Some((spk, ch))
+    }
+
+    #[test]
+    fn words_in_malayalam_and_hindi_keep_the_numbers() {
+        let Some((spk, ch)) = fixture() else { return };
+        let en = shadbala(&spk, None, &KOCHI, &ch, Ayanamsa::Lahiri).unwrap();
+        assert_eq!(en, shadbala_in(&spk, None, &KOCHI, &ch, Ayanamsa::Lahiri, Lang::En).unwrap());
+        let latin = |t: &str| t.split(|c: char| !c.is_ascii_alphabetic()).any(|w| w.len() >= 3);
+        for lang in [Lang::Ml, Lang::Hi] {
+            let s = shadbala_in(&spk, None, &KOCHI, &ch, Ayanamsa::Lahiri, lang).unwrap();
+            for (a, b) in s.grahas.iter().zip(&en.grahas) {
+                assert_eq!(a.total_virupas, b.total_virupas);
+                assert_eq!(a.words.len(), b.words.len());
+                for w in &a.words {
+                    assert!(!latin(w), "{lang:?}: {w}");
+                }
+            }
+        }
+        for m in [Motion::Vakra, Motion::Anuvakra, Motion::Vikala, Motion::Manda, Motion::Mandatara, Motion::Sama, Motion::Chara, Motion::Atichara] {
+            assert_eq!(m.name_in(Lang::En), m.name());
+            assert!(!latin(m.name_in(Lang::Ml)) && !latin(m.meaning_in(Lang::Hi)));
+        }
+        for a in avasthas(&ch) {
+            assert_eq!(a.deeptadi.name_in(Lang::En), format!("{:?}", a.deeptadi));
+            assert_eq!(a.baladi.name_in(Lang::En), format!("{:?}", a.baladi));
+            assert_eq!(a.jagradadi.name_in(Lang::En), format!("{:?}", a.jagradadi));
+        }
     }
 
     #[test]
