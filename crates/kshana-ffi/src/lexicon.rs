@@ -175,7 +175,7 @@ mod tests {
         assert_eq!(term("Ashwini".into(), "ml".into()), "അശ്വതി");
         assert_eq!(term("Mesha".into(), "ta".into()), "மேஷம்");
         assert_eq!(term("Ravivara".into(), "en".into()), "Sunday");
-        assert_eq!(term("Choghadiya".into(), "ml".into()), "Choghadiya");
+        assert_eq!(term("Choghadiya".into(), "ta".into()), "Choghadiya");
         assert_eq!(term("unknown".into(), "xx".into()), "unknown");
         assert_eq!(term_latin("Ashwini".into(), "ml".into()), "Aswathi");
         assert_eq!(term_latin("Aries".into(), "en".into()), "Mesha");

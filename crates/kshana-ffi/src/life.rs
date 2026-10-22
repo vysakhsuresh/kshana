@@ -528,12 +528,14 @@ impl Engine {
 
 /// Naming syllable for a sidereal Moon longitude.
 #[uniffi::export]
-pub fn naming(moon_sidereal: f64) -> NamingRecord {
+pub fn naming(moon_sidereal: f64, lang: String) -> NamingRecord {
+    let lang = kshana_rules::Lang::parse(&lang);
     let (n, p, s) = kshana_vedic::naming_for(moon_sidereal);
+    let (ml, hi) = kshana_vedic::syllable_native(kshana_vedic::nakshatra(moon_sidereal).index, p);
     NamingRecord {
-        nakshatra: n.to_string(),
+        nakshatra: kshana_speak::lexicon::name(n, lang).to_string(),
         pada: p,
-        syllable: s.to_string(),
+        syllable: lang.pick([s, ml, hi]).to_string(),
     }
 }
 
@@ -624,7 +626,9 @@ mod tests {
             .karakas(birth, 9.9312, 76.2673, AyanamsaChoice::Lahiri)
             .unwrap();
         assert_eq!(k.len(), 7);
-        assert_eq!(naming(0.5).syllable, "Chu");
+        assert_eq!(naming(0.5, "en".into()).syllable, "Chu");
+        assert_eq!(naming(0.5, "hi".into()).syllable, "चू");
+        assert_eq!(naming(0.5, "ml".into()).nakshatra, "അശ്വതി");
         assert!(glossary("en".into()).len() >= 50);
     }
 }
