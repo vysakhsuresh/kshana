@@ -440,7 +440,7 @@ internal fun SealCard(seal: PastReveal.Seal, onRemedy: () -> Unit, onAnswer: ((S
         if (!seal.isOpen(now)) {
             Text(
                 run {
-                    val on = opens.format(java.time.format.DateTimeFormatter.ofPattern("d MMM uuuu"))
+                    val on = opens.format(com.kshana.app.ui.screens.datePattern("d MMM uuuu"))
                     when {
                         days == 1L -> trf("I have written down one thing about the coming weeks and sealed it. It opens on {0}, in 1 day. Then you will see if I was right.", on)
                         days > 1L -> trf("I have written down one thing about the coming weeks and sealed it. It opens on {0}, in {1} days. Then you will see if I was right.", on, days)
@@ -450,11 +450,11 @@ internal fun SealCard(seal: PastReveal.Seal, onRemedy: () -> Unit, onAnswer: ((S
                 fontFamily = FontFamily.Serif, fontSize = 17.sp, lineHeight = 24.sp, color = KshanaColors.Text,
             )
             Text(
-                trf("Seal {0} · sealed {1}. The code is a fingerprint of the words: if a single letter changed, it would not match.", seal.shortCode(), java.time.Instant.ofEpochMilli(seal.sealedAt).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("d MMM uuuu, HH:mm"))),
+                trf("Seal {0} · sealed {1}. The code is a fingerprint of the words: if a single letter changed, it would not match.", seal.shortCode(), java.time.Instant.ofEpochMilli(seal.sealedAt).atZone(java.time.ZoneId.systemDefault()).format(com.kshana.app.ui.screens.datePattern("d MMM uuuu, HH:mm"))),
                 style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
             )
         } else {
-            Text(trf("Opened today. Sealed {0}, seal {1}:", java.time.Instant.ofEpochMilli(seal.sealedAt).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("d MMM uuuu")), seal.shortCode()), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            Text(trf("Opened today. Sealed {0}, seal {1}:", java.time.Instant.ofEpochMilli(seal.sealedAt).atZone(java.time.ZoneId.systemDefault()).format(com.kshana.app.ui.screens.datePattern("d MMM uuuu")), seal.shortCode()), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             Text(seal.statement, fontFamily = FontFamily.Serif, fontSize = 19.sp, lineHeight = 27.sp, color = KshanaColors.Text)
             if (seal.verdict.isEmpty() && onAnswer != null) {
                 Text(tr("Did it happen?"), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)

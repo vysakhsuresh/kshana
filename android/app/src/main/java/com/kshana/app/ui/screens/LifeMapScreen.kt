@@ -66,7 +66,7 @@ import java.time.format.DateTimeFormatter
 import com.kshana.app.ui.sky.KshanaFonts
 
 private val LIFE_AREAS = listOf("Career", "Marriage", "Children", "Wealth", "Health", "Property", "Education", "Family", "Foreign")
-private val MONTH_YEAR = DateTimeFormatter.ofPattern("MMMM uuuu")
+private val MONTH_YEAR get() = com.kshana.app.ui.screens.datePattern("MMMM uuuu")
 private const val MAP_YEARS = 100
 private val YEAR_WIDTH = 12.dp
 private val MAP_PAD = 24.dp

@@ -68,7 +68,7 @@ internal fun DataSettings() {
             Text("Keep a copy in Downloads", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
             val last = Backup.lastSaved(context)
             Text(
-                if (last > 0) "Last copy ${Instant.ofEpochMilli(last).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d MMM uuuu, HH:mm"))} · Downloads › Kshana" else "So an uninstall or a cleared phone never loses your data.",
+                if (last > 0) "Last copy ${Instant.ofEpochMilli(last).atZone(ZoneId.systemDefault()).format(com.kshana.app.ui.screens.datePattern("d MMM uuuu, HH:mm"))} · Downloads › Kshana" else "So an uninstall or a cleared phone never loses your data.",
                 style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
             )
         }

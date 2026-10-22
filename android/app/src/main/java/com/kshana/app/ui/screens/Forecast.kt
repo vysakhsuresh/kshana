@@ -20,8 +20,8 @@ import java.time.format.DateTimeFormatter
 /** Shared pieces of the plain-language screens. Nothing here judges a chart. */
 
 internal val TIME_HM: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-internal val DAY_MON: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM uuuu")
-internal val WEEKDAY_DAY: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM uuuu")
+internal val DAY_MON: DateTimeFormatter get() = com.kshana.app.ui.screens.datePattern("d MMM uuuu")
+internal val WEEKDAY_DAY: DateTimeFormatter get() = com.kshana.app.ui.screens.datePattern("EEE d MMM uuuu")
 
 internal val LIFE_ORDER = listOf("Love", "Career", "Money", "Health", "Family", "Study", "Home", "Travel", "Children")
 
@@ -102,7 +102,7 @@ internal fun countdown(from: Instant, to: Instant): String {
 internal fun hm(e: ExactInstant): String = localText(e, TIME_HM)
 internal fun dayMon(e: ExactInstant): String = localText(e, DAY_MON)
 
-internal val WEEKDAY_DAY_YEAR: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM uuuu")
+internal val WEEKDAY_DAY_YEAR: DateTimeFormatter get() = com.kshana.app.ui.screens.datePattern("EEE d MMM uuuu")
 
 /** "Sat 21 Nov 2026": always with the year, so no date is ever ambiguous. */
 internal fun whenText(e: ExactInstant): String = Instants.toLocal(e).format(WEEKDAY_DAY_YEAR)

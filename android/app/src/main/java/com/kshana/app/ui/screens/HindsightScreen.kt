@@ -119,7 +119,7 @@ fun HindsightScreen(profile: BirthProfile, place: Place, settings: EngineSetting
         }
         Text("How was that day for me?", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         Text("Pick a day that mattered: a wedding, a fight, a job, a loss. See how that day stood for you, and the months around it.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
-        ValuePill(date.format(DateTimeFormatter.ofPattern("EEEE d MMMM uuuu")), onClick = { pick = true }, modifier = Modifier.fillMaxWidth())
+        ValuePill(date.format(com.kshana.app.ui.screens.datePattern("EEEE d MMMM uuuu")), onClick = { pick = true }, modifier = Modifier.fillMaxWidth())
         ErrorLine(error)
         val b = brief
         if (b == null) {
@@ -160,7 +160,7 @@ fun HindsightScreen(profile: BirthProfile, place: Place, settings: EngineSetting
             SlowAround(values, 6)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(slow.firstOrNull()?.let { "${dayMon(it.at)} ${localText(it.at, YEAR_ONLY)}" } ?: "", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
-                Text(date.format(DateTimeFormatter.ofPattern("d MMM uuuu")), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Gold)
+                Text(date.format(com.kshana.app.ui.screens.datePattern("d MMM uuuu")), fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Gold)
                 Text(slow.lastOrNull()?.let { "${dayMon(it.at)} ${localText(it.at, YEAR_ONLY)}" } ?: "", fontFamily = FontFamily.Monospace, fontSize = 10.sp, color = KshanaColors.Muted)
             }
             val here = values.getOrNull(6)

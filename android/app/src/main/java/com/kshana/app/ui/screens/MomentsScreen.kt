@@ -32,7 +32,7 @@ import uniffi.kshana_ffi.EventRecord
 import java.time.format.DateTimeFormatter
 import com.kshana.app.ui.sky.KshanaFonts
 
-private val DAY = DateTimeFormatter.ofPattern("EEE d MMM uuuu")
+private val DAY get() = com.kshana.app.ui.screens.datePattern("EEE d MMM uuuu")
 private val TIME = DateTimeFormatter.ofPattern("HH:mm:ss")
 
 @Composable

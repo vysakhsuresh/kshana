@@ -131,7 +131,7 @@ fun JournalScreen(profile: BirthProfile, place: Place, settings: EngineSettings,
 
         SectionLabel("Add a day")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            ValuePill(date.format(DateTimeFormatter.ofPattern("d MMM uuuu")), onClick = { pick = true })
+            ValuePill(date.format(com.kshana.app.ui.screens.datePattern("d MMM uuuu")), onClick = { pick = true })
             OptionBox("It was good", selected = good, onClick = { good = true })
             OptionBox("It was hard", selected = !good, onClick = { good = false })
         }
@@ -169,7 +169,7 @@ fun JournalScreen(profile: BirthProfile, place: Place, settings: EngineSettings,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("${lifeGlyph(e.life)} ${lifeName(e.life)} · ${if (e.good) "good" else "hard"}", style = MaterialTheme.typography.titleMedium, color = KshanaColors.Text, modifier = Modifier.weight(1f))
-                    Text(e.date.format(DateTimeFormatter.ofPattern("d MMM uuuu")), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky)
+                    Text(e.date.format(com.kshana.app.ui.screens.datePattern("d MMM uuuu")), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky)
                 }
                 if (e.note.isNotBlank()) Text(e.note, fontFamily = FontFamily.Serif, fontSize = 16.sp, color = KshanaColors.TextSoft)
                 if (s == null) {

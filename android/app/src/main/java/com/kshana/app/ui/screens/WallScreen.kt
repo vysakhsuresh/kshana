@@ -140,7 +140,7 @@ fun WallScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
             ) {
                 Text(c.title.uppercase(), style = MaterialTheme.typography.labelSmall, color = if (c.good) KshanaColors.Leaf else KshanaColors.Ember)
                 Text(left(tick, at), fontFamily = FontFamily.Monospace, fontSize = 34.sp, color = KshanaColors.Text)
-                Text("${localText(c.at, DATE_TIME)} · ${localText(c.at, java.time.format.DateTimeFormatter.ofPattern("EEEE"))}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky)
+                Text("${localText(c.at, DATE_TIME)} · ${localText(c.at, com.kshana.app.ui.screens.datePattern("EEEE"))}", fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky)
                 Text(c.words, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Chip(if (set) "🔔 TELLING YOU" else "🔔 TELL ME", selected = set, onClick = {

@@ -62,7 +62,7 @@ import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
-private val DAY_LONG: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE d MMMM uuuu")
+private val DAY_LONG: DateTimeFormatter get() = com.kshana.app.ui.screens.datePattern("EEEE d MMMM uuuu")
 
 /**
  * Plan: "I have something at this time; how is that time for me?" Pick the moment and

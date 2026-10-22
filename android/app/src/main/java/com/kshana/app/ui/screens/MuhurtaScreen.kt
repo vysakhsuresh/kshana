@@ -57,7 +57,7 @@ private val RANGES = listOf(7u, 14u, 30u)
 
 private const val LIMIT = 12u
 
-private val DAY = DateTimeFormatter.ofPattern("EEE d MMM uuuu")
+private val DAY get() = com.kshana.app.ui.screens.datePattern("EEE d MMM uuuu")
 private val CLOCK = DateTimeFormatter.ofPattern("HH:mm")
 
 /** The natal Moon as the engine states it: sidereal longitude and the nakshatra it sits in. */

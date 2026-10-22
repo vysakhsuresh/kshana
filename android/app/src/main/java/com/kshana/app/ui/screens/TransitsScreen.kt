@@ -82,8 +82,8 @@ private val SIGN_NAMES = listOf(
     "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces",
 )
 private val MOORTHI_METAL = mapOf("Swarna" to "gold", "Rajata" to "silver", "Tamra" to "copper", "Loha" to "iron")
-private val MONTH_SHORT = DateTimeFormatter.ofPattern("MMM")
-private val MONTH_YEAR_SHORT = DateTimeFormatter.ofPattern("MMM uuuu")
+private val MONTH_SHORT get() = com.kshana.app.ui.screens.datePattern("MMM")
+private val MONTH_YEAR_SHORT get() = com.kshana.app.ui.screens.datePattern("MMM uuuu")
 
 private const val MAX_DAYS = 800L
 private const val DAY_S = 86_400.0

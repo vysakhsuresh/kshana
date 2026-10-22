@@ -53,7 +53,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.kshana.app.ui.sky.KshanaFonts
 
-private val MONTH_CHIP = DateTimeFormatter.ofPattern("MMM uuuu")
+private val MONTH_CHIP get() = com.kshana.app.ui.screens.datePattern("MMM uuuu")
 private const val CONFIRM_WINDOW_MS = 4_000L
 private const val SNAPSHOT_DEPTH: UByte = 3u
 

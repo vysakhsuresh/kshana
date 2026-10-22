@@ -137,7 +137,7 @@ fun FutureScreen(profile: BirthProfile, place: Place, settings: EngineSettings, 
             fontFamily = FontFamily.Serif, fontSize = 18.sp, color = KshanaColors.Text,
         )
         if (shown.isEmpty()) Text("Nothing of this kind in this span.", style = MaterialTheme.typography.bodyLarge, color = KshanaColors.TextSoft)
-        val mon = DateTimeFormatter.ofPattern("MMM")
+        val mon = com.kshana.app.ui.screens.datePattern("MMM")
         val yr = DateTimeFormatter.ofPattern("uuuu")
         for (e in shown) FutureRow(e, mon, yr, onRemedy)
         Spacer(Modifier.height(4.dp))

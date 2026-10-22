@@ -83,7 +83,7 @@ import kotlin.math.ceil
 
 private data class EventDraft(val date: LocalDate, val life: String, val good: Boolean)
 
-private val LONG_DATE_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("d MMM uuuu · HH:mm:ss")
+private val LONG_DATE_TIME: DateTimeFormatter get() = com.kshana.app.ui.screens.datePattern("d MMM uuuu · HH:mm:ss")
 
 /** The eight life areas the engine scores, by their engine names. */
 private val AREAS = listOf("Career", "Marriage", "Children", "Wealth", "Health", "Property", "Education", "Foreign")
@@ -242,7 +242,7 @@ fun RectifyScreen(profile: BirthProfile, settings: EngineSettings, onBack: () ->
         SectionLabel("What happened")
         for ((i, e) in events.withIndex()) {
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(e.date.format(DateTimeFormatter.ofPattern("d MMM uuuu")), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky, modifier = Modifier.width(110.dp))
+                Text(e.date.format(com.kshana.app.ui.screens.datePattern("d MMM uuuu")), fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky, modifier = Modifier.width(110.dp))
                 Text("${lifeGlyph(e.life)} ${e.life} · ${if (e.good) "good" else "hard"}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text, modifier = Modifier.weight(1f))
                 Text("REMOVE", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.clickable { events = events.filterIndexed { j, _ -> j != i }; result = null }.padding(6.dp))
             }

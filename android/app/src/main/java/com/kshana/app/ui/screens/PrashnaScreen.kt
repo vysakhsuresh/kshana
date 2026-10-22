@@ -79,7 +79,7 @@ private val KEYWORDS = listOf(
 )
 
 private const val WINDOW_DAYS = 30u
-private val CLOCK_DATE = DateTimeFormatter.ofPattern("EEEE, d MMMM uuuu")
+private val CLOCK_DATE get() = com.kshana.app.ui.screens.datePattern("EEEE, d MMMM uuuu")
 private val CLOCK_TIME = DateTimeFormatter.ofPattern("HH:mm:ss")
 
 private fun areaFromText(text: String): String? {

@@ -135,7 +135,7 @@ fun AlmanacScreen(place: Place, settings: EngineSettings, onBack: () -> Unit) {
             }
         }
         SectionLabel("Festivals and holy days")
-        val fmt = DateTimeFormatter.ofPattern("EEE d MMM uuuu")
+        val fmt = com.kshana.app.ui.screens.datePattern("EEE d MMM uuuu")
         val withFest = d.filter { it.festivals.isNotEmpty() }
         for (x in withFest) {
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
@@ -202,7 +202,7 @@ fun DashasMoreScreen(profile: BirthProfile, settings: EngineSettings, onBack: ()
             systems = withContext(Dispatchers.Default) { engine.dashaSystemsMoreAt(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, Instants.now()) }
         }.onFailure { error = it.message }
     }
-    val fmt = DateTimeFormatter.ofPattern("d MMM uuuu")
+    val fmt = com.kshana.app.ui.screens.datePattern("d MMM uuuu")
     Page("CHART PAGES · DASHAS", "Every period system", "Narayana, Sthira, Shoola, Drig and the conditional nakshatra dashas, with whether each applies to this chart by BPHS ch. 46.", onBack) {
         ErrorLine(error)
         val l = systems ?: run { if (error == null) Working("running every period system…"); return@Page }

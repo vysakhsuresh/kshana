@@ -49,9 +49,9 @@ internal val PLANET_ABBR: Map<String, String> = mapOf(
 
 internal val SIGN_SHORT = listOf("Ari", "Tau", "Gem", "Can", "Leo", "Vir", "Lib", "Sco", "Sag", "Cap", "Aqu", "Pis")
 
-internal val DATE_TIME = DateTimeFormatter.ofPattern("d MMM uuuu HH:mm")
-internal val DATE_TIME_S = DateTimeFormatter.ofPattern("d MMM uuuu HH:mm:ss")
-internal val DATE_ONLY = DateTimeFormatter.ofPattern("d MMM uuuu")
+internal val DATE_TIME get() = com.kshana.app.ui.screens.datePattern("d MMM uuuu HH:mm")
+internal val DATE_TIME_S get() = com.kshana.app.ui.screens.datePattern("d MMM uuuu HH:mm:ss")
+internal val DATE_ONLY get() = com.kshana.app.ui.screens.datePattern("d MMM uuuu")
 internal val TIME_ONLY = DateTimeFormatter.ofPattern("HH:mm:ss")
 
 internal fun norm360(x: Double): Double = (x % 360.0 + 360.0) % 360.0
@@ -298,3 +298,13 @@ internal fun Door(label: String, onClick: () -> Unit, modifier: Modifier = Modif
         }
     }
 }
+
+/** The locale for day and month names: the app's language, else the phone's own. */
+internal fun appLocale(): java.util.Locale = when (com.kshana.app.data.Lang.code) {
+    "ml" -> java.util.Locale("ml", "IN")
+    "hi" -> java.util.Locale("hi", "IN")
+    else -> java.util.Locale.getDefault()
+}
+
+/** A date pattern whose day and month names follow the app's language (digits stay 0-9). */
+internal fun datePattern(pattern: String): DateTimeFormatter = DateTimeFormatter.ofPattern(pattern, appLocale())

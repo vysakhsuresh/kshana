@@ -138,7 +138,7 @@ object Backup {
         return when (days) {
             0L -> "today at $clock"
             1L -> "yesterday at $clock"
-            else -> t.format(java.time.format.DateTimeFormatter.ofPattern("d MMM uuuu")) + " at $clock"
+            else -> t.format(com.kshana.app.ui.screens.datePattern("d MMM uuuu")) + " at $clock"
         }
     }
 

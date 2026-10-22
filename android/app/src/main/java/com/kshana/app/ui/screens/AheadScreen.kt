@@ -129,7 +129,7 @@ fun AheadScreen(
                 ScoreRing(o.score, size = 84.dp, stroke = 7.dp, label = bandWord(o.band))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        if (span == "day") localText(o.from, java.time.format.DateTimeFormatter.ofPattern("EEEE d MMMM uuuu")) else "${localText(o.from, DATE_ONLY)} – ${localText(o.to, DATE_ONLY)}",
+                        if (span == "day") localText(o.from, com.kshana.app.ui.screens.datePattern("EEEE d MMMM uuuu")) else "${localText(o.from, DATE_ONLY)} – ${localText(o.to, DATE_ONLY)}",
                         fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = KshanaColors.Sky,
                     )
                     Text(o.headline, fontFamily = FontFamily.Serif, fontSize = 18.sp, lineHeight = 26.sp, color = KshanaColors.Text)

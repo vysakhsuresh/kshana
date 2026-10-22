@@ -80,7 +80,7 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.floor
 import com.kshana.app.ui.sky.KshanaFonts
 
-private val DAY_TITLE = DateTimeFormatter.ofPattern("EEE d MMM uuuu")
+private val DAY_TITLE get() = com.kshana.app.ui.screens.datePattern("EEE d MMM uuuu")
 private val HMS_MS = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
 private val HMS = DateTimeFormatter.ofPattern("HH:mm:ss")
 private val SHORT_TIME = DateTimeFormatter.ofPattern("HH:mm")

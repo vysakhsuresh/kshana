@@ -31,7 +31,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-private val SHORT_DATE = DateTimeFormatter.ofPattern("d MMM")
+private val SHORT_DATE get() = com.kshana.app.ui.screens.datePattern("d MMM")
 
 private fun shortDate(millis: Long): String = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).format(SHORT_DATE)
 

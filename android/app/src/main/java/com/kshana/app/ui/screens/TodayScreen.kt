@@ -64,9 +64,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.kshana.app.ui.sky.KshanaFonts
 
-private val GREETING_DATE = DateTimeFormatter.ofPattern("EEEE, d MMMM uuuu")
+private val GREETING_DATE get() = com.kshana.app.ui.screens.datePattern("EEEE, d MMMM uuuu")
 private val SHORT_TIME = DateTimeFormatter.ofPattern("HH:mm")
-private val MOMENT_TIME = DateTimeFormatter.ofPattern("EEE d MMM uuuu · HH:mm:ss")
+private val MOMENT_TIME get() = com.kshana.app.ui.screens.datePattern("EEE d MMM uuuu · HH:mm:ss")
 
 /** A dim red for the hours to avoid; the only non-palette colour, kept to the day bar. */
 private val AvoidFill = Color(0xFF7A3238)

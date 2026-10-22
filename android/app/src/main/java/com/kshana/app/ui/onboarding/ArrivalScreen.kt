@@ -90,7 +90,7 @@ private const val STAR_COUNT = 320
 private const val STAR_SEED = 0x415252495641L // "ARRIVA": the same stars on every arrival
 private const val HORIZON_FRACTION = 0.80f
 private val DAY_BLUE = Color(0xFF0E1A3A)
-private val STAMP = DateTimeFormatter.ofPattern("d MMM uuuu  HH:mm:ss")
+private val STAMP get() = com.kshana.app.ui.screens.datePattern("d MMM uuuu  HH:mm:ss")
 private val SIGN_GLYPHS = listOf("♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓")
 private val BODY_GLYPHS = mapOf(
     "Sun" to "☉", "Moon" to "☽", "Mercury" to "☿", "Venus" to "♀", "Mars" to "♂", "Jupiter" to "♃", "Saturn" to "♄",

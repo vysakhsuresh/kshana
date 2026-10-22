@@ -120,7 +120,7 @@ fun NowScreen(
 @Composable
 private fun Clock(tickMillis: Long) {
     val local = ZonedDateTime.ofInstant(java.time.Instant.ofEpochMilli(tickMillis), ZoneId.systemDefault())
-    val date = local.format(DateTimeFormatter.ofPattern("EEEE, d MMMM uuuu"))
+    val date = local.format(com.kshana.app.ui.screens.datePattern("EEEE, d MMMM uuuu"))
     val hms = local.format(DateTimeFormatter.ofPattern("HH:mm:ss"))
     // microseconds within the second, from the monotonic clock so the digits keep moving
     val micro = ((System.nanoTime() / 1_000) % 1_000_000).toString().padStart(6, '0')

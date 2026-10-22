@@ -77,7 +77,7 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 private val CLOCK: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
-private val LONG_DATE: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM uuuu")
+private val LONG_DATE: DateTimeFormatter get() = com.kshana.app.ui.screens.datePattern("EEEE, d MMMM uuuu")
 
 /**
  * The time loop: what this moment holds, a countdown to the next shift, nine lives,
@@ -420,7 +420,7 @@ private fun WallStrip(profile: BirthProfile, place: Place, settings: EngineSetti
         val f = fest?.filter { Instants.toLocal(it.at).toInstant().isBefore(tick.plusSeconds(7 * 86_400)) && Instants.toLocal(it.at).toInstant().isAfter(tick.minusSeconds(86_400)) }
         if (!f.isNullOrEmpty()) {
             Text(
-                tr("This week:") + " " + f.joinToString(" · ") { "${it.name} ${localText(it.at, java.time.format.DateTimeFormatter.ofPattern("EEE"))}" },
+                tr("This week:") + " " + f.joinToString(" · ") { "${it.name} ${localText(it.at, com.kshana.app.ui.screens.datePattern("EEE"))}" },
                 style = MaterialTheme.typography.bodySmall, color = KshanaColors.TextSoft, modifier = Modifier.padding(horizontal = 24.dp),
             )
         }

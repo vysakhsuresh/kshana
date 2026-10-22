@@ -172,7 +172,7 @@ fun CalendarScreen(profile: BirthProfile, place: Place, settings: EngineSettings
             fontFamily = FontFamily.Serif, fontSize = 19.sp, lineHeight = 26.sp, color = KshanaColors.Text,
         )
         val hm = DateTimeFormatter.ofPattern("HH:mm")
-        val day = DateTimeFormatter.ofPattern("EEE d MMM uuuu")
+        val day = com.kshana.app.ui.screens.datePattern("EEE d MMM uuuu")
         val z = ZoneId.systemDefault()
         for (c in list) {
             val bad = c.score < 44 || c.window != null
@@ -217,8 +217,8 @@ private const val DAYS = 60u
 /** Eclipses are listed this far ahead: two years, well under the engine's twenty. */
 private const val ECLIPSE_DAYS = 731L
 
-private val MONTH = DateTimeFormatter.ofPattern("MMMM uuuu")
-private val DAY_SHORT = DateTimeFormatter.ofPattern("EEE d MMM uuuu")
+private val MONTH get() = com.kshana.app.ui.screens.datePattern("MMMM uuuu")
+private val DAY_SHORT get() = com.kshana.app.ui.screens.datePattern("EEE d MMM uuuu")
 
 /** The filter chips: a label and the test an observance name must pass. */
 private enum class Filter(val label: String, val test: (String) -> Boolean) {

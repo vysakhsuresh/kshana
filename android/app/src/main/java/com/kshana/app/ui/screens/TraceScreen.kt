@@ -76,9 +76,9 @@ import com.kshana.app.ui.sky.BellInstant
  * divisions, tithi/karana/yoga, horas, sunrise and sunset), each to the microsecond.
  * ---------------------------------------------------------------------------------- */
 
-private val DAY_TITLE = DateTimeFormatter.ofPattern("EEE d MMM uuuu")
+private val DAY_TITLE get() = com.kshana.app.ui.screens.datePattern("EEE d MMM uuuu")
 private val HMS = DateTimeFormatter.ofPattern("HH:mm:ss")
-private val WEEKDAY_HMS = DateTimeFormatter.ofPattern("EEE HH:mm:ss")
+private val WEEKDAY_HMS get() = com.kshana.app.ui.screens.datePattern("EEE HH:mm:ss")
 
 /** Transitions closer than this share one row of the river. */
 private const val ROW_WINDOW_NS = 1_000_000L

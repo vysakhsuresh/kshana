@@ -54,7 +54,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import com.kshana.app.ui.sky.KshanaFonts
 
-private val BIRTH_LINE = DateTimeFormatter.ofPattern("d MMMM uuuu · HH:mm:ss")
+private val BIRTH_LINE get() = com.kshana.app.ui.screens.datePattern("d MMMM uuuu · HH:mm:ss")
 private const val MAX_ORB_DEG = 8.0
 private val MAJOR_GOLD = setOf("Conjunction", "Trine", "Sextile")
 private val MAJOR_SKY = setOf("Square", "Opposition")

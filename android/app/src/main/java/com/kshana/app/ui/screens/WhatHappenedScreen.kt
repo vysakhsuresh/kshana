@@ -97,7 +97,7 @@ fun WhatHappenedScreen(profile: BirthProfile, onBack: () -> Unit, onScore: () ->
             }
             SectionLabel(tr("When"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                ValuePill(date.format(DateTimeFormatter.ofPattern("d MMM uuuu")), onClick = { pick = true })
+                ValuePill(date.format(com.kshana.app.ui.screens.datePattern("d MMM uuuu")), onClick = { pick = true })
             }
             SectionLabel(tr("How was it"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
