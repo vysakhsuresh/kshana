@@ -1196,7 +1196,7 @@ fn named(o: &mut Out) {
             let nl = sign_lord(n);
             let l2x = sign_lord(c.sign(nl) as usize);
             if (kendra(c.house(l2x)) || trikona(c.house(l2x))) && c.own_or_exalted(l2x) {
-                let (ne, nn, nx, dx, hx) = (n(e), n(nl), n(l2x), c.dg(c.dig(l2x)), c.house(l2x));
+                let (ne, nn, nx, dx, hx) = (c.name(e), c.name(nl), c.name(l2x), c.dg(c.dig(l2x)), c.house(l2x));
                 let ox = c.o(hx);
                 o.push("mridanga", vec![crate::say3!(lang, "{ne} exalted; its navamsa lord {nn} sits in a sign of {nx}, which is {dx} in house {hx}; lagna lord strong", "{ne} ഉച്ചത്തിൽ; അതിന്റെ നവാംശാധിപനായ {nn} {nx} ആധിപത്യമുള്ള രാശിയിൽ; {nx} {ox} ഭാവത്തിൽ {dx}; ലഗ്നാധിപൻ ബലവാൻ", "{ne} उच्च; उसका नवांशेश {nn} {nx} की राशि में, और {nx} {ox} भाव में {dx}; लग्नेश बलवान")], vec![e, l2x, l1], vec![l2x, e]);
                 break;
@@ -1309,6 +1309,7 @@ fn named(o: &mut Out) {
 
 fn hardship(o: &mut Out) {
     let c = o.c;
+    let lang = c.lang;
     let only_malefics = |h: u8| {
         let v = c.in_house(h, true);
         !v.is_empty() && v.iter().all(|g| !c.benefic(*g))
