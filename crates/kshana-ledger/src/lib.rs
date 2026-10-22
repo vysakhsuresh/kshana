@@ -58,6 +58,7 @@ mod surrogate;
 
 pub use calibrate::{
     baseline_fits, baseline_fits_for, baseline_for_ledger, baseline_instants, calibrate,
+    calibration_verdict,
     Calibration, ReliabilityBin, RELIABILITY_BINS,
 };
 pub use coverage::{
@@ -66,12 +67,13 @@ pub use coverage::{
     CANNOT_FAIL_COVERAGE, PROFILE_DEPTH, SUPPORT_THRESHOLD,
 };
 pub use decoy::{
-    binomial_p_at_least, grade, retrodiction_quiz, verify_question, Question, QuizResult,
+    binomial_p_at_least, grade, grade_words, question_prompt, retrodiction_quiz, verify_question, Question,
+    QuizResult,
 };
 pub use event::{iso_utc, month_year, parse_iso_utc, EventKind, LedgerError, LifeEvent};
 pub use hash::{seed_of, sha256, sha256_hex, SplitMix};
 pub use metrics::{
-    count_words, cube_root_bins, metrics, wilson_interval, CalibrationBin, Metrics, MIN_FOR_CURVE,
+    count_words, count_words_in, cube_root_bins, metrics, metrics_words, wilson_interval, CalibrationBin, Metrics, MIN_FOR_CURVE,
     MIN_FOR_PERCENT, MIN_PER_BIN, Z95,
 };
 pub use opentest::{
@@ -81,9 +83,10 @@ pub use opentest::{
     TestClaim, Tier, ALPHA, LOOK_EVERY, MIN_SALT, POOLED_AREAS, PROTOCOL_HASH_V1, PROTOCOL_VERSION, SILENCE_MIN,
 };
 pub use posterior::{birth_posterior, birth_posterior_in, hpd_interval, Posterior, LIKELIHOOD_FLOOR, MAX_CANDIDATES};
-pub use retrodict::{retrodict, PeriodReading};
+pub use retrodict::{retrodict, retrodict_in, PeriodReading};
 pub use score::{
-    combine_fit, fit_words, parashari_factor, score_at, score_event, transit_factor,
+    combine_fit, fit_words, fit_words_in, kind_word, parashari_factor, score_at, score_at_in, score_event,
+    score_event_in, transit_factor,
     transit_sample, EventScore, TransitSample, FUNNEL_DEPTH, JUPITER_GOOD_FROM_MOON,
     SADE_SATI_SHIFT, SATURN_GOOD_FROM_MOON, WEIGHT_DASHA, WEIGHT_PARASHARI, WEIGHT_TRANSIT,
 };
@@ -94,7 +97,7 @@ pub use integrity::{match_logged, record_card, BlindMatch, RecordCard, BLIND_GRA
 pub use specificity::{
     equivalent_areas, score_event_discounted, specificity_factor, tested_houses, DiscountedScore,
 };
-pub use surrogate::{circular_shift, time_shift_pvalue, SurrogateResult};
+pub use surrogate::{circular_shift, surrogate_words, time_shift_pvalue, SurrogateResult};
 
 #[cfg(test)]
 pub(crate) mod fixture {

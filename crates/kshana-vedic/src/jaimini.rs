@@ -29,6 +29,83 @@ pub const KARAKA_MEANINGS: [&str; 7] = [
     "spouse, partnerships",
 ];
 
+/// The karaka names as Kerala astrologers and Hindi panchangs write them: index 0 is
+/// Malayalam, 1 Hindi; rank order as [`KARAKA_NAMES_8`] (Pitrikaraka at rank 4).
+const KARAKA_NAMES_8_IN: [[&str; 8]; 2] = [
+    [
+        "ആത്മകാരകൻ",
+        "അമാത്യകാരകൻ",
+        "ഭ്രാതൃകാരകൻ",
+        "മാതൃകാരകൻ",
+        "പിതൃകാരകൻ",
+        "പുത്രകാരകൻ",
+        "ജ്ഞാതികാരകൻ",
+        "ദാരകാരകൻ",
+    ],
+    ["आत्मकारक", "अमात्यकारक", "भ्रातृकारक", "मातृकारक", "पितृकारक", "पुत्रकारक", "ज्ञातिकारक", "दारकारक"],
+];
+
+/// [`KARAKA_MEANINGS`] in Malayalam (index 0) and Hindi (index 1).
+const KARAKA_MEANINGS_IN: [[&str; 7]; 2] = [
+    [
+        "സ്വന്തം വ്യക്തിത്വം, ജീവിതലക്ഷ്യം",
+        "തൊഴിൽ, ഉപദേശം, ഒരാൾ അറിയപ്പെടുന്ന ജോലി",
+        "സഹോദരങ്ങൾ, ധൈര്യം, ഗുരുക്കന്മാർ",
+        "അമ്മ, വീട്, പഠനം",
+        "മക്കൾ, ശിഷ്യർ, സർഗ്ഗശക്തി",
+        "എതിരാളികൾ, തടസ്സങ്ങൾ, രോഗം",
+        "ജീവിതപങ്കാളി, പങ്കാളിത്തങ്ങൾ",
+    ],
+    [
+        "स्वयं, आत्मा का उद्देश्य",
+        "करियर, सलाह, वह काम जिससे व्यक्ति जाना जाता है",
+        "भाई-बहन, साहस, गुरु",
+        "माता, घर, विद्या",
+        "संतान, शिष्य, रचनात्मकता",
+        "प्रतिद्वंद्वी, बाधाएँ, रोग",
+        "जीवनसाथी, साझेदारी",
+    ],
+];
+
+fn lang_index(code: &str) -> Option<usize> {
+    match code.trim().to_ascii_lowercase().as_str() {
+        "ml" => Some(0),
+        "hi" => Some(1),
+        _ => None,
+    }
+}
+
+/// A seven-scheme karaka's name (rank 0 = Atmakaraka) for a language code ("en",
+/// "ml", "hi"); English for anything else.
+pub fn karaka_name_in(rank: usize, code: &str) -> &'static str {
+    let rank = rank.min(6);
+    match lang_index(code) {
+        // the seven scheme skips Pitrikaraka
+        Some(l) => KARAKA_NAMES_8_IN[l][if rank >= 4 { rank + 1 } else { rank }],
+        None => KARAKA_NAMES[rank],
+    }
+}
+
+/// An eight-scheme karaka's name (rank 0 = Atmakaraka … 7 = Darakaraka) for a
+/// language code; English for anything else.
+pub fn karaka_name_8_in(rank: usize, code: &str) -> &'static str {
+    let rank = rank.min(7);
+    match lang_index(code) {
+        Some(l) => KARAKA_NAMES_8_IN[l][rank],
+        None => KARAKA_NAMES_8[rank],
+    }
+}
+
+/// What a seven-scheme karaka signifies, for a language code; English for anything
+/// else.
+pub fn karaka_meaning_in(rank: usize, code: &str) -> &'static str {
+    let rank = rank.min(6);
+    match lang_index(code) {
+        Some(l) => KARAKA_MEANINGS_IN[l][rank],
+        None => KARAKA_MEANINGS[rank],
+    }
+}
+
 /// One karaka assignment.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Karaka {
@@ -88,6 +165,21 @@ mod tests {
         assert_eq!(k[0].graha, DashaLord::Mars);
         assert_eq!(k[6].graha, DashaLord::Saturn);
         assert!((k[1].degree_in_sign - 19.9).abs() < 1e-9);
+    }
+
+    #[test]
+    fn karaka_words_in_three_languages() {
+        for r in 0..7 {
+            assert_eq!(karaka_name_in(r, "en"), KARAKA_NAMES[r]);
+            assert_eq!(karaka_meaning_in(r, "en"), KARAKA_MEANINGS[r]);
+            for code in ["ml", "hi"] {
+                for s in [karaka_name_in(r, code), karaka_meaning_in(r, code)] {
+                    assert!(!s.chars().any(|c| c.is_ascii_alphabetic()), "{code}: {s}");
+                }
+            }
+        }
+        assert_eq!(karaka_name_in(4, "hi"), "पुत्रकारक");
+        assert_eq!(karaka_name_8_in(4, "ml"), "പിതൃകാരകൻ");
     }
 
     #[test]

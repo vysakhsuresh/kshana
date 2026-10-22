@@ -68,12 +68,12 @@ fun AreasScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> U
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(profile, settings) {
+    LaunchedEffect(profile, settings, com.kshana.app.data.Lang.code) {
         try {
             val engine = EngineProvider.get(context)
             val birth = profile.birthInstant()
             readings = withContext(Dispatchers.Default) {
-                engine.areaReadings(birth, profile.latitude, profile.longitude, 0.0, settings.houseSystem, settings.ayanamsa, Instants.now(), 5u)
+                engine.areaReadings(birth, profile.latitude, profile.longitude, 0.0, settings.houseSystem, settings.ayanamsa, Instants.now(), 5u, com.kshana.app.data.Lang.code)
             }
             if (selected == null) selected = readings.firstOrNull()?.promise?.area
             status = "${readings.size} areas · judged at ${localText(Instants.now(), DATE_TIME_S)}"

@@ -20,6 +20,8 @@
 //! no calibration curve below twenty, and bins default to `⌈N^(1/3)⌉` (sklearn's
 //! cube-root rule).
 
+use kshana_rules::Lang;
+
 /// `z` for a 95 % interval.
 pub const Z95: f64 = 1.959_963_984_540_054;
 /// Items below which no percentage is shown.
@@ -239,17 +241,120 @@ pub fn metrics(probabilities: &[f64], labels: &[bool], bins: usize) -> Metrics {
 
 /// "31 of 40 (78%, 95% CI 63–88%)" at ten or more, "3 of 7" below.
 pub fn count_words(successes: usize, n: usize) -> String {
+    count_words_in(successes, n, Lang::En)
+}
+
+/// [`count_words`] in the reader's language.
+pub fn count_words_in(successes: usize, n: usize, lang: Lang) -> String {
+    let head = kshana_rules::say3!(lang, "{successes} of {n}", "{n}-ൽ {successes}", "{n} में से {successes}");
     if n < MIN_FOR_PERCENT {
-        format!("{successes} of {n}")
+        head
     } else {
         let (lo, hi) = wilson_interval(successes, n, Z95);
         format!(
-            "{successes} of {n} ({:.0}%, 95% CI {:.0}–{:.0}%)",
+            "{head} ({:.0}%, 95% CI {:.0}–{:.0}%)",
             100.0 * successes as f64 / n as f64,
             100.0 * lo,
             100.0 * hi
         )
     }
+}
+
+/// A metrics summary's words in the reader's language, rebuilt from its numbers
+/// (the English is the [`Metrics::words`] it already carries).
+pub fn metrics_words(m: &Metrics, lang: Lang) -> String {
+    words_in(
+        lang,
+        m.n,
+        m.positives,
+        m.base_rate,
+        m.brier,
+        m.brier_reference,
+        m.skill,
+        m.reliability,
+        m.resolution,
+        m.ece,
+        m.bins.len(),
+        m.curve_shown,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn words_in(
+    lang: Lang,
+    n: usize,
+    positives: usize,
+    base_rate: f64,
+    brier: f64,
+    reference: f64,
+    skill: f64,
+    reliability: f64,
+    resolution: f64,
+    ece: f64,
+    bins: usize,
+    curve_shown: bool,
+) -> String {
+    if lang == Lang::En {
+        return words(
+            n, positives, base_rate, (0.0, 0.0), brier, reference, skill, reliability, resolution, ece, bins,
+            curve_shown,
+        );
+    }
+    if n == 0 {
+        return lang
+            .pick([
+                "",
+                "ഇതുവരെ ഫലം തീർന്ന പ്രവചനങ്ങളില്ല: മുദ്രവെച്ചത് 0, ഫലം തീർന്നത് 0.",
+                "अभी तक कोई हल हुआ पूर्वानुमान नहीं: सील 0, हल 0।",
+            ])
+            .to_string();
+    }
+    let count = count_words_in(positives, n, lang);
+    let mut w = kshana_rules::say3!(lang, "", "{count} സംഭവിച്ചു.", "{count} हुए।");
+    if reference > 0.0 {
+        let tail = if skill > 0.0 {
+            lang.pick(["", ", അടിസ്ഥാന നിരക്കിനേക്കാൾ മെച്ചം", ", आधार दर से बेहतर"])
+        } else if skill < 0.0 {
+            lang.pick(["", ", അടിസ്ഥാന നിരക്കിനേക്കാൾ മോശം", ", आधार दर से बदतर"])
+        } else {
+            ""
+        };
+        w.push_str(&kshana_rules::say3!(
+            lang,
+            "",
+            " Brier {brier:.3}; എപ്പോഴും അടിസ്ഥാന നിരക്ക് {base_rate:.2} എന്ന് പറഞ്ഞാൽ കിട്ടുന്നത് {reference:.3}: മികവ് {skill:+.2}{tail}.",
+            " Brier {brier:.3}; हमेशा आधार दर {base_rate:.2} कहने पर {reference:.3} मिलता: कौशल {skill:+.2}{tail}।"
+        ));
+    } else {
+        w.push_str(&kshana_rules::say3!(
+            lang,
+            "",
+            " Brier {brier:.3}; എല്ലാ ഫലവും ഒരുപോലെയായിരുന്നു, അതിനാൽ മറികടക്കാൻ ഒരു അടിസ്ഥാന നിരക്കില്ല.",
+            " Brier {brier:.3}; हर नतीजा एक-सा था, इसलिए पार करने को कोई आधार दर नहीं।"
+        ));
+    }
+    w.push_str(&kshana_rules::say3!(
+        lang,
+        "",
+        " വിശ്വാസ്യത {reliability:.3} (കുറവാണ് നല്ലത്), വേർതിരിവ് {resolution:.3} (കൂടുതലാണ് നല്ലത്), ECE {ece:.3}, {bins} തട്ടുകളിൽ.",
+        " विश्वसनीयता {reliability:.3} (कम बेहतर), विभेदन {resolution:.3} (ज़्यादा बेहतर), ECE {ece:.3}, {bins} खानों में।"
+    ));
+    if !curve_shown {
+        w.push_str(&kshana_rules::say3!(
+            lang,
+            "",
+            " ഒത്തുനോക്കൽ രേഖ വരയ്ക്കാൻ ഫലം തീർന്ന {MIN_FOR_CURVE} പ്രവചനങ്ങൾ വേണം; ഇതുവരെ {n}.",
+            " कैलिब्रेशन वक्र के लिए {MIN_FOR_CURVE} हल हुए पूर्वानुमान चाहिए; अभी तक {n}।"
+        ));
+    }
+    if n < MIN_FOR_PERCENT {
+        w.push_str(lang.pick([
+            "",
+            " എണ്ണത്തിനപ്പുറം എന്തെങ്കിലും പറയാൻ ഇത് പോരാ.",
+            " गिनती से आगे कुछ कहने को ये बहुत कम हैं।",
+        ]));
+    }
+    w
 }
 
 #[allow(clippy::too_many_arguments)]

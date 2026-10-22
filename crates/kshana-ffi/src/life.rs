@@ -517,6 +517,7 @@ impl Engine {
         latitude_deg: f64,
         longitude_deg: f64,
         ayanamsa: AyanamsaChoice,
+        lang: String,
     ) -> Result<Vec<KarakaRecord>, KshanaError> {
         let ch = natal_chart(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let sid: [f64; 7] = std::array::from_fn(|i| ch.bodies[i].sidereal);
@@ -524,10 +525,10 @@ impl Engine {
             .iter()
             .map(|k| KarakaRecord {
                 rank: k.rank as u8,
-                name: kshana_vedic::KARAKA_NAMES[k.rank].to_string(),
+                name: kshana_vedic::jaimini::karaka_name_in(k.rank, &lang).to_string(),
                 graha: lord(k.graha),
                 degree_in_sign: k.degree_in_sign,
-                meaning: kshana_vedic::KARAKA_MEANINGS[k.rank].to_string(),
+                meaning: kshana_vedic::jaimini::karaka_meaning_in(k.rank, &lang).to_string(),
             })
             .collect())
     }
@@ -630,7 +631,7 @@ mod tests {
             .unwrap();
         assert!(cal.len() >= 8);
         let k = engine
-            .karakas(birth, 9.9312, 76.2673, AyanamsaChoice::Lahiri)
+            .karakas(birth, 9.9312, 76.2673, AyanamsaChoice::Lahiri, "en".into())
             .unwrap();
         assert_eq!(k.len(), 7);
         assert_eq!(naming(0.5, "en".into()).syllable, "Chu");

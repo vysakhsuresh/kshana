@@ -16,7 +16,7 @@ use crate::coverage::{ProfileSet, TransitCache};
 use crate::event::{LedgerError, LifeEvent};
 use kshana_chart::Chart;
 use kshana_ephem::Spk;
-use kshana_rules::Facts;
+use kshana_rules::{Facts, Lang};
 use kshana_time::Instant;
 use kshana_vedic::Ayanamsa;
 
@@ -122,6 +122,51 @@ pub fn time_shift_pvalue(
         n: events.len(),
         words,
     })
+}
+
+/// A time-shift result's words in the reader's language, rebuilt from its numbers
+/// (English gives back [`SurrogateResult::words`] unchanged).
+pub fn surrogate_words(r: &SurrogateResult, lang: Lang) -> String {
+    let (n, real_mean, shifts, p) = (r.n, r.real_mean, r.shifts, r.p);
+    if lang == Lang::En {
+        return r.words.clone();
+    }
+    if shifts == 0 || r.shifted_means.is_empty() {
+        return kshana_rules::say3!(
+            lang,
+            "",
+            "ഈ {n} സംഭവങ്ങൾ ഇപ്പോഴത്തെ സ്ഥാനത്ത് ശരാശരി {real_mean:.2} ചേർച്ച നേടുന്നു; നീക്കിനോക്കാൻ ആവശ്യപ്പെട്ടില്ല, അതിനാൽ p-മൂല്യം ഇല്ല.",
+            "ये {n} घटनाएँ अपनी जगह पर औसत {real_mean:.2} मेल पाती हैं; खिसकाकर देखने को नहीं कहा गया, इसलिए कोई p-मान नहीं।"
+        );
+    }
+    let best = r.shifted_means.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    let shifted_avg = r.shifted_means.iter().sum::<f64>() / r.shifted_means.len() as f64;
+    let at_least = r.shifted_means.iter().filter(|m| **m >= real_mean).count();
+    let verdict = if p <= 0.05 {
+        lang.pick([
+            "",
+            "ഈ ജീവിതത്തെ മറ്റിടങ്ങളിലേക്ക് നീക്കിയാൽ അത്ര നന്നായി ചേരുന്നത് കുറവ്: ദശകൾ ചേരുന്നത് സംഭവങ്ങൾ നടന്നിടത്തുതന്നെ",
+            "इस जीवन को कहीं और खिसकाने पर कम ही जगहें इतना अच्छा मेल देती हैं: दशाएँ वहीं मेल खाती हैं जहाँ घटनाएँ हुईं",
+        ])
+    } else if p <= 0.2 {
+        lang.pick([
+            "",
+            "മറ്റു ചില സ്ഥാനങ്ങളും അത്ര നന്നായി ചേരുന്നു: സൂചനയുണ്ട്, തെളിവല്ല",
+            "कुछ और जगहें भी उतना ही मेल देती हैं: संकेत है, प्रमाण नहीं",
+        ])
+    } else {
+        lang.pick([
+            "",
+            "ഇതേ ജീവിതം മറ്റു പല സ്ഥാനങ്ങളിലും അത്ര തന്നെ ചേരുന്നു: എവിടെ നടന്നാലും ദശകൾ അത് വിശദീകരിക്കുമായിരുന്നു",
+            "यही जीवन कई और जगहों पर भी उतना ही मेल देता है: घटनाएँ कहीं भी होतीं, दशाएँ उन्हें समझा देतीं",
+        ])
+    };
+    kshana_rules::say3!(
+        lang,
+        "",
+        "ഈ {n} സംഭവങ്ങൾ ഇപ്പോഴത്തെ സ്ഥാനത്ത് ശരാശരി {real_mean:.2} ചേർച്ച നേടുന്നു; കാലയളവിനുള്ളിൽ {shifts} തവണ ഒരുമിച്ച് നീക്കിയപ്പോൾ ശരാശരി {shifted_avg:.2} (ഏറ്റവും കൂടിയത് {best:.2}), {shifts}-ൽ {at_least} നീക്കങ്ങൾ അത്രയോ അതിലധികമോ നേടി: p = {p:.3}, അതായത് {verdict}.",
+        "ये {n} घटनाएँ अपनी जगह पर औसत {real_mean:.2} मेल पाती हैं; अवधि के भीतर {shifts} बार साथ-साथ खिसकाने पर औसत {shifted_avg:.2} (सबसे ऊँचा {best:.2}), और {shifts} में से {at_least} बार उतना या ज़्यादा: p = {p:.3}, यानी {verdict}।"
+    )
 }
 
 #[cfg(test)]

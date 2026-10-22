@@ -39,7 +39,10 @@ use kshana_time::Instant;
 use kshana_vedic::dasha::YEAR_365_25_NS;
 use kshana_vedic::{sign_lord, subdivide, varga, vimshottari, DashaLord, DashaPeriod};
 
-use crate::{graha_name, sign_of, SIGN_NAMES};
+use crate::sign_of;
+use crate::sphuta::{gn, sn};
+use kshana_rules::yogas::words;
+use kshana_rules::{say3, Lang};
 
 /// How wide a sandhi window is.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -56,6 +59,22 @@ impl SandhiRule {
         match self {
             SandhiRule::SubPeriod => "last and first sub-periods",
             SandhiRule::Fraction(_) => "fraction of each adjoining period",
+        }
+    }
+
+    /// Name of the rule in the reader's language.
+    pub fn name_in(self, lang: Lang) -> &'static str {
+        match self {
+            SandhiRule::SubPeriod => lang.pick([
+                "last and first sub-periods",
+                "അവസാനത്തെയും ആദ്യത്തെയും അപഹാരങ്ങൾ",
+                "अंतिम और प्रथम अंतर्दशाएँ",
+            ]),
+            SandhiRule::Fraction(_) => lang.pick([
+                "fraction of each adjoining period",
+                "ചേർന്നുവരുന്ന ഓരോ ദശയുടെയും ഒരംശം",
+                "दोनों सटी हुई दशाओं का एक अंश",
+            ]),
         }
     }
 }
@@ -206,55 +225,79 @@ pub fn navamsa_64_lord(moon_sidereal: f64) -> DashaLord {
 
 /// The chidra lords of a dasha lord, each with its reason.
 pub fn chidra_lords(facts: &Facts, dasha_lord: DashaLord) -> Vec<(DashaLord, String)> {
+    chidra_lords_in(facts, dasha_lord, Lang::En)
+}
+
+/// [`chidra_lords`] with the reasons in the reader's language.
+pub fn chidra_lords_in(facts: &Facts, dasha_lord: DashaLord, lang: Lang) -> Vec<(DashaLord, String)> {
     let dl = facts.planet(dasha_lord);
     let from = dl.sign;
     let lagna = facts.lagna_sign;
+    let dln = gn(lang, dasha_lord);
     let mut out = Vec::new();
     for (h, what) in [(2u8, "2nd"), (7, "7th"), (12, "12th")] {
         let sign = (from + h - 1) % 12;
         let lord = sign_lord(sign as usize);
         let from_lagna = ((sign as i32 - lagna as i32).rem_euclid(12) + 1) as u8;
         let maraka = if matches!(from_lagna, 2 | 7) {
-            format!("; also the lord of the {from_lagna}th from the lagna, a Parashari maraka")
+            say3!(
+                lang,
+                "; also the lord of the {from_lagna}th from the lagna, a Parashari maraka",
+                "; ലഗ്നത്തിൽ നിന്ന് {from_lagna}-ാം ഭാവത്തിന്റെ അധിപനും, പാരാശരി രീതിയിൽ ക്ലേശകാരകൻ",
+                "; लग्न से {from_lagna}वें भाव का स्वामी भी, पाराशरी पद्धति में कष्टकारक"
+            )
         } else {
             String::new()
         };
+        let (s, f) = (sn(lang, sign), sn(lang, from));
+        let ord = match lang {
+            Lang::En => what,
+            _ => words::bhava(lang, h),
+        };
         out.push((
             lord,
-            format!(
-                "lord of the {what} from {} ({} from {}){maraka}",
-                graha_name(dasha_lord),
-                SIGN_NAMES[sign as usize],
-                SIGN_NAMES[from as usize]
+            say3!(
+                lang,
+                "lord of the {ord} from {dln} ({s} from {f}){maraka}",
+                "ദശാനാഥനിൽ ({dln}) നിന്ന് {ord} ഭാവത്തിന്റെ അധിപൻ ({f} രാശിയിൽ നിന്ന് {s}){maraka}",
+                "{dln} से {ord} भाव का स्वामी ({f} से {s}){maraka}"
             ),
         ));
     }
     let khara = khara_drekkana_lord(facts.cusps[0]);
+    let ks = sn(lang, sign_of(varga(facts.cusps[0] + 210.0, 3)));
     out.push((
         khara,
-        format!(
-            "lord of the 22nd (Khara) drekkana from the lagna, {}",
-            SIGN_NAMES[sign_of(varga(facts.cusps[0] + 210.0, 3)) as usize]
+        say3!(
+            lang,
+            "lord of the 22nd (Khara) drekkana from the lagna, {ks}",
+            "ലഗ്നത്തിൽ നിന്ന് 22-ാം (ഖര) ദ്രേക്കാണത്തിന്റെ അധിപൻ, {ks}",
+            "लग्न से 22वें (खर) द्रेष्काण का स्वामी, {ks}"
         ),
     ));
     let moon = facts.planet(DashaLord::Moon).sidereal;
     let n64 = navamsa_64_lord(moon);
+    let ns = sn(lang, sign_of(varga(moon + 210.0, 9)));
     out.push((
         n64,
-        format!(
-            "lord of the 64th navamsa from the Moon, {}",
-            SIGN_NAMES[sign_of(varga(moon + 210.0, 9)) as usize]
+        say3!(
+            lang,
+            "lord of the 64th navamsa from the Moon, {ns}",
+            "ചന്ദ്രനിൽ നിന്ന് 64-ാം നവാംശത്തിന്റെ അധിപൻ, {ns}",
+            "चंद्र से 64वें नवांश का स्वामी, {ns}"
         ),
     ));
     let eighth = (from + 7) % 12;
+    let es = sn(lang, eighth);
     for p in &facts.planets {
         if p.sign == eighth {
             out.push((
                 p.graha,
-                format!(
-                    "in the 8th from {} ({})",
-                    graha_name(dasha_lord),
-                    SIGN_NAMES[eighth as usize]
+                say3!(
+                    lang,
+                    "in the 8th from {dln} ({es})",
+                    "ദശാനാഥനിൽ ({dln}) നിന്ന് എട്ടാമത് ({es})",
+                    "{dln} से आठवें में ({es})"
                 ),
             ));
         }

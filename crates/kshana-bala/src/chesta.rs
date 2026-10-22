@@ -29,6 +29,7 @@
 //! continuous from 0 to 60 rather than one of the eight steps.
 
 use crate::BalaError;
+use kshana_rules::Lang;
 use kshana_ephem::{Body, Spk};
 use kshana_sky::apparent;
 use kshana_time::{Instant, NS_PER_DAY};
@@ -82,6 +83,34 @@ impl Motion {
             Motion::Chara => "Chara",
             Motion::Atichara => "Atichara",
         }
+    }
+
+    /// The state's name in the reader's language: "Vakra", "വക്രം", "वक्र".
+    pub fn name_in(self, lang: Lang) -> &'static str {
+        lang.pick(match self {
+            Motion::Vakra => ["Vakra", "വക്രം", "वक्र"],
+            Motion::Anuvakra => ["Anuvakra", "അനുവക്രം", "अनुवक्र"],
+            Motion::Vikala => ["Vikala", "വികലം", "विकल"],
+            Motion::Manda => ["Manda", "മന്ദം", "मंद"],
+            Motion::Mandatara => ["Mandatara", "മന്ദതരം", "मंदतर"],
+            Motion::Sama => ["Sama", "സമം", "सम"],
+            Motion::Chara => ["Chara", "ചരം", "चर"],
+            Motion::Atichara => ["Atichara", "അതിചാരം", "अतिचार"],
+        })
+    }
+
+    /// What the state is, in a few words.
+    pub fn meaning_in(self, lang: Lang) -> &'static str {
+        lang.pick(match self {
+            Motion::Vakra => ["retrograde", "വക്രഗതി", "वक्री"],
+            Motion::Anuvakra => ["retrograde into the previous sign", "മുൻരാശിയിലേക്കു വക്രിച്ചത്", "पिछली राशि में वक्री"],
+            Motion::Vikala => ["stationary", "നിശ്ചലം", "स्थिर"],
+            Motion::Manda => ["slow", "മന്ദഗതി", "धीमी गति"],
+            Motion::Mandatara => ["very slow", "വളരെ മന്ദഗതി", "बहुत धीमी गति"],
+            Motion::Sama => ["even", "സമഗതി", "सम गति"],
+            Motion::Chara => ["fast", "ശീഘ്രഗതി", "तेज़ गति"],
+            Motion::Atichara => ["very fast", "അതിശീഘ്രഗതി", "बहुत तेज़ गति"],
+        })
     }
 }
 

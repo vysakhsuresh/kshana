@@ -35,7 +35,9 @@ use kshana_bala::{compound_relation, Relation};
 use kshana_chart::Chart;
 use kshana_vedic::{sign_lord, DashaLord};
 
-use crate::{graha_name, sign_of, MargaError, SIGN_NAMES};
+use crate::sphuta::{gn, sn};
+use crate::{graha_name, sign_of, MargaError};
+use kshana_rules::{say3, Lang};
 
 /// Shadvarga weights `(n, weight)`.
 pub const SHADVARGA: [(u32, f64); 6] =
@@ -105,19 +107,55 @@ pub fn relation_points(r: Relation) -> f64 {
 /// else by the compound relationship with the sign's lord. `rasi_signs` are the seven
 /// grahas' rasi signs, which fix the temporary friendships.
 pub fn varga_points(g: DashaLord, varga_sign: u8, rasi_signs: &[(DashaLord, u8)]) -> (f64, String) {
+    varga_points_in(Lang::En, g, varga_sign, rasi_signs)
+}
+
+/// [`varga_points`] with the reason in the reader's language.
+pub fn varga_points_in(lang: Lang, g: DashaLord, varga_sign: u8, rasi_signs: &[(DashaLord, u8)]) -> (f64, String) {
     let lord = sign_lord(varga_sign as usize);
     if lord == g {
-        return (20.0, "own sign".into());
+        return (20.0, lang.pick(["own sign", "സ്വക്ഷേത്രം", "स्वराशि"]).into());
     }
     let sign_of_g = |x: DashaLord| rasi_signs.iter().find(|(p, _)| *p == x).map(|(_, s)| *s);
     let (Some(a), Some(b)) = (sign_of_g(g), sign_of_g(lord)) else {
-        return (10.0, "lord's rasi position unknown: neutral".into());
+        return (
+            10.0,
+            lang.pick([
+                "lord's rasi position unknown: neutral",
+                "അധിപന്റെ രാശിസ്ഥാനം അറിയില്ല: സമം",
+                "स्वामी की राशि-स्थिति अज्ञात: सम",
+            ])
+            .into(),
+        );
     };
     let r = compound_relation(g, lord, a, b);
+    let lord_name = gn(lang, lord);
     (
         relation_points(r),
-        format!("{}'s sign, a {}", graha_name(lord), r.name()),
+        say3!(lang, "{}'s sign, a {}", "രാശ്യധിപൻ {}, {}", "{} की राशि, {}", lord_name, r.name_in(lang)),
     )
+}
+
+/// [`grade`] in the reader's language.
+pub fn grade_in(lang: Lang, score: f64) -> &'static str {
+    let t = match grade(score) {
+        "full" => ["full", "പൂർണ്ണബലം", "पूर्ण"],
+        "strong" => ["strong", "ബലവത്ത്", "बलवान"],
+        "middling" => ["middling", "മധ്യമം", "मध्यम"],
+        "weak" => ["weak", "ദുർബലം", "दुर्बल"],
+        _ => ["very weak", "അതിദുർബലം", "अति दुर्बल"],
+    };
+    lang.pick(t)
+}
+
+fn scheme_name(lang: Lang, en: &'static str) -> &'static str {
+    let t = match en {
+        "Shadvarga" => ["Shadvarga", "ഷഡ്വർഗ്ഗം", "षड्वर्ग"],
+        "Saptavarga" => ["Saptavarga", "സപ്തവർഗ്ഗം", "सप्तवर्ग"],
+        "Dashavarga" => ["Dashavarga", "ദശവർഗ്ഗം", "दशवर्ग"],
+        _ => ["Shodashavarga", "ഷോഡശവർഗ്ഗം", "षोडशवर्ग"],
+    };
+    lang.pick(t)
 }
 
 /// The word for a score out of twenty. Convention: the bands software prints, 18–20
@@ -155,61 +193,48 @@ pub struct Vimshopaka {
     pub words: Vec<String>,
 }
 
+#[allow(clippy::too_many_arguments)]
 fn scheme(
+    lang: Lang,
     g: DashaLord,
     sidereal: f64,
     rasi_signs: &[(DashaLord, u8)],
     weights: &[(u32, f64)],
     words: &mut Vec<String>,
-    name: &str,
+    name: &'static str,
 ) -> f64 {
     let mut total = 0.0;
     let mut parts = Vec::with_capacity(weights.len());
     for (n, w) in weights {
         let vs = varga_sign(sidereal, *n);
-        let (pts, why) = varga_points(g, vs, rasi_signs);
+        let (pts, why) = varga_points_in(lang, g, vs, rasi_signs);
         total += w * pts / 20.0;
-        parts.push(format!(
-            "D{n} {} {pts:.0} ({why}) × {w}",
-            SIGN_NAMES[vs as usize]
-        ));
+        parts.push(format!("D{n} {} {pts:.0} ({why}) × {w}", sn(lang, vs)));
     }
-    words.push(format!("{name} {total:.3}: {}", parts.join("; ")));
+    words.push(format!("{} {total:.3}: {}", scheme_name(lang, name), parts.join("; ")));
     total
 }
 
 /// Vimshopaka of one graha at a sidereal longitude, given the seven rasi signs.
 pub fn vimshopaka_of(g: DashaLord, sidereal: f64, rasi_signs: &[(DashaLord, u8)]) -> Vimshopaka {
+    vimshopaka_of_in(Lang::En, g, sidereal, rasi_signs)
+}
+
+/// [`vimshopaka_of`] with the words and grade in the reader's language.
+pub fn vimshopaka_of_in(lang: Lang, g: DashaLord, sidereal: f64, rasi_signs: &[(DashaLord, u8)]) -> Vimshopaka {
     let mut words = Vec::with_capacity(5);
-    let shadvarga = scheme(g, sidereal, rasi_signs, &SHADVARGA, &mut words, "Shadvarga");
-    let saptavarga = scheme(
-        g,
-        sidereal,
-        rasi_signs,
-        &SAPTAVARGA,
-        &mut words,
-        "Saptavarga",
-    );
-    let dashavarga = scheme(
-        g,
-        sidereal,
-        rasi_signs,
-        &DASHAVARGA,
-        &mut words,
-        "Dashavarga",
-    );
-    let shodashavarga = scheme(
-        g,
-        sidereal,
-        rasi_signs,
-        &SHODASHAVARGA,
-        &mut words,
-        "Shodashavarga",
-    );
-    let grade = grade(shodashavarga);
-    words.push(format!(
+    let shadvarga = scheme(lang, g, sidereal, rasi_signs, &SHADVARGA, &mut words, "Shadvarga");
+    let saptavarga = scheme(lang, g, sidereal, rasi_signs, &SAPTAVARGA, &mut words, "Saptavarga");
+    let dashavarga = scheme(lang, g, sidereal, rasi_signs, &DASHAVARGA, &mut words, "Dashavarga");
+    let shodashavarga = scheme(lang, g, sidereal, rasi_signs, &SHODASHAVARGA, &mut words, "Shodashavarga");
+    let grade = grade_in(lang, shodashavarga);
+    let gname = gn(lang, g);
+    words.push(say3!(
+        lang,
         "{} at {sidereal:.4}°: Shadvarga {shadvarga:.2}, Saptavarga {saptavarga:.2}, Dashavarga {dashavarga:.2}, Shodashavarga {shodashavarga:.2} of 20, {grade}",
-        graha_name(g)
+        "{} {sidereal:.4}°-ൽ: ഷഡ്വർഗ്ഗം {shadvarga:.2}, സപ്തവർഗ്ഗം {saptavarga:.2}, ദശവർഗ്ഗം {dashavarga:.2}, ഷോഡശവർഗ്ഗം {shodashavarga:.2} (20-ൽ), {grade}",
+        "{} {sidereal:.4}° पर: षड्वर्ग {shadvarga:.2}, सप्तवर्ग {saptavarga:.2}, दशवर्ग {dashavarga:.2}, षोडशवर्ग {shodashavarga:.2} (20 में से), {grade}",
+        gname
     ));
     Vimshopaka {
         graha: g,
@@ -224,6 +249,11 @@ pub fn vimshopaka_of(g: DashaLord, sidereal: f64, rasi_signs: &[(DashaLord, u8)]
 
 /// Vimshopaka of the seven grahas of a chart, Sun to Saturn.
 pub fn vimshopaka(chart: &Chart) -> Result<Vec<Vimshopaka>, MargaError> {
+    vimshopaka_in(chart, Lang::En)
+}
+
+/// [`vimshopaka`] with the words and grades in the reader's language.
+pub fn vimshopaka_in(chart: &Chart, lang: Lang) -> Result<Vec<Vimshopaka>, MargaError> {
     let mut placed = Vec::with_capacity(7);
     for g in SEVEN {
         let name = graha_name(g);
@@ -237,7 +267,7 @@ pub fn vimshopaka(chart: &Chart) -> Result<Vec<Vimshopaka>, MargaError> {
     let rasi_signs: Vec<(DashaLord, u8)> = placed.iter().map(|(g, l)| (*g, sign_of(*l))).collect();
     Ok(placed
         .iter()
-        .map(|(g, l)| vimshopaka_of(*g, *l, &rasi_signs))
+        .map(|(g, l)| vimshopaka_of_in(lang, *g, *l, &rasi_signs))
         .collect())
 }
 

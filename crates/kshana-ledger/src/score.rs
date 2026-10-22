@@ -19,6 +19,8 @@ use kshana_rules::{
     agreeing_levels, area, period_quality, period_supports, significators, timing, Area, Facts,
     TimingLevel,
 };
+use kshana_rules::yogas::words;
+use kshana_rules::Lang;
 use kshana_time::Instant;
 use kshana_vedic::{Ayanamsa, DashaLord};
 
@@ -88,6 +90,103 @@ fn yes_no(b: bool) -> &'static str {
     } else {
         "no"
     }
+}
+
+/// A house ordinal in the reader's language: "7th", "ഏഴാം", "सप्तम".
+pub(crate) fn ordinal_in(lang: Lang, h: u8) -> String {
+    match lang {
+        Lang::En => ordinal(h),
+        _ => words::bhava(lang, h).to_string(),
+    }
+}
+
+/// A dasha lord's name: "Saturn" (as the English always printed it), "ശനി", "शनि".
+pub(crate) fn lord_in(lang: Lang, l: DashaLord) -> String {
+    match lang {
+        Lang::En => format!("{l:?}"),
+        _ => words::graha(lang, l).to_string(),
+    }
+}
+
+/// "Mar 2019" in English (as before); the month and year in the reader's language
+/// otherwise, by the UTC date.
+pub(crate) fn when_in(lang: Lang, at: Instant) -> String {
+    match lang {
+        Lang::En => month_year(at),
+        _ => kshana_rules::lang::month_year(lang, at, 0.0),
+    }
+}
+
+/// An area's name as shown: "Career", "ജോലി", "करियर".
+pub(crate) fn area_word(lang: Lang, name: &str) -> String {
+    let t = match name {
+        "Career" => ["Career", "ജോലി", "करियर"],
+        "Marriage" => ["Marriage", "വിവാഹം", "विवाह"],
+        "Children" => ["Children", "മക്കൾ", "संतान"],
+        "Wealth" => ["Wealth", "സമ്പത്ത്", "धन"],
+        "Health" => ["Health", "ആരോഗ്യം", "सेहत"],
+        "Property" => ["Property", "വീടും വസ്തുവും", "घर-संपत्ति"],
+        "Education" => ["Education", "വിദ്യാഭ്യാസം", "शिक्षा"],
+        "Family" => ["Family", "കുടുംബം", "परिवार"],
+        "Foreign" => ["Foreign", "വിദേശം", "विदेश"],
+        _ => return name.to_string(),
+    };
+    lang.pick(t).to_string()
+}
+
+/// An event kind's display name, capitalised in English: "Began", "തുടക്കം", "शुरुआत".
+pub fn kind_word(lang: Lang, k: EventKind) -> &'static str {
+    let t = match k {
+        EventKind::Began => ["Began", "തുടക്കം", "शुरुआत"],
+        EventKind::Ended => ["Ended", "അവസാനം", "अंत"],
+        EventKind::Gain => ["Gain", "നേട്ടം", "लाभ"],
+        EventKind::Loss => ["Loss", "നഷ്ടം", "हानि"],
+        EventKind::Milestone => ["Milestone", "നാഴികക്കല്ല്", "उपलब्धि"],
+        EventKind::Crisis => ["Crisis", "പ്രതിസന്ധി", "संकट"],
+    };
+    lang.pick(t)
+}
+
+/// An event kind inside a sentence: lower case in English.
+fn kind_lower(lang: Lang, k: EventKind) -> String {
+    match lang {
+        Lang::En => k.name().to_lowercase(),
+        _ => kind_word(lang, k).to_string(),
+    }
+}
+
+/// The five Vimshottari levels by name.
+fn level_name(lang: Lang, i: usize) -> &'static str {
+    let t = [
+        ["mahadasha", "മഹാദശ", "महादशा"],
+        ["antardasha", "അന്തർദശ", "अंतर्दशा"],
+        ["pratyantar", "പ്രത്യന്തരദശ", "प्रत्यंतर दशा"],
+        ["sookshma", "സൂക്ഷ്മദശ", "सूक्ष्म दशा"],
+        ["prana", "പ്രാണദശ", "प्राण दशा"],
+    ];
+    lang.pick(t[i.min(4)])
+}
+
+/// The Sade Sati phase in words, 1 rising, 2 peak, 3 setting.
+pub(crate) fn sade_phase_words(lang: Lang, phase: u8) -> &'static str {
+    let t = match phase {
+        1 => [
+            "rising, Saturn in the 12th from the Moon",
+            "ആരംഭം, ചന്ദ്രന്റെ പന്ത്രണ്ടാം ഭാവത്തിൽ ശനി",
+            "आरंभ, चंद्र से द्वादश भाव में शनि",
+        ],
+        2 => ["peak, Saturn on the Moon", "മധ്യം, ചന്ദ്രനു മേൽ ശനി", "शिखर, चंद्र पर शनि"],
+        _ => [
+            "setting, Saturn in the 2nd from the Moon",
+            "ഒടുക്കം, ചന്ദ്രന്റെ രണ്ടാം ഭാവത്തിൽ ശനി",
+            "अंत, चंद्र से द्वितीय भाव में शनि",
+        ],
+    };
+    lang.pick(t)
+}
+
+fn list_u8(v: &[u8]) -> String {
+    words::houses(v)
 }
 
 fn unit(b: bool) -> f64 {
@@ -265,9 +364,20 @@ pub fn score_event(
     ayanamsa: Ayanamsa,
     ev: &LifeEvent,
 ) -> Result<EventScore, LedgerError> {
+    score_event_in(spk, natal, ayanamsa, ev, Lang::En)
+}
+
+/// [`score_event`] with the explanation in the reader's language.
+pub fn score_event_in(
+    spk: &Spk,
+    natal: &Chart,
+    ayanamsa: Ayanamsa,
+    ev: &LifeEvent,
+    lang: Lang,
+) -> Result<EventScore, LedgerError> {
     let a = area(&ev.area).ok_or_else(|| LedgerError::UnknownArea(ev.area.clone()))?;
     let facts = Facts::from_chart(natal);
-    score_at(spk, natal, &facts, ayanamsa, a, ev.kind, ev.at)
+    score_at_in(spk, natal, &facts, ayanamsa, a, ev.kind, ev.at, lang)
 }
 
 /// Score an area and kind at an instant, with the natal [`Facts`] already derived (so
@@ -281,8 +391,25 @@ pub fn score_at(
     kind: EventKind,
     at: Instant,
 ) -> Result<EventScore, LedgerError> {
+    score_at_in(spk, natal, facts, ayanamsa, a, kind, at, Lang::En)
+}
+
+/// [`score_at`] with the explanation in the reader's language.
+#[allow(clippy::too_many_arguments)]
+pub fn score_at_in(
+    spk: &Spk,
+    natal: &Chart,
+    facts: &Facts,
+    ayanamsa: Ayanamsa,
+    a: Area,
+    kind: EventKind,
+    at: Instant,
+    lang: Lang,
+) -> Result<EventScore, LedgerError> {
     let adverse = kind.is_adverse();
-    let when = month_year(at);
+    let when = when_in(lang, at);
+    let area_w = area_word(lang, a.name);
+    let kind_w = kind_lower(lang, kind);
     let moon = natal.bodies[1].sidereal;
     let mut explanation = Vec::with_capacity(5);
 
@@ -296,8 +423,11 @@ pub fn score_at(
     };
     let dasha_support = agree as f64 / FUNNEL_DEPTH as f64;
     if funnel.is_empty() {
-        explanation.push(format!(
-            "In {when}, no Vimshottari period was running (the instant lies outside the 120-year cycle from birth): dasha support 0.00."
+        explanation.push(kshana_rules::say3!(
+            lang,
+            "In {when}, no Vimshottari period was running (the instant lies outside the 120-year cycle from birth): dasha support 0.00.",
+            "{when}-ൽ ഒരു വിംശോത്തരി ദശയും നടന്നിരുന്നില്ല (ആ സമയം ജനനം മുതലുള്ള 120 വർഷ ചക്രത്തിന് പുറത്താണ്): ദശാ പിന്തുണ 0.00.",
+            "{when} में कोई विंशोत्तरी दशा नहीं चल रही थी (वह क्षण जन्म से 120 वर्ष के चक्र के बाहर है): दशा समर्थन 0.00।"
         ));
     } else {
         let per_level: Vec<String> = funnel
@@ -309,12 +439,20 @@ pub fn score_at(
                 } else {
                     !l.supports.is_empty()
                 };
-                format!(
-                    "{:?} {}: {}",
-                    l.period.lord,
-                    LEVEL_NAMES[i.min(4)],
-                    yes_no(s)
-                )
+                match lang {
+                    Lang::En => format!(
+                        "{:?} {}: {}",
+                        l.period.lord,
+                        LEVEL_NAMES[i.min(4)],
+                        yes_no(s)
+                    ),
+                    _ => format!(
+                        "{} {}: {}",
+                        lord_in(lang, l.period.lord),
+                        level_name(lang, i),
+                        lang.pick(["", if s { "ഉണ്ട്" } else { "ഇല്ല" }, if s { "हाँ" } else { "नहीं" }])
+                    ),
+                }
             })
             .collect();
         let (houses, what, denial) = if adverse {
@@ -322,12 +460,28 @@ pub fn score_at(
         } else {
             (a.group, "houses", "")
         };
-        explanation.push(format!(
-            "In {when}, {agree} of {FUNNEL_DEPTH} Vimshottari levels in unbroken order from the mahadasha had lords signifying {}'s {what} {houses:?}{denial} ({}): {}dasha support {dasha_support:.2}.",
-            a.name,
-            per_level.join(", "),
-            if adverse { "adverse " } else { "" }
-        ));
+        let levels = per_level.join(", ");
+        let hl = list_u8(houses);
+        explanation.push(match lang {
+            Lang::En => format!(
+                "In {when}, {agree} of {FUNNEL_DEPTH} Vimshottari levels in unbroken order from the mahadasha had lords signifying {}'s {what} {houses:?}{denial} ({}): {}dasha support {dasha_support:.2}.",
+                a.name,
+                levels,
+                if adverse { "adverse " } else { "" }
+            ),
+            Lang::Ml => format!(
+                "{when}-ൽ, മഹാദശ മുതൽ മുറിയാതെ താഴോട്ടുള്ള {FUNNEL_DEPTH} വിംശോത്തരി തലങ്ങളിൽ {agree} എണ്ണത്തിന്റെ നാഥന്മാർ {area_w} എന്ന മേഖലയുടെ {} ({hl}){} സൂചിപ്പിച്ചു ({levels}): {}ദശാ പിന്തുണ {dasha_support:.2}.",
+                if adverse { "നിഷേധ ഭാവങ്ങൾ" } else { "ഭാവങ്ങൾ" },
+                if adverse { ", അതിനെ തടയുന്ന ഭാവങ്ങൾ," } else { "" },
+                if adverse { "പ്രതികൂല " } else { "" }
+            ),
+            Lang::Hi => format!(
+                "{when} में, महादशा से बिना टूटे क्रम में {FUNNEL_DEPTH} में से {agree} विंशोत्तरी स्तरों के स्वामी {area_w} के {} ({hl}){} के कारक थे ({levels}): {}दशा समर्थन {dasha_support:.2}।",
+                if adverse { "निषेधक भावों" } else { "भावों" },
+                if adverse { ", यानी इसे रोकने वाले भावों," } else { "" },
+                if adverse { "प्रतिकूल " } else { "" }
+            ),
+        });
     }
 
     // 2. Parashari quality of the maha and antar lords.
@@ -350,30 +504,59 @@ pub fn score_at(
     };
     if qualities.is_empty() {
         explanation.push(
-            "No period lord to judge by Parashari period quality: parashari 0.00.".to_string(),
+            lang.pick([
+                "No period lord to judge by Parashari period quality: parashari 0.00.",
+                "പരാശരി ദശാഗുണം നോക്കാൻ ഒരു ദശാനാഥനും ഇല്ല: പരാശരി 0.00.",
+                "पाराशरी दशा-गुण से परखने को कोई दशा-स्वामी नहीं: पाराशरी 0.00।",
+            ])
+            .to_string(),
         );
     } else {
         let parts: Vec<String> = qualities
             .iter()
             .enumerate()
-            .map(|(i, (l, q))| {
-                let level = if i == 0 { "Mahadasha" } else { "antardasha" };
-                format!("{level} lord {l:?} scored {q:.2}")
+            .map(|(i, (l, q))| match lang {
+                Lang::En => {
+                    let level = if i == 0 { "Mahadasha" } else { "antardasha" };
+                    format!("{level} lord {l:?} scored {q:.2}")
+                }
+                Lang::Ml => format!(
+                    "{}നാഥൻ {} {q:.2}",
+                    if i == 0 { "മഹാദശാ" } else { "അന്തർദശാ" },
+                    lord_in(lang, *l)
+                ),
+                Lang::Hi => format!(
+                    "{} स्वामी {} को {q:.2}",
+                    if i == 0 { "महादशा" } else { "अंतर्दशा" },
+                    lord_in(lang, *l)
+                ),
             })
             .collect();
         let tail = if adverse {
-            format!(
-                "mean {period_quality_mean:.2}; a {} is supported by a poor period, so this counts as 1 − {period_quality_mean:.2} = {parashari:.2}.",
-                kind.name().to_lowercase()
+            kshana_rules::say3!(
+                lang,
+                "mean {period_quality_mean:.2}; a {kind_w} is supported by a poor period, so this counts as 1 − {period_quality_mean:.2} = {parashari:.2}.",
+                "ശരാശരി {period_quality_mean:.2}; {kind_w} എന്നതിന് താങ്ങാകുന്നത് മോശം ദശയാണ്, അതിനാൽ ഇത് 1 − {period_quality_mean:.2} = {parashari:.2} ആയി എണ്ണുന്നു.",
+                "औसत {period_quality_mean:.2}; {kind_w} को कमज़ोर दशा का सहारा मिलता है, इसलिए यह 1 − {period_quality_mean:.2} = {parashari:.2} गिना गया।"
             )
         } else {
-            format!("mean {parashari:.2}.")
+            kshana_rules::say3!(lang, "mean {parashari:.2}.", "ശരാശരി {parashari:.2}.", "औसत {parashari:.2}।")
         };
-        explanation.push(format!(
-            "{} for {} by Parashari period quality: {tail}",
-            parts.join(" and "),
-            a.name
-        ));
+        explanation.push(match lang {
+            Lang::En => format!(
+                "{} for {} by Parashari period quality: {tail}",
+                parts.join(" and "),
+                a.name
+            ),
+            Lang::Ml => format!(
+                "പരാശരി ദശാഗുണം പ്രകാരം {area_w} എന്ന മേഖലയ്ക്ക് {}: {tail}",
+                parts.join(", ")
+            ),
+            Lang::Hi => format!(
+                "पाराशरी दशा-गुण से {area_w} के लिए {}: {tail}",
+                parts.join(" और ")
+            ),
+        });
     }
 
     // 3. Jupiter and Saturn from the natal Moon, and Sade Sati.
@@ -390,7 +573,30 @@ pub fn score_at(
     } else {
         0.5 * (unit(j_good) + unit(s_good))
     };
+    let favour_in = |good: bool| {
+        if good {
+            lang.pick(["favourable", "അനുകൂലം", "अनुकूल"])
+        } else {
+            lang.pick(["unfavourable", "പ്രതികൂലം", "प्रतिकूल"])
+        }
+    };
     let favour = |good: bool| if good { "favourable" } else { "unfavourable" };
+    let (jo, so) = (ordinal_in(lang, jupiter_from_moon), ordinal_in(lang, saturn_from_moon));
+    let (jf, sf) = (favour_in(j_good), favour_in(s_good));
+    let (jl, sl) = (list_u8(&JUPITER_GOOD_FROM_MOON), list_u8(&SATURN_GOOD_FROM_MOON));
+    if lang != Lang::En {
+        let adv = match (lang, adverse) {
+            (_, false) => String::new(),
+            (Lang::Ml, true) => format!("{kind_w} ആയതിനാൽ പ്രതികൂല സ്ഥാനങ്ങളാണ് എണ്ണുന്നത്; "),
+            (_, true) => format!("{kind_w} के लिए प्रतिकूल स्थान गिने जाते हैं, इसलिए "),
+        };
+        explanation.push(kshana_rules::say3!(
+            lang,
+            "",
+            "പ്രമാണ പട്ടിക പ്രകാരം ജന്മചന്ദ്രനിൽ നിന്ന് {jo} ഭാവത്തിൽ വ്യാഴവും ({jf}) {so} ഭാവത്തിൽ ശനിയും ({sf}) സഞ്ചരിച്ചു (വ്യാഴം {jl} ഭാവങ്ങളിലും ശനി {sl} ഭാവങ്ങളിലും ഗുണം ചെയ്യും): {adv}ഗോചരം {transit:.2}.",
+            "शास्त्रीय तालिका के अनुसार गुरु जन्म-चंद्र से {jo} भाव में ({jf}) और शनि {so} भाव में ({sf}) गोचर कर रहे थे (गुरु {jl} भावों में, शनि {sl} भावों में शुभ फल देता है): {adv}गोचर {transit:.2}।"
+        ));
+    } else {
     explanation.push(format!(
         "Jupiter transited the {} from the natal Moon ({}) and Saturn the {} ({}) by the classical table (Jupiter gives in {:?}, Saturn in {:?}): {}transit {transit:.2}.",
         ordinal(jupiter_from_moon),
@@ -408,29 +614,32 @@ pub fn score_at(
             String::new()
         }
     ));
+    }
     if sade_sati_phase != 0 {
-        let phase_words = match sade_sati_phase {
-            1 => "rising, Saturn in the 12th from the Moon",
-            2 => "peak, Saturn on the Moon",
-            _ => "setting, Saturn in the 2nd from the Moon",
-        };
+        let phase_words = sade_phase_words(lang, sade_sati_phase);
         let before = transit;
         if adverse {
             transit = (transit + SADE_SATI_SHIFT).min(1.0);
-            explanation.push(format!(
-                "Sade Sati was running (phase {sade_sati_phase} of 3: {phase_words}), which counts for a {} (+{SADE_SATI_SHIFT:.2}, capped at 1): transit {before:.2} → {transit:.2}.",
-                kind.name().to_lowercase()
+            explanation.push(kshana_rules::say3!(
+                lang,
+                "Sade Sati was running (phase {sade_sati_phase} of 3: {phase_words}), which counts for a {kind_w} (+{SADE_SATI_SHIFT:.2}, capped at 1): transit {before:.2} → {transit:.2}.",
+                "ഏഴരശ്ശനി നടക്കുകയായിരുന്നു (3-ൽ {sade_sati_phase}-ാം ഘട്ടം: {phase_words}), ഇത് {kind_w} എന്നതിന് അനുകൂലമായി എണ്ണുന്നു (+{SADE_SATI_SHIFT:.2}, പരമാവധി 1): ഗോചരം {before:.2} → {transit:.2}.",
+                "साढ़ेसाती चल रही थी (3 में से चरण {sade_sati_phase}: {phase_words}), जो {kind_w} के पक्ष में गिनी जाती है (+{SADE_SATI_SHIFT:.2}, अधिकतम 1): गोचर {before:.2} → {transit:.2}।"
             ));
         } else if matches!(a.name, "Health" | "Career") {
             transit = (transit - SADE_SATI_SHIFT).max(0.0);
-            explanation.push(format!(
-                "Sade Sati was running (phase {sade_sati_phase} of 3: {phase_words}), which counts against {} (−{SADE_SATI_SHIFT:.2}, floored at 0): transit {before:.2} → {transit:.2}.",
-                a.name
+            explanation.push(kshana_rules::say3!(
+                lang,
+                "Sade Sati was running (phase {sade_sati_phase} of 3: {phase_words}), which counts against {area_w} (−{SADE_SATI_SHIFT:.2}, floored at 0): transit {before:.2} → {transit:.2}.",
+                "ഏഴരശ്ശനി നടക്കുകയായിരുന്നു (3-ൽ {sade_sati_phase}-ാം ഘട്ടം: {phase_words}), ഇത് {area_w} എന്ന മേഖലയ്ക്ക് എതിരായി എണ്ണുന്നു (−{SADE_SATI_SHIFT:.2}, കുറഞ്ഞത് 0): ഗോചരം {before:.2} → {transit:.2}.",
+                "साढ़ेसाती चल रही थी (3 में से चरण {sade_sati_phase}: {phase_words}), जो {area_w} के विरुद्ध गिनी जाती है (−{SADE_SATI_SHIFT:.2}, न्यूनतम 0): गोचर {before:.2} → {transit:.2}।"
             ));
         } else {
-            explanation.push(format!(
-                "Sade Sati was running (phase {sade_sati_phase} of 3: {phase_words}); it bears on Health and Career, not on {}, so the transit stays {transit:.2}.",
-                a.name
+            explanation.push(kshana_rules::say3!(
+                lang,
+                "Sade Sati was running (phase {sade_sati_phase} of 3: {phase_words}); it bears on Health and Career, not on {area_w}, so the transit stays {transit:.2}.",
+                "ഏഴരശ്ശനി നടക്കുകയായിരുന്നു (3-ൽ {sade_sati_phase}-ാം ഘട്ടം: {phase_words}); ഇത് ആരോഗ്യത്തെയും ജോലിയെയുമാണ് ബാധിക്കുക, {area_w} എന്ന മേഖലയെ അല്ല, അതിനാൽ ഗോചരം {transit:.2} ആയി തുടരുന്നു.",
+                "साढ़ेसाती चल रही थी (3 में से चरण {sade_sati_phase}: {phase_words}); इसका असर सेहत और करियर पर होता है, {area_w} पर नहीं, इसलिए गोचर {transit:.2} ही रहा।"
             ));
         }
     }
@@ -442,19 +651,25 @@ pub fn score_at(
         parashari_factor(facts, a, kind, &running)
     );
     let fit = combine_fit(dasha_support, parashari, transit);
-    let sum = format!(
-        "fit {fit:.2} = {WEIGHT_DASHA} × {dasha_support:.2} (dasha) + {WEIGHT_PARASHARI} × {parashari:.2} (Parashari) + {WEIGHT_TRANSIT} × {transit:.2} (transit)."
+    let sum = kshana_rules::say3!(
+        lang,
+        "fit {fit:.2} = {WEIGHT_DASHA} × {dasha_support:.2} (dasha) + {WEIGHT_PARASHARI} × {parashari:.2} (Parashari) + {WEIGHT_TRANSIT} × {transit:.2} (transit).",
+        "ചേർച്ച {fit:.2} = {WEIGHT_DASHA} × {dasha_support:.2} (ദശ) + {WEIGHT_PARASHARI} × {parashari:.2} (പരാശരി) + {WEIGHT_TRANSIT} × {transit:.2} (ഗോചരം).",
+        "मेल {fit:.2} = {WEIGHT_DASHA} × {dasha_support:.2} (दशा) + {WEIGHT_PARASHARI} × {parashari:.2} (पाराशरी) + {WEIGHT_TRANSIT} × {transit:.2} (गोचर)।"
     );
     explanation.push(if adverse {
-        format!(
-            "For a {}, support means the running periods were adverse for {}, so each factor above measures adversity: {sum}",
-            kind.name().to_lowercase(),
-            a.name
+        kshana_rules::say3!(
+            lang,
+            "For a {kind_w}, support means the running periods were adverse for {area_w}, so each factor above measures adversity: {sum}",
+            "{kind_w} ആയതിനാൽ, ഇവിടെ പിന്തുണ എന്നാൽ നടന്ന ദശകൾ {area_w} എന്ന മേഖലയ്ക്ക് പ്രതികൂലമായിരുന്നു എന്നാണ്; അതിനാൽ മുകളിലെ ഓരോ ഘടകവും പ്രതികൂലതയാണ് അളക്കുന്നത്: {sum}",
+            "{kind_w} के लिए समर्थन का अर्थ है कि चल रही दशाएँ {area_w} के प्रतिकूल थीं, इसलिए ऊपर का हर घटक प्रतिकूलता मापता है: {sum}"
         )
     } else {
-        format!(
-            "Read as the chance the engine gave to something happening in {} in {when}: {sum}",
-            a.name
+        kshana_rules::say3!(
+            lang,
+            "Read as the chance the engine gave to something happening in {area_w} in {when}: {sum}",
+            "{when}-ൽ {area_w} എന്ന മേഖലയിൽ എന്തെങ്കിലും സംഭവിക്കാൻ ക്ഷണ നൽകിയ സാധ്യതയായി ഇതു വായിക്കാം: {sum}",
+            "इसे {when} में {area_w} में कुछ होने की उस संभावना की तरह पढ़ें जो क्षण ने दी थी: {sum}"
         )
     });
 
@@ -496,6 +711,85 @@ fn kind_phrase(kind: EventKind, area_name: &str) -> String {
 /// Saturn's sub-period in Jupiter's mahadasha carried Career at 0.72 and Jupiter
 /// transited your 11th from the Moon while Saturn crossed your 4th: a fit of 0.81."
 pub fn fit_words(score: &EventScore, ev: &LifeEvent) -> String {
+    fit_words_in(score, ev, Lang::En)
+}
+
+fn kind_phrase_in(lang: Lang, kind: EventKind, area_w: &str) -> String {
+    match (lang, kind) {
+        (Lang::Ml, EventKind::Began) => format!("{area_w} എന്ന മേഖലയിൽ ഒന്ന് തുടങ്ങി"),
+        (Lang::Ml, EventKind::Ended) => format!("{area_w} എന്ന മേഖലയിൽ ഒന്ന് അവസാനിച്ചു"),
+        (Lang::Ml, EventKind::Gain) => format!("{area_w} എന്ന മേഖലയിൽ നേട്ടമുണ്ടായി"),
+        (Lang::Ml, EventKind::Loss) => format!("{area_w} എന്ന മേഖലയിൽ നഷ്ടമുണ്ടായി"),
+        (Lang::Ml, EventKind::Milestone) => format!("{area_w} എന്ന മേഖലയിൽ ഒരു നാഴികക്കല്ല് കടന്നു"),
+        (Lang::Ml, EventKind::Crisis) => format!("{area_w} എന്ന മേഖലയിൽ ഒരു പ്രതിസന്ധി വന്നു"),
+        (_, EventKind::Began) => format!("{area_w} में कुछ शुरू हुआ"),
+        (_, EventKind::Ended) => format!("{area_w} में कुछ ख़त्म हुआ"),
+        (_, EventKind::Gain) => format!("{area_w} में लाभ हुआ"),
+        (_, EventKind::Loss) => format!("{area_w} में हानि हुई"),
+        (_, EventKind::Milestone) => format!("{area_w} में एक उपलब्धि मिली"),
+        (_, EventKind::Crisis) => format!("{area_w} में संकट आया"),
+    }
+}
+
+/// [`fit_words`] in the reader's language. The person's own note is quoted as written.
+pub fn fit_words_in(score: &EventScore, ev: &LifeEvent, lang: Lang) -> String {
+    if lang != Lang::En {
+        let when = when_in(lang, ev.at);
+        let area_w = area_word(lang, &ev.area);
+        let note = ev.note.trim();
+        let what = if note.is_empty() {
+            kind_phrase_in(lang, ev.kind, &area_w)
+        } else {
+            format!("“{note}”")
+        };
+        let q = score.period_quality;
+        let kind_w = kind_lower(lang, ev.kind);
+        let periods = match (score.running.first(), score.running.get(1)) {
+            (Some(m), Some(a)) => {
+                let (m, a) = (lord_in(lang, *m), lord_in(lang, *a));
+                kshana_rules::say3!(lang, "", "{m} മഹാദശയിൽ {a} അന്തർദശ", "{m} महादशा में {a} की अंतर्दशा")
+            }
+            (Some(m), None) => {
+                let m = lord_in(lang, *m);
+                kshana_rules::say3!(lang, "", "{m} മഹാദശ", "{m} महादशा")
+            }
+            _ => String::new(),
+        };
+        let carried = if score.running.is_empty() {
+            lang.pick(["", "ഒരു വിംശോത്തരി ദശയും നടന്നിരുന്നില്ല", "कोई विंशोत्तरी दशा नहीं चल रही थी"]).to_string()
+        } else if score.adverse {
+            kshana_rules::say3!(
+                lang,
+                "",
+                "{periods} {area_w} എന്ന മേഖലയെ {q:.2}-ൽ നിർത്തി, {kind_w} വരുന്ന തരം ദശ",
+                "{periods} ने {area_w} को {q:.2} पर छोड़ा, ठीक वैसी दशा जैसी {kind_w} माँगता है"
+            )
+        } else {
+            kshana_rules::say3!(
+                lang,
+                "",
+                "{periods} {area_w} എന്ന മേഖലയെ {q:.2}-ൽ താങ്ങി",
+                "{periods} ने {area_w} को {q:.2} पर थामा"
+            )
+        };
+        let (jo, so) = (ordinal_in(lang, score.jupiter_from_moon), ordinal_in(lang, score.saturn_from_moon));
+        let mut sky = kshana_rules::say3!(
+            lang,
+            "",
+            "ചന്ദ്രനിൽ നിന്ന് {jo} ഭാവത്തിൽ വ്യാഴവും {so} ഭാവത്തിൽ ശനിയും സഞ്ചരിച്ചു",
+            "गुरु चंद्र से {jo} भाव में और शनि {so} भाव में गोचर कर रहे थे"
+        );
+        if score.sade_sati_phase != 0 {
+            sky.push_str(lang.pick(["", " (ഏഴരശ്ശനിക്കാലം)", " (साढ़ेसाती में)"]));
+        }
+        let fit = score.fit;
+        return kshana_rules::say3!(
+            lang,
+            "",
+            "{when}-ൽ {what}: {carried}, {sky}; ചേർച്ച {fit:.2}.",
+            "{when} में {what}: {carried}, और {sky}; मेल {fit:.2}।"
+        );
+    }
     let when = month_year(ev.at);
     let note = ev.note.trim();
     let what = if note.is_empty() {
@@ -535,7 +829,7 @@ pub fn fit_words(score: &EventScore, ev: &LifeEvent) -> String {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::fixture::{kochi, noon};
 
@@ -610,6 +904,59 @@ mod tests {
             "{w}"
         );
         assert!(w.contains("mahadasha carried Career at"), "{w}");
+    }
+
+    /// Latin words of three or more letters, apart from the metric names kept on purpose.
+    pub(crate) fn latin_words(s: &str) -> Vec<String> {
+        s.split(|c: char| !c.is_ascii_alphabetic())
+            .filter(|w| w.len() >= 3 && !matches!(*w, "Brier" | "ECE"))
+            .map(str::to_string)
+            .collect()
+    }
+
+    #[test]
+    fn malayalam_and_hindi_carry_no_english() {
+        let Some((spk, ch)) = kochi() else { return };
+        for lang in [Lang::Ml, Lang::Hi] {
+            for ev in three_events().into_iter().map(|mut e| {
+                e.note.clear();
+                e
+            }) {
+                let s = score_event_in(&spk, &ch, Ayanamsa::Lahiri, &ev, lang).unwrap();
+                let en = score_event(&spk, &ch, Ayanamsa::Lahiri, &ev).unwrap();
+                assert_eq!(s.fit, en.fit);
+                assert_eq!(s.explanation.len(), en.explanation.len());
+                for line in s.explanation.iter().chain([&fit_words_in(&s, &ev, lang)]) {
+                    assert!(latin_words(line).is_empty(), "{lang:?}: {line}");
+                }
+            }
+            let r = crate::retrodict_in(&spk, &ch, Ayanamsa::Lahiri, noon(2010, 1, 1), noon(2014, 1, 1), lang).unwrap();
+            for p in &r {
+                assert!(latin_words(&p.words).is_empty(), "{lang:?}: {}", p.words);
+            }
+            for k in EventKind::ALL {
+                assert!(latin_words(kind_word(lang, k)).is_empty());
+            }
+        }
+        // English is the old text.
+        let r = crate::retrodict_in(&spk, &ch, Ayanamsa::Lahiri, noon(2010, 1, 1), noon(2014, 1, 1), Lang::En).unwrap();
+        assert_eq!(r, crate::retrodict(&spk, &ch, Ayanamsa::Lahiri, noon(2010, 1, 1), noon(2014, 1, 1)).unwrap());
+    }
+
+    #[test]
+    fn summaries_in_malayalam_and_hindi_carry_no_english() {
+        use crate::{calibrate, calibration_verdict, metrics, metrics_words, surrogate_words, SurrogateResult};
+        let m = metrics(&[0.9, 0.2, 0.7, 0.4, 0.6], &[true, false, true, false, false], 0);
+        let m0 = metrics(&[], &[], 0);
+        let sr = SurrogateResult { p: 0.1, real_mean: 0.6, shifted_means: vec![0.5, 0.7], shifts: 2, n: 3, words: String::new() };
+        let c = calibrate(&[], &[0.3]);
+        for lang in [Lang::Ml, Lang::Hi] {
+            for w in [metrics_words(&m, lang), metrics_words(&m0, lang), surrogate_words(&sr, lang), calibration_verdict(&c, lang)] {
+                assert!(!w.is_empty() && latin_words(&w).is_empty(), "{lang:?}: {w}");
+            }
+        }
+        assert_eq!(metrics_words(&m, Lang::En), m.words);
+        assert_eq!(calibration_verdict(&c, Lang::En), c.verdict);
     }
 
     #[test]

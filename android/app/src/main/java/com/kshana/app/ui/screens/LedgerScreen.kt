@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kshana.app.data.BirthProfile
 import com.kshana.app.data.EngineSettings
+import com.kshana.app.data.Lang
 import com.kshana.app.data.LedgerStore
 import com.kshana.app.engine.EngineProvider
 import com.kshana.app.engine.Instants
@@ -79,6 +80,7 @@ import uniffi.kshana_ffi.ReliabilityBinRecord
 import uniffi.kshana_ffi.SurrogateRecord
 import uniffi.kshana_ffi.TallyEventRecord
 import uniffi.kshana_ffi.TallyRecord
+import uniffi.kshana_ffi.ledgerEventKindName
 import uniffi.kshana_ffi.ledgerEventKinds
 import java.time.DateTimeException
 import java.time.LocalDateTime
@@ -158,15 +160,15 @@ fun LedgerScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> 
 
     // Your past: every antardasha from birth to now, read once per profile and settings.
     val pastList = rememberLazyListState()
-    var rows by remember(profile, settings) { mutableStateOf<List<PastRow>?>(null) }
+    var rows by remember(profile, settings, Lang.code) { mutableStateOf<List<PastRow>?>(null) }
     var pastError by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(profile, settings) {
+    LaunchedEffect(profile, settings, Lang.code) {
         try {
             val engine = EngineProvider.get(context)
             val birth = profile.birthInstant()
             val birthDate = profile.birthLocal().toLocalDate()
             rows = withContext(Dispatchers.Default) {
-                val periods = engine.retrodict(birth, profile.latitude, profile.longitude, settings.ayanamsa, birth, Instants.now())
+                val periods = engine.retrodict(birth, profile.latitude, profile.longitude, settings.ayanamsa, birth, Instants.now(), Lang.code)
                 periods.map { p ->
                     val s = Instants.toLocal(p.start, zone)
                     val e = Instants.toLocal(p.end, zone)
@@ -187,11 +189,11 @@ fun LedgerScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> 
     }
 
     // Your events: scores for the whole ledger whenever it changes, cached by the list's hash.
-    val scoreCache = remember(profile, settings) { HashMap<Int, List<LedgerScoreRecord>>() }
+    val scoreCache = remember(profile, settings, Lang.code) { HashMap<Int, List<LedgerScoreRecord>>() }
     var scores by remember { mutableStateOf<List<LedgerScoreRecord>?>(null) }
     var scoresHash by remember { mutableIntStateOf(0) }
     var scoreError by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(events, profile, settings) {
+    LaunchedEffect(events, profile, settings, Lang.code) {
         val list = events
         val hash = list.hashCode()
         val cached = scoreCache[hash]
@@ -208,7 +210,7 @@ fun LedgerScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> 
         try {
             val engine = EngineProvider.get(context)
             val found = withContext(Dispatchers.Default) {
-                engine.scoreEvents(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, list)
+                engine.scoreEvents(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, list, Lang.code)
             }
             scoreCache[hash] = found
             scores = found; scoresHash = hash
@@ -220,7 +222,7 @@ fun LedgerScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> 
     val currentScores = if (scoresHash == events.hashCode()) scores else null
 
     // Did it know?: the calibration, run on demand.
-    var calibration by remember(profile, settings) { mutableStateOf<LedgerCalibrationRecord?>(null) }
+    var calibration by remember(profile, settings, Lang.code) { mutableStateOf<LedgerCalibrationRecord?>(null) }
     var calibratedHash by remember { mutableIntStateOf(0) }
     var measuring by remember { mutableStateOf(false) }
     var calError by remember { mutableStateOf<String?>(null) }
@@ -235,7 +237,7 @@ fun LedgerScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> 
                 val engine = EngineProvider.get(context)
                 val birth = profile.birthInstant()
                 val found = withContext(Dispatchers.Default) {
-                    engine.calibrateLedger(birth, profile.latitude, profile.longitude, settings.ayanamsa, list, birth, Instants.now(), PER_EVENT)
+                    engine.calibrateLedger(birth, profile.latitude, profile.longitude, settings.ayanamsa, list, birth, Instants.now(), PER_EVENT, Lang.code)
                 }
                 calibration = found
                 calibratedHash = list.hashCode()
@@ -247,7 +249,7 @@ fun LedgerScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> 
     }
 
     // Against chance: the exact tally and the calibration metrics, read whenever the ledger changes.
-    val chanceCache = remember(profile, settings) { HashMap<Int, ChanceResult>() }
+    val chanceCache = remember(profile, settings, Lang.code) { HashMap<Int, ChanceResult>() }
     var chance by remember { mutableStateOf<ChanceResult?>(null) }
     var chanceHash by remember { mutableIntStateOf(0) }
     var chanceStage by remember { mutableStateOf<String?>(null) }
@@ -271,7 +273,7 @@ fun LedgerScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> 
             chanceStage = "Scoring ${plural(list.size, "event")} and ${list.size * METRICS_PER_EVENT.toInt()} matched quiet moments…"
             val found = try {
                 val m = withContext(Dispatchers.Default) {
-                    engine.ledgerMetrics(birth, profile.latitude, profile.longitude, settings.ayanamsa, list, from, to, METRICS_PER_EVENT, 0u)
+                    engine.ledgerMetrics(birth, profile.latitude, profile.longitude, settings.ayanamsa, list, from, to, METRICS_PER_EVENT, 0u, Lang.code)
                 }
                 ChanceResult(tally, m, null)
             } catch (e: Exception) {
@@ -287,7 +289,7 @@ fun LedgerScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> 
     val currentChance = if (chanceHash == 31 * events.hashCode() + com.kshana.app.data.Lang.code.hashCode()) chance else null
 
     // Shift the sky: the circular time-shift test, run on demand.
-    val shiftCache = remember(profile, settings) { HashMap<Int, SurrogateRecord>() }
+    val shiftCache = remember(profile, settings, Lang.code) { HashMap<Int, SurrogateRecord>() }
     var surrogate by remember { mutableStateOf<SurrogateRecord?>(null) }
     var surrogateHash by remember { mutableIntStateOf(0) }
     var shifting by remember { mutableStateOf(false) }
@@ -305,7 +307,7 @@ fun LedgerScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> 
                 val engine = EngineProvider.get(context)
                 val (from, to) = tallySpan(list, zone)
                 val found = withContext(Dispatchers.Default) {
-                    engine.timeShiftTest(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, list, from, to, SHIFTS)
+                    engine.timeShiftTest(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, list, from, to, SHIFTS, Lang.code)
                 }
                 shiftCache[hash] = found
                 surrogate = found; surrogateHash = hash
@@ -562,9 +564,9 @@ private fun EventRow(
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(e.note.trim().ifEmpty { "${e.kind} · ${e.area}" }, fontFamily = KshanaFonts.serif, fontSize = 17.sp, color = KshanaColors.Text)
+                Text(e.note.trim().ifEmpty { "${ledgerEventKindName(e.kind, Lang.code)} · ${e.area}" }, fontFamily = KshanaFonts.serif, fontSize = 17.sp, color = KshanaColors.Text)
                 Text(
-                    "${localText(e.at, DATE_TIME, zone)} · ${e.area} · ${e.kind.lowercase()}",
+                    "${localText(e.at, DATE_TIME, zone)} · ${e.area} · ${ledgerEventKindName(e.kind, Lang.code).lowercase()}",
                     style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
                 )
             }
@@ -712,7 +714,7 @@ private fun EventForm(
         }
         Text("KIND", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            for (k in kinds) Chip(k.uppercase(), selected = kind == k, onClick = { kind = k })
+            for (k in kinds) Chip(ledgerEventKindName(k, Lang.code).uppercase(), selected = kind == k, onClick = { kind = k })
         }
         Text("IMPORTANCE", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -920,9 +922,9 @@ private fun AgainstChance(
 private fun TallyRow(e: TallyEventRecord, note: String, zone: ZoneId) {
     Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(note.trim().ifEmpty { "${e.kind} · ${e.area}" }, fontFamily = KshanaFonts.serif, fontSize = 16.sp, color = KshanaColors.Text)
+            Text(note.trim().ifEmpty { "${ledgerEventKindName(e.kind, Lang.code)} · ${e.area}" }, fontFamily = KshanaFonts.serif, fontSize = 16.sp, color = KshanaColors.Text)
             Text(
-                "${localText(e.at, DATE_ONLY, zone)} · ${e.area} · ${e.kind.lowercase()}",
+                "${localText(e.at, DATE_ONLY, zone)} · ${e.area} · ${ledgerEventKindName(e.kind, Lang.code).lowercase()}",
                 style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted,
             )
             Text(

@@ -4,6 +4,7 @@
 
 use kshana_chart::Chart;
 use kshana_ledger::{EventKind, LifeEvent, Metrics, Question, SealedForecast};
+use kshana_rules::Lang;
 use kshana_sky::Observer;
 use kshana_time::Instant;
 
@@ -368,6 +369,7 @@ impl Engine {
         from: ExactInstant,
         to: ExactInstant,
         shifts: u32,
+        lang: String,
     ) -> Result<SurrogateRecord, KshanaError> {
         let ch = chart_of(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let evs = to_events(&events)?;
@@ -381,13 +383,14 @@ impl Engine {
             shifts.min(20_000) as usize,
         )
         .map_err(err)?;
+        let words = kshana_ledger::surrogate_words(&r, Lang::parse(&lang));
         Ok(SurrogateRecord {
             p: r.p,
             real_mean: r.real_mean,
             shifted_means: r.shifted_means,
             shifts: r.shifts as u32,
             n: r.n as u32,
-            words: r.words,
+            words,
         })
     }
 
@@ -406,6 +409,7 @@ impl Engine {
         to: ExactInstant,
         per_event: u32,
         bins: u32,
+        lang: String,
     ) -> Result<MetricsRecord, KshanaError> {
         let ch = chart_of(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let ay = ayanamsa.into();
@@ -432,11 +436,9 @@ impl Engine {
         .map_err(err)?;
         labels.extend(std::iter::repeat(false).take(baseline.len()));
         ps.extend(baseline);
-        Ok(metrics_record(&kshana_ledger::metrics(
-            &ps,
-            &labels,
-            bins as usize,
-        )))
+        let mut m = kshana_ledger::metrics(&ps, &labels, bins as usize);
+        m.words = kshana_ledger::metrics_words(&m, Lang::parse(&lang));
+        Ok(metrics_record(&m))
     }
 
     /// Seal a forecast for `area` and `kind` over `[window_start, window_end]` at
@@ -484,7 +486,9 @@ impl Engine {
         to: ExactInstant,
         n_questions: u32,
         decoys: u32,
+        lang: String,
     ) -> Result<Vec<QuizQuestionRecord>, KshanaError> {
+        let lang = Lang::parse(&lang);
         let ch = chart_of(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let qs = kshana_ledger::retrodiction_quiz(
             &self.spk,
@@ -497,7 +501,13 @@ impl Engine {
             decoys.min(9) as usize,
         )
         .map_err(err)?;
-        Ok(qs.iter().map(question_record).collect())
+        Ok(qs
+            .iter()
+            .map(|q| QuizQuestionRecord {
+                prompt: kshana_ledger::question_prompt(q, lang),
+                ..question_record(q)
+            })
+            .collect())
     }
 
     /// The posterior over birth time across `±half_window_seconds` around `birth` in
@@ -592,10 +602,11 @@ pub fn sealed_forecast_metrics(forecasts: Vec<SealedRecord>) -> Result<MetricsRe
 /// Grade quiz answers (the chosen window's index, or a negative number for "not
 /// sure") against the questions, paired by position.
 #[uniffi::export]
-pub fn grade_quiz(questions: Vec<QuizQuestionRecord>, answers: Vec<i64>) -> QuizResultRecord {
+pub fn grade_quiz(questions: Vec<QuizQuestionRecord>, answers: Vec<i64>, lang: String) -> QuizResultRecord {
     let qs: Vec<Question> = questions.iter().map(question_of).collect();
     let ans: Vec<Option<usize>> = answers.iter().map(|a| usize::try_from(*a).ok()).collect();
-    let r = kshana_ledger::grade(&qs, &ans);
+    let mut r = kshana_ledger::grade(&qs, &ans);
+    r.words = kshana_ledger::grade_words(&r, Lang::parse(&lang));
     QuizResultRecord {
         correct: r.correct as u32,
         total: r.total as u32,
@@ -681,6 +692,7 @@ mod tests {
                 from,
                 to,
                 50,
+                "en".into(),
             )
             .unwrap();
         assert_eq!(s.shifted_means.len(), 50);
@@ -697,6 +709,7 @@ mod tests {
                 to,
                 4,
                 0,
+                "ml".into(),
             )
             .unwrap();
         assert_eq!(m.n, 15);
@@ -756,6 +769,7 @@ mod tests {
                 to,
                 3,
                 2,
+                "en".into(),
             )
             .unwrap();
         assert_eq!(qs.len(), 3);
@@ -766,10 +780,10 @@ mod tests {
             assert!(verify_quiz_question(q.clone()));
         }
         let answers: Vec<i64> = qs.iter().map(|q| q.predicted_index as i64).collect();
-        let g = grade_quiz(qs.clone(), answers);
+        let g = grade_quiz(qs.clone(), answers, "en".into());
         assert_eq!((g.correct, g.total, g.skipped), (3, 3, 0));
         assert!((g.chance_rate - 1.0 / 3.0).abs() < 1e-12);
-        let partial = grade_quiz(qs.clone(), vec![-1, qs[1].predicted_index as i64]);
+        let partial = grade_quiz(qs.clone(), vec![-1, qs[1].predicted_index as i64], "hi".into());
         assert_eq!((partial.correct, partial.total, partial.skipped), (1, 1, 2));
 
         let post = engine

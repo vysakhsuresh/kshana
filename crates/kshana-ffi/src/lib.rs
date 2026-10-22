@@ -631,6 +631,7 @@ impl Engine {
         ayanamsa: AyanamsaChoice,
         at: ExactInstant,
         depth: u8,
+        lang: String,
     ) -> Result<Vec<AreaReading>, KshanaError> {
         let input = ChartInput {
             instant: birth.into(),
@@ -654,8 +655,8 @@ impl Engine {
         Ok(kshana_rules::AREAS
             .iter()
             .map(|&area| {
-                let p = kshana_rules::promise(&facts, area);
-                let b = kshana_rules::assess(&facts, area);
+                let p = kshana_rules::kp::promise_in(&facts, area, kshana_rules::Lang::parse(&lang));
+                let b = kshana_rules::parashari::assess_in(&facts, area, kshana_rules::Lang::parse(&lang));
                 let funnel = kshana_rules::timing(
                     &facts,
                     area,
@@ -769,6 +770,7 @@ impl Engine {
         shape: QuestionShape,
         ayanamsa: AyanamsaChoice,
         window_days: u32,
+        lang: String,
     ) -> Result<PrashnaRecord, KshanaError> {
         let a = kshana_rules::areas::area(&area)
             .ok_or_else(|| KshanaError::Engine(format!("unknown area {area}")))?;
@@ -796,7 +798,7 @@ impl Engine {
             QuestionShape::WillItReturn => kshana_rules::QuestionShape::WillItReturn,
             QuestionShape::WillTheyRecover => kshana_rules::QuestionShape::WillTheyRecover,
         };
-        let v = kshana_rules::prashna(&facts, a, sh, at.into(), longitude_deg);
+        let v = kshana_rules::prashna::prashna_in(&facts, a, sh, at.into(), longitude_deg, kshana_rules::Lang::parse(&lang));
         let windows = kshana_rules::prashna_windows(
             &self.spk,
             ayanamsa.into(),
@@ -1709,6 +1711,7 @@ impl Engine {
             ayanamsa,
             at,
             5,
+            "en".to_string(),
         )?;
         let yogas = self.yogas(birth, latitude_deg, longitude_deg, ayanamsa)?;
         let av = self.ashtakavarga(birth, latitude_deg, longitude_deg, ayanamsa)?;
@@ -2022,6 +2025,7 @@ mod tests {
                 AyanamsaChoice::Lahiri,
                 at,
                 5,
+                "en".to_string(),
             )
             .unwrap();
         assert_eq!(readings.len(), 9);

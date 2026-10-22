@@ -56,14 +56,14 @@ fun ReadingScreen(profile: BirthProfile, settings: EngineSettings, onAreas: () -
     var loading by remember { mutableStateOf(true) }
     var answersVersion by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(profile, settings) {
+    LaunchedEffect(profile, settings, com.kshana.app.data.Lang.code) {
         loading = true
         try {
             val engine = EngineProvider.get(context)
             val birth = profile.birthInstant()
             val at = Instants.now()
             readings = withContext(Dispatchers.Default) {
-                engine.areaReadings(birth, profile.latitude, profile.longitude, 0.0, settings.houseSystem, settings.ayanamsa, at, FUNNEL_LEVELS.toUByte())
+                engine.areaReadings(birth, profile.latitude, profile.longitude, 0.0, settings.houseSystem, settings.ayanamsa, at, FUNNEL_LEVELS.toUByte(), com.kshana.app.data.Lang.code)
             }
             now = at
             error = null

@@ -52,49 +52,6 @@ pub enum Deeptadi {
     Kopa,
 }
 
-impl Baladi {
-    /// The state's name in the reader's language (English: the enum's own name). Mrita
-    /// is written as the inert state in Malayalam and Hindi, as the app never prints the
-    /// word for death.
-    pub fn name_in(self, lang: kshana_rules::Lang) -> &'static str {
-        match self {
-            Baladi::Bala => lang.pick(["Bala", "ബാല", "बाल"]),
-            Baladi::Kumara => lang.pick(["Kumara", "കുമാര", "कुमार"]),
-            Baladi::Yuva => lang.pick(["Yuva", "യുവ", "युवा"]),
-            Baladi::Vriddha => lang.pick(["Vriddha", "വൃദ്ധ", "वृद्ध"]),
-            Baladi::Mrita => lang.pick(["Mrita", "നിശ്ചേഷ്ട", "निश्चेष्ट"]),
-        }
-    }
-}
-
-impl Jagradadi {
-    /// The state's name in the reader's language.
-    pub fn name_in(self, lang: kshana_rules::Lang) -> &'static str {
-        match self {
-            Jagradadi::Jagrat => lang.pick(["Jagrat", "ജാഗ്രത്", "जाग्रत"]),
-            Jagradadi::Swapna => lang.pick(["Swapna", "സ്വപ്ന", "स्वप्न"]),
-            Jagradadi::Sushupti => lang.pick(["Sushupti", "സുഷുപ്തി", "सुषुप्ति"]),
-        }
-    }
-}
-
-impl Deeptadi {
-    /// The state's name in the reader's language.
-    pub fn name_in(self, lang: kshana_rules::Lang) -> &'static str {
-        match self {
-            Deeptadi::Deepta => lang.pick(["Deepta", "ദീപ്ത", "दीप्त"]),
-            Deeptadi::Swastha => lang.pick(["Swastha", "സ്വസ്ഥ", "स्वस्थ"]),
-            Deeptadi::Mudita => lang.pick(["Mudita", "മുദിത", "मुदित"]),
-            Deeptadi::Shanta => lang.pick(["Shanta", "ശാന്ത", "शांत"]),
-            Deeptadi::Deena => lang.pick(["Deena", "ദീന", "दीन"]),
-            Deeptadi::Dukhita => lang.pick(["Dukhita", "ദുഃഖിത", "दुःखित"]),
-            Deeptadi::Vikala => lang.pick(["Vikala", "വികല", "विकल"]),
-            Deeptadi::Khala => lang.pick(["Khala", "ഖല", "खल"]),
-            Deeptadi::Kopa => lang.pick(["Kopa", "കോപ", "कोप"]),
-        }
-    }
-}
-
 /// The three avasthas of one graha.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Avastha {

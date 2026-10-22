@@ -126,7 +126,7 @@ fun PrashnaScreen(place: Place, settings: EngineSettings, onBack: () -> Unit) {
             try {
                 val engine = EngineProvider.get(context)
                 val rec = withContext(Dispatchers.Default) {
-                    engine.prashna(at, place.latitude, place.longitude, kp?.toUShort(), a, s, settings.ayanamsa, WINDOW_DAYS)
+                    engine.prashna(at, place.latitude, place.longitude, kp?.toUShort(), a, s, settings.ayanamsa, WINDOW_DAYS, com.kshana.app.data.Lang.code)
                 }
                 askedAt = at
                 answer = rec

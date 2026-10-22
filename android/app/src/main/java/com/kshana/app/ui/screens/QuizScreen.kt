@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kshana.app.data.BirthProfile
 import com.kshana.app.data.EngineSettings
+import com.kshana.app.data.Lang
 import com.kshana.app.engine.EngineProvider
 import com.kshana.app.engine.Instants
 import com.kshana.app.ui.sky.KshanaFonts
@@ -95,7 +96,7 @@ fun QuizScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> Un
                 val birth = profile.birthInstant()
                 val from = Instants.fromInstant(profile.birthLocal().plusYears(LIVED_FROM_AGE).toInstant())
                 val found = withContext(Dispatchers.Default) {
-                    val qs = engine.retrodictionQuiz(birth, profile.latitude, profile.longitude, settings.ayanamsa, chosen, from, Instants.now(), QUESTIONS, DECOYS)
+                    val qs = engine.retrodictionQuiz(birth, profile.latitude, profile.longitude, settings.ayanamsa, chosen, from, Instants.now(), QUESTIONS, DECOYS, Lang.code)
                     Asked(chosen, qs, qs.map { runCatching { verifyQuizQuestion(it) }.getOrDefault(false) })
                 }
                 asked = found
@@ -109,7 +110,7 @@ fun QuizScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> Un
     fun grade() {
         val set = asked ?: return
         val list = set.questions.indices.map { (answers[it] ?: NOT_SURE).toLong() }
-        result = runCatching { gradeQuiz(set.questions, list) }.onFailure { error = it.message ?: it.toString() }.getOrNull()
+        result = runCatching { gradeQuiz(set.questions, list, Lang.code) }.onFailure { error = it.message ?: it.toString() }.getOrNull()
         // Only the counts are kept, for the scoreboard: grading the same set again replaces them.
         result?.let { r ->
             set.questions.firstOrNull()?.let { q ->

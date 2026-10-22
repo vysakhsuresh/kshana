@@ -12,7 +12,9 @@
 
 use crate::areas::Area;
 use crate::facts::Facts;
-use crate::kp::{promise, significators, Promise, Significance};
+use crate::kp::{promise_in, significators, Promise, Significance};
+use crate::plain::Lang;
+use crate::yogas::words;
 use crate::Hit;
 use kshana_ephem::{Body, Spk};
 use kshana_sky::apparent_longitude;
@@ -130,8 +132,21 @@ pub fn prashna(
     instant: Instant,
     longitude_deg: f64,
 ) -> PrashnaVerdict {
+    prashna_in(facts, area, shape, instant, longitude_deg, Lang::En)
+}
+
+/// [`prashna`] with the factors and sources in the reader's language.
+pub fn prashna_in(
+    facts: &Facts,
+    area: Area,
+    shape: QuestionShape,
+    instant: Instant,
+    longitude_deg: f64,
+    lang: Lang,
+) -> PrashnaVerdict {
     let mut hits = Vec::new();
     let moon = facts.planet(DashaLord::Moon);
+    let msl = words::graha(lang, moon.sub_lord);
     let moon_sig = significators(facts, moon.sub_lord);
     let genuine_houses: Vec<Significance> = moon_sig
         .iter()
@@ -141,16 +156,37 @@ pub fn prashna(
     let question_genuine = !genuine_houses.is_empty();
     hits.push(Hit {
         rule_id: "KS-P-0001",
-        source: "KP Reader VI: the Moon's sub-lord reveals the matter in the querent's mind",
+        source: lang.pick([
+            "KP Reader VI: the Moon's sub-lord reveals the matter in the querent's mind",
+            "കെപി റീഡർ VI: ചന്ദ്രന്റെ ഉപനാഥൻ ചോദ്യകർത്താവിന്റെ മനസ്സിലുള്ള കാര്യം വെളിവാക്കുന്നു",
+            "केपी रीडर VI: चंद्र का उपस्वामी प्रश्नकर्ता के मन की बात प्रकट करता है",
+        ]),
         weight: if question_genuine { 1.0 } else { 0.3 },
         factors: if question_genuine {
-            genuine_houses.iter().map(|s| format!("Moon's sub-lord {:?} signifies house {}", moon.sub_lord, s.house)).collect()
+            genuine_houses
+                .iter()
+                .map(|s| {
+                    let (sl, hn, h) = (moon.sub_lord, s.house, words::bhava(lang, s.house));
+                    crate::say3!(
+                        lang,
+                        "Moon's sub-lord {sl:?} signifies house {hn}",
+                        "ചന്ദ്രന്റെ ഉപനാഥൻ {msl} {h} ഭാവത്തെ സൂചിപ്പിക്കുന്നു",
+                        "चंद्र का उपस्वामी {msl} {h} भाव का कार्येश है"
+                    )
+                })
+                .collect()
         } else {
-            vec![format!("Moon's sub-lord {:?} does not signify houses {:?}; the question may not be the real concern", moon.sub_lord, area.group)]
+            let (sl, grp, hs) = (moon.sub_lord, area.group, words::houses(area.group));
+            vec![crate::say3!(
+                lang,
+                "Moon's sub-lord {sl:?} does not signify houses {grp:?}; the question may not be the real concern",
+                "ചന്ദ്രന്റെ ഉപനാഥൻ {msl} {hs} എന്നീ ഭാവങ്ങളെ സൂചിപ്പിക്കുന്നില്ല; ചോദ്യം മനസ്സിലെ യഥാർഥ ആശങ്ക ആകണമെന്നില്ല",
+                "चंद्र का उपस्वामी {msl} भाव {hs} का कार्येश नहीं है; हो सकता है प्रश्न मन की असली चिंता न हो"
+            )]
         },
     });
 
-    let p = promise(facts, area);
+    let p = promise_in(facts, area, lang);
     hits.push(p.hit.clone());
 
     let sub = facts.planet(p.sub_lord);
@@ -161,15 +197,31 @@ pub fn prashna(
     if retro_sub || retro_star {
         hits.push(Hit {
             rule_id: "KS-P-0012",
-            source: "KP Reader VI: a retrograde sub-lord, or one in the star of a retrograde planet, delays until the planet turns direct",
+            source: lang.pick([
+                "KP Reader VI: a retrograde sub-lord, or one in the star of a retrograde planet, delays until the planet turns direct",
+                "കെപി റീഡർ VI: ഉപനാഥൻ വക്രത്തിലാണെങ്കിലോ വക്രഗ്രഹത്തിന്റെ നക്ഷത്രത്തിലാണെങ്കിലോ, ആ ഗ്രഹം നേർഗതിയിലാകുംവരെ കാര്യം വൈകും",
+                "केपी रीडर VI: उपस्वामी वक्री हो, या किसी वक्री ग्रह के नक्षत्र में हो, तो ग्रह के मार्गी होने तक काम में देर होती है",
+            ]),
             weight: 0.8,
             factors: {
                 let mut v = Vec::new();
                 if retro_sub {
-                    v.push(format!("{:?}, the sub-lord, is retrograde", sub.graha));
+                    let (sg, n) = (sub.graha, words::graha(lang, sub.graha));
+                    v.push(crate::say3!(
+                        lang,
+                        "{sg:?}, the sub-lord, is retrograde",
+                        "ഉപനാഥനായ {n} വക്രത്തിലാണ്",
+                        "उपस्वामी {n} वक्री है"
+                    ));
                 }
                 if retro_star {
-                    v.push(format!("{:?}, the sub-lord's star lord, is retrograde", sub_star.graha));
+                    let (sg, n) = (sub_star.graha, words::graha(lang, sub_star.graha));
+                    v.push(crate::say3!(
+                        lang,
+                        "{sg:?}, the sub-lord's star lord, is retrograde",
+                        "ഉപനാഥന്റെ നക്ഷത്രനാഥനായ {n} വക്രത്തിലാണ്",
+                        "उपस्वामी का नक्षत्र स्वामी {n} वक्री है"
+                    ));
                 }
                 v
             },
@@ -194,14 +246,50 @@ pub fn prashna(
         .collect();
     hits.push(Hit {
         rule_id: "KS-P-0020",
-        source: "KP Reader VI: ruling planets at the question time the matter when they are also significators",
+        source: lang.pick([
+            "KP Reader VI: ruling planets at the question time the matter when they are also significators",
+            "കെപി റീഡർ VI: ചോദ്യസമയത്തെ ഭരണഗ്രഹങ്ങൾ ആ കാര്യത്തിന്റെ സൂചകങ്ങൾ കൂടിയാണെങ്കിൽ അവ കാലം കുറിക്കുന്നു",
+            "केपी रीडर VI: प्रश्न के समय के शासक ग्रह, जब वे कार्येश भी हों, तब विषय का समय बताते हैं",
+        ]),
         weight: if agents.is_empty() { 0.2 } else { 0.7 },
         factors: vec![
-            format!(
-                "ruling planets: lagna sign {:?}, lagna star {:?}, Moon sign {:?}, Moon star {:?}, day {:?}",
-                ruling.lagna_sign_lord, ruling.lagna_star_lord, ruling.moon_sign_lord, ruling.moon_star_lord, ruling.day_lord
-            ),
-            if agents.is_empty() { "none of them signifies the matter".into() } else { format!("agents for timing: {agents:?}") },
+            if lang == Lang::En {
+                format!(
+                    "ruling planets: lagna sign {:?}, lagna star {:?}, Moon sign {:?}, Moon star {:?}, day {:?}",
+                    ruling.lagna_sign_lord, ruling.lagna_star_lord, ruling.moon_sign_lord, ruling.moon_star_lord, ruling.day_lord
+                )
+            } else {
+                let n = |g: DashaLord| words::graha(lang, g);
+                let (a, b, c, d, e) = (
+                    n(ruling.lagna_sign_lord),
+                    n(ruling.lagna_star_lord),
+                    n(ruling.moon_sign_lord),
+                    n(ruling.moon_star_lord),
+                    n(ruling.day_lord),
+                );
+                crate::say3!(
+                    lang,
+                    "",
+                    "ഭരണഗ്രഹങ്ങൾ: ലഗ്നരാശിനാഥൻ {a}, ലഗ്നനക്ഷത്രനാഥൻ {b}, ചന്ദ്രരാശിനാഥൻ {c}, ചന്ദ്രനക്ഷത്രനാഥൻ {d}, ദിനനാഥൻ {e}",
+                    "शासक ग्रह: लग्न राशि स्वामी {a}, लग्न नक्षत्र स्वामी {b}, चंद्र राशि स्वामी {c}, चंद्र नक्षत्र स्वामी {d}, वार स्वामी {e}"
+                )
+            },
+            if agents.is_empty() {
+                lang.pick([
+                    "none of them signifies the matter",
+                    "ഇവയിൽ ഒന്നും ഈ കാര്യത്തെ സൂചിപ്പിക്കുന്നില്ല",
+                    "इनमें से कोई भी इस विषय का कार्येश नहीं है",
+                ])
+                .into()
+            } else {
+                let list = words::graha_list(lang, &agents);
+                crate::say3!(
+                    lang,
+                    "agents for timing: {agents:?}",
+                    "കാലം കുറിക്കുന്ന ഗ്രഹങ്ങൾ: {list}",
+                    "समय बताने वाले ग्रह: {list}"
+                )
+            },
         ],
     });
 

@@ -154,10 +154,11 @@ fun KpFullScreen(profile: BirthProfile, place: Place, settings: EngineSettings, 
     val context = LocalContext.current
     var kp by remember { mutableStateOf<uniffi.kshana_ffi.KpFullRecord?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(profile) {
+    val lang = com.kshana.app.data.Lang.code
+    LaunchedEffect(profile, lang) {
         runCatching {
             val engine = EngineProvider.get(context)
-            kp = withContext(Dispatchers.Default) { engine.kpFull(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, Instants.now(), place.latitude, place.longitude) }
+            kp = withContext(Dispatchers.Default) { engine.kpFull(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, Instants.now(), place.latitude, place.longitude, lang) }
         }.onFailure { error = it.message }
     }
     Page("CHART PAGES · KP", "KP, in full", "Cusps and planets with star, sub, sub-sub and sub-sub-sub lords; house significators in four levels; cuspal interlinks and ruling planets now.", onBack) {
