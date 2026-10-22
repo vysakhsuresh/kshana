@@ -199,7 +199,7 @@ internal fun RecordPanel(life: String) {
     val context = LocalContext.current
     var version by remember { mutableStateOf(0) }
     val pending = remember(version) { PredictionStore.pending(context, life).takeLast(4) }
-    val calibration = remember(version) { calibrate(PredictionStore.records(context)) }
+    val calibration = remember(version, com.kshana.app.data.Lang.code) { calibrate(PredictionStore.records(context), com.kshana.app.data.Lang.code) }
     val mine = calibration.lives.firstOrNull { it.life == life }
     if (pending.isEmpty() && (mine == null || mine.n == 0u)) return
     Column(

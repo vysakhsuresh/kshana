@@ -65,8 +65,9 @@ fun AskScreen(
     onGo: (uniffi.kshana_ffi.AskActionRecord) -> Unit = {},
 ) {
     val context = LocalContext.current
-    val qs: List<QuestionRecord> = remember { questions() }
-    val allTopics: List<TopicRecord> = remember { topics() }
+    val langCode = com.kshana.app.data.Lang.code
+    val qs: List<QuestionRecord> = remember(langCode) { questions(langCode) }
+    val allTopics: List<TopicRecord> = remember(langCode) { topics(langCode) }
     // Another screen may send the person here with a question already chosen.
     val pre = remember { Triple(AskPrefill.life, AskPrefill.topic, AskPrefill.question).also { AskPrefill.life = null; AskPrefill.topic = null; AskPrefill.question = null } }
     var life by remember { mutableStateOf(pre.first ?: initialLife ?: "Love") }
@@ -80,7 +81,7 @@ fun AskScreen(
     var askedKey by remember { mutableStateOf(if (pre.first != null) "pre|${System.currentTimeMillis()}" else null) }
     var showWhy by remember { mutableStateOf(false) }
 
-    LaunchedEffect(askedKey) {
+    LaunchedEffect(askedKey, langCode) {
         val key = askedKey ?: return@LaunchedEffect
         asking = true
         try {
@@ -92,13 +93,13 @@ fun AskScreen(
                     engine.askTopic(
                         profile.birthInstant(), profile.latitude, profile.longitude,
                         place.latitude, place.longitude,
-                        settings.houseSystem, settings.ayanamsa, t.key, question, at,
+                        settings.houseSystem, settings.ayanamsa, t.key, question, at, langCode,
                     )
                 } else {
                     engine.ask(
                         profile.birthInstant(), profile.latitude, profile.longitude,
                         place.latitude, place.longitude,
-                        settings.houseSystem, settings.ayanamsa, life, question, at,
+                        settings.houseSystem, settings.ayanamsa, life, question, at, langCode,
                     )
                 }
             }
@@ -137,7 +138,7 @@ fun AskScreen(
             }
         }
         fun understandIt(text: String) {
-            val u = uniffi.kshana_ffi.understand(text)
+            val u = uniffi.kshana_ffi.understand(text, langCode)
             reply = u
             if (u.status == "answer") u.action?.let { run(it) } else answer = null
         }

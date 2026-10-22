@@ -109,7 +109,7 @@ fun SealedScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> 
                 val record = withContext(Dispatchers.Default) {
                     engine.sealForecast(
                         profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa,
-                        createdAt, area, kind, Instants.fromInstant(start.toInstant()), Instants.fromInstant(end.toInstant()),
+                        createdAt, area, kind, Instants.fromInstant(start.toInstant()), Instants.fromInstant(end.toInstant()), com.kshana.app.data.Lang.code,
                     )
                 }
                 val line = sealedForecastToJson(record)

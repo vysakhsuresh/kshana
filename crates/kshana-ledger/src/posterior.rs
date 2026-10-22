@@ -28,7 +28,7 @@ use crate::event::{iso_utc, LedgerError, LifeEvent};
 use kshana_chart::{compute, ChartInput};
 use kshana_ephem::Spk;
 use kshana_houses::HouseSystem;
-use kshana_rules::{area, Facts};
+use kshana_rules::{area, Facts, Lang};
 use kshana_sky::Observer;
 use kshana_time::{EopTable, Instant, NS_PER_SEC};
 use kshana_vedic::Ayanamsa;
@@ -127,6 +127,23 @@ pub fn birth_posterior(
     step_s: i64,
     events: &[LifeEvent],
 ) -> Result<Posterior, LedgerError> {
+    birth_posterior_in(spk, eop, obs, system, ayanamsa, center, half_window_s, step_s, events, Lang::En)
+}
+
+/// [`birth_posterior`], its words in the reader's language.
+#[allow(clippy::too_many_arguments)]
+pub fn birth_posterior_in(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    obs: &Observer,
+    system: HouseSystem,
+    ayanamsa: Ayanamsa,
+    center: Instant,
+    half_window_s: i64,
+    step_s: i64,
+    events: &[LifeEvent],
+    lang: Lang,
+) -> Result<Posterior, LedgerError> {
     if events.is_empty() {
         return Err(LedgerError::Refused(
             "no dated events, so every birth time is as likely as any other".into(),
@@ -220,7 +237,31 @@ pub fn birth_posterior(
     let mean = center.add_ns(mean_offset.round() as i128);
     let (hpd50, hpd50_runs) = hpd_interval(&grid, step, 0.5);
     let (hpd90, hpd90_runs) = hpd_interval(&grid, step, 0.9);
-    let words = format!(
+    let words = if lang != Lang::En {
+        let ml = lang == Lang::Ml;
+        let dw = |ns: i128| {
+            let s = duration_words(ns);
+            if ml {
+                s.replace(" min", " മിനിറ്റ്").replace(" h", " മണിക്കൂർ").replace(" s", " സെക്കൻഡ്")
+            } else {
+                s.replace(" min", " मिनट").replace(" h", " घंटे").replace(" s", " सेकंड")
+            }
+        };
+        let (a, b, st, ev) = (iso_utc(first), iso_utc(first.add_ns(step * (n as i128 - 1))), dw(step), events.len());
+        let (mp, mn) = (iso_utc(map), iso_utc(mean));
+        let (h5a, h5b, h5w) = (iso_utc(hpd50.0), iso_utc(hpd50.1), dw(hpd50.1.ns_since(hpd50.0)));
+        let (h9a, h9b, h9w) = (iso_utc(hpd90.0), iso_utc(hpd90.1), dw(hpd90.1.ns_since(hpd90.0)));
+        if ml {
+            let r5 = if hpd50_runs > 1 { format!(", {hpd50_runs} വേറിട്ട ഭാഗങ്ങളിൽ: ഒരു സമയമല്ല, ഒരു ചീപ്പുപോലെ") } else { String::new() };
+            let r9 = if hpd90_runs > 1 { format!(", {hpd90_runs} വേറിട്ട ഭാഗങ്ങളിൽ") } else { String::new() };
+            format!("{a} മുതൽ {b} വരെ {st} ഇടവിട്ട് {n} സാധ്യമായ ജനനനിമിഷങ്ങൾ, തീയതിയുള്ള {ev} സംഭവങ്ങളുമായി ഒത്തുനോക്കി. ഏറ്റവും സാധ്യത: {mp}; ശരാശരി {mn}. പകുതി സാധ്യത {h5a} മുതൽ {h5b} വരെ (വീതി {h5w}{r5}); 90% {h9a} മുതൽ {h9b} വരെ (വീതി {h9w}{r9}). ഇങ്ങനെ ശരിയാക്കിയ സമയത്തിന് റോഡന്റെ രീതിയിൽ C ഗ്രേഡാണ്: രേഖപ്പെടുത്തിയ സമയവും ഒപ്പം സൂക്ഷിക്കുക.")
+        } else {
+            let r5 = if hpd50_runs > 1 { format!(", {hpd50_runs} अलग-अलग हिस्सों में: एक समय नहीं, कंघी जैसा") } else { String::new() };
+            let r9 = if hpd90_runs > 1 { format!(", {hpd90_runs} अलग-अलग हिस्सों में") } else { String::new() };
+            format!("{a} से {b} तक {st} के अंतर पर {n} संभावित जन्म-क्षण, तारीख़ वाली {ev} घटनाओं से मिलाए गए। सबसे संभावित: {mp}; औसत {mn}। आधी संभावना {h5a} से {h5b} तक (चौड़ाई {h5w}{r5}); 90% {h9a} से {h9b} तक (चौड़ाई {h9w}{r9})। ऐसे सुधारे गए समय को रॉडन की रीति में C दर्जा मिलता है: दर्ज समय भी साथ रखें।")
+        }
+    } else {
+        format!(
         "Scanned {n} candidate birth instants from {} to {} in steps of {} against {} dated event{}. Most likely: {}; posterior mean {}. Half the mass lies in {} to {} (width {}{}); 90% in {} to {} (width {}{}). A rectified time is rated C by Rodden's convention: keep the recorded time beside it.",
         iso_utc(first),
         iso_utc(first.add_ns(step * (n as i128 - 1))),
@@ -245,7 +286,8 @@ pub fn birth_posterior(
         } else {
             String::new()
         }
-    );
+    )
+    };
     Ok(Posterior {
         grid,
         step_ns: step,

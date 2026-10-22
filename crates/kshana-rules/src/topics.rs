@@ -5,6 +5,7 @@
 
 use crate::areas::Area;
 use crate::forecast::Life;
+use crate::plain::Lang;
 
 /// One matter.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -99,6 +100,86 @@ pub const TOPICS: &[Topic] = &[
     topic!("adoption", "An adoption", Children, "Adoption", 5, [2, 5, 11], [1, 4, 10], "D7"),
 ];
 
+impl Topic {
+    /// The words on the chip, in the reader's language.
+    pub fn words_in(&self, lang: Lang) -> &'static str {
+        match lang {
+            Lang::En => self.words,
+            _ => topic_words_local(lang, self.key).unwrap_or(self.words),
+        }
+    }
+}
+
+/// The chip words in Malayalam and Hindi, by key: nouns, so a sentence can set them at
+/// its head ("വിവാഹം: …").
+const LOCAL: &[(&str, &str, &str)] = &[
+    ("marriage", "വിവാഹം", "विवाह"),
+    ("new_love", "ഒരു പുതിയ ബന്ധം", "एक नया रिश्ता"),
+    ("reunion", "വീണ്ടും ഒന്നിക്കൽ", "फिर से साथ आना"),
+    ("second_marriage", "രണ്ടാം വിവാഹം", "दूसरा विवाह"),
+    ("separation", "ഉലച്ചിലിലായ ദാമ്പത്യം", "तनाव में चल रहा विवाह"),
+    ("in_laws", "പങ്കാളിയുടെ വീട്ടുകാരുമായുള്ള സമാധാനം", "ससुराल वालों से मेल"),
+    ("new_job", "ഒരു പുതിയ ജോലി", "नई नौकरी"),
+    ("promotion", "സ്ഥാനക്കയറ്റം", "तरक्की"),
+    ("transfer", "സ്ഥലംമാറ്റം", "तबादला"),
+    ("own_business", "സ്വന്തമായി ഒരു ബിസിനസ്", "अपना कारोबार"),
+    ("government_post", "ഒരു സർക്കാർ ജോലി", "सरकारी नौकरी"),
+    ("business_partner", "ബിസിനസിൽ ഒരു പങ്കാളി", "कारोबार में साझेदार"),
+    ("foreign_job", "വിദേശത്ത് ഒരു ജോലി", "विदेश में नौकरी"),
+    ("court_case", "കോടതിക്കേസിലോ തർക്കത്തിലോ ജയം", "मुकदमे या विवाद में जीत"),
+    ("loan", "ഒരു വായ്പ", "कर्ज़ की मंज़ूरी"),
+    ("debt_cleared", "കടം തീരൽ", "कर्ज़ से छुटकारा"),
+    ("investment", "നിക്ഷേപത്തിന്റെ ഫലം", "निवेश का फल"),
+    ("inheritance", "പാരമ്പര്യസ്വത്ത്", "विरासत"),
+    ("windfall", "അപ്രതീക്ഷിത ധനലാഭം", "अचानक धन-लाभ"),
+    ("sale", "ഒരു വിൽപന", "कोई बिक्री"),
+    ("recovery", "രോഗത്തിൽ നിന്നുള്ള സുഖപ്പെടൽ", "बीमारी से राहत"),
+    ("surgery", "ശസ്ത്രക്രിയ നന്നായി നടക്കൽ", "ऑपरेशन की सफलता"),
+    ("peace_of_mind", "മനസ്സമാധാനം", "मन की शांति"),
+    ("mother_health", "അമ്മയുടെ ആരോഗ്യം", "माँ की सेहत"),
+    ("father_health", "അച്ഛന്റെ ആരോഗ്യം", "पिता की सेहत"),
+    ("home_peace", "വീട്ടിലെ സമാധാനം", "घर में शांति"),
+    ("sibling", "സഹോദരനോ സഹോദരിയോ", "भाई या बहन"),
+    ("mother", "അമ്മ", "माँ"),
+    ("father", "അച്ഛൻ", "पिता"),
+    ("moving_home", "വീടുമാറ്റം", "घर बदलना"),
+    ("exam", "ഒരു പരീക്ഷ", "परीक्षा"),
+    ("admission", "ഒരു അഡ്മിഷൻ", "दाख़िला"),
+    ("competitive_exam", "ഒരു മത്സരപ്പരീക്ഷ", "प्रतियोगी परीक्षा"),
+    ("study_abroad", "വിദേശപഠനം", "विदेश में पढ़ाई"),
+    ("scholarship", "ഒരു സ്കോളർഷിപ്പ്", "छात्रवृत्ति"),
+    ("buy_house", "വീടോ സ്ഥലമോ വാങ്ങൽ", "घर या ज़मीन की ख़रीद"),
+    ("build_house", "വീടുപണി", "घर का निर्माण"),
+    ("sell_house", "വീടോ സ്ഥലമോ വിൽക്കൽ", "घर या ज़मीन की बिक्री"),
+    ("rent", "വാടകയ്ക്ക് ഒരു വീട്", "किराये का घर"),
+    ("vehicle", "ഒരു വാഹനം", "वाहन"),
+    ("visa", "ഒരു വിസ", "वीज़ा"),
+    ("journey_abroad", "ഒരു വിദേശയാത്ര", "विदेश यात्रा"),
+    ("settle_abroad", "വിദേശത്തെ സ്ഥിരതാമസം", "विदेश में बसना"),
+    ("pilgrimage", "ഒരു തീർത്ഥയാത്ര", "तीर्थयात्रा"),
+    ("return_home", "നാട്ടിലേക്കുള്ള മടക്കം", "घर वापसी"),
+    ("child_birth", "ഒരു കുഞ്ഞ്", "संतान"),
+    ("child_marriage", "മക്കളുടെ വിവാഹം", "संतान का विवाह"),
+    ("child_studies", "മക്കളുടെ പഠനം", "संतान की पढ़ाई"),
+    ("child_health", "മക്കളുടെ ആരോഗ്യം", "संतान की सेहत"),
+    ("adoption", "ദത്തെടുക്കൽ", "गोद लेना"),
+];
+
+fn topic_words_local(lang: Lang, key: &str) -> Option<&'static str> {
+    LOCAL.iter().find(|x| x.0 == key).map(|x| if lang == Lang::Hi { x.2 } else { x.1 })
+}
+
+/// The topic's houses, for the expert line: "houses 2, 7, 11 · against 1, 6, 10".
+pub fn houses_words(t: &Topic, lang: Lang) -> String {
+    let join = |v: &[u8]| v.iter().map(|h| h.to_string()).collect::<Vec<_>>().join(", ");
+    let (g, n) = (join(t.area.group), join(t.area.negating));
+    match lang {
+        Lang::En => format!("houses {g} · against {n}"),
+        Lang::Ml => format!("ഭാവങ്ങൾ {g} · എതിരായവ {n}"),
+        Lang::Hi => format!("भाव {g} · विरोधी {n}"),
+    }
+}
+
 /// Topics under a life, in order.
 pub fn topics_for(life: Life) -> Vec<&'static Topic> {
     TOPICS.iter().filter(|t| t.life == life).collect()
@@ -125,7 +206,12 @@ mod tests {
         assert_eq!(keys.len(), TOPICS.len(), "duplicate topic key");
         for t in TOPICS {
             assert_eq!(crate::plain::jargon(t.words), None, "{}", t.words);
+            for lang in [Lang::Ml, Lang::Hi] {
+                assert!(topic_words_local(lang, t.key).is_some(), "{}: no {lang:?} words", t.key);
+                assert_eq!(crate::plain::jargon_in(lang, t.words_in(lang)), None, "{}", t.words_in(lang));
+            }
         }
+        assert_eq!(LOCAL.len(), TOPICS.len());
         for t in TOPICS {
             assert!(t.area.group.contains(&t.area.primary), "{}: primary outside the group", t.key);
             assert!((1..=12).contains(&t.area.primary));

@@ -61,7 +61,7 @@ pub use calibrate::{
     Calibration, ReliabilityBin, RELIABILITY_BINS,
 };
 pub use coverage::{
-    chance_words, coverage, coverage_of, expected_hits, fit_profile, tally, Coverage,
+    chance_words, chance_words_in, coverage, coverage_of, coverage_of_in, expected_hits, fit_profile, tally, tally_in, Coverage,
     EventCoverage, FitProfile, FitSegment, PoissonBinomial, Tally, TransitTable,
     CANNOT_FAIL_COVERAGE, PROFILE_DEPTH, SUPPORT_THRESHOLD,
 };
@@ -76,18 +76,18 @@ pub use metrics::{
 };
 pub use opentest::{
     alpha_at_look, contribution, evaluate, evaluate_under, holm, install_code, no_better_than_chance, own_records,
-    own_words, protocol_hash, protocol_text, record_words, short_hash, silenced_areas, silenced_line, tail_p,
+    own_words, protocol_hash, protocol_text, record_words, record_words_in, report_text_in, short_hash, silenced_areas, silenced_line, tail_p,
     Contribution, Exclusions, GroupResult, LeftOut, OpenRecord, OpenReport, PooledArea, Silenced, SilencedBy,
     TestClaim, Tier, ALPHA, LOOK_EVERY, MIN_SALT, POOLED_AREAS, PROTOCOL_HASH_V1, PROTOCOL_VERSION, SILENCE_MIN,
 };
-pub use posterior::{birth_posterior, hpd_interval, Posterior, LIKELIHOOD_FLOOR, MAX_CANDIDATES};
+pub use posterior::{birth_posterior, birth_posterior_in, hpd_interval, Posterior, LIKELIHOOD_FLOOR, MAX_CANDIDATES};
 pub use retrodict::{retrodict, PeriodReading};
 pub use score::{
     combine_fit, fit_words, parashari_factor, score_at, score_event, transit_factor,
     transit_sample, EventScore, TransitSample, FUNNEL_DEPTH, JUPITER_GOOD_FROM_MOON,
     SADE_SATI_SHIFT, SATURN_GOOD_FROM_MOON, WEIGHT_DASHA, WEIGHT_PARASHARI, WEIGHT_TRANSIT,
 };
-pub use sealed::{resolve, seal, sealed_brier, SealedForecast};
+pub use sealed::{resolve, seal, seal_in, sealed_brier, SealedForecast};
 pub use claim::{claim_key, resolve_claim, seal_claim, select_new, ClaimInput, Outcome, SealedClaim, MIN_LEAD_DAYS};
 pub use scoreboard::{how_it_works, points_text, scoreboard, ScoreItem, ScoreLine, ScoreSource, Scoreboard, BEATS_CHANCE_P, MIN_TO_JUDGE};
 pub use integrity::{match_logged, record_card, BlindMatch, RecordCard, BLIND_GRACE_DAYS};

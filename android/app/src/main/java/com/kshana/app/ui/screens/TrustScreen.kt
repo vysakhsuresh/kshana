@@ -223,7 +223,7 @@ fun TrustScreen(profile: BirthProfile?, settings: EngineSettings, onBack: () -> 
                 if (it.fitLine.isNotEmpty()) Text(it.fitLine, style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             }
         }
-        val record = remember { uniffi.kshana_ffi.calibrate(com.kshana.app.data.PredictionStore.records(context)) }
+        val record = remember(com.kshana.app.data.Lang.code) { uniffi.kshana_ffi.calibrate(com.kshana.app.data.PredictionStore.records(context), com.kshana.app.data.Lang.code) }
         Text(record.words, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
         for (l in record.lives.filter { it.n > 0u }) {
             Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {

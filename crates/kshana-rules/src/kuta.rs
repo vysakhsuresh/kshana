@@ -3,6 +3,7 @@
 //! conventional ones and are stated in the source so nothing is hidden.
 
 use crate::parashari::natural_relation;
+use crate::plain::Lang;
 use crate::Facts;
 use kshana_chart::Chart;
 use kshana_vedic::{nakshatra, sign_lord, DashaLord};
@@ -256,6 +257,78 @@ pub fn ashtakoota(moon_a: f64, moon_b: f64) -> Ashtakoota {
     }
 }
 
+const VARNA_ML: [&str; 4] = ["ശൂദ്ര", "വൈശ്യ", "ക്ഷത്രിയ", "ബ്രാഹ്മണ"];
+const VARNA_HI: [&str; 4] = ["शूद्र", "वैश्य", "क्षत्रिय", "ब्राह्मण"];
+const VASHYA_ML: [&str; 5] = ["ചതുഷ്പാദം", "മാനവം", "ജലചരം", "വനചരം", "കീടം"];
+const VASHYA_HI: [&str; 5] = ["चतुष्पद", "मानव", "जलचर", "वनचर", "कीट"];
+const YONI_ML: [&str; 14] = ["കുതിര", "ആന", "ആട്", "പാമ്പ്", "നായ", "പൂച്ച", "എലി", "പശു", "എരുമ", "കടുവ", "മാൻ", "കുരങ്ങ്", "കീരി", "സിംഹം"];
+const YONI_HI: [&str; 14] = ["घोड़ा", "हाथी", "भेड़", "सर्प", "कुत्ता", "बिल्ली", "चूहा", "गाय", "भैंस", "बाघ", "हिरण", "बंदर", "नेवला", "सिंह"];
+const GANA_ML: [&str; 3] = ["ദേവ", "മനുഷ്യ", "രാക്ഷസ"];
+const GANA_HI: [&str; 3] = ["देव", "मनुष्य", "राक्षस"];
+const NADI_ML: [&str; 3] = ["ആദി", "മധ്യ", "അന്ത്യ"];
+const NADI_HI: [&str; 3] = ["आदि", "मध्य", "अंत्य"];
+
+/// [`ashtakoota`] with the detail and the verdict in the reader's language (expert
+/// text: the classical names in Malayalam or Devanagari). `name` stays the English key.
+pub fn ashtakoota_in(moon_a: f64, moon_b: f64, lang: Lang) -> Ashtakoota {
+    let mut r = ashtakoota(moon_a, moon_b);
+    if lang == Lang::En {
+        return r;
+    }
+    let hi = lang == Lang::Hi;
+    let sa = (moon_a.rem_euclid(360.0) / 30.0).floor() as usize % 12;
+    let sb = (moon_b.rem_euclid(360.0) / 30.0).floor() as usize % 12;
+    let na = nakshatra(moon_a).index;
+    let nb = nakshatra(moon_b).index;
+    let pair = |a: &str, b: &str| if hi { format!("{a} और {b}") } else { format!("{a}, {b}") };
+    let pick = |ml: &'static [&'static str], hl: &'static [&'static str], i: usize| if hi { hl[i] } else { ml[i] };
+    for k in r.kutas.iter_mut() {
+        k.detail = match k.name {
+            "Varna" => pair(pick(&VARNA_ML, &VARNA_HI, varna(sa)), pick(&VARNA_ML, &VARNA_HI, varna(sb))),
+            "Vashya" => pair(pick(&VASHYA_ML, &VASHYA_HI, vashya(moon_a)), pick(&VASHYA_ML, &VASHYA_HI, vashya(moon_b))),
+            "Tara" => {
+                let (t1, t2) = (tara(na, nb), tara(nb, na));
+                if hi { format!("9 में से {t1} और {t2} की गिनती") } else { format!("9-ൽ {t1}, {t2} എന്ന എണ്ണം") }
+            }
+            "Yoni" => pair(pick(&YONI_ML, &YONI_HI, YONI_OF[na]), pick(&YONI_ML, &YONI_HI, YONI_OF[nb])),
+            "Graha Maitri" => {
+                let (la, lb) = (crate::lang::graha_name(lang, sign_lord(sa)), crate::lang::graha_name(lang, sign_lord(sb)));
+                if hi { format!("चंद्र राशि के स्वामी {la} और {lb}") } else { format!("ചന്ദ്രരാശിയുടെ അധിപന്മാർ {la}, {lb}") }
+            }
+            "Gana" => pair(pick(&GANA_ML, &GANA_HI, GANA_OF[na]), pick(&GANA_ML, &GANA_HI, GANA_OF[nb])),
+            "Bhakoot" => {
+                let (d1, d2) = ((sb + 12 - sa) % 12 + 1, (sa + 12 - sb) % 12 + 1);
+                if hi { format!("चंद्र राशियाँ {d1} और {d2} की दूरी पर") } else { format!("ചന്ദ്രരാശികൾ തമ്മിൽ {d1}, {d2} അകലം") }
+            }
+            "Nadi" => pair(pick(&NADI_ML, &NADI_HI, nadi(na)), pick(&NADI_ML, &NADI_HI, nadi(nb))),
+            _ => std::mem::take(&mut k.detail),
+        };
+    }
+    r.verdict = lang.pick(match r.verdict {
+        "Excellent" => ["Excellent", "ഉത്തമം", "उत्तम"],
+        "Good" => ["Good", "നല്ലത്", "अच्छा"],
+        "Acceptable" => ["Acceptable", "സ്വീകാര്യം", "स्वीकार्य"],
+        _ => ["Asks for care", "കരുതൽ ചോദിക്കുന്നു", "ध्यान माँगता है"],
+    });
+    r
+}
+
+/// [`mangal_dosha`] with the cancellations in the reader's language (expert text).
+pub fn mangal_dosha_in(facts: &Facts, lang: Lang) -> MangalDosha {
+    let mut m = mangal_dosha(facts);
+    for c in m.cancellations.iter_mut() {
+        let t = match c.as_str() {
+            "Mars in its own sign" => ["Mars in its own sign", "ചൊവ്വ സ്വക്ഷേത്രത്തിൽ", "मंगल अपनी राशि में"],
+            "Mars exalted in Capricorn" => ["Mars exalted in Capricorn", "ചൊവ്വ മകരത്തിൽ ഉച്ചത്തിൽ", "मंगल मकर में उच्च"],
+            "Mars in Cancer or Leo (held harmless by some texts)" => ["Mars in Cancer or Leo (held harmless by some texts)", "ചൊവ്വ കർക്കടകത്തിലോ ചിങ്ങത്തിലോ (ചില ഗ്രന്ഥങ്ങൾ ദോഷമില്ലെന്ന് കാണുന്നു)", "मंगल कर्क या सिंह में (कुछ ग्रंथ इसे निर्दोष मानते हैं)"],
+            "Jupiter aspects or joins Mars" => ["Jupiter aspects or joins Mars", "വ്യാഴം ചൊവ്വയെ നോക്കുകയോ ചൊവ്വയോടു ചേരുകയോ ചെയ്യുന്നു", "गुरु मंगल को देखता है या उसके साथ है"],
+            _ => continue,
+        };
+        *c = lang.pick(t).to_string();
+    }
+    m
+}
+
 /// Mangal (Kuja) dosha from one chart.
 #[derive(Clone, Debug, PartialEq)]
 pub struct MangalDosha {
@@ -415,6 +488,23 @@ mod tests {
                 assert_eq!(*v, VASHYA_TABLE[j][i]);
             }
         }
+    }
+
+    #[test]
+    fn the_details_are_written_in_malayalam_and_hindi() {
+        for lang in [Lang::Ml, Lang::Hi] {
+            for (a, b) in [(45.0, 165.0), (100.0, 100.0), (250.0, 10.0), (300.0, 200.0)] {
+                let r = ashtakoota_in(a, b, lang);
+                let en = ashtakoota(a, b);
+                assert_eq!(r.total, en.total);
+                assert!(!r.verdict.is_ascii());
+                for (k, e) in r.kutas.iter().zip(en.kutas.iter()) {
+                    assert_eq!(k.name, e.name);
+                    assert!(!k.detail.chars().any(|c| c.is_ascii_alphabetic()), "{lang:?} {}: {}", k.name, k.detail);
+                }
+            }
+        }
+        assert_eq!(ashtakoota_in(45.0, 165.0, Lang::En), ashtakoota(45.0, 165.0));
     }
 
     #[test]

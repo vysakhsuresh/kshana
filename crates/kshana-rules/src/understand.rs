@@ -16,6 +16,7 @@
 //! distress, it answers with care first.
 
 use crate::forecast::Life;
+use crate::plain::Lang;
 use crate::topics::TOPICS;
 
 /// What to do with the question.
@@ -522,6 +523,236 @@ pub fn understand(text: &str) -> Understanding {
         }
     }
     u
+}
+
+/// Understand a question in the person's own words, and reply in the reader's language.
+/// The matching is the same in every language; only the words shown change.
+pub fn understand_in(text: &str, lang: Lang) -> Understanding {
+    let u = understand(text);
+    match lang {
+        Lang::En => u,
+        _ => localise(u, lang),
+    }
+}
+
+// ---------------------------------------------------------------------------------
+// The reply in Malayalam and Hindi. The understanding is made once, in English; each
+// message and label is then rebuilt from what was understood (the action and the
+// reason), never translated word by word.
+// ---------------------------------------------------------------------------------
+
+fn q_local(lang: Lang, q: &str) -> &'static str {
+    let t = match q {
+        "when" => ["when?", "എപ്പോൾ?", "कब?"],
+        "will_it_happen" => ["will it happen?", "നടക്കുമോ?", "होगा या नहीं?"],
+        "should_i" => ["should I go ahead?", "മുന്നോട്ടു പോകണോ?", "आगे बढ़ूँ या नहीं?"],
+        "good_time_now" => ["is now a good time?", "ഇപ്പോൾ നല്ല സമയമാണോ?", "क्या अभी अच्छा समय है?"],
+        "will_it_return" => ["will it come back?", "തിരിച്ചുവരുമോ?", "क्या यह लौटेगा?"],
+        _ => ["will it be set right?", "ശരിയാകുമോ?", "क्या यह ठीक होगा?"],
+    };
+    lang.pick(t)
+}
+
+fn topic_local(lang: Lang, key: &str) -> &'static str {
+    crate::topics::topic(key).map(|t| t.words_in(lang)).unwrap_or(lang.pick(["this", "ഇത്", "यह"]))
+}
+
+fn plan_local(lang: Lang, p: &str) -> &'static str {
+    let t = match p {
+        "interview" => ["an interview", "ഒരു ഇന്റർവ്യൂ", "इंटरव्यू"],
+        "exam" => ["an exam", "ഒരു പരീക്ഷ", "परीक्षा"],
+        "journey" => ["a journey", "ഒരു യാത്ര", "यात्रा"],
+        "deal" => ["a deal or a signing", "ഒരു ഇടപാടോ ഒപ്പിടലോ", "सौदा या दस्तख़त"],
+        "doctor" => ["the doctor or a treatment", "ഡോക്ടറെ കാണലോ ചികിത്സയോ", "डॉक्टर या इलाज"],
+        "date" => ["meeting someone for marriage", "വിവാഹാലോചനയ്ക്കായി ഒരാളെ കാണൽ", "शादी के लिए किसी से मिलना"],
+        "family" => ["a family function", "ഒരു കുടുംബച്ചടങ്ങ്", "पारिवारिक समारोह"],
+        "property" => ["a property matter", "ഒരു വസ്തുകാര്യം", "ज़मीन-जायदाद का काम"],
+        "launch" => ["starting something new", "പുതിയതെന്തെങ്കിലും തുടങ്ങൽ", "कुछ नया शुरू करना"],
+        "meeting" => ["a meeting", "ഒരു കൂടിക്കാഴ്ച", "मुलाक़ात"],
+        _ => ["anything", "എന്തിനും", "कोई भी काम"],
+    };
+    lang.pick(t)
+}
+
+fn span_local(lang: Lang, s: &str) -> &'static str {
+    let t = match s {
+        "day" => ["today", "ഇന്ന്", "आज"],
+        "week" => ["this week", "ഈ ആഴ്ച", "यह हफ़्ता"],
+        "month" => ["this month", "ഈ മാസം", "यह महीना"],
+        _ => ["this year", "ഈ വർഷം", "यह साल"],
+    };
+    lang.pick(t)
+}
+
+/// How the question was understood, without the "Understood as" head.
+fn understood_local(lang: Lang, a: &Action) -> String {
+    let life = |l: &Life| crate::lang::life_name(lang, *l);
+    match (lang, a) {
+        (Lang::Hi, Action::Past) => "जो हो चुका उस पर एक नज़र, और वह समय आपके लिए कैसा रहा।".into(),
+        (_, Action::Past) => "കഴിഞ്ഞുപോയതിലേക്ക് ഒരു തിരിഞ്ഞുനോട്ടം, ആ കാലം നിങ്ങൾക്ക് എങ്ങനെയായിരുന്നു എന്ന്.".into(),
+        (Lang::Hi, Action::ChartFear) => "क्या मेरे जन्म-समय में कुछ गड़बड़ है, और वह कब ख़त्म होगा?".into(),
+        (_, Action::ChartFear) => "എന്റെ ജനനസമയത്തിൽ എന്തെങ്കിലും കുഴപ്പമുണ്ടോ, അത് എപ്പോൾ തീരും?".into(),
+        (Lang::Hi, Action::Remedy(Some(l))) => format!("{}: क्या मदद करेगा।", life(l)),
+        (_, Action::Remedy(Some(l))) => format!("{}: എന്തു ചെയ്താൽ സഹായമാകും.", life(l)),
+        (Lang::Hi, Action::Remedy(None)) => "क्या मदद करेगा।".into(),
+        (_, Action::Remedy(None)) => "എന്തു ചെയ്താൽ സഹായമാകും.".into(),
+        (Lang::Hi, Action::Us) => "आप दोनों साथ में कैसे हैं।".into(),
+        (_, Action::Us) => "നിങ്ങൾ രണ്ടുപേരും ഒരുമിച്ച് എങ്ങനെ നിൽക്കുന്നു.".into(),
+        (Lang::Hi, Action::Plan(p)) => format!("{} के लिए अच्छा दिन और घंटा।", plan_local(lang, p)),
+        (_, Action::Plan(p)) => format!("{}: നല്ല ദിവസവും സമയവും.", plan_local(lang, p)),
+        (_, Action::Ask { topic: Some(k), question, .. }) => format!("{} — {}", topic_local(lang, k), q_local(lang, question)),
+        (_, Action::Ask { life: l, topic: None, question }) => format!("{} — {}", life(l), q_local(lang, question)),
+        (Lang::Hi, Action::Future) => "आने वाले सालों में क्या आ रहा है।".into(),
+        (_, Action::Future) => "വരും വർഷങ്ങളിൽ എന്തു വരുന്നു.".into(),
+        (Lang::Hi, Action::Outlook(s)) => format!("{} आपके लिए कैसा है।", span_local(lang, s)),
+        (_, Action::Outlook(s)) => format!("{} നിങ്ങൾക്ക് എങ്ങനെ.", span_local(lang, s)),
+        (Lang::Hi, Action::Life(l)) => format!("{}: अभी और आगे कैसा है।", life(l)),
+        (_, Action::Life(l)) => format!("{}: ഇപ്പോഴും മുന്നോട്ടും എങ്ങനെ.", life(l)),
+    }
+}
+
+/// An offered question's label, from its English label and what it does.
+fn label_local(lang: Lang, en: &str, a: &Action) -> String {
+    let fixed = match en {
+        "How is my day today?" => Some(["ഇന്നത്തെ ദിവസം എനിക്ക് എങ്ങനെ?", "आज मेरा दिन कैसा है?"]),
+        "What does this year hold for me?" => Some(["ഈ വർഷം എനിക്കായി എന്താണ് കരുതിവച്ചിരിക്കുന്നത്?", "यह साल मेरे लिए क्या लेकर आया है?"]),
+        "How is money for me?" => Some(["എന്റെ പണകാര്യം എങ്ങനെ?", "मेरे लिए पैसा कैसा है?"]),
+        "How is my health?" => Some(["എന്റെ ആരോഗ്യം എങ്ങനെ?", "मेरी सेहत कैसी है?"]),
+        "What is coming in the years ahead?" => Some(["വരും വർഷങ്ങളിൽ എന്തു വരുന്നു?", "आने वाले सालों में क्या आ रहा है?"]),
+        "What will help me now?" => Some(["ഇപ്പോൾ എന്തു ചെയ്താൽ സഹായമാകും?", "अभी मुझे क्या मदद करेगा?"]),
+        "Is something wrong in my chart?" => Some(["എന്റെ ജനനസമയത്തിൽ എന്തെങ്കിലും കുഴപ്പമുണ്ടോ?", "क्या मेरे जन्म-समय में कुछ गड़बड़ है?"]),
+        "When does this hard time ease?" => Some(["ഈ പ്രയാസകാലം എപ്പോൾ അയയും?", "यह कठिन समय कब हल्का होगा?"]),
+        "A good day to see the doctor" => Some(["ഡോക്ടറെ കാണാൻ ഒരു നല്ല ദിവസം", "डॉक्टर से मिलने का अच्छा दिन"]),
+        "Add someone under Us" => Some(["'നമ്മൾ' എന്നതിൽ ഒരാളെ ചേർക്കൂ", "'हम' में किसी को जोड़ें"]),
+        "How is my family life?" => Some(["എന്റെ കുടുംബജീവിതം എങ്ങനെ?", "मेरा पारिवारिक जीवन कैसा है?"]),
+        "How is love for me now?" => Some(["ഇപ്പോൾ എന്റെ പ്രണയം എങ്ങനെ?", "अभी मेरे लिए प्रेम कैसा है?"]),
+        "How do the two of us stand together?" => Some(["ഞങ്ങൾ രണ്ടുപേരും ഒരുമിച്ച് എങ്ങനെ?", "हम दोनों साथ में कैसे हैं?"]),
+        _ => None,
+    };
+    if let Some([ml, hi]) = fixed {
+        return if lang == Lang::Hi { hi } else { ml }.to_string();
+    }
+    let life = |l: &Life| crate::lang::life_name(lang, *l);
+    match (lang, a) {
+        (_, Action::Ask { topic: Some(k), question, .. }) => format!("{}: {}", topic_local(lang, k), q_local(lang, question)),
+        (Lang::Hi, Action::Life(l)) if en.starts_with("How is ") => format!("{}: अभी मेरे लिए कैसा है?", life(l)),
+        (_, Action::Life(l)) if en.starts_with("How is ") => format!("{}: ഇപ്പോൾ എനിക്ക് എങ്ങനെ?", life(l)),
+        (Lang::Hi, Action::Remedy(Some(l))) if en.starts_with("What will help my ") => format!("{}: क्या मदद करेगा?", life(l)),
+        (_, Action::Remedy(Some(l))) if en.starts_with("What will help my ") => format!("{}: എന്തു ചെയ്താൽ സഹായമാകും?", life(l)),
+        (Lang::Hi, Action::Plan(p)) if en.starts_with("A good day for ") => format!("{} के लिए अच्छा दिन", plan_local(lang, p)),
+        (_, Action::Plan(p)) if en.starts_with("A good day for ") => format!("{}: ഒരു നല്ല ദിവസം", plan_local(lang, p)),
+        _ => understood_local(lang, a),
+    }
+}
+
+/// The reply for a question that a reading cannot answer, by its reason.
+fn outside_local(lang: Lang, reason: &str) -> Option<&'static str> {
+    let t = match reason {
+        "gender" => [
+            "കുഞ്ഞ് ആണോ പെണ്ണോ എന്ന് ക്ഷണ പ്രവചിക്കില്ല. ഒരു വായനയ്ക്കും അത് സത്യമായി പറയാനാകില്ല, ഇന്ത്യയിൽ അങ്ങനെ ചോദിക്കുന്നത് നിയമവിരുദ്ധവുമാണ് (PCPNDT നിയമം). കുഞ്ഞ് വരുന്ന സമയത്തെക്കുറിച്ച് പറയാനാകും.",
+            "क्षण यह नहीं बताता कि बच्चा लड़का होगा या लड़की। कोई भी पढ़त इसे सच में नहीं बता सकती, और भारत में यह पूछना क़ानून के ख़िलाफ़ है (PCPNDT क़ानून)। यह संतान के समय के बारे में बता सकता है।",
+        ],
+        "death" => [
+            "ഒരാൾ എത്ര കാലം ജീവിക്കും എന്ന് ക്ഷണ ഒരിക്കലും പറയില്ല, നിങ്ങളെക്കുറിച്ചായാലും മറ്റാരെക്കുറിച്ചായാലും. അത് ആർക്കും അറിയാനാകില്ല, പറയാനും പാടില്ല. ആരോഗ്യം എങ്ങനെ നിൽക്കുന്നു, പ്രയാസകാലം എപ്പോൾ അയയും എന്ന് പറയാനാകും.",
+            "क्षण कभी नहीं बताता कि कोई जीवन कितना लंबा चलेगा, न आपका न किसी और का। यह कोई नहीं जान सकता, और यह कहा भी नहीं जाना चाहिए। यह बता सकता है कि सेहत कैसी है और कठिन दौर कब हल्का होगा।",
+        ],
+        "gamble" => [
+            "ലോട്ടറി നമ്പറുകളോ പന്തയ സൂചനകളോ ഏത് ഓഹരി വാങ്ങണമെന്നോ ക്ഷണ പറയില്ല. ആകാശത്തിൽ നമ്പറുകളില്ല, സത്യസന്ധമായ ഒരു വായനയും അങ്ങനെ അവകാശപ്പെടില്ല. പണകാര്യം എങ്ങനെ നിൽക്കുന്നു, എപ്പോൾ മെച്ചപ്പെടും എന്ന് പറയാനാകും.",
+            "क्षण लॉटरी नंबर, सट्टे के सुझाव या कौन-सा शेयर ख़रीदें, यह नहीं बताता। आसमान में नंबर नहीं होते, और कोई ईमानदार पढ़त ऐसा दावा नहीं करेगी। यह बता सकता है कि पैसा कैसा है और कब सुधरेगा।",
+        ],
+        "medical" => [
+            "രോഗം നിർണ്ണയിക്കാനോ റിപ്പോർട്ട് വായിക്കാനോ മരുന്ന് തിരഞ്ഞെടുക്കാനോ ക്ഷണയ്ക്ക് കഴിയില്ല; ദയവായി ഡോക്ടറോട് ചോദിക്കൂ, ഒരു വായനയുടെ പേരിൽ ചികിത്സ ഒരിക്കലും നിർത്തരുത്. ആരോഗ്യം എങ്ങനെ നിൽക്കുന്നു, ചികിത്സയ്ക്ക് നല്ല ദിവസങ്ങൾ ഏതെല്ലാം എന്ന് പറയാനാകും.",
+            "क्षण बीमारी की पहचान नहीं कर सकता, रिपोर्ट नहीं पढ़ सकता, न दवा चुन सकता है; कृपया अपने डॉक्टर से पूछें, और किसी पढ़त की वजह से इलाज कभी न रोकें। यह बता सकता है कि सेहत कैसी है और इलाज के लिए अच्छे दिन कौन-से हैं।",
+        ],
+        "curse" => [
+            "കൂടോത്രമോ ശാപമോ, ആരെങ്കിലും നിങ്ങളോട് എന്തെങ്കിലും ചെയ്തോ എന്നോ ക്ഷണ അന്വേഷിക്കില്ല; ആകാശത്തിന്റെ വായനയ്ക്ക് മറ്റൊരാളുടെ പ്രവൃത്തി കാണാനാകില്ല. ഇപ്പോൾ ശരിക്കും നിങ്ങളെ ഞെരുക്കുന്നത് എന്ത്, അത് എപ്പോൾ തീരും, എന്തു സഹായിക്കും എന്ന് കാണിക്കാനാകും.",
+            "क्षण काला जादू, श्राप या किसने आपके साथ कुछ किया, यह नहीं खोजता; आसमान की पढ़त किसी और के कामों को नहीं देख सकती। यह दिखा सकता है कि अभी असल में आप पर क्या दबाव है, वह कब ख़त्म होगा, और क्या मदद करेगा।",
+        ],
+        "other_mind" => [
+            "മറ്റൊരാൾ എന്തു ചെയ്യുന്നു, എന്തു തോന്നുന്നു എന്ന് ക്ഷണയ്ക്ക് കാണാനാകില്ല; അത് അവരുടേതാണ്, നിങ്ങളുടെ ജനനസമയത്തിൽ എഴുതിയതല്ല. നിങ്ങളുടെ ദാമ്പത്യമോ ബന്ധമോ എങ്ങനെ നിൽക്കുന്നു, എപ്പോൾ അയയും എന്ന് പറയാനാകും.",
+            "क्षण यह नहीं देख सकता कि कोई और क्या कर रहा है या महसूस कर रहा है; वह उनका है, आपके जन्म-समय में लिखा नहीं। यह बता सकता है कि आपका विवाह या रिश्ता कैसा है, और कब हल्का होगा।",
+        ],
+        "names" => [
+            "ഒരു പേരോ ആദ്യാക്ഷരമോ, ആ വ്യക്തി കൃത്യമായി ആരായിരിക്കും എന്നോ ക്ഷണയ്ക്ക് പറയാനാകില്ല. വിവാഹമോ ഒരു ബന്ധമോ എപ്പോൾ വരാൻ സാധ്യതയുണ്ടെന്ന് പറയാനാകും.",
+            "क्षण कोई नाम, पहला अक्षर या वह व्यक्ति ठीक-ठीक कौन होगा, यह नहीं बता सकता। यह बता सकता है कि विवाह या रिश्ता कब होने की संभावना है।",
+        ],
+        "amount" => [
+            "കൃത്യമായ ഒരു തുകയോ ശമ്പളമോ ക്ഷണയ്ക്ക് പറയാനാകില്ല. പണം കൂടുമോ കുറയുമോ, എപ്പോൾ എന്ന് പറയാനാകും.",
+            "क्षण कोई ठीक रक़म या तनख़्वाह नहीं बता सकता। यह बता सकता है कि पैसा बढ़ेगा या घटेगा, और कब।",
+        ],
+        "lost" => [
+            "നഷ്ടപ്പെട്ടതോ മോഷണം പോയതോ ആയ ഒരു വസ്തു കണ്ടെത്താനോ ആരെടുത്തു എന്നു പറയാനോ ക്ഷണയ്ക്ക് കഴിയില്ല. നിങ്ങളുടെ സ്വന്തം ജീവിതത്തിന്റെ ഗതിയാണ് അത് വായിക്കുന്നത്.",
+            "क्षण खोई या चोरी हुई चीज़ नहीं ढूँढ सकता, न बता सकता है कि किसने ली। यह आपके अपने जीवन की राह पढ़ता है।",
+        ],
+        "world" => [
+            "ക്ഷണ നിങ്ങളുടെ സ്വന്തം ജനനസമയത്തിൽ നിന്ന് നിങ്ങളുടെ ജീവിതമാണ് വായിക്കുന്നത്; തിരഞ്ഞെടുപ്പുകളോ കളികളോ വിപണിയോ കാലാവസ്ഥയോ പ്രവചിക്കില്ല.",
+            "क्षण आपके अपने जन्म-समय से आपका जीवन पढ़ता है; यह चुनाव, मैच, बाज़ार या मौसम की भविष्यवाणी नहीं करता।",
+        ],
+        "other_person" => [
+            "ഈ ചോദ്യം മറ്റൊരാളുടെ സ്വന്തം ജീവിതത്തെക്കുറിച്ചാണ്; അത് വായിക്കാൻ അവരുടെ ജനനത്തീയതിയും സമയവും സ്ഥലവും വേണം. 'നമ്മൾ' എന്നതിൽ അവരെ ചേർത്ത് വായിക്കാം, അല്ലെങ്കിൽ അത് നിങ്ങളുടെ ജീവിതത്തെ എങ്ങനെ തൊടുന്നു എന്ന് ചോദിക്കാം.",
+            "यह सवाल किसी और के अपने जीवन के बारे में है, और उसे पढ़ने के लिए उनकी जन्म-तारीख़, समय और जगह चाहिए। उन्हें 'हम' में जोड़कर पढ़ें, या पूछें कि यह आपके जीवन को कैसे छूता है।",
+        ],
+        _ => return None,
+    };
+    Some(if lang == Lang::Hi { t[1] } else { t[0] })
+}
+
+const OFFLINE_NOTE_ML: &str = "ക്ഷണ ഓഫ്‌ലൈനായാണ് പ്രവർത്തിക്കുന്നത്: ഓരോ ഉത്തരവും നിങ്ങളുടെ ജനനസമയത്തിൽ നിന്നും ആകാശത്തിൽ നിന്നും ഈ ഫോണിൽ തന്നെ, ഒരു നിശ്ചിത ചോദ്യപ്പട്ടികയ്ക്കായി കണക്കാക്കുന്നതാണ്.";
+const OFFLINE_NOTE_HI: &str = "क्षण बिना इंटरनेट चलता है: हर जवाब आपके जन्म-समय और आसमान से, इसी फ़ोन पर, तय सवालों की सूची के लिए निकाला जाता है।";
+
+fn localise(u: Understanding, lang: Lang) -> Understanding {
+    let hi = lang == Lang::Hi;
+    let pick = |ml: &str, h: &str| if hi { h.to_string() } else { ml.to_string() };
+    let en = u.message.as_str();
+    let message = match u.status {
+        "answer" => match &u.action {
+            Some(a) => format!("{}{}", if hi { "समझा गया: " } else { "മനസ്സിലാക്കിയത്: " }, understood_local(lang, a)),
+            None => u.message.clone(),
+        },
+        "care" => pick(
+            "നിങ്ങൾ വളരെ ഭാരമുള്ള എന്തോ ചുമക്കുന്നതുപോലെ തോന്നുന്നു. ദയവായി ഇപ്പോൾ തന്നെ ആരോടെങ്കിലും സംസാരിക്കൂ: ഇന്ത്യാ ഗവൺമെന്റിന്റെ സൗജന്യ ഹെൽപ്‌ലൈനായ ടെലി-മനസ് 14416-ൽ രാവും പകലും നിങ്ങളുടെ ഭാഷയിൽ മറുപടി തരും. ഉടൻ സഹായം വേണമെങ്കിൽ 112-ൽ വിളിക്കൂ. പ്രയാസകാലം കടന്നുപോകും; ഇത് എപ്പോൾ അയയുമെന്ന് ക്ഷണയ്ക്ക് കാണിച്ചുതരാനാകും.",
+            "लगता है आप बहुत भारी बोझ उठाए हुए हैं। कृपया अभी किसी से बात करें: भारत सरकार की मुफ़्त हेल्पलाइन टेली-मानस 14416 पर दिन-रात आपकी भाषा में जवाब देती है। अगर आप ख़तरे में हैं, तो 112 पर कॉल करें। कठिन समय बीत जाता है, और क्षण आपको दिखा सकता है कि यह कब हल्का होगा।",
+        ),
+        "outside" => match outside_local(lang, u.reason) {
+            Some(m) => format!("{m} {}", if hi { OFFLINE_NOTE_HI } else { OFFLINE_NOTE_ML }),
+            None => u.message.clone(),
+        },
+        _ => {
+            if en.starts_with("Kshana is not sure") {
+                pick(
+                    "നിങ്ങളുടെ ചോദ്യം മുഴുവൻ മനസ്സിലായോ എന്ന് ക്ഷണയ്ക്ക് ഉറപ്പില്ല, അതിനാൽ ഊഹിച്ചു പറയില്ല. ഇത് ഓഫ്‌ലൈനായി, നിങ്ങളുടെ ജനനസമയത്തിൽ നിന്നും ആകാശത്തിൽ നിന്നും, ഒരു നിശ്ചിത ചോദ്യപ്പട്ടികയ്ക്കാണ് ഉത്തരം തരുന്നത്. ഇവയിൽ ഒന്നാണോ?",
+                    "क्षण को पक्का नहीं कि उसने आपका पूरा सवाल समझा, इसलिए वह अंदाज़ा नहीं लगाएगा। यह बिना इंटरनेट, आपके जन्म-समय और आसमान से, तय सवालों की सूची के लिए जवाब देता है। क्या यह इनमें से एक है?",
+                )
+            } else if en.starts_with("Type or say") {
+                pick(
+                    "നിങ്ങളുടെ ജീവിതത്തെക്കുറിച്ച് ഒരു ചോദ്യം ടൈപ്പ് ചെയ്യുകയോ പറയുകയോ ചെയ്യൂ; നിങ്ങളുടെ ജനനസമയത്തിൽ നിന്നും ആകാശത്തിൽ നിന്നും ക്ഷണ ഉത്തരം തരും. അല്ലെങ്കിൽ ഇവയിൽ ഒന്ന് തിരഞ്ഞെടുക്കൂ.",
+                    "अपने जीवन के बारे में कोई सवाल लिखें या बोलें, क्षण आपके जन्म-समय और आसमान से उसका जवाब देगा। या इनमें से कोई एक चुनें।",
+                )
+            } else if en.starts_with("Understood: you want a good day") {
+                pick(
+                    "മനസ്സിലായി: നിങ്ങൾക്ക് ഒരു നല്ല ദിവസം വേണം. എന്തിനാണ്? ഒന്ന് തിരഞ്ഞെടുക്കൂ, അല്ലെങ്കിൽ അത് പറഞ്ഞ് വീണ്ടും ചോദിക്കൂ.",
+                    "समझ गया: आपको एक अच्छा दिन चाहिए। किसलिए? कोई एक चुनें, या उसका नाम लेकर फिर पूछें।",
+                )
+            } else if en.starts_with("Understood: ") {
+                let topic = match u.alternatives.first().map(|a| &a.action) {
+                    Some(Action::Ask { topic: Some(k), .. }) => topic_local(lang, k),
+                    _ => lang.pick(["this", "ഇത്", "यह"]),
+                };
+                if hi { format!("समझ गया: {topic}। आप क्या जानना चाहते हैं?") } else { format!("മനസ്സിലായി: {topic}. എന്താണ് അറിയേണ്ടത്?") }
+            } else if en.starts_with("Your question touches more than one part of life") {
+                pick("നിങ്ങളുടെ ചോദ്യം ജീവിതത്തിന്റെ ഒന്നിലധികം ഭാഗങ്ങളെ തൊടുന്നു. ഏതാണ് ഉദ്ദേശിച്ചത്?", "आपका सवाल जीवन के एक से ज़्यादा हिस्सों को छूता है। आपका मतलब किससे है?")
+            } else if en.starts_with("Your question touches more than one") {
+                pick("നിങ്ങളുടെ ചോദ്യം ഒന്നിലധികം കാര്യങ്ങളെ തൊടുന്നു. ഏതാണ് ഉദ്ദേശിച്ചത്?", "आपका सवाल एक से ज़्यादा बातों को छूता है। आपका मतलब किससे है?")
+            } else {
+                pick(
+                    "ക്ഷമിക്കണം, സത്യസന്ധമായി ഉത്തരം പറയാൻ പാകത്തിൽ ഈ ചോദ്യം ക്ഷണയ്ക്ക് മനസ്സിലായില്ല. ഇത് ഓഫ്‌ലൈനായി, നിങ്ങളുടെ ജനനസമയത്തിൽ നിന്നും ആകാശത്തിൽ നിന്നും, ഒരു നിശ്ചിത ചോദ്യപ്പട്ടികയ്ക്കാണ് ഉത്തരം തരുന്നത്. ഉത്തരം പറയാനാകുന്ന ഏറ്റവും അടുത്ത ചോദ്യങ്ങൾ ഇതാ; അല്ലെങ്കിൽ മറ്റു വാക്കുകളിൽ വീണ്ടും ചോദിക്കൂ.",
+                    "माफ़ कीजिए, क्षण इस सवाल को इतना नहीं समझ पाया कि सच्चा जवाब दे सके। यह बिना इंटरनेट, आपके जन्म-समय और आसमान से, तय सवालों की सूची के लिए जवाब देता है। ये सबसे पास के सवाल हैं जिनका यह जवाब दे सकता है; या दूसरे शब्दों में फिर पूछें।",
+                )
+            }
+        }
+    };
+    let alternatives = u.alternatives.iter().map(|a| Alternative { label: label_local(lang, &a.label, &a.action), action: a.action.clone() }).collect();
+    Understanding { message, alternatives, ..u }
 }
 
 fn understand_with(text: &str, combos: bool) -> Understanding {
@@ -1408,5 +1639,29 @@ mod third_set {
         }
         println!("third: {} phrasings: {} right, {} honestly unsure, {} wrong\nUNSURE: {}\nWRONG:\n{}", THIRD.len(), right, unsure.len(), wrong.len(), unsure.join(", "), wrong.join("\n"));
         assert!(wrong.is_empty());
+    }
+
+    /// The reply in Malayalam and Hindi: the same understanding, every word shown in the
+    /// reader's script (a law's acronym and the helpline numbers aside), and plain.
+    #[test]
+    fn replies_in_malayalam_and_hindi_are_whole_and_plain() {
+        let extra = [
+            "", "asdf qwerty", "I want to die", "boy or girl", "lottery number", "which medicine", "name of my wife", "where is my ring", "black magic",
+            "is he cheating", "how much money", "election", "my friend s job", "good day", "marriage", "how is my health", "past", "what will help my career",
+            "this week", "future", "us two", "how is my career and money", "when will i get a job abroad and marry",
+        ];
+        for text in THIRD.iter().map(|x| x.0).chain(extra) {
+            let en = understand(text);
+            assert_eq!(understand_in(text, Lang::En), en);
+            for lang in [Lang::Ml, Lang::Hi] {
+                let u = understand_in(text, lang);
+                assert_eq!((u.status, &u.action, u.reason, u.alternatives.len()), (en.status, &en.action, en.reason, en.alternatives.len()), "{text:?}");
+                for s in std::iter::once(&u.message).chain(u.alternatives.iter().map(|a| &a.label)) {
+                    let latin = s.split(|c: char| !c.is_ascii_alphabetic()).find(|w| w.len() >= 3 && *w != "PCPNDT");
+                    assert_eq!(latin, None, "{lang:?} {text:?}: {s}");
+                    assert_eq!(crate::plain::jargon_in(lang, s), None, "{lang:?} {text:?}: {s}");
+                }
+            }
+        }
     }
 }
