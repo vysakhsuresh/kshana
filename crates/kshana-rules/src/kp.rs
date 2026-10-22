@@ -14,6 +14,8 @@
 
 use crate::areas::Area;
 use crate::facts::Facts;
+use crate::plain::Lang;
+use crate::yogas::words;
 use crate::Hit;
 use kshana_vedic::DashaLord;
 
@@ -134,6 +136,11 @@ pub struct Promise {
 
 /// KP cusp sub-lord promise rule.
 pub fn promise(facts: &Facts, area: Area) -> Promise {
+    promise_in(facts, area, Lang::En)
+}
+
+/// [`promise`] with the factors and source in the reader's language.
+pub fn promise_in(facts: &Facts, area: Area, lang: Lang) -> Promise {
     let sub_lord = facts.cusp_sub_lords[(area.primary - 1) as usize];
     let sig = significators(facts, sub_lord);
     let fulfilling: Vec<Significance> = sig
@@ -152,30 +159,59 @@ pub fn promise(facts: &Facts, area: Area) -> Promise {
     let net = f - 0.5 * d;
     let strength = net.clamp(0.0, 1.0);
     let promised = !fulfilling.is_empty() && f > d;
-    let mut factors = vec![format!(
-        "{} cusp sub-lord is {:?}",
-        ordinal(area.primary),
-        sub_lord
-    )];
-    for s in &fulfilling {
+    let mut factors = Vec::new();
+    if lang == Lang::En {
         factors.push(format!(
-            "{sub_lord:?} signifies house {} ({})",
-            s.house,
-            level_words(s.level)
+            "{} cusp sub-lord is {:?}",
+            ordinal(area.primary),
+            sub_lord
         ));
-    }
-    for s in &denying {
-        factors.push(format!(
-            "{sub_lord:?} also signifies house {}, a negating house ({})",
-            s.house,
-            level_words(s.level)
-        ));
-    }
-    if fulfilling.is_empty() {
-        factors.push(format!(
-            "{sub_lord:?} signifies none of houses {:?}",
-            area.group
-        ));
+        for s in &fulfilling {
+            factors.push(format!(
+                "{sub_lord:?} signifies house {} ({})",
+                s.house,
+                level_words(s.level)
+            ));
+        }
+        for s in &denying {
+            factors.push(format!(
+                "{sub_lord:?} also signifies house {}, a negating house ({})",
+                s.house,
+                level_words(s.level)
+            ));
+        }
+        if fulfilling.is_empty() {
+            factors.push(format!(
+                "{sub_lord:?} signifies none of houses {:?}",
+                area.group
+            ));
+        }
+    } else {
+        let g = words::graha(lang, sub_lord);
+        let ord = words::bhava(lang, area.primary);
+        factors.push(crate::say3!(lang, "", "{ord} ഭാവാരംഭത്തിന്റെ ഉപനാഥൻ {g}", "{ord} भावारंभ का उपस्वामी {g}"));
+        for s in &fulfilling {
+            let (h, lw) = (words::bhava(lang, s.house), level_words_in(lang, s.level));
+            factors.push(crate::say3!(lang, "", "{g} {h} ഭാവത്തെ സൂചിപ്പിക്കുന്നു ({lw})", "{g} {h} भाव का कार्येश है ({lw})"));
+        }
+        for s in &denying {
+            let (h, lw) = (words::bhava(lang, s.house), level_words_in(lang, s.level));
+            factors.push(crate::say3!(
+                lang,
+                "",
+                "{g} നിഷേധ ഭാവമായ {h} ഭാവത്തെയും സൂചിപ്പിക്കുന്നു ({lw})",
+                "{g} निषेधक {h} भाव का भी कार्येश है ({lw})"
+            ));
+        }
+        if fulfilling.is_empty() {
+            let hs = words::houses(area.group);
+            factors.push(crate::say3!(
+                lang,
+                "",
+                "{g} {hs} എന്നീ ഭാവങ്ങളിൽ ഒന്നിനെയും സൂചിപ്പിക്കുന്നില്ല",
+                "{g} भाव {hs} में से किसी का कार्येश नहीं है"
+            ));
+        }
     }
     Promise {
         area,
@@ -189,7 +225,11 @@ pub fn promise(facts: &Facts, area: Area) -> Promise {
         net,
         hit: Hit {
             rule_id: "KS-K-0001",
-            source: "Krishnamurti Padhdhati, Reader III: the cusp sub-lord must signify the houses of the matter",
+            source: lang.pick([
+                "Krishnamurti Padhdhati, Reader III: the cusp sub-lord must signify the houses of the matter",
+                "കൃഷ്ണമൂർത്തി പദ്ധതി, കെപി റീഡർ III: ഭാവാരംഭത്തിന്റെ ഉപനാഥൻ ആ കാര്യത്തിന്റെ ഭാവങ്ങളെ സൂചിപ്പിക്കണം",
+                "कृष्णमूर्ति पद्धति, केपी रीडर III: भावारंभ का उपस्वामी उस विषय के भावों का कार्येश होना चाहिए",
+            ]),
             weight: strength,
             factors,
         },
@@ -212,6 +252,12 @@ pub fn period_supports(facts: &Facts, area: Area, lord: DashaLord) -> Vec<Signif
 /// primary cusp's house, the KP practice that a dasha lord must be a significator of
 /// the matter's houses and not a stronger significator of the houses that deny it.
 pub fn support_score(facts: &Facts, area: Area, lord: DashaLord) -> (f64, Vec<String>) {
+    support_score_in(facts, area, lord, Lang::En)
+}
+
+/// [`support_score`] with the reasons in the reader's language.
+pub fn support_score_in(facts: &Facts, area: Area, lord: DashaLord, lang: Lang) -> (f64, Vec<String>) {
+    let g = words::graha(lang, lord);
     let sigs = significators(facts, lord);
     let mut fulfil = 0.0;
     let mut deny = 0.0;
@@ -223,25 +269,34 @@ pub fn support_score(facts: &Facts, area: Area, lord: DashaLord) -> (f64, Vec<St
             if s.house == area.primary {
                 primary = 0.2;
             }
-            why.push(format!(
-                "{lord:?} signifies house {} ({})",
-                s.house,
-                level_words(s.level)
+            let (h, lw) = (words::bhava(lang, s.house), level_words_in(lang, s.level));
+            let (hn, lwe) = (s.house, level_words(s.level));
+            why.push(crate::say3!(
+                lang,
+                "{lord:?} signifies house {hn} ({lwe})",
+                "{g} {h} ഭാവത്തെ സൂചിപ്പിക്കുന്നു ({lw})",
+                "{g} {h} भाव का कार्येश है ({lw})"
             ));
         } else if area.negating.contains(&s.house) {
             deny += s.level.weight();
-            why.push(format!(
-                "{lord:?} also signifies negating house {} ({})",
-                s.house,
-                level_words(s.level)
+            let (h, lw) = (words::bhava(lang, s.house), level_words_in(lang, s.level));
+            let (hn, lwe) = (s.house, level_words(s.level));
+            why.push(crate::say3!(
+                lang,
+                "{lord:?} also signifies negating house {hn} ({lwe})",
+                "{g} നിഷേധ ഭാവമായ {h} ഭാവത്തെയും സൂചിപ്പിക്കുന്നു ({lw})",
+                "{g} निषेधक {h} भाव का भी कार्येश है ({lw})"
             ));
         }
     }
     let f = (fulfil / area.group.len() as f64).min(1.0);
     let d = (deny / area.negating.len().max(1) as f64).min(1.0);
     let score = (f - 0.8 * d + primary).clamp(0.0, 1.0);
-    why.push(format!(
-        "net support {score:.2} = fulfilling {f:.2} − 0.8 × denying {d:.2} + primary {primary:.1}"
+    why.push(crate::say3!(
+        lang,
+        "net support {score:.2} = fulfilling {f:.2} − 0.8 × denying {d:.2} + primary {primary:.1}",
+        "ആകെ പിന്തുണ {score:.2} = അനുകൂലം {f:.2} − 0.8 × നിഷേധം {d:.2} + പ്രധാന ഭാവം {primary:.1}",
+        "कुल समर्थन {score:.2} = अनुकूल {f:.2} − 0.8 × निषेधक {d:.2} + मुख्य भाव {primary:.1}"
     ));
     (score, why)
 }
@@ -327,6 +382,16 @@ fn level_words(l: Level) -> &'static str {
         Level::Occupant => "as occupant",
         Level::StarOfOwner => "in the star of its lord",
         Level::Owner => "as its lord",
+    }
+}
+
+/// [`level_words`] in the reader's language.
+pub fn level_words_in(lang: Lang, l: Level) -> &'static str {
+    match l {
+        Level::StarOfOccupant => lang.pick(["in the star of an occupant", "ഭാവസ്ഥിതന്റെ നക്ഷത്രത്തിൽ", "भावस्थ ग्रह के नक्षत्र में"]),
+        Level::Occupant => lang.pick(["as occupant", "ഭാവത്തിൽ നിൽക്കുന്നതിനാൽ", "भाव में स्थित होकर"]),
+        Level::StarOfOwner => lang.pick(["in the star of its lord", "ഭാവാധിപന്റെ നക്ഷത്രത്തിൽ", "भावेश के नक्षत्र में"]),
+        Level::Owner => lang.pick(["as its lord", "ഭാവാധിപനായി", "भावेश होकर"]),
     }
 }
 
@@ -703,6 +768,57 @@ mod tests {
         )
         .unwrap();
         Some(Facts::from_chart(&ch))
+    }
+
+    /// A Latin word of three or more letters, leaving out Roman numerals (III, VI).
+    fn latin_word(s: &str) -> Option<String> {
+        s.split(|c: char| !c.is_ascii_alphabetic())
+            .find(|w| w.len() >= 3 && !w.chars().all(|c| "IVX".contains(c)))
+            .map(str::to_string)
+    }
+
+    #[test]
+    fn kp_parashari_and_prashna_speak_malayalam_and_hindi() {
+        let Some(f) = kochi_facts() else { return };
+        let t = Utc::new(2026, 10, 15, 9, 2, 7, 0).unwrap().to_instant().unwrap();
+        for lang in [Lang::Ml, Lang::Hi] {
+            let mut texts: Vec<String> = Vec::new();
+            for a in AREAS {
+                let p = promise_in(&f, a, lang);
+                texts.push(p.hit.source.into());
+                texts.extend(p.hit.factors);
+                let b = crate::parashari::assess_in(&f, a, lang);
+                for h in b.hits {
+                    texts.push(h.source.into());
+                    texts.extend(h.factors);
+                }
+                for g in [DashaLord::Sun, DashaLord::Saturn, DashaLord::Rahu] {
+                    texts.extend(support_score_in(&f, a, g, lang).1);
+                    texts.extend(crate::parashari::period_quality_in(&f, a, g, lang).1);
+                }
+                for shape in [crate::prashna::QuestionShape::WillItHappen] {
+                    let v = crate::prashna::prashna_in(&f, a, shape, t, 76.27, lang);
+                    for h in v.hits {
+                        texts.push(h.source.into());
+                        texts.extend(h.factors);
+                    }
+                }
+            }
+            for y in crate::parashari::yogas_in(&f, lang) {
+                texts.push(crate::parashari::yoga_name_in(lang, y.name));
+                texts.push(y.hit.source.into());
+                texts.extend(y.hit.factors);
+            }
+            for s in &texts {
+                assert_eq!(latin_word(s), None, "{lang:?}: {s}");
+            }
+        }
+        // English is the old text.
+        for a in AREAS {
+            assert_eq!(promise_in(&f, a, Lang::En), promise(&f, a));
+            assert_eq!(crate::parashari::assess_in(&f, a, Lang::En), crate::parashari::assess(&f, a));
+        }
+        assert_eq!(crate::parashari::yogas_in(&f, Lang::En), crate::parashari::yogas(&f));
     }
 
     #[test]
