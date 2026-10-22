@@ -16,7 +16,7 @@
 //! good acts begun at a good hour; nothing here promises they change what is coming.
 
 use kshana_rules::remedy_timing::{
-    basis_words, day_words, keep_for, keep_words, reminder_text, span_words, stretch_words, until_words, why_now, TimingTable,
+    basis_words, day_words, keep_for, keep_source_words, keep_words, reminder_text, span_words, stretch_words, until_words, why_now, TimingTable,
 };
 use kshana_rules::{Lang, Life};
 use kshana_sky::Observer;
@@ -198,7 +198,7 @@ impl Engine {
                         weekday_iso: if k.every == 7 && on_weekday { if wd == 0 { 7 } else { wd as u8 } } else { 0 },
                         keep_basis: k.basis.to_string(),
                         keep_basis_words: basis_words(lang, &k).to_string(),
-                        keep_source: k.source.to_string(),
+                        keep_source: keep_source_words(lang, k.source).to_string(),
                         until_ms,
                         until_words: until_words(lang, &k, last, offset),
                         stretch_start_ms: c.since.map(unix_ms),
@@ -278,7 +278,7 @@ mod plain_audit {
             assert!(!rs.is_empty());
             counts.push(rs.iter().map(|r| (r.start_ms, r.until_ms, r.times)).collect::<Vec<_>>());
             for r in &rs {
-                for v in [&r.start_words, &r.keep_words, &r.keep_basis_words, &r.until_words, &r.for_stretch_words, &r.why_now] {
+                for v in [&r.start_words, &r.keep_words, &r.keep_basis_words, &r.until_words, &r.for_stretch_words, &r.why_now, &r.keep_source] {
                     assert_eq!(kshana_rules::plain::jargon_in(l, v), None, "{lang}: {v}");
                     let latin = v.split(|c: char| !c.is_ascii_alphabetic()).any(|w| w.len() >= 2);
                     match l {

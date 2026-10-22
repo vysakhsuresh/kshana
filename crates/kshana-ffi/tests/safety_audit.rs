@@ -431,7 +431,9 @@ fn feeds(range: std::ops::Range<usize>, name: &str) {
             a.run(&tag("festivals"), || e.festivals(b, la, lo, HS, AY, t, 35));
             a.run(&tag("festivals_here"), || e.festivals_here(b, la, lo, HS, AY, hla, hlo, off, t, 35, LANGS[ci % 3].into()));
             a.run(&tag("slow"), || e.slow_horizon(b, la, lo, hla, hlo, HS, AY, t, 12));
-            a.run(&tag("parihara"), || e.parihara(b, la, lo, AY, t, None));
+            for lang in LANGS {
+                a.run(&format!("c{ci}.{lang}.parihara"), || e.parihara(b, la, lo, AY, t, None, lang.into()));
+            }
             a.run(&tag("timeline"), || e.timeline(b, la, lo, HS, AY, t, LANGS[ci % 3].into()));
             a.run(&tag("plain_reading"), || e.plain_reading(b, la, lo, AY, t, LANGS[ci % 3].into()));
             a.run(&tag("daily"), || e.daily(b, la, lo, AY, t, hla, hlo, LANGS[ci % LANGS.len()].into()));
@@ -470,7 +472,7 @@ fn feeds(range: std::ops::Range<usize>, name: &str) {
         a.run(&tag("karakas"), || e.karakas(b, la, lo, AY));
         a.run(&tag("jaimini_full"), || e.jaimini_full(b, la, lo, AY, ci % 2 == 0, t));
         for life in std::iter::once(None).chain(life_names().into_iter().map(Some)) {
-            a.run(&tag(&format!("parihara_{life:?}")), || e.parihara(b, la, lo, AY, t, life));
+            a.run(&tag(&format!("parihara_{life:?}.{}", LANGS[ci % 3])), || e.parihara(b, la, lo, AY, t, life, LANGS[ci % 3].into()));
         }
         // The birth-time pages, in one language per chart (rotating).
         let lang = LANGS[ci % 3];
@@ -656,7 +658,9 @@ fn catalogues_and_questions() {
     for planet in ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"] {
         for source in ["dasha", "gochara", "natal"] {
             for life in std::iter::once(None).chain(life_names().into_iter().map(Some)) {
-                a.read(&format!("how_{planet}_{source}"), remedy_how_it_helps(planet.into(), source.into(), life));
+                for lang in LANGS {
+                    a.read(&format!("how_{planet}_{source}_{lang}"), remedy_how_it_helps(planet.into(), source.into(), life.clone(), lang.into()));
+                }
             }
         }
     }

@@ -998,31 +998,14 @@ fn window_record(w: &kshana_rules::RemedyWindow) -> RemedyWindowRecord {
 
 /// The cause in plain words: which part of the running period presses, what it brings
 /// and to which part of life, and how heavily.
-fn plain_cause(c: &kshana_rules::parihara::Cause, matter: Option<&str>, severity: f64) -> String {
-    let to = matter.map(|m| format!(" to your {m}")).unwrap_or_default();
+fn plain_cause(c: &kshana_rules::parihara::Cause, matter: Option<&str>, severity: f64, lang: kshana_rules::Lang) -> String {
     let level = match c.running_level {
         Some("mahadasha") => Some(0),
         Some("antardasha") => Some(1),
         Some("pratyantar") => Some(2),
         _ => None,
     };
-    let head = match (level, matter) {
-        (Some(i), _) => format!(
-            "The {} you are in brings {}{to}",
-            kshana_rules::plain::level_noun(i),
-            kshana_rules::plain::pressure(c.lord)
-        ),
-        (None, Some(m)) => format!(
-            "From birth your {m} is open to {}",
-            kshana_rules::plain::pressure(c.lord)
-        ),
-        (None, None) => "Nothing particular weighs on you".to_string(),
-    };
-    if severity < 0.25 {
-        format!("{head}, but only lightly. Nothing serious is against you: your own effort is the remedy, and the list below is extra help.")
-    } else {
-        format!("{head}. The remedies below are chosen to ease exactly that.")
-    }
+    kshana_rules::parihara::plain_cause_in(lang, c.lord, level, matter, severity)
 }
 
 #[uniffi::export]
@@ -1039,7 +1022,9 @@ impl Engine {
         ayanamsa: AyanamsaChoice,
         at: ExactInstant,
         area: Option<String>,
+        lang: String,
     ) -> Result<PariharaRecord, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let observer = Observer {
             latitude_deg,
             longitude_deg,
@@ -1065,7 +1050,7 @@ impl Engine {
             None => None,
         };
         let matter = a.as_ref().map(|x| x.name.to_ascii_lowercase());
-        let p = kshana_rules::parihara(
+        let p = kshana_rules::parihara::parihara_in(
             &self.spk,
             self.eop.as_ref(),
             &observer,
@@ -1073,12 +1058,13 @@ impl Engine {
             ayanamsa.into(),
             at.into(),
             a,
+            lang,
         )
         .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         let c = &p.cause;
         Ok(PariharaRecord {
             planet: lord_name(p.planet),
-            cause: plain_cause(c, matter.as_deref(), p.severity),
+            cause: plain_cause(c, matter.as_deref(), p.severity, lang),
             cause_expert: c.words.clone(),
             severity: p.severity,
             remedies: p
@@ -1091,7 +1077,7 @@ impl Engine {
                     fit: r.fit,
                     effort: r.effort.to_string(),
                     day: r.day.to_string(),
-                    source: r.source.to_string(),
+                    source: kshana_rules::parihara::source_words(lang, r.source),
                     optional: r.optional,
                     rung: r.rung,
                     rule_id: r.rule_id.clone(),
@@ -2053,7 +2039,7 @@ mod tests {
             .unwrap();
         assert!(!a.verdict.is_empty() && a.reasons.len() >= 4);
         let p = engine
-            .parihara(birth, 9.9312, 76.2673, AyanamsaChoice::Lahiri, at, Some("Love".into()))
+            .parihara(birth, 9.9312, 76.2673, AyanamsaChoice::Lahiri, at, Some("Love".into()), "en".into())
             .unwrap();
         assert!(p.remedies.len() >= 20 && !p.signature.is_empty());
         assert_eq!(horary_lagna(1).unwrap(), 0.0);
@@ -2094,6 +2080,7 @@ mod tests {
                 AyanamsaChoice::Lahiri,
                 at,
                 Some("Career".into()),
+                "en".into(),
             )
             .unwrap();
         assert!(!rec.remedies.is_empty());
@@ -2123,7 +2110,8 @@ mod tests {
                 76.2673,
                 AyanamsaChoice::Lahiri,
                 at,
-                Some("Nowhere".into())
+                Some("Nowhere".into()),
+                "en".into()
             )
             .is_err());
     }
@@ -4692,11 +4680,11 @@ mod plain_audit {
                 audit(&tag("countdowns"), format!("{:?}", engine.countdowns(b, la, lo, la, lo, hs, ay, t, "en".into()).unwrap()), &mut hits);
                 audit(&tag("festivals"), format!("{:?}", engine.festivals(b, la, lo, hs, ay, t, 35).unwrap()), &mut hits);
                 audit(&tag("year"), format!("{:?}", engine.year_chapter(b, la, lo, la, lo, hs, ay, t, "en".into()).unwrap()), &mut hits);
-                audit(&tag("parihara"), format!("{:?}", parihara_shown(engine.parihara(b, la, lo, ay, t, None).unwrap())), &mut hits);
+                audit(&tag("parihara"), format!("{:?}", parihara_shown(engine.parihara(b, la, lo, ay, t, None, "en".into()).unwrap())), &mut hits);
                 for life in life_names() {
                     if ti == 0 || full {
                         audit(&tag(&format!("explain_{life}")), format!("{:?}", engine.explain(b, la, lo, la, lo, hs, ay, life.clone(), t, "en".into()).unwrap()), &mut hits);
-                        audit(&tag(&format!("parihara_{life}")), format!("{:?}", parihara_shown(engine.parihara(b, la, lo, ay, t, Some(life.clone())).unwrap())), &mut hits);
+                        audit(&tag(&format!("parihara_{life}")), format!("{:?}", parihara_shown(engine.parihara(b, la, lo, ay, t, Some(life.clone()), "en".into()).unwrap())), &mut hits);
                     }
                     for q in questions("en".into()) {
                         if ti == 0 || full {
@@ -5547,7 +5535,7 @@ pub fn understand(text: String, lang: String) -> UnderstandingRecord {
 /// pressing through `source` (`dasha`, `gochara` or `natal`) on `life` (a life name, or
 /// none for life in general). Shown only when the person taps "How this helps".
 #[uniffi::export]
-pub fn remedy_how_it_helps(planet: String, source: String, life: Option<String>) -> String {
+pub fn remedy_how_it_helps(planet: String, source: String, life: Option<String>, lang: String) -> String {
     let g = match planet.trim() {
         "Sun" => DashaLord::Sun,
         "Moon" => DashaLord::Moon,
@@ -5561,7 +5549,7 @@ pub fn remedy_how_it_helps(planet: String, source: String, life: Option<String>)
         _ => return String::new(),
     };
     let life = life.and_then(|n| kshana_rules::Life::ALL.iter().copied().find(|l| l.name().eq_ignore_ascii_case(n.trim())));
-    kshana_rules::remedy_tree::how_it_helps(g, &source, life)
+    kshana_rules::remedy_tree::how_it_helps_in(kshana_rules::Lang::parse(&lang), g, &source, life)
 }
 
 fn past_check_record(x: kshana_rules::PastCheck) -> PastCheckRecord {

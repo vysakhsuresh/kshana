@@ -345,7 +345,7 @@ fun TogetherScreen(
                         }
                     }
                 }
-                HowThisHelps(remember(rb.planet) { uniffi.kshana_ffi.remedyHowItHelps(rb.planet, "dasha", null) })
+                HowThisHelps(remember(rb.planet, com.kshana.app.data.Lang.code) { uniffi.kshana_ffi.remedyHowItHelps(rb.planet, "dasha", null, com.kshana.app.data.Lang.code) })
             }
             QuietButton("THE FULL REMEDY FOR LOVE", onClick = { onRemedy("Love") }, modifier = Modifier.fillMaxWidth())
 

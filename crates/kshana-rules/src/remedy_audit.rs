@@ -96,6 +96,7 @@ fn every_tree_remedy_is_calm_promises_nothing_and_keeps_its_source() {
             }
             for src in ["dasha", "gochara", "natal"] {
                 check(Lang::En, "how_it_helps", &how_it_helps(g, src, None), &mut hits);
+                check(lang, "how_it_helps", &crate::remedy_tree::how_it_helps_in(lang, g, src, None), &mut hits);
             }
         }
     }
@@ -167,6 +168,55 @@ fn every_parihara_row_is_calm_promises_nothing_and_is_sourced() {
         check(Lang::En, "match.title", r.title, &mut hits);
         check(Lang::En, "match.why", r.why, &mut hits);
         assert!(!sources::of_remedy(if r.optional { RemedyKind::Pooja } else { RemedyKind::Karma }, r.source).is_empty());
+    }
+    for lang in [Lang::Ml, Lang::Hi] {
+        for r in &rows {
+            check(lang, "parihara.title", &crate::parihara::say(lang, r.1), &mut hits);
+            check(lang, "parihara.why", &crate::parihara::say(lang, r.2), &mut hits);
+        }
+    }
+    assert!(hits.is_empty(), "{hits:#?}");
+}
+
+#[test]
+fn the_plans_read_calmly_in_malayalam_and_hindi_with_deeds_first() {
+    use crate::areas::AREAS;
+    use crate::facts::Facts;
+    use crate::parihara::{parihara_from_facts_in, parihara_in};
+    use kshana_chart::{compute, ChartInput};
+    use kshana_ephem::Spk;
+    use kshana_houses::HouseSystem;
+    use kshana_sky::Observer;
+    use kshana_time::Utc;
+    use kshana_vedic::Ayanamsa;
+
+    let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/de421.bsp");
+    let Ok(spk) = Spk::open(&p) else { return };
+    let obs = Observer { latitude_deg: 9.9312, longitude_deg: 76.2673, height_m: 0.0 };
+    let at = Utc::new(2026, 10, 21, 6, 0, 0, 0).unwrap().to_instant().unwrap();
+    let mut hits = Vec::new();
+    let t = Utc::new(1985, 3, 2, 4, 6, 0, 0).unwrap().to_instant().unwrap();
+    let ch = compute(&spk, None, &ChartInput { instant: t, observer: obs, system: HouseSystem::Placidus, ayanamsa: Ayanamsa::Lahiri, topocentric_moon: false }).unwrap();
+    for lang in [Lang::Ml, Lang::Hi] {
+        let never = if lang == Lang::Ml { "ഒരിക്കലും ആവശ്യമില്ല" } else { "कभी ज़रूरी नहीं" };
+        for area in std::iter::once(None).chain(AREAS.iter().map(Some)) {
+            let area = area.copied();
+            let full = parihara_in(&spk, None, &obs, &ch, Ayanamsa::Lahiri, at, area, lang).unwrap();
+            let quick = parihara_from_facts_in(&Facts::from_chart(&ch), area, &[], lang);
+            for plan in [&full, &quick] {
+                check(lang, "plain", &plan.plain, &mut hits);
+                check(lang, "ledger_hint", &plan.ledger_hint, &mut hits);
+                assert!(plan.remedies.iter().take(3).all(|r| !r.costs_money));
+                for r in &plan.remedies {
+                    for (f, s) in [("title", &r.title), ("why", &r.why), ("effort", &r.effort), ("day", &r.day), ("measurable", &r.measurable)] {
+                        check(lang, f, s, &mut hits);
+                    }
+                    if r.kind == RemedyKind::Gem {
+                        assert!(r.costs_money && r.why.contains(never), "{}", r.why);
+                    }
+                }
+            }
+        }
     }
     assert!(hits.is_empty(), "{hits:#?}");
 }
