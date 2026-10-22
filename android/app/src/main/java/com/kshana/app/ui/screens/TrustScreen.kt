@@ -83,7 +83,7 @@ fun TrustScreen(profile: BirthProfile?, settings: EngineSettings, onBack: () -> 
                 val s = profile?.let {
                     engine.stability(it.birthInstant(), it.latitude, it.longitude, it.uncertaintySeconds().toULong(), settings.houseSystem, settings.ayanamsa)
                 }
-                TrustLoad(engineVersion(), errorBudget(), c, s)
+                TrustLoad(engineVersion(), errorBudget(com.kshana.app.data.Lang.code), c, s)
             }
             error = null
         } catch (e: Exception) {

@@ -6,6 +6,7 @@
 
 use crate::forecast::{date_words, lord_score, Band, Life, Natal};
 use crate::gochara::{favourable_from_moon, SaturnPhase};
+use crate::plain::Lang;
 use crate::transit::{kernel_end, kernel_start, returns, sidereal_longitude, sign_changes};
 use kshana_ephem::Spk;
 use kshana_time::{Instant, NS_PER_DAY};
@@ -136,6 +137,88 @@ fn phase_words(ph: SaturnPhase) -> &'static str {
     }
 }
 
+/// [`phase_words`] in `lang`.
+fn phase_words_in(lang: Lang, ph: SaturnPhase) -> &'static str {
+    let t = match ph {
+        SaturnPhase::SadeSatiRising => ["ആദ്യ ഭാഗം തുടങ്ങുന്നു: ചെലവ് കൂടും, ഉറക്കം കുറയും", "पहला हिस्सा शुरू होता है: खर्च बढ़ता है और नींद हल्की होती है"],
+        SaturnPhase::SadeSatiPeak => ["ഏറ്റവും കഠിനമായ ഭാഗം തുടങ്ങുന്നു: മനസ്സിന് ഭാരം, ജോലി ഇരട്ടി", "सबसे कठिन हिस्सा शुरू होता है: मन भारी, काम दोगुना"],
+        SaturnPhase::SadeSatiSetting => ["അവസാന ഭാഗം തുടങ്ങുന്നു: സമ്മർദ്ദം അയഞ്ഞുവരും", "आख़िरी हिस्सा शुरू होता है: दबाव कम होने लगता है"],
+        SaturnPhase::DhaiyaFourth => ["തുടങ്ങുന്നു: വീടും മനസ്സമാധാനവും പരീക്ഷിക്കപ്പെടും", "शुरू होता है: घर और मन की शांति की परीक्षा"],
+        SaturnPhase::DhaiyaEighth => ["തുടങ്ങുന്നു: ആരോഗ്യവും പെട്ടെന്നുള്ള മാറ്റങ്ങളും ശ്രദ്ധിക്കണം", "शुरू होता है: सेहत और अचानक बदलावों का ध्यान रखें"],
+        SaturnPhase::Clear => ["സമ്മർദ്ദം തീരുന്നു", "दबाव ख़त्म होता है"],
+    };
+    match lang {
+        Lang::En => phase_words(ph),
+        Lang::Ml => t[0],
+        Lang::Hi => t[1],
+    }
+}
+
+/// The line for one long test in the book, in `lang`.
+#[allow(clippy::too_many_arguments)]
+fn span_words(lang: Lang, kind: &str, st: Instant, en: Instant, a: f64, b: f64, current: bool, passed: bool, lon: f64) -> String {
+    let d = |t: Instant| crate::lang::date(lang, t, lon);
+    match lang {
+        Lang::En => format!(
+            "{} from {} to {} (age {:.0} to {:.0}){}",
+            match kind {
+                "sade sati" => "A long testing period of about seven and a half years,",
+                "ardhashtama" => "A testing time for home and peace of mind,",
+                _ => "A testing time for health and sudden changes,",
+            },
+            date_words(st, lon),
+            date_words(en, lon),
+            a,
+            b,
+            if current {
+                format!(". You are in it now; it ends {}.", date_words(en, lon))
+            } else if passed {
+                ". Passed.".to_string()
+            } else {
+                ". Ahead.".to_string()
+            }
+        ),
+        Lang::Ml => format!(
+            "{}: {} മുതൽ {} വരെ ({:.0} മുതൽ {:.0} വയസ്സു വരെ){}",
+            match kind {
+                "sade sati" => "ഏകദേശം ഏഴര വർഷം നീളുന്ന ഒരു നീണ്ട പരീക്ഷണകാലം",
+                "ardhashtama" => "വീടിനും മനസ്സമാധാനത്തിനും ഒരു പരീക്ഷണകാലം",
+                _ => "ആരോഗ്യത്തിനും പെട്ടെന്നുള്ള മാറ്റങ്ങൾക്കും ഒരു പരീക്ഷണകാലം",
+            },
+            d(st),
+            d(en),
+            a,
+            b,
+            if current {
+                format!(". നിങ്ങൾ ഇപ്പോൾ ഇതിലാണ്; ഇത് {}-ന് തീരും.", d(en))
+            } else if passed {
+                ". കടന്നുപോയി.".to_string()
+            } else {
+                ". വരാനിരിക്കുന്നു.".to_string()
+            }
+        ),
+        Lang::Hi => format!(
+            "{}: {} से {} तक ({:.0} से {:.0} साल की उम्र){}",
+            match kind {
+                "sade sati" => "सात साल से कुछ ज़्यादा का एक लंबा कठिन दौर",
+                "ardhashtama" => "घर और मन की शांति के लिए कठिन समय",
+                _ => "सेहत और अचानक बदलावों के लिए कठिन समय",
+            },
+            d(st),
+            d(en),
+            a,
+            b,
+            if current {
+                format!("। आप अभी इसी में हैं; यह {} को ख़त्म होगा।", d(en))
+            } else if passed {
+                "। बीत गया।".to_string()
+            } else {
+                "। आगे है।".to_string()
+            }
+        ),
+    }
+}
+
 #[allow(dead_code)]
 pub(crate) fn lord_theme(l: DashaLord) -> &'static str {
     match l {
@@ -151,7 +234,8 @@ pub(crate) fn lord_theme(l: DashaLord) -> &'static str {
     }
 }
 
-fn chapter(natal: &Natal, lord: DashaLord, parent: Option<DashaLord>, level: u8, start: Instant, end: Instant, at: Instant) -> Chapter {
+#[allow(clippy::too_many_arguments)]
+fn chapter(lang: Lang, natal: &Natal, lord: DashaLord, parent: Option<DashaLord>, level: u8, start: Instant, end: Instant, at: Instant) -> Chapter {
     let lives: Vec<f64> = Life::ALL
         .iter()
         .map(|&life| {
@@ -168,7 +252,31 @@ fn chapter(natal: &Natal, lord: DashaLord, parent: Option<DashaLord>, level: u8,
     let best = Life::ALL[bi];
     let weak = Life::ALL[wi];
     let band = Band::of(tone);
-    let words = format!(
+    let bi = match band {
+        Band::Bright => 0,
+        Band::Good => 1,
+        Band::Steady => 2,
+        Band::Slow => 3,
+        Band::Hold => 4,
+    };
+    let words = match lang {
+        Lang::Ml => format!(
+            "{} {} എന്നിവയെക്കുറിച്ചാണ്. മൊത്തത്തിൽ {}; ഏറ്റവും നല്ലത് {}, ക്ഷമ വേണ്ടത് {}.",
+            if level == 1 { "ഈ അധ്യായം" } else { "ഈ ഘട്ടം" },
+            crate::lang::chapter_theme(lang, lord),
+            ["ഏറെ നൽകുന്ന കാലം", "നല്ല കാലം", "സമനിലയുള്ള കാലം", "മന്ദമായ കാലം", "ക്ഷമ വേണ്ട കാലം"][bi],
+            crate::lang::life_name(lang, best),
+            crate::lang::life_name(lang, weak)
+        ),
+        Lang::Hi => format!(
+            "{} {} के बारे में है। कुल मिलाकर {}; सबसे अच्छा {}, धैर्य चाहिए {} में।",
+            if level == 1 { "यह अध्याय" } else { "यह दौर" },
+            crate::lang::chapter_theme(lang, lord),
+            ["देने वाला समय", "अच्छा समय", "बराबर समय", "धीमा समय", "धैर्य का समय"][bi],
+            crate::lang::life_name(lang, best),
+            crate::lang::life_name(lang, weak)
+        ),
+        Lang::En => format!(
         "{} {}. {} for {}; {} asks patience.",
         if level == 1 { "A chapter about" } else { "A stretch about" },
         crate::plain::chapter_theme(lord),
@@ -181,7 +289,8 @@ fn chapter(natal: &Natal, lord: DashaLord, parent: Option<DashaLord>, level: u8,
         },
         best.name().to_ascii_lowercase(),
         crate::plain::subject(&weak.name().to_ascii_lowercase())
-    );
+    ),
+    };
     Chapter {
         lord,
         level,
@@ -200,18 +309,24 @@ fn chapter(natal: &Natal, lord: DashaLord, parent: Option<DashaLord>, level: u8,
 
 /// Open the book at `at`. `longitude_deg` only places the dates in words.
 pub fn timeline(spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, longitude_deg: f64, at: Instant) -> Timeline {
+    timeline_in(Lang::En, spk, natal, ayanamsa, longitude_deg, at)
+}
+
+/// [`timeline`] with every line in `lang`.
+pub fn timeline_in(lang: Lang, spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, longitude_deg: f64, at: Instant) -> Timeline {
     let birth = natal.birth;
+    let dl = |t: Instant| crate::lang::date(lang, t, longitude_deg);
     let mahas = vimshottari(natal.moon_sidereal, birth, YEAR_365_25_NS);
     let chapters: Vec<Chapter> = mahas
         .iter()
-        .map(|p| chapter(natal, p.lord, None, 1, p.start.max(birth), p.end, at))
+        .map(|p| chapter(lang, natal, p.lord, None, 1, p.start.max(birth), p.end, at))
         .collect();
     let running = mahas.iter().copied().find(|p| p.start <= at && at < p.end);
     let pages: Vec<Chapter> = running
         .map(|p| {
             subdivide(p)
                 .into_iter()
-                .map(|q| chapter(natal, q.lord, Some(p.lord), 2, q.start.max(birth), q.end, at))
+                .map(|q| chapter(lang, natal, q.lord, Some(p.lord), 2, q.start.max(birth), q.end, at))
                 .collect()
         })
         .unwrap_or_default();
@@ -259,31 +374,13 @@ pub fn timeline(spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, longitude_deg: f64
                 let ph = SaturnPhase::from_house(hh);
                 phases.push((
                     intervals[j].0,
-                    phase_words(ph).to_string(),
+                    phase_words_in(lang, ph).to_string(),
                 ));
                 j += 1;
             }
             let en = intervals[j - 1].1;
             let current = st <= at && at < en;
-            let words = format!(
-                "{} from {} to {} (age {:.0} to {:.0}){}",
-                match kind {
-                    "sade sati" => "A long testing period of about seven and a half years,",
-                    "ardhashtama" => "A testing time for home and peace of mind,",
-                    _ => "A testing time for health and sudden changes,",
-                },
-                date_words(st, longitude_deg),
-                date_words(en, longitude_deg),
-                years(birth, st),
-                years(birth, en),
-                if current {
-                    format!(". You are in it now; it ends {}.", date_words(en, longitude_deg))
-                } else if en <= at {
-                    ". Passed.".to_string()
-                } else {
-                    ". Ahead.".to_string()
-                }
-            );
+            let words = span_words(lang, kind, st, en, years(birth, st), years(birth, en), current, en <= at, longitude_deg);
             saturn.push(SaturnSpan {
                 kind,
                 start: st,
@@ -307,34 +404,25 @@ pub fn timeline(spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, longitude_deg: f64
                 let months = (years(last.end, s.start) * 12.0).round() as i64;
                 last.phases.push((
                     last.end,
-                    format!("The pressure lifts for about {months} month{}, then returns", if months == 1 { "" } else { "s" }),
+                    match lang {
+                        Lang::En => format!("The pressure lifts for about {months} month{}, then returns", if months == 1 { "" } else { "s" }),
+                        Lang::Ml => format!("സമ്മർദ്ദം ഏകദേശം {months} മാസം അയയും, പിന്നെ തിരിച്ചുവരും"),
+                        Lang::Hi => format!("दबाव लगभग {months} महीने के लिए हटता है, फिर लौटता है"),
+                    },
                 ));
+                let (from, to) = match lang {
+                    Lang::En => (" begins", " resumes"),
+                    Lang::Ml => ("തുടങ്ങുന്നു", "വീണ്ടും തുടങ്ങുന്നു"),
+                    Lang::Hi => ("शुरू होता है", "फिर शुरू होता है"),
+                };
                 last.phases.extend(
                     s.phases
                         .into_iter()
-                        .map(|(t, w)| (t, w.replacen(" begins", " resumes", 1))),
+                        .map(|(t, w)| (t, w.replacen(from, to, 1))),
                 );
                 last.end = s.end;
                 last.current = last.start <= at && at < last.end;
-                last.words = format!(
-                    "{} from {} to {} (age {:.0} to {:.0}){}",
-                    match last.kind {
-                        "sade sati" => "A long testing period of about seven and a half years,",
-                        "ardhashtama" => "A testing time for home and peace of mind,",
-                        _ => "A testing time for health and sudden changes,",
-                    },
-                    date_words(last.start, longitude_deg),
-                    date_words(last.end, longitude_deg),
-                    years(birth, last.start),
-                    years(birth, last.end),
-                    if last.current {
-                        format!(". You are in it now; it ends {}.", date_words(last.end, longitude_deg))
-                    } else if last.end <= at {
-                        ". Passed.".to_string()
-                    } else {
-                        ". Ahead.".to_string()
-                    }
-                );
+                last.words = span_words(lang, last.kind, last.start, last.end, years(birth, last.start), years(birth, last.end), last.current, last.end <= at, longitude_deg);
                 continue;
             }
         }
@@ -363,13 +451,22 @@ pub fn timeline(spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, longitude_deg: f64
             favourable: fav,
             current: start <= at && at < end,
             words: if fav {
-                "A giving year: growth, help and good news come easier".to_string()
+                lang.pick([
+                    "A giving year: growth, help and good news come easier",
+                    "നൽകുന്ന വർഷം: വളർച്ചയും സഹായവും നല്ല വാർത്തകളും എളുപ്പം വരും",
+                    "देने वाला साल: तरक्की, मदद और अच्छी ख़बरें आसानी से आती हैं",
+                ])
+                .to_string()
             } else {
-                match h {
-                    1 => "A year of expense and focus on yourself: spend with care",
-                    4 | 8 | 12 => "A quiet year: build inside, not outside",
-                    _ => "An even year for growth",
-                }
+                lang.pick(match h {
+                    1 => [
+                        "A year of expense and focus on yourself: spend with care",
+                        "ചെലവിന്റെയും സ്വന്തം കാര്യങ്ങളിലുള്ള ശ്രദ്ധയുടെയും വർഷം: ശ്രദ്ധിച്ച് ചെലവാക്കുക",
+                        "खर्च और अपने आप पर ध्यान का साल: सोच-समझकर खर्च करें",
+                    ],
+                    4 | 8 | 12 => ["A quiet year: build inside, not outside", "ശാന്തമായ വർഷം: പുറത്തല്ല, ഉള്ളിൽ പണിയുക", "शांत साल: बाहर नहीं, भीतर बनाएँ"],
+                    _ => ["An even year for growth", "വളർച്ചയ്ക്ക് സമനിലയുള്ള വർഷം", "तरक्की के लिए बराबर साल"],
+                })
                 .to_string()
             },
         });
@@ -404,27 +501,52 @@ pub fn timeline(spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, longitude_deg: f64
                 nth: n,
                 at: t,
                 age,
-                words: format!(
-                    "{} {}, {} (age {:.1}): {}",
-                    match n {
-                        1 => "First",
-                        2 => "Second",
-                        3 => "Third",
-                        _ => "Fourth",
-                    },
-                    match g {
-                        DashaLord::Saturn => "thirty-year reckoning",
-                        DashaLord::Jupiter => "twelve-year renewal",
-                        _ => "eighteen-year turn",
-                    },
-                    date_words(t, longitude_deg),
-                    age,
-                    match g {
-                        DashaLord::Saturn => "the structure of your life is tested and rebuilt; what is true stays",
-                        DashaLord::Jupiter => "a year of expansion, teachers and second chances",
-                        _ => "an old hunger comes round, and a chance to answer it",
+                words: {
+                    let gi = match g {
+                        DashaLord::Saturn => 0,
+                        DashaLord::Jupiter => 1,
+                        _ => 2,
+                    };
+                    let ni = (n as usize).clamp(1, 4) - 1;
+                    match lang {
+                        Lang::En => format!(
+                            "{} {}, {} (age {:.1}): {}",
+                            ["First", "Second", "Third", "Fourth"][ni],
+                            ["thirty-year reckoning", "twelve-year renewal", "eighteen-year turn"][gi],
+                            date_words(t, longitude_deg),
+                            age,
+                            [
+                                "the structure of your life is tested and rebuilt; what is true stays",
+                                "a year of expansion, teachers and second chances",
+                                "an old hunger comes round, and a chance to answer it",
+                            ][gi]
+                        ),
+                        Lang::Ml => format!(
+                            "{} {}, {} ({:.1} വയസ്സ്): {}",
+                            ["ആദ്യത്തെ", "രണ്ടാമത്തെ", "മൂന്നാമത്തെ", "നാലാമത്തെ"][ni],
+                            ["മുപ്പതു വർഷത്തെ കണക്കെടുപ്പ്", "പന്ത്രണ്ടു വർഷത്തെ പുതുക്കൽ", "പതിനെട്ടു വർഷത്തെ വഴിത്തിരിവ്"][gi],
+                            dl(t),
+                            age,
+                            [
+                                "ജീവിതത്തിന്റെ ഘടന പരീക്ഷിക്കപ്പെട്ട് പുതുക്കിപ്പണിയപ്പെടും; സത്യമായത് നിലനിൽക്കും",
+                                "വികാസത്തിന്റെയും അധ്യാപകരുടെയും രണ്ടാമൂഴങ്ങളുടെയും വർഷം",
+                                "പഴയൊരു ആഗ്രഹം തിരികെ വരും, അതിന് മറുപടി നൽകാൻ ഒരവസരവും",
+                            ][gi]
+                        ),
+                        Lang::Hi => format!(
+                            "{} {}, {} ({:.1} साल की उम्र): {}",
+                            ["पहला", "दूसरा", "तीसरा", "चौथा"][ni],
+                            ["तीस साल का हिसाब", "बारह साल का नवीनीकरण", "अठारह साल का मोड़"][gi],
+                            dl(t),
+                            age,
+                            [
+                                "ज़िंदगी के ढाँचे की परीक्षा होती है और वह फिर से बनता है; जो सच्चा है वह टिकता है",
+                                "फैलाव, शिक्षकों और दूसरे मौक़ों का साल",
+                                "एक पुरानी भूख लौटती है, और उसका जवाब देने का मौक़ा भी",
+                            ][gi]
+                        ),
                     }
-                ),
+                },
             });
         }
     }
@@ -435,8 +557,24 @@ pub fn timeline(spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, longitude_deg: f64
     let page = pages.iter().find(|c| c.current);
     let sat_now = saturn.iter().find(|s| s.current);
     let next_ret = rets.iter().find(|r| r.at > at);
-    let mut headline = match (cur, page) {
-        (Some(c), Some(p)) => format!(
+    let mut headline = match (lang, cur, page) {
+        (Lang::Ml, Some(c), p) => {
+            let mut s = format!("നിങ്ങൾക്ക് {age:.1} വയസ്സ്. {} വരെ നിങ്ങളുടെ ജീവിതം {} എന്നിവയെ ചുറ്റിയാണ്.", dl(c.end), crate::lang::chapter_theme(lang, c.lord));
+            if let Some(p) = p {
+                s.push_str(&format!(" {} വരെ ഏറ്റവും കൂടുതൽ ചലനം {} എന്നിവയിലാണ്.", dl(p.end), crate::lang::chapter_theme(lang, p.lord)));
+            }
+            s
+        }
+        (Lang::Hi, Some(c), p) => {
+            let mut s = format!("आपकी उम्र {age:.1} साल है। {} तक आपकी ज़िंदगी {} के इर्द-गिर्द है।", dl(c.end), crate::lang::chapter_theme(lang, c.lord));
+            if let Some(p) = p {
+                s.push_str(&format!(" {} तक सबसे ज़्यादा हलचल {} में है।", dl(p.end), crate::lang::chapter_theme(lang, p.lord)));
+            }
+            s
+        }
+        (Lang::Ml, None, _) => format!("നിങ്ങൾക്ക് {age:.1} വയസ്സ്."),
+        (Lang::Hi, None, _) => format!("आपकी उम्र {age:.1} साल है।"),
+        (_, Some(c), Some(p)) => format!(
             "You are {:.1}. Until {} your life centres on {}. Until {} the most movement is in {}.",
             age,
             date_words(c.end, longitude_deg),
@@ -444,7 +582,7 @@ pub fn timeline(spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, longitude_deg: f64
             date_words(p.end, longitude_deg),
             crate::plain::chapter_theme(p.lord)
         ),
-        (Some(c), None) => format!("You are {:.1}. Until {} your life centres on {}.", age, date_words(c.end, longitude_deg), crate::plain::chapter_theme(c.lord)),
+        (_, Some(c), None) => format!("You are {:.1}. Until {} your life centres on {}.", age, date_words(c.end, longitude_deg), crate::plain::chapter_theme(c.lord)),
         _ => format!("You are {age:.1}."),
     };
     if let Some(s) = sat_now {
@@ -452,7 +590,12 @@ pub fn timeline(spk: &Spk, natal: &Natal, ayanamsa: Ayanamsa, longitude_deg: f64
         headline.push_str(&s.words);
     }
     if let Some(r) = next_ret {
-        headline.push_str(&format!(" Next: {}.", r.words.split(':').next().unwrap_or("")));
+        let first = r.words.split(':').next().unwrap_or("");
+        headline.push_str(&match lang {
+            Lang::En => format!(" Next: {first}."),
+            Lang::Ml => format!(" അടുത്തത്: {first}."),
+            Lang::Hi => format!(" आगे: {first}।"),
+        });
     }
 
     Timeline {

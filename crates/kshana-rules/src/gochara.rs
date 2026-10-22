@@ -126,6 +126,20 @@ impl SaturnPhase {
             SaturnPhase::Clear => "Saturn clear of your Moon",
         }
     }
+
+    /// [`SaturnPhase::expert`] in the reader's language, with the traditional terms in
+    /// the reader's script (expert text).
+    pub fn expert_in(self, lang: crate::plain::Lang) -> &'static str {
+        let t = match self {
+            SaturnPhase::SadeSatiRising => [self.expert(), "ഏഴരശ്ശനി, ആദ്യഘട്ടം: ജന്മചന്ദ്രന്റെ 12-ാം ഭാവത്തിൽ ശനി", "साढ़ेसाती, पहला चरण: जन्म-चंद्र से 12वें भाव में शनि"],
+            SaturnPhase::SadeSatiPeak => [self.expert(), "ഏഴരശ്ശനി, മധ്യഘട്ടം: ജന്മചന്ദ്രന്റെ മേൽ ശനി", "साढ़ेसाती, चरम: जन्म-चंद्र पर शनि"],
+            SaturnPhase::SadeSatiSetting => [self.expert(), "ഏഴരശ്ശനി, അവസാനഘട്ടം: ജന്മചന്ദ്രന്റെ 2-ാം ഭാവത്തിൽ ശനി", "साढ़ेसाती, अंतिम चरण: जन्म-चंद्र से दूसरे भाव में शनि"],
+            SaturnPhase::DhaiyaFourth => [self.expert(), "കണ്ടകശനി (അർധാഷ്ടമം): ജന്മചന്ദ്രന്റെ 4-ാം ഭാവത്തിൽ ശനി", "ढैय्या (अर्धाष्टम): जन्म-चंद्र से चौथे भाव में शनि"],
+            SaturnPhase::DhaiyaEighth => [self.expert(), "അഷ്ടമശനി: ജന്മചന്ദ്രന്റെ 8-ാം ഭാവത്തിൽ ശനി", "अष्टम शनि (ढैय्या): जन्म-चंद्र से आठवें भाव में शनि"],
+            SaturnPhase::Clear => [self.expert(), "ശനി ജന്മചന്ദ്രനെ ബാധിക്കുന്നില്ല", "शनि जन्म-चंद्र से मुक्त"],
+        };
+        lang.pick(t)
+    }
 }
 
 /// The nine taras counted from the birth star (Muhurta Chintamani).
@@ -152,6 +166,38 @@ pub fn tara_index(janma: usize, transit: usize) -> usize {
 /// Plain words for a tara: what the day is like for the person.
 pub fn tara_words(i: usize) -> &'static str {
     crate::plain::day_quality(i)
+}
+
+/// [`tara_words`] in the reader's language.
+pub fn tara_words_in(lang: crate::plain::Lang, i: usize) -> &'static str {
+    crate::lang::day_quality(lang, i)
+}
+
+/// The nine tara names in the reader's script (expert text): ജന്മം, സമ്പത്ത് …
+pub fn tara_name_in(lang: crate::plain::Lang, i: usize) -> &'static str {
+    const ML: [&str; 9] = ["ജന്മം", "സമ്പത്ത്", "വിപത്ത്", "ക്ഷേമം", "പ്രത്യക്", "സാധകം", "നൈധനം", "മിത്രം", "പരമമിത്രം"];
+    const HI: [&str; 9] = ["जन्म", "संपत्", "विपत्", "क्षेम", "प्रत्यक्", "साधक", "नैधन", "मित्र", "परम मित्र"];
+    let i = i % 9;
+    lang.pick([TARA_NAMES[i], ML[i], HI[i]])
+}
+
+/// [`hora_words`] in the reader's language.
+pub fn hora_words_in(lang: crate::plain::Lang, g: DashaLord) -> &'static str {
+    let t = match g {
+        DashaLord::Sun => ["ഔദ്യോഗിക കാര്യങ്ങൾക്കും അപേക്ഷകൾക്കും അധികാരികളെ കാണാനുമുള്ള സമയം", "अधिकार, अर्ज़ियों और हर सरकारी काम की घड़ी"],
+        DashaLord::Moon => ["കുടുംബം, യാത്ര, മനസ്സിന്റെ കാര്യങ്ങൾ എന്നിവയ്ക്കുള്ള സമയം", "परिवार, यात्रा और दिल के मामलों की घड़ी"],
+        DashaLord::Mars => ["അധ്വാനത്തിനും ധൈര്യത്തിനുമുള്ള സമയം; വഴക്കിനല്ല", "मेहनत और हिम्मत की घड़ी, झगड़े की नहीं"],
+        DashaLord::Mercury => ["പഠനം, കച്ചവടം, സന്ദേശങ്ങൾ, ഇടപാടുകൾ എന്നിവയ്ക്കുള്ള സമയം", "पढ़ाई, व्यापार, संदेशों और सौदों की घड़ी"],
+        DashaLord::Jupiter => ["പണം, പഠനം, മക്കൾ, നല്ല തുടക്കങ്ങൾ എന്നിവയ്ക്കുള്ള സമയം", "पैसे, पढ़ाई, संतान और शुभ शुरुआत की घड़ी"],
+        DashaLord::Venus => ["പ്രണയം, കല, സന്തോഷം, പങ്കാളിത്തം എന്നിവയ്ക്കുള്ള സമയം", "प्रेम, कला, सुख और साझेदारी की घड़ी"],
+        DashaLord::Saturn => ["പതിവുജോലിക്കും ക്ഷമയ്ക്കുമുള്ള സമയം; പുതുതായി ഒന്നും തുടങ്ങരുത്", "रोज़ के काम और धैर्य की घड़ी; कुछ नया शुरू न करें"],
+        DashaLord::Rahu | DashaLord::Ketu => ["ഉറപ്പില്ലാത്ത സമയം; തുടങ്ങുന്നതിനേക്കാൾ തീർക്കുന്നതാണ് നല്ലത്", "अनिश्चित घड़ी; शुरू करने से अच्छा है पूरा करना"],
+    };
+    match lang {
+        crate::plain::Lang::En => hora_words(g),
+        crate::plain::Lang::Ml => t[0],
+        crate::plain::Lang::Hi => t[1],
+    }
 }
 
 /// Hora lord by name, as `kshana_events::hora_at` returns it.

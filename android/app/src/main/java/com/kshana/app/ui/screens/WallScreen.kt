@@ -87,7 +87,7 @@ internal fun addToCalendar(context: android.content.Context, title: String, star
 @Composable
 fun WallScreen(profile: BirthProfile, place: Place, settings: EngineSettings, onBack: () -> Unit, onRemedy: () -> Unit = {}) {
     val context = LocalContext.current
-    val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${java.time.LocalDate.now()}"
+    val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${java.time.LocalDate.now()}|${com.kshana.app.data.Lang.code}"
     var items by remember { mutableStateOf(if (WallCache.key == key) WallCache.countdowns else null) }
     var fest by remember { mutableStateOf(if (WallCache.key == key) WallCache.festivals else null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -100,8 +100,8 @@ fun WallScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
             val engine = EngineProvider.get(context)
             val (c, f) = withContext(Dispatchers.Default) {
                 Pair(
-                    engine.countdowns(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now()),
-                    engine.festivalsHere(profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa, place.latitude, place.longitude, com.kshana.app.data.PlaceClock.offsetMinutes(place), Instants.now(), 35u),
+                    engine.countdowns(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), com.kshana.app.data.Lang.code),
+                    engine.festivalsHere(profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa, place.latitude, place.longitude, com.kshana.app.data.PlaceClock.offsetMinutes(place), Instants.now(), 35u, com.kshana.app.data.Lang.code),
                 )
             }
             WallCache.key = key

@@ -139,7 +139,7 @@ internal suspend fun loadHorizon(
         engine.forecastHorizon(
             profile.birthInstant(), profile.latitude, profile.longitude,
             place.latitude, place.longitude,
-            settings.houseSystem, settings.ayanamsa, from, stepDays, count.toUInt(),
+            settings.houseSystem, settings.ayanamsa, from, stepDays, count.toUInt(), com.kshana.app.data.Lang.code,
         )
     }
 }

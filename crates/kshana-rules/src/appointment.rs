@@ -8,8 +8,9 @@
 //! same day (by the planetary hours, outside the cautions) and a better day in the
 //! next fortnight (by the daily series), so the person is never told only "no".
 
-use crate::forecast::{date_words, moment, series, Band, ForecastError, Hora, Life, Moment};
+use crate::forecast::{date_words, moment, moment_in, series, Band, ForecastError, Hora, Life, Moment};
 use crate::gochara::SaturnPhase;
+use crate::plain::Lang;
 use kshana_ephem::Spk;
 use kshana_houses::HouseSystem;
 use kshana_sky::Observer;
@@ -105,6 +106,42 @@ impl Purpose {
         }
     }
 
+    /// The words on the chip, in `lang`.
+    pub fn words_in(self, lang: Lang) -> &'static str {
+        let t = match self {
+            Purpose::Meeting => ["Meeting someone", "ഒരാളെ കാണാൻ", "किसी से मिलना"],
+            Purpose::Interview => ["Interview, pitch", "ഇന്റർവ്യൂ", "इंटरव्यू"],
+            Purpose::Exam => ["Exam, test", "പരീക്ഷ", "परीक्षा"],
+            Purpose::Journey => ["Journey", "യാത്ര", "यात्रा"],
+            Purpose::Deal => ["Deal, signing, purchase", "കരാർ, ഒപ്പ്, വാങ്ങൽ", "सौदा, हस्ताक्षर, खरीद"],
+            Purpose::Doctor => ["Doctor, treatment", "ഡോക്ടർ, ചികിത്സ", "डॉक्टर, इलाज"],
+            Purpose::Date => ["Date, proposal", "പ്രണയം, വിവാഹാലോചന", "मुलाक़ात, प्रस्ताव"],
+            Purpose::Family => ["Family matter", "കുടുംബകാര്യം", "पारिवारिक बात"],
+            Purpose::Property => ["Home, land, rent", "വീട്, ഭൂമി, വാടക", "घर, ज़मीन, किराया"],
+            Purpose::Launch => ["Starting something new", "പുതിയ തുടക്കം", "नई शुरुआत"],
+            Purpose::Anything => ["Anything at all", "എന്തും", "कुछ भी"],
+        };
+        lang.pick(t)
+    }
+
+    /// The purpose as a phrase inside a sentence, in `lang`.
+    pub fn phrase_in(self, lang: Lang) -> &'static str {
+        let t = match self {
+            Purpose::Meeting => ["a meeting", "ഈ കൂടിക്കാഴ്ച", "यह मुलाक़ात"],
+            Purpose::Interview => ["an interview or a pitch", "ഇന്റർവ്യൂവോ അവതരണമോ", "इंटरव्यू या प्रस्तुति"],
+            Purpose::Exam => ["an exam", "പരീക്ഷ", "परीक्षा"],
+            Purpose::Journey => ["a journey", "യാത്ര", "यात्रा"],
+            Purpose::Deal => ["a deal or a signing", "ഇടപാടോ ഒപ്പിടലോ", "सौदा या हस्ताक्षर"],
+            Purpose::Doctor => ["a visit to the doctor", "ഡോക്ടറെ കാണുന്നത്", "डॉक्टर से मिलना"],
+            Purpose::Date => ["a date or a proposal", "പ്രിയപ്പെട്ടയാളുമായുള്ള കൂടിക്കാഴ്ചയോ ആലോചനയോ", "मुलाक़ात या प्रस्ताव"],
+            Purpose::Family => ["a family matter", "കുടുംബകാര്യം", "पारिवारिक मामला"],
+            Purpose::Property => ["a home or land matter", "വീടിന്റെയോ ഭൂമിയുടെയോ കാര്യം", "घर या ज़मीन का मामला"],
+            Purpose::Launch => ["a new start", "പുതിയ തുടക്കം", "नई शुरुआत"],
+            Purpose::Anything => ["what you have planned", "നിങ്ങൾ ഉദ്ദേശിച്ച കാര്യം", "आपकी योजना"],
+        };
+        lang.pick(t)
+    }
+
     /// The lives it touches and their weights (sum 1).
     pub fn lives(self) -> Vec<(Life, f64)> {
         use Life::*;
@@ -193,6 +230,31 @@ fn verdict_words(score: f64, caution: Option<&str>) -> (&'static str, Band) {
     )
 }
 
+/// A verdict (one of the English keys of `verdict_words`) in `lang`.
+pub fn verdict_in(lang: Lang, verdict: &str) -> String {
+    let t = match verdict {
+        "Go" => ["Go", "പോകാം", "जाइए"],
+        "Go, with care" => ["Go, with care", "പോകാം, ശ്രദ്ധയോടെ", "जाइए, पर सावधानी से"],
+        "Shift it if you can" => ["Shift it if you can", "കഴിയുമെങ്കിൽ സമയം മാറ്റുക", "हो सके तो समय बदलें"],
+        "Better at another time" => ["Better at another time", "മറ്റൊരു സമയമാണ് നല്ലത്", "किसी और समय बेहतर"],
+        _ => return verdict.to_string(),
+    };
+    lang.pick(t).to_string()
+}
+
+/// How a life stands at a band, as the end of a sentence about that life (Malayalam and
+/// Hindi only; English keeps its own wording).
+fn band_state(lang: Lang, b: Band) -> &'static str {
+    let t = match b {
+        Band::Bright => ["bright", "നന്നായി തെളിഞ്ഞുനിൽക്കുന്നു", "बहुत अच्छी है"],
+        Band::Good => ["good", "നല്ല നിലയിലാണ്", "अच्छी है"],
+        Band::Steady => ["steady", "സമനിലയിലാണ്", "सामान्य है"],
+        Band::Slow => ["slow", "മന്ദഗതിയിലാണ്", "धीमी है"],
+        Band::Hold => ["hold", "കാത്തിരിപ്പിലാണ്", "थमी हुई है"],
+    };
+    lang.pick(t)
+}
+
 /// Read `at` for `purpose`.
 #[allow(clippy::too_many_arguments)]
 pub fn appointment(
@@ -205,7 +267,190 @@ pub fn appointment(
     purpose: Purpose,
     at: Instant,
 ) -> Result<Appointment, ForecastError> {
+    appointment_in(Lang::En, spk, eop, natal, obs, system, ayanamsa, purpose, at)
+}
+
+/// [`appointment`] with every sentence in `lang`. The verdict is in `lang` too; the
+/// caution is the moment's own window label.
+#[allow(clippy::too_many_arguments)]
+pub fn appointment_in(
+    lang: Lang,
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    natal: &crate::forecast::Natal,
+    obs: &Observer,
+    system: HouseSystem,
+    ayanamsa: Ayanamsa,
+    purpose: Purpose,
+    at: Instant,
+) -> Result<Appointment, ForecastError> {
+    if lang == Lang::En {
+        return appointment_en(spk, eop, natal, obs, system, ayanamsa, purpose, at);
+    }
+    let m = moment_in(lang, spk, eop, natal, obs, system, ayanamsa, at)?;
+    let mut a = appointment_from(spk, eop, natal, obs, ayanamsa, purpose, at, m)?;
+    localise(lang, &mut a, obs.longitude_deg);
+    Ok(a)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn appointment_en(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    natal: &crate::forecast::Natal,
+    obs: &Observer,
+    system: HouseSystem,
+    ayanamsa: Ayanamsa,
+    purpose: Purpose,
+    at: Instant,
+) -> Result<Appointment, ForecastError> {
     let m = moment(spk, eop, natal, obs, system, ayanamsa, at)?;
+    appointment_from(spk, eop, natal, obs, ayanamsa, purpose, at, m)
+}
+
+/// The words of a reading in Malayalam or Hindi, rebuilt from its numbers and the
+/// moment (already in `lang`).
+fn localise(lang: Lang, a: &mut Appointment, lon: f64) {
+    use crate::lang as l;
+    let idx = |x: Life| Life::ALL.iter().position(|y| *y == x).unwrap_or(0);
+    let m = &a.moment;
+    let raw: f64 = a.lives.iter().map(|(_, w, s)| w * s).sum::<f64>() / a.lives.iter().map(|(_, w, _)| w).sum::<f64>();
+    let top = a.lives.first().map(|(l, _, _)| *l).unwrap_or(Life::Career);
+    let top_ls = &m.lives[idx(top)];
+    let weak = a
+        .lives
+        .iter()
+        .min_by(|x, y| x.2.partial_cmp(&y.2).unwrap_or(std::cmp::Ordering::Equal))
+        .map(|(l, _, s)| (*l, *s));
+    let tn = l::life_name(lang, top);
+    let st = band_state(lang, top_ls.band);
+    let ph = a.purpose.phrase_in(lang);
+    let pw = a.purpose.words_in(lang);
+    a.caution = a.caution.as_ref().map(|c| l::window_label(lang, c));
+    let ml = lang == Lang::Ml;
+    a.headline = match (a.caution.as_deref(), a.verdict.as_str()) {
+        (Some(c), _) => {
+            if ml {
+                format!("{pw}: ഈ സമയം ദിവസത്തിലെ {c} ആണ്. അപ്പോൾ തുടങ്ങിവച്ചത് തീർക്കാം, പുതിയതൊന്നും തുടങ്ങരുത്: കഴിയുമെങ്കിൽ ആ നേരം കഴിഞ്ഞ് തുടങ്ങുക, അല്ലെങ്കിൽ താഴെ കാണുന്ന ഏതെങ്കിലും സമയം എടുക്കുക.")
+            } else {
+                format!("{pw}: यह समय दिन के {c} में पड़ता है। उस समय शुरू किया काम निपटाएँ, नया कुछ शुरू न करें: हो सके तो वह समय बीतने के बाद शुरू करें, या नीचे दिए किसी समय को चुनें।")
+            }
+        }
+        (None, "Go") => {
+            if ml {
+                format!("ധൈര്യമായി പോകൂ. ആ സമയത്ത് {tn} {st}; {ph} നന്നായി നടക്കാൻ സമയം അനുകൂലമാണ്. {}", top_ls.headline)
+            } else {
+                format!("बेझिझक जाइए। उस समय {tn} की स्थिति {st}, और समय {ph} के पक्ष में है। {}", top_ls.headline)
+            }
+        }
+        (None, "Go, with care") => {
+            let watch = weak
+                .filter(|(_, s)| *s < 0.44)
+                .map(|(w, _)| {
+                    if ml {
+                        format!(" {} ശ്രദ്ധിക്കുക.", l::life_name(lang, w))
+                    } else {
+                        format!(" {} पर ध्यान दें।", l::life_name(lang, w))
+                    }
+                })
+                .unwrap_or_default();
+            if ml {
+                format!("പോകാം, ശ്രദ്ധയോടെ. അപ്പോൾ {tn} {st}; {ph} നടക്കും, പക്ഷേ പതിവിലും കൂടുതൽ തയ്യാറെടുക്കുക.{watch}")
+            } else {
+                format!("जाइए, पर सावधानी से। उस समय {tn} की स्थिति {st}; {ph} हो जाएगा, पर सामान्य से ज़्यादा तैयारी करें।{watch}")
+            }
+        }
+        (None, "Shift it if you can") => {
+            if ml {
+                format!("കഴിയുമെങ്കിൽ സമയം മാറ്റുക. ആ സമയത്ത് {tn} {st}, {ph} ആശ്രയിക്കുന്നത് അതിനെയാണ്. താഴെയുള്ള സമയങ്ങളും ദിവസങ്ങളും ഇതിന് കൂടുതൽ നല്ലതാണ്.")
+            } else {
+                format!("हो सके तो समय बदल दें। उस समय {tn} की स्थिति {st}, और {ph} इसी पर टिका है। नीचे दिए समय और दिन इसके लिए बेहतर हैं।")
+            }
+        }
+        _ => {
+            if ml {
+                format!("മറ്റൊരു സമയമാണ് നല്ലത്. അപ്പോൾ {tn} കാത്തിരിപ്പിലാണ്, ആ ഭാരം {ph} ചുമക്കേണ്ടിവരും. താഴെയുള്ള ഏതെങ്കിലും സമയം ഇതിന് കൂടുതൽ നല്ലതാണ്.")
+            } else {
+                format!("किसी और समय बेहतर रहेगा। उस समय {tn} की स्थिति थमी हुई है, और {ph} पर उसका बोझ पड़ेगा। नीचे दिया कोई समय इसके लिए बेहतर है।")
+            }
+        }
+    };
+
+    let mut advice: Vec<String> = Vec::new();
+    if let Some(h) = &m.hora {
+        let fit = top.hora_affinity(h.lord);
+        let tail = if fit >= 0.7 {
+            lang.pick(["", " · {}: യോജിച്ച സമയം", " · {} के लिए ठीक"]).replace("{}", tn)
+        } else if fit <= 0.3 {
+            lang.pick(["", " · {}: പറ്റിയ സമയമല്ല", " · {} के लिए सही समय नहीं"]).replace("{}", tn)
+        } else {
+            String::new()
+        };
+        let lead = lang.pick(["", "ആ മണിക്കൂർ: ", "वह घंटा: "]);
+        advice.push(format!("{lead}{}{tail}", l::hour_nature(lang, h.lord)));
+    }
+    if a.abhijit {
+        advice.push(lang.pick(["", "ഇത് ദിവസത്തിലെ ഭാഗ്യ നിമിഷങ്ങളിലാണ്. കൃത്യം അപ്പോൾ തുടങ്ങുക.", "यह दिन की शुभ घड़ी में पड़ता है। ठीक उसी समय शुरू करें।"]).to_string());
+    }
+    for w in &m.windows {
+        if w.caution && w.start > a.at && w.start.ns_since(a.at) < 3 * 3_600 * kshana_time::NS_PER_SEC {
+            let label = l::window_label(lang, &w.label);
+            advice.push(if ml {
+                format!("അധികം വൈകാതെ ദിവസത്തിലെ {label} തുടങ്ങും; അതിനുമുമ്പ് തീർക്കുക, അതിലേക്ക് നീളാൻ അനുവദിക്കരുത്.")
+            } else {
+                format!("थोड़ी ही देर बाद दिन का {label} शुरू होगा; उससे पहले निपटा लें, उसमें खिंचने न दें।")
+            });
+        }
+    }
+    let dq = l::day_quality(lang, m.tara);
+    advice.push(if ml { format!("നിങ്ങൾക്ക് ഇത് {dq}.") } else { format!("आपके लिए यह {dq}।") });
+    if m.moon_from_moon == 8 {
+        advice.push(lang.pick(["", "മാസത്തിലെ നിങ്ങളുടെ ഏറ്റവും സൂക്ഷിക്കേണ്ട ദിവസമാണിത്: മനസ്സ് താഴും, തെറ്റിദ്ധാരണകൾ എളുപ്പം ഉണ്ടാകും. കാര്യങ്ങൾ ചുരുക്കവും ലളിതവുമാക്കുക.", "यह महीने का आपका सबसे नाज़ुक दिन है: मन उदास रहता है और ग़लतफ़हमियाँ आसानी से होती हैं। बात छोटी और सरल रखें।"]).to_string());
+    }
+    if m.saturn != SaturnPhase::Clear {
+        let lt = l::long_test(lang, m.saturn);
+        advice.push(if ml {
+            format!("ഇപ്പോൾ നടക്കുന്നത്: {lt}. വിചാരിച്ചതിലും കൂടുതൽ സമയം എടുക്കുമെന്ന് കരുതിയിരിക്കുക.")
+        } else {
+            format!("अभी आपके लिए यह समय है: {lt}। काम में सोचे से ज़्यादा समय लग सकता है।")
+        });
+    }
+    for (x, _, s) in &a.lives {
+        if *s < 0.44 && *x != top {
+            advice.push(format!("{}: {}", l::life_name(lang, *x), m.lives[idx(*x)].headline));
+        }
+    }
+    if let Some((_, s)) = weak {
+        if s >= 0.56 && a.lives.len() > 1 {
+            advice.push(lang.pick(["", "ഇത് ബാധിക്കുന്ന എല്ലാ കാര്യങ്ങളും ആ സമയത്ത് നല്ല നിലയിലോ അതിലും മെച്ചത്തിലോ ആണ്.", "इससे जुड़े सभी पहलू उस समय अच्छे या उससे बेहतर हैं।"]).to_string());
+        }
+    }
+    a.advice = advice;
+    a.better_day_words = match a.better_day {
+        Some((t, v)) => {
+            let d = l::date(lang, t, lon);
+            if ml {
+                format!("മാറ്റാൻ കഴിയുമെങ്കിൽ: ഇതിന് {d} {:.0} കാണിക്കുന്നു; നിങ്ങൾ തിരഞ്ഞെടുത്ത സമയത്ത് {:.0} മാത്രം.", v * 100.0, raw * 100.0)
+            } else {
+                format!("अगर बदल सकें तो: इसके लिए {d} को {:.0} अंक मिलते हैं, आपके चुने समय पर {:.0}।", v * 100.0, raw * 100.0)
+            }
+        }
+        None => String::new(),
+    };
+    a.verdict = verdict_in(lang, &a.verdict);
+}
+
+#[allow(clippy::too_many_arguments)]
+fn appointment_from(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    natal: &crate::forecast::Natal,
+    obs: &Observer,
+    ayanamsa: Ayanamsa,
+    purpose: Purpose,
+    at: Instant,
+    m: Moment,
+) -> Result<Appointment, ForecastError> {
     let weights = purpose.lives();
     let idx = |l: Life| Life::ALL.iter().position(|x| *x == l).unwrap_or(0);
     let mut lives: Vec<(Life, f64, f64)> = weights
@@ -582,6 +827,20 @@ mod tests {
             assert!((w - 1.0).abs() < 1e-9);
             if a.score < 0.50 {
                 assert!(!a.better_today.is_empty() || a.better_day.is_some(), "{:?}", a.verdict);
+            }
+        }
+        // The same in Malayalam and Hindi: no astrology words, no English left, and the
+        // numbers unchanged.
+        for lang in [Lang::Ml, Lang::Hi] {
+            for p in Purpose::ALL {
+                let en = appointment(&spk, None, &natal, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, p, at).unwrap();
+                let a = appointment_in(lang, &spk, None, &natal, &obs, HouseSystem::Placidus, Ayanamsa::Lahiri, p, at).unwrap();
+                assert_eq!(a.score, en.score);
+                assert_eq!(a.verdict, verdict_in(lang, &en.verdict));
+                for s in std::iter::once(&a.headline).chain(a.advice.iter()).chain(std::iter::once(&a.better_day_words)).chain(std::iter::once(&a.verdict)) {
+                    assert_eq!(crate::plain::jargon_in(lang, s), None, "{lang:?} {p:?}: {s}");
+                }
+                assert!(!a.headline.is_ascii() && a.advice.iter().all(|s| !s.is_ascii()), "{lang:?} {p:?}: {:?}", a.advice);
             }
         }
         // Rahu kala on a Tuesday in Kochi runs about 15:00–16:30 local; a time inside it is capped.

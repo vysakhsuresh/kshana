@@ -68,7 +68,7 @@ internal object YearCache {
 @Composable
 private fun YearSection(profile: BirthProfile, place: Place, settings: EngineSettings, onLife: (String) -> Unit) {
     val context = LocalContext.current
-    val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${settings.houseSystem}|${java.time.LocalDate.now()}"
+    val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${settings.houseSystem}|${java.time.LocalDate.now()}|${com.kshana.app.data.Lang.code}"
     var y by remember { mutableStateOf(if (YearCache.key == key) YearCache.record else null) }
     var error by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(key) {
@@ -76,7 +76,7 @@ private fun YearSection(profile: BirthProfile, place: Place, settings: EngineSet
         try {
             val engine = EngineProvider.get(context)
             val r = withContext(Dispatchers.Default) {
-                engine.yearChapter(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now())
+                engine.yearChapter(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), com.kshana.app.data.Lang.code)
             }
             YearCache.key = key
             YearCache.record = r
@@ -123,7 +123,7 @@ private fun YearSection(profile: BirthProfile, place: Place, settings: EngineSet
 @Composable
 fun BookScreen(profile: BirthProfile, place: Place, settings: EngineSettings, onBack: () -> Unit, onLife: (String) -> Unit = {}, onRemedy: () -> Unit = {}) {
     val context = LocalContext.current
-    val key = "${profile.birthInstant().taiSeconds}|${profile.latitude}|${profile.longitude}|${settings.ayanamsa}|${settings.houseSystem}"
+    val key = "${profile.birthInstant().taiSeconds}|${profile.latitude}|${profile.longitude}|${settings.ayanamsa}|${settings.houseSystem}|${com.kshana.app.data.Lang.code}"
     var book by remember { mutableStateOf(if (BookCache.key == key) BookCache.record else null) }
     var error by remember { mutableStateOf<String?>(null) }
     var openChapter by remember { mutableStateOf<Int?>(null) }
@@ -134,7 +134,7 @@ fun BookScreen(profile: BirthProfile, place: Place, settings: EngineSettings, on
         try {
             val engine = EngineProvider.get(context)
             val t = withContext(Dispatchers.Default) {
-                engine.timeline(profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa, Instants.now())
+                engine.timeline(profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), com.kshana.app.data.Lang.code)
             }
             BookCache.key = key
             BookCache.record = t

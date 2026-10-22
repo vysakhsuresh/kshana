@@ -6,6 +6,7 @@
 //! year.
 
 use crate::forecast::{date_words, slow_series, Band, ForecastError, Life, Natal};
+use crate::plain::Lang;
 
 use kshana_chart::{compute, ChartInput};
 use kshana_ephem::Spk;
@@ -59,6 +60,21 @@ pub fn year_chapter(
     ayanamsa: Ayanamsa,
     at: Instant,
 ) -> Result<YearChapter, ForecastError> {
+    year_chapter_in(Lang::En, spk, eop, natal, obs, system, ayanamsa, at)
+}
+
+/// [`year_chapter`] with its sentences in `lang`.
+#[allow(clippy::too_many_arguments)]
+pub fn year_chapter_in(
+    lang: Lang,
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    natal: &Natal,
+    obs: &Observer,
+    system: HouseSystem,
+    ayanamsa: Ayanamsa,
+    at: Instant,
+) -> Result<YearChapter, ForecastError> {
     let sun_sid = natal.facts.planet(DashaLord::Sun).sidereal;
     let sun_trop = (sun_sid + ayanamsa_degrees(ayanamsa, natal.birth.tt_centuries_since_j2000())).rem_euclid(360.0);
     let year = Utc::from_instant(at).year;
@@ -99,22 +115,53 @@ pub fn year_chapter(
     let age = (start.ns_since(natal.birth) as f64 / (365.25 * NS_PER_DAY as f64)).round() as u32;
     let band = Band::of(tone);
     let lon = obs.longitude_deg;
-    let theme = format!("This year leans towards {}. {}", crate::plain::chapter_theme(lord), crate::plain::chapter_prediction(lord));
-    let kind = match band {
-        Band::Bright => "a bright year",
-        Band::Good => "a good year",
-        Band::Steady => "an even year",
-        Band::Slow => "a slow year",
-        Band::Hold => "a year to hold still",
+    let (th, pr) = (crate::lang::chapter_theme(lang, lord), crate::lang::chapter_prediction(lang, lord));
+    let theme = match lang {
+        Lang::En => format!("This year leans towards {th}. {pr}"),
+        Lang::Ml => format!("ഈ വർഷം {th} എന്നിവയിലേക്ക് ചായുന്നു. {pr}"),
+        Lang::Hi => format!("यह साल {th} की ओर झुका है। {pr}"),
     };
-    let headline = format!(
-        "Your {} year runs from {} to {}. Overall it is {kind}: {} is its gift, and the most patience is needed for {}.",
-        ordinal_age(age + 1),
-        date_words(start, lon),
-        date_words(end, lon),
-        Life::ALL[bi].name(),
-        Life::ALL[wi].name().to_ascii_lowercase()
-    );
+    let bix = match band {
+        Band::Bright => 0,
+        Band::Good => 1,
+        Band::Steady => 2,
+        Band::Slow => 3,
+        Band::Hold => 4,
+    };
+    let d = |t: Instant| crate::lang::date(lang, t, lon);
+    let (bn, wn) = (crate::lang::life_name(lang, Life::ALL[bi]), crate::lang::life_name(lang, Life::ALL[wi]));
+    let headline = match lang {
+        Lang::En => {
+            let kind = ["a bright year", "a good year", "an even year", "a slow year", "a year to hold still"][bix];
+            format!(
+                "Your {} year runs from {} to {}. Overall it is {kind}: {} is its gift, and the most patience is needed for {}.",
+                ordinal_age(age + 1),
+                date_words(start, lon),
+                date_words(end, lon),
+                Life::ALL[bi].name(),
+                Life::ALL[wi].name().to_ascii_lowercase()
+            )
+        }
+        Lang::Ml => {
+            let kind = ["തിളക്കമുള്ള വർഷം", "നല്ല വർഷം", "സമനിലയുള്ള വർഷം", "മന്ദമായ വർഷം", "അനങ്ങാതെ നിൽക്കേണ്ട വർഷം"][bix];
+            format!(
+                "നിങ്ങളുടെ ജീവിതത്തിലെ {}-ാം വർഷം {} മുതൽ {} വരെ. മൊത്തത്തിൽ ഇത് {kind} ആണ്: ഇതിന്റെ സമ്മാനം {bn}; ഏറ്റവും ക്ഷമ വേണ്ടത് {}.",
+                age + 1,
+                d(start),
+                d(end),
+                crate::forecast::life_in(lang, Life::ALL[wi])
+            )
+        }
+        Lang::Hi => {
+            let kind = ["चमकदार साल", "अच्छा साल", "बराबर साल", "धीमा साल", "ठहरने का साल"][bix];
+            format!(
+                "आपके जीवन का {} साल {} से {} तक है। कुल मिलाकर यह {kind} है: इसका तोहफ़ा {bn} है, और सबसे ज़्यादा धैर्य {wn} में चाहिए।",
+                crate::forecast::hi_ordinal(age as usize + 1),
+                d(start),
+                d(end)
+            )
+        }
+    };
     Ok(YearChapter {
         start,
         end,

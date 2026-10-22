@@ -111,7 +111,7 @@ fun PlanScreen(
                 engine.appointment(
                     profile.birthInstant(), profile.latitude, profile.longitude,
                     planPlace.latitude, planPlace.longitude,
-                    settings.houseSystem, settings.ayanamsa, purpose, at,
+                    settings.houseSystem, settings.ayanamsa, purpose, at, com.kshana.app.data.Lang.code,
                 )
             }
             error = null
@@ -223,7 +223,7 @@ fun PlanScreen(
             try {
                 val engine = EngineProvider.get(context)
                 bestWeek = withContext(Dispatchers.Default) {
-                    engine.bestSlots(profile.birthInstant(), profile.latitude, profile.longitude, planPlace.latitude, planPlace.longitude, settings.houseSystem, settings.ayanamsa, purpose, Instants.now(), 7u, 5u)
+                    engine.bestSlots(profile.birthInstant(), profile.latitude, profile.longitude, planPlace.latitude, planPlace.longitude, settings.houseSystem, settings.ayanamsa, purpose, Instants.now(), 7u, 5u, com.kshana.app.data.Lang.code)
                 }
             } catch (e: Exception) {
                 error = e.message ?: e.toString()

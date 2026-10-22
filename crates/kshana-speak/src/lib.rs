@@ -14,6 +14,7 @@ use kshana_rules::{
     agreeing_levels, assess, promise, timing, yogas, Ashtakoota, Facts, MangalDosha,
     SynastryAspect, AREAS,
 };
+use kshana_rules::Lang;
 use kshana_time::{Instant, Utc};
 use kshana_vedic::panchanga::NAKSHATRA_NAMES;
 use kshana_vedic::{chara_karakas, nakshatra, naming_for, Ayanamsa, DashaLord};
@@ -40,6 +41,10 @@ pub struct Sentence {
 /// A titled group of sentences.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Section {
+    /// Stable key, never shown: `who`, `now`, `next`, or the area's English name.
+    pub key: String,
+    /// For an area: `promised` or `earned`; empty otherwise. Never shown.
+    pub mark: String,
     /// Title.
     pub title: String,
     /// One-line summary.
@@ -101,16 +106,123 @@ pub fn graha_words(g: DashaLord) -> &'static str {
 }
 
 fn area_words(name: &str) -> &'static str {
-    match name {
-        "Career" => "your work and standing",
-        "Marriage" => "marriage and partnership",
-        "Children" => "children",
-        "Wealth" => "money and gains",
-        "Health" => "health and vitality",
-        "Property" => "home and property",
-        "Education" => "learning",
-        "Foreign" => "travel and life abroad",
-        _ => "this matter",
+    area_words_in(Lang::En, name)
+}
+
+/// Pick the sentence for `lang`; each arm is built only when chosen.
+macro_rules! say {
+    ($lang:expr, $en:expr, $ml:expr, $hi:expr $(,)?) => {
+        match $lang {
+            Lang::En => $en,
+            Lang::Ml => $ml,
+            Lang::Hi => $hi,
+        }
+    };
+}
+
+/// The lexicon's language for a reader's language.
+fn lexicon_lang(lang: Lang) -> Language {
+    match lang {
+        Lang::En => Language::English,
+        Lang::Ml => Language::Malayalam,
+        Lang::Hi => Language::Hindi,
+    }
+}
+
+/// An engine name (a sign, a star, a graha) in the reader's script; the name itself in
+/// English or when the lexicon has no verified cell.
+fn name_in(lang: Lang, en: &'static str) -> &'static str {
+    if lang == Lang::En {
+        return en;
+    }
+    if en == "Lagna" {
+        return lang.pick(["Lagna", "ലഗ്നം", "लग्न"]);
+    }
+    let t = term(en, lexicon_lang(lang));
+    if t.is_empty() {
+        en
+    } else {
+        t
+    }
+}
+
+fn sign_in(lang: Lang, i: usize) -> &'static str {
+    name_in(lang, SIGN_NAMES[i % 12])
+}
+
+/// A graha's name: "the Sun" in English, the native name otherwise.
+fn graha_in(lang: Lang, g: DashaLord) -> &'static str {
+    let en = match g {
+        DashaLord::Sun => "Sun",
+        DashaLord::Moon => "Moon",
+        DashaLord::Mars => "Mars",
+        DashaLord::Mercury => "Mercury",
+        DashaLord::Jupiter => "Jupiter",
+        DashaLord::Venus => "Venus",
+        DashaLord::Saturn => "Saturn",
+        DashaLord::Rahu => "Rahu",
+        DashaLord::Ketu => "Ketu",
+    };
+    match lang {
+        Lang::En => graha_words(g),
+        _ => name_in(lang, en),
+    }
+}
+
+/// A date: "12 Mar 2027" (UTC) in English, the reader's form otherwise.
+fn date_in(lang: Lang, i: Instant) -> String {
+    match lang {
+        Lang::En => date_words(i),
+        _ => kshana_rules::lang::date(lang, i, 0.0),
+    }
+}
+
+/// A month and year: "Mar 2027" in English, the reader's form otherwise.
+fn month_in(lang: Lang, i: Instant) -> String {
+    match lang {
+        Lang::En => month_words(i),
+        _ => kshana_rules::lang::month_year(lang, i, 0.0),
+    }
+}
+
+fn area_words_in(lang: Lang, name: &str) -> &'static str {
+    let t = match name {
+        "Career" => ["your work and standing", "നിങ്ങളുടെ ജോലിയും സ്ഥാനവും", "आपका काम और पद"],
+        "Marriage" => ["marriage and partnership", "വിവാഹവും പങ്കാളിത്തവും", "विवाह और साझेदारी"],
+        "Children" => ["children", "മക്കൾ", "संतान"],
+        "Wealth" => ["money and gains", "പണവും നേട്ടങ്ങളും", "धन और लाभ"],
+        "Health" => ["health and vitality", "ആരോഗ്യവും ഊർജവും", "सेहत और ऊर्जा"],
+        "Property" => ["home and property", "വീടും വസ്തുവും", "घर और संपत्ति"],
+        "Education" => ["learning", "പഠനം", "पढ़ाई"],
+        "Foreign" => ["travel and life abroad", "യാത്രയും വിദേശജീവിതവും", "यात्रा और विदेश का जीवन"],
+        _ => ["this matter", "ഈ കാര്യം", "यह विषय"],
+    };
+    lang.pick(t)
+}
+
+/// An area's title: the engine's name in English.
+fn area_title_in(lang: Lang, name: &'static str) -> &'static str {
+    let t = match name {
+        "Career" => ["Career", "ജോലി", "करियर"],
+        "Marriage" => ["Marriage", "വിവാഹം", "विवाह"],
+        "Children" => ["Children", "മക്കൾ", "संतान"],
+        "Wealth" => ["Wealth", "ധനം", "धन"],
+        "Health" => ["Health", "ആരോഗ്യം", "सेहत"],
+        "Property" => ["Property", "വസ്തു", "संपत्ति"],
+        "Education" => ["Education", "വിദ്യാഭ്യാസം", "शिक्षा"],
+        "Family" => ["Family", "കുടുംബം", "परिवार"],
+        "Foreign" => ["Foreign", "വിദേശം", "विदेश"],
+        _ => [name, name, name],
+    };
+    lang.pick(t)
+}
+
+/// "7th" / "7-ാം" / "7वें".
+fn ordinal_in(lang: Lang, n: u8) -> String {
+    match lang {
+        Lang::En => ordinal(n),
+        Lang::Ml => format!("{n}-ാം"),
+        Lang::Hi => format!("{n}वें"),
     }
 }
 
@@ -125,6 +237,11 @@ fn s(text: String, why: Vec<String>, confidence: f64, rules: Vec<String>) -> Sen
 
 /// Who the person is: lagna, Moon, Sun, the soul planet, the naming syllable.
 pub fn who(natal: &Chart) -> Section {
+    who_in(Lang::En, natal)
+}
+
+/// [`who`] in `lang`.
+pub fn who_in(lang: Lang, natal: &Chart) -> Section {
     let facts = Facts::from_chart(natal);
     let moon = &facts.planets[1];
     let sun = &facts.planets[0];
@@ -132,74 +249,131 @@ pub fn who(natal: &Chart) -> Section {
     let (nname, pada, syl) = naming_for(moon.sidereal);
     let sid: [f64; 7] = std::array::from_fn(|i| facts.planets[i].sidereal);
     let kk = chara_karakas(sid);
+    let lagna = sign_in(lang, facts.lagna_sign as usize);
+    let moon_sign = sign_in(lang, moon.sign as usize);
+    let star = name_in(lang, nname);
     let mut sentences = vec![
         s(
-            format!(
-                "You rise with {} on the eastern horizon. That is the lens your whole chart is read through.",
-                SIGN_NAMES[facts.lagna_sign as usize]
+            say!(
+                lang,
+                format!("You rise with {lagna} on the eastern horizon. That is the lens your whole chart is read through."),
+                format!("നിങ്ങളുടെ ലഗ്നം {lagna} ആണ്: ജനനസമയത്ത് കിഴക്കേ ചക്രവാളത്തിൽ ഉദിച്ചുനിന്ന രാശി. ജാതകം മുഴുവൻ ഇതിലൂടെയാണ് വായിക്കുന്നത്."),
+                format!("आपका लग्न {lagna} है: जन्म के समय पूर्वी क्षितिज पर उदित राशि। पूरी कुंडली इसी के आधार पर पढ़ी जाती है।"),
             ),
-            vec![format!(
-                "Lagna (sidereal) {:.2}° = {}",
-                facts.cusps[0], SIGN_NAMES[facts.lagna_sign as usize]
+            vec![say!(
+                lang,
+                format!("Lagna (sidereal) {:.2}° = {lagna}", facts.cusps[0]),
+                format!("ലഗ്നം (നിരയനം) {:.2}° = {lagna}", facts.cusps[0]),
+                format!("लग्न (निरयण) {:.2}° = {lagna}", facts.cusps[0]),
             )],
             1.0,
             vec![],
         ),
         s(
-            format!(
-                "Your Moon is in {}, in the star {} (pada {}). The Moon is your mind; its star sets your first dasha and your naming syllable, {}.",
-                SIGN_NAMES[moon.sign as usize], nname, pada, syl
+            say!(
+                lang,
+                format!(
+                    "Your Moon is in {moon_sign}, in the star {star} (pada {pada}). The Moon is your mind; its star sets your first dasha and your naming syllable, {syl}."
+                ),
+                format!(
+                    "നിങ്ങളുടെ ചന്ദ്രൻ {moon_sign} രാശിയിൽ, {star} നക്ഷത്രത്തിൽ ({pada}-ാം പാദം). ചന്ദ്രൻ മനസ്സാണ്; ഈ നക്ഷത്രമാണ് ആദ്യത്തെ ദശയും പേരിന്റെ ആദ്യാക്ഷരവും ({syl}) നിശ്ചയിക്കുന്നത്."
+                ),
+                format!(
+                    "आपका चंद्र {moon_sign} राशि में, {star} नक्षत्र में है (चरण {pada})। चंद्र मन है; इसका नक्षत्र आपकी पहली दशा और नाम का पहला अक्षर ({syl}) तय करता है।"
+                ),
             ),
-            vec![format!(
-                "Moon sidereal {:.4}°, nakshatra {} fraction {:.3}",
-                moon.sidereal,
-                NAKSHATRA_NAMES[nk.index],
-                nk.fraction
+            vec![say!(
+                lang,
+                format!(
+                    "Moon sidereal {:.4}°, nakshatra {} fraction {:.3}",
+                    moon.sidereal, NAKSHATRA_NAMES[nk.index], nk.fraction
+                ),
+                format!(
+                    "ചന്ദ്രൻ നിരയനം {:.4}°, നക്ഷത്രം {} ഭാഗം {:.3}",
+                    moon.sidereal,
+                    name_in(lang, NAKSHATRA_NAMES[nk.index]),
+                    nk.fraction
+                ),
+                format!(
+                    "चंद्र निरयण {:.4}°, नक्षत्र {} भाग {:.3}",
+                    moon.sidereal,
+                    name_in(lang, NAKSHATRA_NAMES[nk.index]),
+                    nk.fraction
+                ),
             )],
             1.0,
             vec![],
         ),
-        s(
-            format!(
-                "Your Sun is in {} (sidereal). In the Western zodiac that is {}.",
-                SIGN_NAMES[sun.sign as usize],
-                SIGN_NAMES[(natal.bodies[0].tropical / 30.0).floor() as usize % 12]
-            ),
-            vec![format!(
-                "Sun sidereal {:.4}°, tropical {:.4}°, ayanamsa {:.4}°",
-                sun.sidereal, natal.bodies[0].tropical, natal.ayanamsa_deg
-            )],
-            1.0,
-            vec![],
-        ),
-        s(
-            format!(
-                "{} is your Atmakaraka, the planet with the highest degree in its sign: {}.",
-                capital(graha_words(kk[0].graha)),
-                kshana_vedic::KARAKA_MEANINGS[0]
-            ),
-            vec![format!(
-                "{:?} at {:.2}° in its sign; Darakaraka (spouse) is {:?}",
-                kk[0].graha, kk[0].degree_in_sign, kk[6].graha
-            )],
-            1.0,
-            vec!["Jaimini chara karaka, 7-planet scheme".to_string()],
-        ),
+        {
+            let sun_sign = sign_in(lang, sun.sign as usize);
+            let west = sign_in(lang, (natal.bodies[0].tropical / 30.0).floor() as usize % 12);
+            let (sd, tr, ay) = (sun.sidereal, natal.bodies[0].tropical, natal.ayanamsa_deg);
+            s(
+                say!(
+                    lang,
+                    format!("Your Sun is in {sun_sign} (sidereal). In the Western zodiac that is {west}."),
+                    format!("നിങ്ങളുടെ സൂര്യൻ {sun_sign} രാശിയിൽ (നിരയനം). പാശ്ചാത്യ രാശിചക്രത്തിൽ അത് {west} ആണ്."),
+                    format!("आपका सूर्य {sun_sign} राशि में है (निरयण)। पश्चिमी राशिचक्र में यह {west} है।"),
+                ),
+                vec![say!(
+                    lang,
+                    format!("Sun sidereal {sd:.4}°, tropical {tr:.4}°, ayanamsa {ay:.4}°"),
+                    format!("സൂര്യൻ നിരയനം {sd:.4}°, സായനം {tr:.4}°, അയനാംശം {ay:.4}°"),
+                    format!("सूर्य निरयण {sd:.4}°, सायन {tr:.4}°, अयनांश {ay:.4}°"),
+                )],
+                1.0,
+                vec![],
+            )
+        },
+        {
+            let g = graha_in(lang, kk[0].graha);
+            let dk = graha_in(lang, kk[6].graha);
+            let deg = kk[0].degree_in_sign;
+            s(
+                say!(
+                    lang,
+                    format!(
+                        "{} is your Atmakaraka, the planet with the highest degree in its sign: {}.",
+                        capital(g),
+                        kshana_vedic::KARAKA_MEANINGS[0]
+                    ),
+                    format!("{g} ആണ് നിങ്ങളുടെ ആത്മകാരകൻ, സ്വന്തം രാശിയിൽ ഏറ്റവും കൂടുതൽ ഡിഗ്രി കടന്ന ഗ്രഹം: സ്വത്വവും ആത്മാവിന്റെ ലക്ഷ്യവും."),
+                    format!("{g} आपका आत्मकारक है, अपनी राशि में सबसे अधिक अंश वाला ग्रह: स्वयं और आत्मा का उद्देश्य।"),
+                ),
+                vec![say!(
+                    lang,
+                    format!("{:?} at {:.2}° in its sign; Darakaraka (spouse) is {:?}", kk[0].graha, deg, kk[6].graha),
+                    format!("{g} സ്വന്തം രാശിയിൽ {deg:.2}°; ദാരകാരകൻ (ജീവിതപങ്കാളി) {dk}"),
+                    format!("{g} अपनी राशि में {deg:.2}°; दारकारक (जीवनसाथी) {dk}"),
+                )],
+                1.0,
+                vec!["Jaimini chara karaka, 7-planet scheme".to_string()],
+            )
+        },
     ];
     for y in yogas(&facts) {
         sentences.push(s(
-            format!("{} is present in your chart.", y.name),
+            say!(
+                lang,
+                format!("{} is present in your chart.", y.name),
+                format!("{} നിങ്ങളുടെ ജാതകത്തിലുണ്ട്.", y.name),
+                format!("{} आपकी कुंडली में है।", y.name),
+            ),
             y.hit.factors.clone(),
             y.hit.weight,
             vec![y.hit.rule_id.to_string()],
         ));
     }
     Section {
-        summary: format!(
-            "{} rising, Moon in {} ({})",
-            SIGN_NAMES[facts.lagna_sign as usize], SIGN_NAMES[moon.sign as usize], nname
+        key: "who".to_string(),
+        mark: String::new(),
+        summary: say!(
+            lang,
+            format!("{lagna} rising, Moon in {moon_sign} ({star})"),
+            format!("{lagna} ലഗ്നം, ചന്ദ്രൻ {moon_sign} രാശിയിൽ ({star})"),
+            format!("{lagna} लग्न, चंद्र {moon_sign} में ({star})"),
         ),
-        title: "Who you are".to_string(),
+        title: lang.pick(["Who you are", "നിങ്ങൾ ആരാണ്", "आप कौन हैं"]).to_string(),
         sentences,
     }
 }
@@ -214,29 +388,48 @@ fn capital(w: &str) -> String {
 
 /// One life area, in words: promise, strength, and the tightest supported window now.
 pub fn area_section(natal: &Chart, area: kshana_rules::Area, at: Instant) -> Section {
+    area_section_in(Lang::En, natal, area, at)
+}
+
+/// [`area_section`] in `lang`.
+pub fn area_section_in(lang: Lang, natal: &Chart, area: kshana_rules::Area, at: Instant) -> Section {
     let facts = Facts::from_chart(natal);
     let p = promise(&facts, area);
     let a = assess(&facts, area);
     let funnel = timing(&facts, area, natal.bodies[1].sidereal, natal.instant, at, 5);
     let agree = agreeing_levels(&funnel);
-    let words = area_words(area.name);
+    let words = area_words_in(lang, area.name);
     let mut sentences = Vec::new();
     let verdict = match (p.promised, a.score >= 0.5) {
-        (true, true) => format!(
-            "Both traditions agree: {} is promised in this chart, and the chart supports it.",
-            words
+        (true, true) => say!(
+            lang,
+            format!("Both traditions agree: {} is promised in this chart, and the chart supports it.", words),
+            format!("രണ്ടു പദ്ധതികളും യോജിക്കുന്നു: ഈ ജാതകത്തിൽ {words} വാഗ്ദാനം ചെയ്യപ്പെട്ടിരിക്കുന്നു, ജാതകം അതിനെ പിന്തുണയ്ക്കുകയും ചെയ്യുന്നു."),
+            format!("दोनों पद्धतियाँ सहमत हैं: इस कुंडली में {words} का वादा है, और कुंडली इसका साथ देती है।"),
         ),
-        (true, false) => format!(
-            "The KP sub-lord promises {}, but the Parashari reading finds the house weak. Expect it, with effort.",
-            words
+        (true, false) => say!(
+            lang,
+            format!("The KP sub-lord promises {}, but the Parashari reading finds the house weak. Expect it, with effort.", words),
+            format!("KP ഉപനാഥൻ {words} വാഗ്ദാനം ചെയ്യുന്നു, പക്ഷേ പരാശരി വായനയിൽ ഭാവം ദുർബലമാണ്. പ്രതീക്ഷിക്കാം, പരിശ്രമത്തോടെ."),
+            format!("KP उप-स्वामी {words} का वादा करता है, पर पाराशरी पद्धति में भाव कमज़ोर है। यह मिलेगा, पर मेहनत से।"),
         ),
-        (false, true) => format!(
-            "The Parashari reading supports {}, but the KP sub-lord does not promise it outright. Expect delays or conditions.",
-            words
+        (false, true) => say!(
+            lang,
+            format!(
+                "The Parashari reading supports {}, but the KP sub-lord does not promise it outright. Expect delays or conditions.",
+                words
+            ),
+            format!("പരാശരി വായന {words} പിന്തുണയ്ക്കുന്നു, പക്ഷേ KP ഉപനാഥൻ അത് നേരിട്ട് വാഗ്ദാനം ചെയ്യുന്നില്ല. താമസമോ നിബന്ധനകളോ പ്രതീക്ഷിക്കുക."),
+            format!("पाराशरी पद्धति {words} का समर्थन करती है, पर KP उप-स्वामी इसका सीधा वादा नहीं करता। देरी या शर्तों की उम्मीद रखें।"),
         ),
-        (false, false) => format!(
-            "Neither tradition promises {} freely in this chart. It is not denied; it must be earned and timed.",
-            words
+        (false, false) => say!(
+            lang,
+            format!(
+                "Neither tradition promises {} freely in this chart. It is not denied; it must be earned and timed.",
+                words
+            ),
+            format!("ഈ ജാതകത്തിൽ രണ്ടു പദ്ധതികളും {words} എളുപ്പത്തിൽ വാഗ്ദാനം ചെയ്യുന്നില്ല. അത് നിഷേധിക്കപ്പെട്ടിട്ടില്ല; അധ്വാനിച്ചും ശരിയായ സമയം നോക്കിയും നേടണം."),
+            format!("इस कुंडली में कोई भी पद्धति {words} का सहज वादा नहीं करती। यह नकारा नहीं गया है; इसे मेहनत और सही समय से पाना होगा।"),
         ),
     };
     let conf = 0.5
@@ -260,50 +453,76 @@ pub fn area_section(natal: &Chart, area: kshana_rules::Area, at: Instant) -> Sec
             .chain(a.hits.iter().map(|h| h.rule_id.to_string()))
             .collect(),
     ));
-    sentences.push(s(
-        format!(
-            "The sub-lord of your {} cusp is {}; the lord of the house is {} with a Parashari strength of {:.0} out of 100.",
-            ordinal(area.primary),
-            graha_words(p.sub_lord),
-            graha_words(a.lord),
-            a.score * 100.0
-        ),
-        vec![format!("KP strength {:.2}, Parashari score {:.2}", p.strength, a.score)],
-        1.0,
-        vec![],
-    ));
+    {
+        let ord = ordinal_in(lang, area.primary);
+        let (sub, lord) = (graha_in(lang, p.sub_lord), graha_in(lang, a.lord));
+        let pts = format!("{:.0}", a.score * 100.0);
+        sentences.push(s(
+            say!(
+                lang,
+                format!(
+                    "The sub-lord of your {} cusp is {}; the lord of the house is {} with a Parashari strength of {} out of 100.",
+                    ord, sub, lord, pts
+                ),
+                format!("നിങ്ങളുടെ {ord} ഭാവാരംഭത്തിന്റെ ഉപനാഥൻ {sub}; ഭാവാധിപൻ {lord}, പരാശരി ബലം 100-ൽ {pts}."),
+                format!("आपके {ord} भाव-संधि का उप-स्वामी {sub} है; भाव का स्वामी {lord} है, जिसका पाराशरी बल 100 में {pts} है।"),
+            ),
+            vec![say!(
+                lang,
+                format!("KP strength {:.2}, Parashari score {:.2}", p.strength, a.score),
+                format!("KP ബലം {:.2}, പരാശരി സ്കോർ {:.2}", p.strength, a.score),
+                format!("KP बल {:.2}, पाराशरी अंक {:.2}", p.strength, a.score),
+            )],
+            1.0,
+            vec![],
+        ));
+    }
     if let Some(top) = funnel.first() {
-        let running = format!(
-            "You are in the {} mahadasha ({} to {}).",
-            graha_words(top.period.lord),
-            month_words(top.period.start),
-            month_words(top.period.end)
+        let g = graha_in(lang, top.period.lord);
+        let (m1, m2) = (month_in(lang, top.period.start), month_in(lang, top.period.end));
+        let running = say!(
+            lang,
+            format!("You are in the {} mahadasha ({} to {}).", g, m1, m2),
+            format!("നിങ്ങൾ ഇപ്പോൾ {g} മഹാദശയിലാണ് ({m1} മുതൽ {m2} വരെ)."),
+            format!("आप अभी {g} की महादशा में हैं ({m1} से {m2} तक)।"),
         );
         sentences.push(s(running, vec![], 1.0, vec![]));
     }
     if agree > 0 {
         let deep = &funnel[agree - 1];
+        let (d1, d2) = (date_in(lang, deep.period.start), date_in(lang, deep.period.end));
+        let g = graha_in(lang, deep.period.lord);
         sentences.push(s(
-            format!(
-                "The running periods support {} down to level {} of 5: from {} to {}, {}'s period carries it.",
-                words,
-                agree,
-                date_words(deep.period.start),
-                date_words(deep.period.end),
-                graha_words(deep.period.lord)
+            say!(
+                lang,
+                format!(
+                    "The running periods support {} down to level {} of 5: from {} to {}, {}'s period carries it.",
+                    words, agree, d1, d2, g
+                ),
+                format!("നടക്കുന്ന ദശകൾ 5-ൽ {agree} തലം വരെ {words} പിന്തുണയ്ക്കുന്നു: {d1} മുതൽ {d2} വരെ {g} ദശാഭാഗമാണ് ഇതിനെ താങ്ങുന്നത്."),
+                format!("चल रही दशाएँ 5 में से {agree} स्तर तक {words} का साथ देती हैं: {d1} से {d2} तक {g} की अवधि इसे आगे ले जाती है।"),
             ),
             deep.supports
                 .iter()
-                .map(|x| format!("{:?} signifies house {} ({:?})", deep.period.lord, x.house, x.level))
+                .map(|x| match lang {
+                    Lang::En => format!("{:?} signifies house {} ({:?})", deep.period.lord, x.house, x.level),
+                    Lang::Ml => format!("{g} {}-ാം ഭാവത്തെ സൂചിപ്പിക്കുന്നു ({:?})", x.house, x.level),
+                    Lang::Hi => format!("{g} {}वें भाव का सूचक है ({:?})", x.house, x.level),
+                })
                 .collect(),
             0.4 + 0.12 * agree as f64,
             vec!["KS-K-0002".to_string()],
         ));
     } else {
         sentences.push(s(
-            format!(
-                "The running mahadasha does not signify {} just now. Nothing is lost; the next supporting period is the one to prepare for.",
-                words
+            say!(
+                lang,
+                format!(
+                    "The running mahadasha does not signify {} just now. Nothing is lost; the next supporting period is the one to prepare for.",
+                    words
+                ),
+                format!("ഇപ്പോഴത്തെ മഹാദശ {words} സൂചിപ്പിക്കുന്നില്ല. ഒന്നും നഷ്ടപ്പെട്ടിട്ടില്ല; പിന്തുണ നൽകുന്ന അടുത്ത ദശയ്ക്കായി ഒരുങ്ങുക."),
+                format!("चल रही महादशा अभी {words} की सूचक नहीं है। कुछ खोया नहीं है; अगली सहायक दशा के लिए तैयारी करें।"),
             ),
             vec![],
             0.6,
@@ -311,11 +530,13 @@ pub fn area_section(natal: &Chart, area: kshana_rules::Area, at: Instant) -> Sec
         ));
     }
     Section {
-        title: area.name.to_string(),
+        key: area.name.to_string(),
+        mark: if p.promised { "promised" } else { "earned" }.to_string(),
+        title: area_title_in(lang, area.name).to_string(),
         summary: if p.promised {
-            "promised".to_string()
+            lang.pick(["promised", "വാഗ്ദാനമുണ്ട്", "वादा है"]).to_string()
         } else {
-            "to be earned".to_string()
+            lang.pick(["to be earned", "നേടിയെടുക്കണം", "मेहनत से मिलेगा"]).to_string()
         },
         sentences,
     }
@@ -333,27 +554,55 @@ fn ordinal(n: u8) -> String {
 
 /// What the sky is doing to the chart now: Sade Sati, Jupiter and Saturn transits.
 pub fn now_section(spk: &Spk, natal: &Chart, at: Instant, ayanamsa: Ayanamsa) -> Section {
+    now_section_in(Lang::En, spk, natal, at, ayanamsa)
+}
+
+/// [`now_section`] in `lang`.
+pub fn now_section_in(lang: Lang, spk: &Spk, natal: &Chart, at: Instant, ayanamsa: Ayanamsa) -> Section {
     let mut sentences = Vec::new();
     let mut summary = String::new();
     if let Ok(ss) = sade_sati(spk, natal, at, ayanamsa) {
         let phase_words = match ss.phase {
-            1 => Some("the first phase of Sade Sati: Saturn is in the sign before your Moon"),
-            2 => Some("the peak of Sade Sati: Saturn is over your Moon"),
-            3 => Some("the last phase of Sade Sati: Saturn is in the sign after your Moon"),
+            1 => Some(lang.pick([
+                "the first phase of Sade Sati: Saturn is in the sign before your Moon",
+                "ഏഴരശനിയുടെ ആദ്യ ഘട്ടം: ശനി നിങ്ങളുടെ ചന്ദ്രരാശിക്ക് തൊട്ടുമുമ്പുള്ള രാശിയിൽ",
+                "साढ़ेसाती का पहला चरण: शनि आपकी चंद्र राशि से पहले वाली राशि में है",
+            ])),
+            2 => Some(lang.pick([
+                "the peak of Sade Sati: Saturn is over your Moon",
+                "ഏഴരശനിയുടെ മധ്യഘട്ടം: ശനി നിങ്ങളുടെ ചന്ദ്രരാശിയിൽ തന്നെ",
+                "साढ़ेसाती का चरम: शनि आपकी चंद्र राशि पर है",
+            ])),
+            3 => Some(lang.pick([
+                "the last phase of Sade Sati: Saturn is in the sign after your Moon",
+                "ഏഴരശനിയുടെ അവസാന ഘട്ടം: ശനി നിങ്ങളുടെ ചന്ദ്രരാശിക്ക് ശേഷമുള്ള രാശിയിൽ",
+                "साढ़ेसाती का अंतिम चरण: शनि आपकी चंद्र राशि के बाद वाली राशि में है",
+            ])),
             _ => None,
         };
+        let (sat, moon) = (sign_in(lang, ss.saturn_sign as usize), sign_in(lang, ss.moon_sign as usize));
         match phase_words {
             Some(w) => {
                 let until = ss
                     .phase_end
-                    .map(|e| format!(" It ends on {}.", date_words(e)))
+                    .map(|e| {
+                        let d = date_in(lang, e);
+                        say!(lang, format!(" It ends on {}.", d), format!(" ഇത് {d}-ന് അവസാനിക്കും."), format!(" यह {d} को समाप्त होगी।"))
+                    })
                     .unwrap_or_default();
-                summary = "Sade Sati running".to_string();
+                summary = lang.pick(["Sade Sati running", "ഏഴരശനി നടക്കുന്നു", "साढ़ेसाती चल रही है"]).to_string();
                 sentences.push(s(
-                    format!("You are in {}.{} The classical reading is a time of effort, slowing and clearing, not of punishment.", w, until),
-                    vec![format!(
-                        "Saturn sidereal sign {}, natal Moon sign {}",
-                        SIGN_NAMES[ss.saturn_sign as usize], SIGN_NAMES[ss.moon_sign as usize]
+                    say!(
+                        lang,
+                        format!("You are in {}.{} The classical reading is a time of effort, slowing and clearing, not of punishment.", w, until),
+                        format!("ഇപ്പോൾ നടക്കുന്നത്: {w}.{until} പരമ്പരാഗത വായനയിൽ ഇത് പരിശ്രമത്തിന്റെയും വേഗം കുറയലിന്റെയും തെളിയലിന്റെയും കാലമാണ്, ശിക്ഷയുടേതല്ല."),
+                        format!("अभी चल रहा है: {w}।{until} शास्त्रीय दृष्टि से यह मेहनत, धीमेपन और सफ़ाई का समय है, सज़ा का नहीं।"),
+                    ),
+                    vec![say!(
+                        lang,
+                        format!("Saturn sidereal sign {}, natal Moon sign {}", sat, moon),
+                        format!("ശനി നിരയന രാശി {sat}, ജന്മചന്ദ്ര രാശി {moon}"),
+                        format!("शनि निरयण राशि {sat}, जन्म चंद्र राशि {moon}"),
                     )],
                     0.9,
                     vec!["Gochara: Sade Sati".to_string()],
@@ -361,14 +610,19 @@ pub fn now_section(spk: &Spk, natal: &Chart, at: Instant, ayanamsa: Ayanamsa) ->
             }
             None => {
                 if let Some(n) = ss.next_start {
+                    let d = date_in(lang, n);
                     sentences.push(s(
-                        format!(
-                            "You are not in Sade Sati. The next one begins on {}.",
-                            date_words(n)
+                        say!(
+                            lang,
+                            format!("You are not in Sade Sati. The next one begins on {}.", d),
+                            format!("ഇപ്പോൾ ഏഴരശനി ഇല്ല. അടുത്തത് {d}-ന് തുടങ്ങും."),
+                            format!("अभी साढ़ेसाती नहीं है। अगली {d} को शुरू होगी।"),
                         ),
-                        vec![format!(
-                            "Saturn in {}, Moon in {}",
-                            SIGN_NAMES[ss.saturn_sign as usize], SIGN_NAMES[ss.moon_sign as usize]
+                        vec![say!(
+                            lang,
+                            format!("Saturn in {}, Moon in {}", sat, moon),
+                            format!("ശനി {sat} രാശിയിൽ, ചന്ദ്രൻ {moon} രാശിയിൽ"),
+                            format!("शनि {sat} में, चंद्र {moon} में"),
                         )],
                         0.95,
                         vec!["Gochara: Sade Sati".to_string()],
@@ -379,41 +633,73 @@ pub fn now_section(spk: &Spk, natal: &Chart, at: Instant, ayanamsa: Ayanamsa) ->
     }
     if let Ok(ts) = transits_at(spk, natal, at, ayanamsa) {
         for t in ts.iter().filter(|t| matches!(t.body, "Jupiter" | "Saturn")) {
+            let body = name_in(lang, t.body);
+            let pt = name_in(lang, t.natal);
             let text = match t.kind {
                 TransitKind::FromMoon => {
                     let good = match (t.body, t.house) {
-                        ("Jupiter", 2 | 5 | 7 | 9 | 11) => "favourable",
-                        ("Saturn", 3 | 6 | 11) => "favourable",
-                        _ => "demanding",
+                        ("Jupiter", 2 | 5 | 7 | 9 | 11) => true,
+                        ("Saturn", 3 | 6 | 11) => true,
+                        _ => false,
                     };
-                    format!(
-                        "{} is passing through your {} house from the Moon, a {} transit by the classical table.",
-                        t.body,
-                        ordinal(t.house),
-                        good
+                    let ord = ordinal_in(lang, t.house);
+                    say!(
+                        lang,
+                        format!(
+                            "{} is passing through your {} house from the Moon, a {} transit by the classical table.",
+                            t.body,
+                            ord,
+                            if good { "favourable" } else { "demanding" }
+                        ),
+                        format!(
+                            "{body} നിങ്ങളുടെ ചന്ദ്രരാശിയിൽ നിന്ന് {ord} ഭാവത്തിലൂടെ കടന്നുപോകുന്നു; പരമ്പരാഗത പട്ടികപ്രകാരം ഇത് {} ഗോചരമാണ്.",
+                            if good { "അനുകൂലമായ" } else { "കഠിനമായ" }
+                        ),
+                        format!(
+                            "{body} आपकी चंद्र राशि से {ord} भाव से गुज़र रहा है; शास्त्रीय तालिका के अनुसार यह {} गोचर है।",
+                            if good { "अनुकूल" } else { "कठिन" }
+                        ),
                     )
                 }
-                TransitKind::OverNatal => format!(
-                    "{} is passing over your natal {} ({:.1}° apart).",
-                    t.body, t.natal, t.separation
+                TransitKind::OverNatal => say!(
+                    lang,
+                    format!("{} is passing over your natal {} ({:.1}° apart).", t.body, t.natal, t.separation),
+                    format!("{body} നിങ്ങളുടെ ജനനസമയത്തെ {pt} സ്ഥാനത്തിനു മുകളിലൂടെ കടന്നുപോകുന്നു ({:.1}° അകലം).", t.separation),
+                    format!("{body} आपके जन्म के {pt} के ऊपर से गुज़र रहा है ({:.1}° दूर)।", t.separation),
                 ),
-                TransitKind::AspectingNatal => {
-                    format!("{} aspects your natal {} by sign.", t.body, t.natal)
-                }
+                TransitKind::AspectingNatal => say!(
+                    lang,
+                    format!("{} aspects your natal {} by sign.", t.body, t.natal),
+                    format!("{body} രാശിദൃഷ്ടിയാൽ നിങ്ങളുടെ ജനനസമയത്തെ {pt} സ്ഥാനത്തെ നോക്കുന്നു."),
+                    format!("{body} राशि-दृष्टि से आपके जन्म के {pt} को देखता है।"),
+                ),
             };
             sentences.push(s(
                 text,
-                vec![format!("{} sidereal {:.3}°", t.body, t.longitude)],
+                vec![say!(
+                    lang,
+                    format!("{} sidereal {:.3}°", t.body, t.longitude),
+                    format!("{body} നിരയനം {:.3}°", t.longitude),
+                    format!("{body} निरयण {:.3}°", t.longitude),
+                )],
                 0.8,
                 vec!["Gochara".to_string()],
             ));
         }
     }
     if summary.is_empty() {
-        summary = format!("{} transits in force", sentences.len());
+        let n = sentences.len();
+        summary = say!(
+            lang,
+            format!("{} transits in force", n),
+            format!("{n} ഗോചരങ്ങൾ പ്രാബല്യത്തിൽ"),
+            format!("{n} गोचर प्रभावी"),
+        );
     }
     Section {
-        title: "Right now".to_string(),
+        key: "now".to_string(),
+        mark: String::new(),
+        title: lang.pick(["Right now", "ഇപ്പോൾ", "अभी"]).to_string(),
         summary,
         sentences,
     }
@@ -421,6 +707,11 @@ pub fn now_section(spk: &Spk, natal: &Chart, at: Instant, ayanamsa: Ayanamsa) ->
 
 /// The years ahead in words: the best and hardest stretches per area over `years`.
 pub fn years_ahead(natal: &Chart, at: Instant, years: u32) -> Section {
+    years_ahead_in(Lang::En, natal, at, years)
+}
+
+/// [`years_ahead`] in `lang`.
+pub fn years_ahead_in(lang: Lang, natal: &Chart, at: Instant, years: u32) -> Section {
     let rows = life_map(natal, 100);
     let current_age = rows.iter().rposition(|r| r.start <= at).unwrap_or(0);
     let window: Vec<_> = rows
@@ -444,37 +735,62 @@ pub fn years_ahead(natal: &Chart, at: Instant, years: u32) -> Section {
         }) else {
             continue;
         };
+        let w = area_words_in(lang, area.name);
+        let m = month_in(lang, best.start);
+        let (g, g2) = (graha_in(lang, best.maha), graha_in(lang, worst.maha));
+        let (a, b) = (best.age, worst.age);
         sentences.push(s(
-            format!(
-                "For {}, the strongest year ahead starts at age {} ({}, {} period), the hardest at age {} ({} period).",
-                area_words(area.name),
-                best.age,
-                month_words(best.start),
-                graha_words(best.maha),
-                worst.age,
-                graha_words(worst.maha)
+            say!(
+                lang,
+                format!(
+                    "For {}, the strongest year ahead starts at age {} ({}, {} period), the hardest at age {} ({} period).",
+                    w, a, m, g, b, g2
+                ),
+                format!("{w}: ഏറ്റവും നല്ല വർഷം {a} വയസ്സിൽ തുടങ്ങും ({m}, {g} ദശ), ഏറ്റവും കഠിനമായത് {b} വയസ്സിൽ ({g2} ദശ)."),
+                format!("{w}: सबसे अच्छा साल {a} की उम्र में शुरू होता है ({m}, {g} की दशा), सबसे कठिन {b} की उम्र में ({g2} की दशा)।"),
             ),
-            vec![format!("best {:.2}, worst {:.2} (Parashari period quality)", best.areas[i], worst.areas[i])],
+            vec![say!(
+                lang,
+                format!("best {:.2}, worst {:.2} (Parashari period quality)", best.areas[i], worst.areas[i]),
+                format!("മികച്ചത് {:.2}, ദുർബലം {:.2} (പരാശരി ദശാഫലം)", best.areas[i], worst.areas[i]),
+                format!("सबसे अच्छा {:.2}, सबसे कमज़ोर {:.2} (पाराशरी दशा-फल)", best.areas[i], worst.areas[i]),
+            )],
             0.6,
             vec!["Parashari period quality".to_string()],
         ));
     }
     Section {
-        title: format!("The next {years} years"),
-        summary: "from the Vimshottari periods".to_string(),
+        key: "next".to_string(),
+        mark: String::new(),
+        title: say!(
+            lang,
+            format!("The next {years} years"),
+            format!("അടുത്ത {years} വർഷം"),
+            format!("अगले {years} साल"),
+        ),
+        summary: lang
+            .pick(["from the Vimshottari periods", "വിംശോത്തരി ദശകളിൽ നിന്ന്", "विंशोत्तरी दशाओं से"])
+            .to_string(),
         sentences,
     }
 }
 
 /// The whole plain-words reading.
 pub fn reading(spk: &Spk, natal: &Chart, at: Instant, ayanamsa: Ayanamsa) -> Vec<Section> {
-    let mut out = vec![who(natal), now_section(spk, natal, at, ayanamsa)];
+    reading_in(Lang::En, spk, natal, at, ayanamsa)
+}
+
+/// [`reading`] in `lang`: every title, summary, sentence and reason in the reader's
+/// language, the chart's names in its script. `key` and `mark` stay English.
+pub fn reading_in(lang: Lang, spk: &Spk, natal: &Chart, at: Instant, ayanamsa: Ayanamsa) -> Vec<Section> {
+    let mut out = vec![who_in(lang, natal), now_section_in(lang, spk, natal, at, ayanamsa)];
     for area in AREAS.iter() {
-        out.push(area_section(natal, *area, at));
+        out.push(area_section_in(lang, natal, *area, at));
     }
-    out.push(years_ahead(natal, at, 10));
+    out.push(years_ahead_in(lang, natal, at, 10));
     out
 }
+
 
 /// Compatibility in words.
 pub fn compatibility(
@@ -691,5 +1007,23 @@ mod chart_tests {
         assert!(r.iter().all(|s| !s.sentences.is_empty()));
         assert!(r[0].sentences.len() >= 4);
         assert!(r[2..2 + AREAS.len()].iter().all(|s| s.sentences.len() >= 3));
+        assert_eq!(r[0].key, "who");
+        assert_eq!(r[1].title, "Right now");
+        for lang in [Lang::Ml, Lang::Hi] {
+            let t = reading_in(lang, &spk, &ch, at, Ayanamsa::Lahiri);
+            assert_eq!(t.len(), r.len());
+            for (a, b) in t.iter().zip(r.iter()) {
+                assert_eq!(a.key, b.key);
+                assert_eq!(a.mark, b.mark);
+                assert_eq!(a.sentences.len(), b.sentences.len());
+                let mut texts = vec![a.title.clone(), a.summary.clone()];
+                texts.extend(a.sentences.iter().map(|x| x.text.clone()));
+                for s in texts {
+                    for w in ["your", " the ", "Moon", "Saturn", "Jupiter", "rising", "period", "house"] {
+                        assert!(!s.contains(w), "{lang:?} English left ({w}): {s}");
+                    }
+                }
+            }
+        }
     }
 }

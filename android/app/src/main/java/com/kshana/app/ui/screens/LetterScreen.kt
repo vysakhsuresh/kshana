@@ -60,7 +60,7 @@ fun LetterScreen(profile: BirthProfile, place: Place, settings: EngineSettings, 
         try {
             val engine = EngineProvider.get(context)
             val l = withContext(Dispatchers.Default) {
-                engine.letter(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), com.kshana.app.data.Focus.lives)
+                engine.letter(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), com.kshana.app.data.Focus.lives, com.kshana.app.data.Lang.code)
             }
             LetterCache.key = key
             LetterCache.record = l

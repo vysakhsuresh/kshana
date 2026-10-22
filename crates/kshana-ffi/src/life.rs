@@ -53,6 +53,10 @@ pub struct SentenceRecord {
 #[derive(Clone, Debug, uniffi::Record)]
 #[allow(missing_docs)]
 pub struct SectionRecord {
+    /// Stable key, never shown: `who`, `now`, `next`, or the area's English name.
+    pub key: String,
+    /// For an area: `promised` or `earned`; empty otherwise. Never shown.
+    pub mark: String,
     pub title: String,
     pub summary: String,
     pub sentences: Vec<SentenceRecord>,
@@ -60,6 +64,8 @@ pub struct SectionRecord {
 
 fn section(s: kshana_speak::Section) -> SectionRecord {
     SectionRecord {
+        key: s.key,
+        mark: s.mark,
         title: s.title,
         summary: s.summary,
         sentences: s.sentences.into_iter().map(sentence).collect(),
@@ -266,10 +272,11 @@ impl Engine {
         longitude_deg: f64,
         ayanamsa: AyanamsaChoice,
         at: ExactInstant,
+        lang: String,
     ) -> Result<Vec<SectionRecord>, KshanaError> {
         let ch = natal_chart(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         Ok(
-            kshana_speak::reading(&self.spk, &ch, at.into(), ayanamsa.into())
+            kshana_speak::reading_in(kshana_rules::Lang::parse(&lang), &self.spk, &ch, at.into(), ayanamsa.into())
                 .into_iter()
                 .map(section)
                 .collect(),
@@ -569,7 +576,7 @@ mod tests {
         let birth = u(1990, 10, 29, 17, 36);
         let at = u(2026, 10, 15, 9, 0);
         let r = engine
-            .plain_reading(birth, 9.9312, 76.2673, AyanamsaChoice::Lahiri, at)
+            .plain_reading(birth, 9.9312, 76.2673, AyanamsaChoice::Lahiri, at, "en".into())
             .unwrap();
         assert_eq!(r.len(), 2 + kshana_rules::AREAS.len() + 1);
         let lm = engine

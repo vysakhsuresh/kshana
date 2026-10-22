@@ -129,7 +129,7 @@ fun CalendarScreen(profile: BirthProfile, place: Place, settings: EngineSettings
                 val w = m.windows.firstOrNull { it.caution && e.begin >= it.start.toJava().toEpochMilli() && e.begin < it.end.toJava().toEpochMilli() }
                 val dayStart = Instant.ofEpochMilli(e.begin).atZone(ZoneId.systemDefault()).toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant()
                 val slot = withContext(Dispatchers.Default) {
-                    engine.bestSlots(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, "meeting", Instants.fromInstant(dayStart), 1u, 1u)
+                    engine.bestSlots(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, "meeting", Instants.fromInstant(dayStart), 1u, 1u, com.kshana.app.data.Lang.code)
                 }.firstOrNull()
                 out.add(
                     CalCheck(

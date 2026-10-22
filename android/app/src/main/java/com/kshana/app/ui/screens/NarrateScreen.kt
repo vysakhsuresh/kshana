@@ -79,7 +79,7 @@ fun NarrateScreen(profile: BirthProfile, settings: EngineSettings, onBack: () ->
                 val at = Instants.now()
                 val (report, sections) = withContext(Dispatchers.Default) {
                     val r = engine.readingReportJson(profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa, at)
-                    val s: List<SectionRecord> = engine.plainReading(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, at)
+                    val s: List<SectionRecord> = engine.plainReading(profile.birthInstant(), profile.latitude, profile.longitude, settings.ayanamsa, at, com.kshana.app.data.Lang.code)
                     Pair(r, s)
                 }
                 val text = narrate(context, apiKey, model, report, sections, question.trim().ifEmpty { null })

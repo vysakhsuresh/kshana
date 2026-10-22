@@ -126,7 +126,7 @@ fun BirthScreen(
     var nzLocal by remember { mutableStateOf<LocalDateTime?>(null) }
     var nzFor by remember { mutableStateOf("") }
     var nzError by remember { mutableStateOf<String?>(null) }
-    val nzKey = listOf(nzOn, year, month, day, nzN, nzV, nzSunrise, nzPrev, latitude, longitude, zoneId, elevation).joinToString("|")
+    val nzKey = listOf(nzOn, year, month, day, nzN, nzV, nzSunrise, nzPrev, latitude, longitude, zoneId, elevation, com.kshana.app.data.Lang.code).joinToString("|")
     LaunchedEffect(nzKey) {
         if (!nzOn) { nzResult = null; nzLocal = null; nzError = null; return@LaunchedEffect }
         val y = year.toIntOrNull(); val mo = month.toIntOrNull(); val d = day.toIntOrNull()
@@ -145,7 +145,7 @@ fun BirthScreen(
         try {
             val engine = EngineProvider.get(context)
             val r = withContext(Dispatchers.Default) {
-                engine.nazhikaToInstant(y.toLong(), mo.toUInt(), d.toUInt(), offset, lat, lon, Heights.parse(elevation), n.toUInt(), v.toUInt(), nzSunrise, nzPrev)
+                engine.nazhikaToInstant(y.toLong(), mo.toUInt(), d.toUInt(), offset, lat, lon, Heights.parse(elevation), n.toUInt(), v.toUInt(), nzSunrise, nzPrev, com.kshana.app.data.Lang.code)
             }
             nzResult = r
             nzLocal = Instants.toLocal(r.at, ZoneOffset.ofTotalSeconds(offset)).toLocalDateTime().withNano(0)

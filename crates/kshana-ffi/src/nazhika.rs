@@ -108,6 +108,30 @@ fn local_words(i: Instant, utc_offset_seconds: i32) -> String {
     format!("{h12}:{:02}:{:02} {ap} on {} {} {}", u.minute, u.second, u.day, MONTHS[(u.month as usize).saturating_sub(1) % 12], u.year)
 }
 
+/// "2026 മാർച്ച് 20, 6:21:05" / "20 मार्च 2026, 6:21:05" in local clock time.
+fn local_words_in(lang: kshana_rules::Lang, i: Instant, utc_offset_seconds: i32) -> String {
+    let u = Utc::from_instant(i.add_ns(utc_offset_seconds as i128 * NS_PER_SEC));
+    let month = kshana_rules::lang::month_name(lang, u.month);
+    let clock = format!("{}:{:02}:{:02}", u.hour, u.minute, u.second);
+    match lang {
+        kshana_rules::Lang::Ml => format!("{} {month} {}, {clock}", u.year, u.day),
+        _ => format!("{} {month} {}, {clock}", u.day, u.year),
+    }
+}
+
+/// What a count was taken from, in the reader's language.
+fn count_note(lang: kshana_rules::Lang, from_sunrise: bool, start: Instant, utc_offset_seconds: i32) -> String {
+    use kshana_rules::Lang;
+    match (lang, from_sunrise) {
+        (Lang::En, true) => format!("Counted from the sunrise at {}, at this place.", local_words(start, utc_offset_seconds)),
+        (Lang::En, false) => format!("Counted from {} by the clock.", local_words(start, utc_offset_seconds)),
+        (Lang::Ml, true) => format!("ഈ സ്ഥലത്ത് {}-ന് ഉണ്ടായ സൂര്യോദയം മുതൽ എണ്ണിയത്.", local_words_in(lang, start, utc_offset_seconds)),
+        (Lang::Ml, false) => format!("ക്ലോക്കിലെ {} മുതൽ എണ്ണിയത്.", local_words_in(lang, start, utc_offset_seconds)),
+        (Lang::Hi, true) => format!("इस जगह {} के सूर्योदय से गिना गया।", local_words_in(lang, start, utc_offset_seconds)),
+        (Lang::Hi, false) => format!("घड़ी के {} से गिना गया।", local_words_in(lang, start, utc_offset_seconds)),
+    }
+}
+
 /// Sunrise of a local date, then the sunset and the next sunrise after it.
 fn day_of(
     engine: &Engine,
@@ -156,6 +180,7 @@ impl Engine {
         vinazhika: u32,
         from_sunrise: bool,
         previous_day: bool,
+        lang: String,
     ) -> Result<NazhikaTimeRecord, KshanaError> {
         if nazhika > 60 || vinazhika > 59 || (nazhika == 60 && vinazhika > 0) {
             return Err(KshanaError::InvalidUtc("nazhika runs 0–60 and vinazhika 0–59".into()));
@@ -177,11 +202,7 @@ impl Engine {
         };
         let count_s = i64::from(nazhika) * NAZHIKA_S + i64::from(vinazhika) * VINAZHIKA_S;
         let at = start.add_ns(count_s as i128 * NS_PER_SEC);
-        let note = if from_sunrise {
-            format!("Counted from the sunrise at {}, at this place.", local_words(start, utc_offset_seconds))
-        } else {
-            format!("Counted from {} by the clock.", local_words(start, utc_offset_seconds))
-        };
+        let note = count_note(kshana_rules::Lang::parse(&lang), from_sunrise, start, utc_offset_seconds);
         Ok(NazhikaTimeRecord {
             at: at.into(),
             start: start.into(),
@@ -232,11 +253,7 @@ impl Engine {
         let rest = elapsed % (NAZHIKA_S as i128 * NS_PER_SEC);
         let v = rest / (VINAZHIKA_S as i128 * NS_PER_SEC);
         let vilipta = (rest % (VINAZHIKA_S as i128 * NS_PER_SEC)) as f64 / (VINAZHIKA_S as f64 * 1e9) * 60.0;
-        let note = if from_sunrise {
-            format!("Counted from the sunrise at {}, at this place.", local_words(start, utc_offset_seconds))
-        } else {
-            format!("Counted from {} by the clock.", local_words(start, utc_offset_seconds))
-        };
+        let note = count_note(kshana_rules::Lang::En, from_sunrise, start, utc_offset_seconds);
         Ok(NazhikaCountRecord {
             nazhika: n as u32,
             vinazhika: v as u32,
@@ -288,7 +305,7 @@ mod tests {
     fn a_count_from_sunrise_lands_on_the_clock_and_reads_back() {
         let Some(e) = engine() else { return };
         // 12 nazhika 30 vinazhika after sunrise = 4 h 60 min… = 4 h 48 min + 12 min = 5 h 0 min.
-        let r = e.nazhika_to_instant(2026, 3, 20, IST, KOCHI.0, KOCHI.1, 0.0, 12, 30, true, false).unwrap();
+        let r = e.nazhika_to_instant(2026, 3, 20, IST, KOCHI.0, KOCHI.1, 0.0, 12, 30, true, false, "en".into()).unwrap();
         let rise = Instant::from(r.sunrise.unwrap());
         assert_eq!(Instant::from(r.start), rise);
         assert_eq!(Instant::from(r.at).ns_since(rise), (12 * 1_440 + 30 * 24) as i128 * NS_PER_SEC);
@@ -308,7 +325,7 @@ mod tests {
     fn a_birth_after_midnight_counts_from_the_previous_sunrise() {
         let Some(e) = engine() else { return };
         // 52 nazhika after the 19 March sunrise is about 03:20 on 20 March.
-        let r = e.nazhika_to_instant(2026, 3, 20, IST, KOCHI.0, KOCHI.1, 0.0, 52, 0, true, true).unwrap();
+        let r = e.nazhika_to_instant(2026, 3, 20, IST, KOCHI.0, KOCHI.1, 0.0, 52, 0, true, true, "en".into()).unwrap();
         let u = local(r.at);
         assert_eq!((u.day, u.hour), (20, 3), "{u:?}");
         assert!(r.after_sunset && !r.past_next_sunrise);
@@ -316,21 +333,21 @@ mod tests {
         let b = e.instant_to_nazhika(r.at, IST, KOCHI.0, KOCHI.1, 0.0, true).unwrap();
         assert_eq!((b.nazhika, b.vinazhika, b.previous_day), (52, 0, true));
         // The same count from the date's own sunrise runs into the next date.
-        let same = e.nazhika_to_instant(2026, 3, 20, IST, KOCHI.0, KOCHI.1, 0.0, 52, 0, true, false).unwrap();
+        let same = e.nazhika_to_instant(2026, 3, 20, IST, KOCHI.0, KOCHI.1, 0.0, 52, 0, true, false, "en".into()).unwrap();
         assert_eq!(local(same.at).day, 21);
     }
 
     #[test]
     fn six_in_the_morning_is_by_the_clock() {
         let Some(e) = engine() else { return };
-        let r = e.nazhika_to_instant(1980, 7, 1, IST, KOCHI.0, KOCHI.1, 0.0, 10, 0, false, false).unwrap();
+        let r = e.nazhika_to_instant(1980, 7, 1, IST, KOCHI.0, KOCHI.1, 0.0, 10, 0, false, false, "en".into()).unwrap();
         let u = local(r.at);
         assert_eq!((u.hour, u.minute, u.second), (10, 0, 0));
         assert_eq!(local(r.start).hour, 6);
         let b = e.instant_to_nazhika(r.at, IST, KOCHI.0, KOCHI.1, 0.0, false).unwrap();
         assert_eq!((b.nazhika, b.vinazhika), (10, 0));
         // Bombay Time, +04:51.
-        let r = e.nazhika_to_instant(1950, 1, 1, 17_460, 19.076, 72.8777, 0.0, 0, 0, false, false).unwrap();
+        let r = e.nazhika_to_instant(1950, 1, 1, 17_460, 19.076, 72.8777, 0.0, 0, 0, false, false, "en".into()).unwrap();
         let u = Utc::from_instant(Instant::from(r.at));
         assert_eq!((u.hour, u.minute), (1, 9));
     }
@@ -340,12 +357,12 @@ mod tests {
         let Some(e) = engine() else { return };
         // Munnar, about 1,530 m: the count starts some five minutes earlier than at sea level.
         let (la, lo) = (10.0889, 77.0595);
-        let sea = e.nazhika_to_instant(2026, 3, 20, IST, la, lo, 0.0, 5, 0, true, false).unwrap();
-        let hill = e.nazhika_to_instant(2026, 3, 20, IST, la, lo, 1_530.0, 5, 0, true, false).unwrap();
+        let sea = e.nazhika_to_instant(2026, 3, 20, IST, la, lo, 0.0, 5, 0, true, false, "en".into()).unwrap();
+        let hill = e.nazhika_to_instant(2026, 3, 20, IST, la, lo, 1_530.0, 5, 0, true, false, "en".into()).unwrap();
         let earlier = Instant::from(sea.at).ns_since(Instant::from(hill.at)) as f64 / 60e9;
         assert!((4.0..6.5).contains(&earlier), "{earlier}");
-        assert!(e.nazhika_to_instant(2026, 3, 20, IST, la, lo, 0.0, 61, 0, true, false).is_err());
-        assert!(e.nazhika_to_instant(2026, 3, 20, IST, la, lo, 0.0, 5, 60, true, false).is_err());
+        assert!(e.nazhika_to_instant(2026, 3, 20, IST, la, lo, 0.0, 61, 0, true, false, "en".into()).is_err());
+        assert!(e.nazhika_to_instant(2026, 3, 20, IST, la, lo, 0.0, 5, 60, true, false, "en".into()).is_err());
     }
 }
 
@@ -371,11 +388,20 @@ mod plain_audit {
         let Ok(e) = Engine::open(p.to_string_lossy().into_owned(), None) else { return };
         let mut hits = Vec::new();
         for (from_sunrise, prev) in [(true, false), (true, true), (false, false), (false, true)] {
-            let r = e.nazhika_to_instant(1990, 2, 20, 19_800, 9.9312, 76.2673, 0.0, 25, 12, from_sunrise, prev).unwrap();
+            let r = e.nazhika_to_instant(1990, 2, 20, 19_800, 9.9312, 76.2673, 0.0, 25, 12, from_sunrise, prev, "en".into()).unwrap();
             check("note", &r.note, &mut hits);
             let b = e.instant_to_nazhika(r.at, 19_800, 9.9312, 76.2673, 0.0, from_sunrise).unwrap();
             check("note", &b.note, &mut hits);
             assert!(!r.note.trim().is_empty() && !b.note.trim().is_empty());
+        }
+        for lang in [kshana_rules::Lang::Ml, kshana_rules::Lang::Hi] {
+            for from_sunrise in [true, false] {
+                let r = e.nazhika_to_instant(1990, 2, 20, 19_800, 9.9312, 76.2673, 0.0, 25, 12, from_sunrise, false, lang.code().into()).unwrap();
+                assert!(!r.note.chars().any(|c| c.is_ascii_alphabetic()), "{}", r.note);
+                if let Some(w) = kshana_rules::plain::jargon_in(lang, &r.note) {
+                    hits.push(format!("note [{w}]: {}", r.note));
+                }
+            }
         }
         assert!(hits.is_empty(), "{hits:#?}");
     }

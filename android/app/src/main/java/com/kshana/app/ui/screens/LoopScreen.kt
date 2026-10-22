@@ -141,7 +141,7 @@ fun LoopScreen(
         // The reading is loaded as soon as the Loop opens, so the season line is there
         // before the person scrolls to the card.
         val hourKey = (System.currentTimeMillis() + travelSeconds * 1000L) / 3_600_000L
-        val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${settings.houseSystem}|$hourKey|${com.kshana.app.data.Focus.lives}"
+        val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${settings.houseSystem}|$hourKey|${com.kshana.app.data.Focus.lives}|${com.kshana.app.data.Lang.code}"
         if (BriefingCache.key == key && BriefingCache.record != null) { brief = BriefingCache.record; return@LaunchedEffect }
         runCatching {
             val engine = EngineProvider.get(context)
@@ -374,7 +374,7 @@ fun LoopScreen(
 @Composable
 private fun WallStrip(profile: BirthProfile, place: Place, settings: EngineSettings, tick: Instant, onWall: () -> Unit) {
     val context = LocalContext.current
-    val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${java.time.LocalDate.now()}"
+    val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${java.time.LocalDate.now()}|${com.kshana.app.data.Lang.code}"
     var items by remember { mutableStateOf(if (WallCache.key == key) WallCache.countdowns else null) }
     var fest by remember { mutableStateOf(if (WallCache.key == key) WallCache.festivals else null) }
     LaunchedEffect(key) {
@@ -383,8 +383,8 @@ private fun WallStrip(profile: BirthProfile, place: Place, settings: EngineSetti
             val engine = EngineProvider.get(context)
             val (c, f) = withContext(Dispatchers.Default) {
                 Pair(
-                    engine.countdowns(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now()),
-                    engine.festivalsHere(profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa, place.latitude, place.longitude, com.kshana.app.data.PlaceClock.offsetMinutes(place), Instants.now(), 35u),
+                    engine.countdowns(profile.birthInstant(), profile.latitude, profile.longitude, place.latitude, place.longitude, settings.houseSystem, settings.ayanamsa, Instants.now(), com.kshana.app.data.Lang.code),
+                    engine.festivalsHere(profile.birthInstant(), profile.latitude, profile.longitude, settings.houseSystem, settings.ayanamsa, place.latitude, place.longitude, com.kshana.app.data.PlaceClock.offsetMinutes(place), Instants.now(), 35u, com.kshana.app.data.Lang.code),
                 )
             }
             WallCache.key = key
@@ -532,7 +532,7 @@ private fun BriefingCard(
 ) {
     val context = LocalContext.current
     val hourKey = (System.currentTimeMillis() + travelSeconds * 1000L) / 3_600_000L
-    val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${settings.houseSystem}|$hourKey|${com.kshana.app.data.Focus.lives}"
+    val key = "${profile.birthInstant().taiSeconds}|${place.name}|${settings.ayanamsa}|${settings.houseSystem}|$hourKey|${com.kshana.app.data.Focus.lives}|${com.kshana.app.data.Lang.code}"
     var b by remember { mutableStateOf(if (BriefingCache.key == key) BriefingCache.record else null) }
     var error by remember { mutableStateOf<String?>(null) }
     var open by remember { mutableStateOf(false) }

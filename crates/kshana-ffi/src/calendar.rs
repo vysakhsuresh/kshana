@@ -9,7 +9,6 @@
 //! `samvatsara*`, `ritu*`, `ayana*`, `rule`, `kind`, `key` and the skipped/repeated
 //! flags (see `plain_audit` below).
 
-use kshana_calendar::names::{RITUS, RITUS_PLAIN, SAMVATSARAS, WEEKDAYS};
 use kshana_calendar::{names, Calendar, Config, Date, DayInfo, Festival, SolarRule};
 use kshana_events::rise_convention;
 use kshana_sky::Observer;
@@ -113,58 +112,75 @@ pub struct CalendarFestivalRecord {
     pub rule: String,
 }
 
-fn ayana(uttara: bool) -> String {
-    if uttara { "Uttarayana" } else { "Dakshinayana" }.into()
+fn ayana(uttara: bool, lang: &str) -> String {
+    names::ayana_in(uttara, lang).into()
 }
 
-fn solar_record(d: &kshana_calendar::SolarDate) -> SolarDateRecord {
+/// A panchanga name (tithi, star, month) in the reader's language through the lexicon;
+/// English, and any name the lexicon lacks, stay as the engine spells them.
+fn panchanga_term(en: &str, lang: &str) -> String {
+    if names::lang_index(lang) == 0 {
+        return en.to_string();
+    }
+    let Some(l) = kshana_speak::lexicon::Language::from_code(lang) else { return en.to_string() };
+    let t = kshana_speak::lexicon::term(en, l);
+    if t.is_empty() { en.to_string() } else { t.to_string() }
+}
+
+fn solar_record(d: &kshana_calendar::SolarDate, lang: &str) -> SolarDateRecord {
     let (calendar, year_name) = match d.rule {
         SolarRule::Kerala => ("malayalam", String::new()),
-        SolarRule::Tamil => ("tamil", SAMVATSARAS[d.year as usize % 60].to_string()),
+        SolarRule::Tamil => ("tamil", names::samvatsara_in(d.year as usize % 60, lang).to_string()),
         SolarRule::Bengal => ("bengali", String::new()),
         SolarRule::Odisha => ("odia", String::new()),
     };
-    SolarDateRecord { calendar: calendar.into(), month: d.month_name().into(), day: d.day, year: d.year, year_name }
+    let month = names::solar_month_in(d.rule, d.sign, lang).to_string();
+    SolarDateRecord { calendar: calendar.into(), month, day: d.day, year: d.year, year_name }
 }
 
-fn day_record(i: &DayInfo, festivals: &[Festival]) -> CalendarDayRecord {
+fn day_record(i: &DayInfo, festivals: &[Festival], lang: &str) -> CalendarDayRecord {
     let d = i.day.date;
+    let national_month = names::national_month_in(i.national.month as usize, lang);
     CalendarDayRecord {
         year: d.year,
         month: d.month,
         day: d.day,
-        weekday: WEEKDAYS[d.weekday() as usize].into(),
+        weekday: names::weekday_in(d.weekday() as usize, lang).into(),
         sunrise: i.day.sunrise.into(),
         sunset: i.day.sunset.into(),
         next_sunrise: i.day.next_sunrise.into(),
-        lunar_month: kshana_calendar::MonthName { number: i.month.number, adhika: i.month.adhika }.label(),
+        lunar_month: names::lunar_month_in(i.month.number, i.month.adhika, lang),
         lunar_month_number: i.month.number,
-        lunar_month_north: i.purnimanta.label(),
+        lunar_month_north: names::lunar_month_in(i.purnimanta.number, i.purnimanta.adhika, lang),
         extra_month: i.month.adhika,
-        fortnight: if i.shukla { "waxing" } else { "waning" }.into(),
-        tithi: names::tithi_full_name(i.tithi.index),
+        fortnight: names::fortnight_in(i.shukla, lang).into(),
+        tithi: panchanga_term(&names::tithi_full_name(i.tithi.index), lang),
         tithi_number: i.tithi.index,
         tithi_ends: i.tithi.end.into(),
-        tithi_skipped: i.tithi_skipped.map(|s| names::tithi_full_name(s.index)),
+        tithi_skipped: i.tithi_skipped.map(|s| panchanga_term(&names::tithi_full_name(s.index), lang)),
         tithi_repeated: i.tithi_repeated,
-        nakshatra: names::star_name(i.star.index).into(),
+        nakshatra: panchanga_term(names::star_name(i.star.index), lang),
         nakshatra_ends: i.star.end.into(),
-        nakshatra_skipped: i.star_skipped.map(|s| names::star_name(s.index).to_string()),
+        nakshatra_skipped: i.star_skipped.map(|s| panchanga_term(names::star_name(s.index), lang)),
         nakshatra_repeated: i.star_repeated,
-        samvatsara: SAMVATSARAS[i.samvatsara_south].into(),
-        samvatsara_north: SAMVATSARAS[i.samvatsara_north].into(),
+        samvatsara: names::samvatsara_in(i.samvatsara_south, lang).into(),
+        samvatsara_north: names::samvatsara_in(i.samvatsara_north, lang).into(),
         shaka: i.shaka,
         vikram: i.vikram,
         vikram_gujarati: i.vikram_kartikadi,
         kali: i.kali,
-        national_date: format!("{} {}, {}", i.national.month_name(), i.national.day, i.national.year),
-        season: RITUS_PLAIN[i.ritu].into(),
-        ritu: RITUS[i.ritu].into(),
-        ritu_tropical: RITUS[i.ritu_tropical].into(),
-        ayana: ayana(i.uttarayana),
-        ayana_tropical: ayana(i.uttarayana_tropical),
-        solar: [i.malayalam, i.tamil, i.bengali, i.odia].iter().flatten().map(solar_record).collect(),
-        festivals: festivals.iter().filter(|f| f.date == d).map(|f| f.name.clone()).collect(),
+        national_date: match names::lang_index(lang) {
+            1 => format!("{} {} {}", i.national.year, national_month, i.national.day),
+            2 => format!("{} {} {}", i.national.day, national_month, i.national.year),
+            _ => format!("{} {}, {}", i.national.month_name(), i.national.day, i.national.year),
+        },
+        season: names::ritu_plain_in(i.ritu, lang).into(),
+        ritu: names::ritu_in(i.ritu, lang).into(),
+        ritu_tropical: names::ritu_in(i.ritu_tropical, lang).into(),
+        ayana: ayana(i.uttarayana, lang),
+        ayana_tropical: ayana(i.uttarayana_tropical, lang),
+        solar: [i.malayalam, i.tamil, i.bengali, i.odia].iter().flatten().map(|s| solar_record(s, lang)).collect(),
+        festivals: festivals.iter().filter(|f| f.date == d).map(|f| kshana_calendar::festivals::localise(f, lang).0).collect(),
     }
 }
 
@@ -214,6 +230,7 @@ impl Engine {
         day: u32,
         days: u32,
         ayanamsa: AyanamsaChoice,
+        lang: String,
     ) -> Result<Vec<CalendarDayRecord>, KshanaError> {
         let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
         let cal = Calendar::new(&self.spk, self.eop.as_ref(), obs, config(ayanamsa, utc_offset_minutes), Date::new(year, month, day), days.clamp(1, 400))
@@ -222,7 +239,7 @@ impl Engine {
         let mut out = Vec::new();
         for i in cal.requested() {
             if let Some(info) = cal.info(i).map_err(engine_err)? {
-                out.push(day_record(&info, &fest));
+                out.push(day_record(&info, &fest, &lang));
             }
         }
         Ok(out)
@@ -266,8 +283,14 @@ impl Engine {
         utc_offset_minutes: i32,
         at: ExactInstant,
         days: u32,
+        lang: String,
     ) -> Result<Vec<FestivalRecord>, KshanaError> {
-        let mut out = self.festivals(birth, birth_lat, birth_lon, system, ayanamsa, at, days)?;
+        let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
+        let rl = kshana_rules::Lang::parse(&lang);
+        let mut out: Vec<FestivalRecord> = kshana_rules::feed::festivals_in(rl, &self.spk, &natal, ayanamsa.into(), at.clone().into(), days.clamp(1, 400) as i64)
+            .iter()
+            .map(crate::festival_record)
+            .collect();
         let at_i: Instant = at.into();
         let days = days.clamp(1, 400);
         let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
@@ -278,11 +301,12 @@ impl Engine {
             if kshana_calendar::festivals::MONTHLY_KEYS.contains(&f.key) || f.day_end <= at_i || f.day_start > end {
                 continue;
             }
+            let (name, what) = kshana_calendar::festivals::localise(&f, &lang);
             out.push(FestivalRecord {
-                name: f.name.clone(),
+                name,
                 at: f.day_start.into(),
                 end: Some(f.day_end.into()),
-                what: f.what.into(),
+                what: what.into(),
                 kind: "festival".into(),
             });
         }
@@ -330,7 +354,7 @@ mod plain_audit {
                 assert!(!f.what.trim().is_empty());
             }
         }
-        for d in e.calendar_days(9.9312, 76.2673, 330, 2026, 5, 10, 40, AyanamsaChoice::Lahiri).unwrap() {
+        for d in e.calendar_days(9.9312, 76.2673, 330, 2026, 5, 10, 40, AyanamsaChoice::Lahiri, "en".into()).unwrap() {
             for (field, v) in [
                 ("weekday", d.weekday.as_str()),
                 ("lunar_month", &d.lunar_month),
@@ -361,7 +385,7 @@ mod plain_audit {
         let b = instant_from_utc(UtcFields { year: 1990, month: 2, day: 20, hour: 5, minute: 4, second: 0, nanos: 0 }).unwrap();
         let old = e.festivals(b.clone(), 9.9312, 76.2673, HouseSystem::Placidus, AyanamsaChoice::Lahiri, at.clone(), 35).unwrap();
         let new = e
-            .festivals_here(b, 9.9312, 76.2673, HouseSystem::Placidus, AyanamsaChoice::Lahiri, 28.6139, 77.2090, 330, at, 35)
+            .festivals_here(b, 9.9312, 76.2673, HouseSystem::Placidus, AyanamsaChoice::Lahiri, 28.6139, 77.2090, 330, at, 35, "en".into())
             .unwrap();
         // Everything the old call returned is still there.
         for o in &old {
@@ -380,10 +404,40 @@ mod plain_audit {
     }
 
     #[test]
+    fn the_calendar_speaks_malayalam_and_hindi() {
+        let e = engine();
+        let latin = |s: &str| s.chars().any(|c| c.is_ascii_alphabetic());
+        let at = instant_from_utc(UtcFields { year: 2025, month: 8, day: 20, hour: 0, minute: 0, second: 0, nanos: 0 }).unwrap();
+        let b = instant_from_utc(UtcFields { year: 1990, month: 2, day: 20, hour: 5, minute: 4, second: 0, nanos: 0 }).unwrap();
+        for lang in [kshana_rules::Lang::Ml, kshana_rules::Lang::Hi] {
+            let code = lang.code().to_string();
+            let mut names = Vec::new();
+            for n in e.festivals_here(b.clone(), 9.9312, 76.2673, HouseSystem::Placidus, AyanamsaChoice::Lahiri, 9.9312, 76.2673, 330, at.clone(), 60, code.clone()).unwrap() {
+                assert!(!latin(&n.name) && !latin(&n.what), "{code}: {} / {}", n.name, n.what);
+                assert_eq!(kshana_rules::plain::jargon_in(lang, &n.name), None, "{}", n.name);
+                assert_eq!(kshana_rules::plain::jargon_in(lang, &n.what), None, "{}", n.what);
+                names.push(n.name);
+            }
+            assert!(names.iter().any(|n| n.contains(if lang == kshana_rules::Lang::Ml { "തിരുവോണം" } else { "ओणम" })), "{names:?}");
+            for d in e.calendar_days(9.9312, 76.2673, 330, 2025, 8, 20, 60, AyanamsaChoice::Lahiri, code.clone()).unwrap() {
+                for v in [&d.weekday, &d.lunar_month, &d.lunar_month_north, &d.fortnight, &d.national_date, &d.season, &d.samvatsara, &d.ritu, &d.ayana] {
+                    assert!(!latin(v), "{code}: {v}");
+                }
+                for f in &d.festivals {
+                    assert!(!latin(f), "{code}: {f}");
+                }
+                for s in d.solar.iter().filter(|s| s.calendar == "malayalam" || s.calendar == "bengali") {
+                    assert!(!latin(&s.month), "{code}: {}", s.month);
+                }
+            }
+        }
+    }
+
+    #[test]
     fn the_almanac_day_over_the_ffi() {
         let e = engine();
         // 1 June 2026 at Delhi: Adhika Jyeshtha; Raudra (North) / Parabhava (South).
-        let d = &e.calendar_days(28.6139, 77.2090, 330, 2026, 6, 1, 1, AyanamsaChoice::Lahiri).unwrap()[0];
+        let d = &e.calendar_days(28.6139, 77.2090, 330, 2026, 6, 1, 1, AyanamsaChoice::Lahiri, "en".into()).unwrap()[0];
         assert_eq!((d.year, d.month, d.day), (2026, 6, 1));
         assert_eq!(d.lunar_month, "Adhika Jyeshtha");
         assert!(d.extra_month);

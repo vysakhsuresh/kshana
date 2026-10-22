@@ -118,6 +118,23 @@ impl Activity {
     }
 }
 
+/// The classical name of a tara (0 = Janma … 8 = Parama Mitra), in the reader's script.
+/// Expert text: the Sanskrit name, written in Malayalam or Devanagari.
+pub fn tara_name_in(lang: crate::plain::Lang, i: usize) -> &'static str {
+    const T: [[&str; 3]; 9] = [
+        ["Janma", "ജന്മ", "जन्म"],
+        ["Sampat", "സമ്പത്ത്", "संपत"],
+        ["Vipat", "വിപത്ത്", "विपत"],
+        ["Kshema", "ക്ഷേമ", "क्षेम"],
+        ["Pratyak", "പ്രത്യക്", "प्रत्यक"],
+        ["Sadhana", "സാധക", "साधक"],
+        ["Naidhana", "നൈധന", "नैधन"],
+        ["Mitra", "മിത്ര", "मित्र"],
+        ["Parama Mitra", "പരമമിത്ര", "परम मित्र"],
+    ];
+    lang.pick(T[i % 9])
+}
+
 /// One recommended window.
 #[derive(Clone, Debug, PartialEq)]
 pub struct MuhurtaWindow {
