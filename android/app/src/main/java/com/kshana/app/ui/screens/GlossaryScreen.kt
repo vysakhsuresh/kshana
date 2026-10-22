@@ -49,10 +49,10 @@ fun GlossaryScreen(onBack: () -> Unit, initialTerm: String? = null) {
     var tradition by remember { mutableStateOf("All") }
     var error by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(com.kshana.app.data.Lang.code) {
         try {
             EngineProvider.get(context)
-            entries = withContext(Dispatchers.Default) { glossary() }
+            entries = withContext(Dispatchers.Default) { glossary(com.kshana.app.data.Lang.code) }
             error = null
         } catch (e: Exception) {
             error = e.message ?: e.toString()
@@ -62,7 +62,7 @@ fun GlossaryScreen(onBack: () -> Unit, initialTerm: String? = null) {
     val shown = remember(entries, query, tradition) {
         val q = query.trim()
         entries.filter { e ->
-            (tradition == "All" || e.tradition.equals(tradition, ignoreCase = true)) &&
+            (tradition == "All" || e.traditionKey.equals(tradition, ignoreCase = true)) &&
                 (q.isEmpty() || e.term.contains(q, ignoreCase = true) || e.meaning.contains(q, ignoreCase = true))
         }
     }
@@ -103,7 +103,7 @@ fun GlossaryScreen(onBack: () -> Unit, initialTerm: String? = null) {
             )
         }
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 6.dp, bottom = 32.dp)) {
-            items(shown, key = { it.term + "|" + it.tradition }) { e ->
+            items(shown, key = { it.term + "|" + it.traditionKey }) { e ->
                 HorizontalDivider(color = KshanaColors.LineSoft)
                 Column(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(e.term, style = MaterialTheme.typography.titleLarge, color = KshanaColors.Text)

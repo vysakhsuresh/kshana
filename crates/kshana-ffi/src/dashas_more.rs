@@ -284,6 +284,7 @@ impl Engine {
             &obs,
             ayanamsa.into(),
             year,
+            kshana_rules::Lang::En,
         )
         .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         Ok(kshana_tajika::patyayini(&v.sky, v.instant, v.next_return)

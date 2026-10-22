@@ -45,7 +45,7 @@ fn main() {
         .unwrap()
         .to_instant()
         .unwrap();
-    let d = daily(&spk, None, &obs, &ch, at, Ayanamsa::Lahiri).unwrap();
+    let d = daily(&spk, None, &obs, &ch, at, Ayanamsa::Lahiri, kshana_rules::Lang::En).unwrap();
     println!("headline: {}", d.headline);
     if let Some(day) = &d.day {
         println!(

@@ -116,14 +116,27 @@ pub fn panchavargeeya(sky: &AnnualSky, planet: DashaLord) -> Option<Panchavargee
 /// Grade of a Vishwa bala (Shanker Adawal, *Encyclopedia of Vedic Astrology*, ch. III):
 /// 15 and above Parakrami, 10–15 Poorna bali, 5–10 Madhya bali, below 5 Nirbali.
 pub fn grade(vishwa: f64) -> &'static str {
+    grade_in(vishwa, kshana_rules::Lang::En)
+}
+
+/// [`grade`] in the reader's language.
+pub fn grade_in(vishwa: f64, lang: kshana_rules::Lang) -> &'static str {
     if vishwa >= 15.0 {
-        "Parakrami (extraordinarily strong)"
+        lang.pick([
+            "Parakrami (extraordinarily strong)",
+            "പരാക്രമി (അസാധാരണ ബലം)",
+            "पराक्रमी (असाधारण बलवान)",
+        ])
     } else if vishwa >= 10.0 {
-        "Poorna bali (full strength)"
+        lang.pick([
+            "Poorna bali (full strength)",
+            "പൂർണബലി (മുഴുവൻ ബലം)",
+            "पूर्ण बली (पूरा बल)",
+        ])
     } else if vishwa >= 5.0 {
-        "Madhya bali (middling)"
+        lang.pick(["Madhya bali (middling)", "മധ്യബലി (ഇടത്തരം)", "मध्य बली (मध्यम)"])
     } else {
-        "Nirbali (weak)"
+        lang.pick(["Nirbali (weak)", "നിർബലി (ദുർബലം)", "निर्बली (दुर्बल)"])
     }
 }
 

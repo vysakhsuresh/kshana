@@ -14,10 +14,10 @@ pub mod gochara;
 pub mod lifemap;
 pub mod transits;
 
-pub use calendar::{observances, sidereal_sign_name, Observance};
+pub use calendar::{observance_words, observances, sidereal_sign_name, Observance};
 pub use daily::{daily, DailyForecast, HourWindow};
 pub use gochara::{
-    gochara_longitude, gochara_verdict, kakshya_favourable, kakshya_of, kakshya_windows, moorthi,
+    gochara_longitude, gochara_verdict, gochara_verdict_in, kakshya_favourable, kakshya_of, kakshya_windows, moorthi,
     score_blend, today_transit_score, transit_bindus, transit_windows, vedha_exempt, vedha_table,
     GocharaVerdict, KakshyaLord, KakshyaWindow, Moorthi, TransitWindow, GOCHARA_PLANETS,
     KAKSHYA_DEG, KAKSHYA_LORDS,
@@ -105,7 +105,7 @@ mod tests {
         let Some((spk, ch, obs, at)) = fixture() else {
             return;
         };
-        let d = daily(&spk, None, &obs, &ch, at, Ayanamsa::Lahiri).unwrap();
+        let d = daily(&spk, None, &obs, &ch, at, Ayanamsa::Lahiri, kshana_rules::Lang::En).unwrap();
         assert!(d.day.is_some());
         assert!(d.windows.iter().any(|w| w.avoid));
         assert!(d.windows.iter().any(|w| !w.avoid));

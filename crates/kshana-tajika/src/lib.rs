@@ -39,17 +39,17 @@ mod sky;
 mod tables;
 mod yoga;
 
-pub use bala::{grade, panchavargeeya, relation, Panchavargeeya, Relation};
+pub use bala::{grade, grade_in, panchavargeeya, relation, Panchavargeeya, Relation};
 pub use mudda::{mudda, mudda_start_lord, MuddaPeriod};
 pub use patyayini::{patyamsas, patyayini, PatyayiniLord, PatyayiniPeriod, PatyayiniSub};
-pub use saham::{between, combine, sahams, Saham, SahamFormula, Term, PUNYA, SAHAMS, SASTRA};
+pub use saham::{between, combine, saham_in, sahams, Saham, SahamFormula, Term, PUNYA, SAHAMS, SASTRA};
 pub use sky::{house_of, AnnualSky};
 pub use tables::{
-    deep_debilitation, deeptamsa, drekkana_lord, graha_name, hadda_lord, navamsa_lord, sign_index,
+    deep_debilitation, deeptamsa, drekkana_lord, graha_in, graha_name, sign_in, hadda_lord, navamsa_lord, sign_index,
     speed_rank, trirashi_lord, within_sign, CHALDEAN_DECANS, HADDA, SEVEN, SIGN_NAMES, TRIRASHI,
 };
 pub use yoga::{
-    adhikara, aspects_by_sign, drishti, link, pair_orb, tajika_yogas, Adhikara, Drishti, Link,
+    adhikara, aspects_by_sign, drishti, link, pair_orb, tajika_yogas, tajika_yogas_in, Adhikara, Drishti, Link,
     LinkKind, TajikaYoga, YogaKind,
 };
 
@@ -61,6 +61,7 @@ use kshana_sky::{apparent, Observer};
 use kshana_solver::{find_root, wrap180, SolverError};
 use kshana_time::{EopTable, Instant, Utc, UtcError, NS_PER_DAY};
 use kshana_vedic::{ayanamsa_degrees, sidereal, sign_lord, Ayanamsa, DashaLord};
+use kshana_rules::Lang;
 
 /// Solver tolerance for the return: one microsecond.
 pub const MICROSECOND_NS: i128 = 1_000;
@@ -182,6 +183,25 @@ impl Office {
             Office::TrirashiLord => "Tri-rashi lord",
         }
     }
+
+    /// Name of the office in the reader's language.
+    pub fn name_in(self, lang: Lang) -> &'static str {
+        match self {
+            Office::MunthaLord => lang.pick(["Muntha lord", "മുന്ഥാധിപൻ", "मुंथा स्वामी"]),
+            Office::NatalLagnaLord => {
+                lang.pick(["natal lagna lord", "ജന്മലഗ്നാധിപൻ", "जन्म लग्नेश"])
+            }
+            Office::AnnualLagnaLord => {
+                lang.pick(["annual lagna lord", "വർഷലഗ്നാധിപൻ", "वर्ष लग्नेश"])
+            }
+            Office::DinaRatriLord => {
+                lang.pick(["Dina-Ratri lord", "ദിനരാത്രി അധിപൻ", "दिन-रात्रि स्वामी"])
+            }
+            Office::TrirashiLord => {
+                lang.pick(["Tri-rashi lord", "ത്രിരാശി അധിപൻ", "त्रिराशि स्वामी"])
+            }
+        }
+    }
 }
 
 /// One contender for the year, with every office it holds.
@@ -301,11 +321,32 @@ pub fn choose_varshesha(
     muntha_lord: DashaLord,
     reasoning: &mut Vec<String>,
 ) -> DashaLord {
+    choose_varshesha_in(candidates, muntha_lord, reasoning, Lang::En)
+}
+
+/// [`choose_varshesha`] with the reasoning written in the reader's language.
+pub fn choose_varshesha_in(
+    candidates: &[Candidate],
+    muntha_lord: DashaLord,
+    reasoning: &mut Vec<String>,
+    lang: Lang,
+) -> DashaLord {
+    let graha_name = |g: DashaLord| graha_in(g, lang);
     if candidates.iter().all(|c| c.vishwa < WEAK_BELOW) {
-        reasoning.push(format!(
-            "every office-bearer is below {WEAK_BELOW:.0} vishwas; the Muntha lord {} takes the year",
-            graha_name(muntha_lord)
-        ));
+        reasoning.push(match lang {
+            Lang::En => format!(
+                "every office-bearer is below {WEAK_BELOW:.0} vishwas; the Muntha lord {} takes the year",
+                graha_name(muntha_lord)
+            ),
+            Lang::Ml => format!(
+                "എല്ലാ അധികാരികളും {WEAK_BELOW:.0} വിശ്വയിൽ താഴെ; മുന്ഥാധിപൻ {} വർഷം ഭരിക്കുന്നു",
+                graha_name(muntha_lord)
+            ),
+            Lang::Hi => format!(
+                "सभी पदाधिकारी {WEAK_BELOW:.0} विश्वा से नीचे हैं; मुंथा स्वामी {} वर्ष का स्वामी बनता है",
+                graha_name(muntha_lord)
+            ),
+        });
         return muntha_lord;
     }
     let mut q: Vec<&Candidate> = candidates
@@ -316,21 +357,41 @@ pub fn choose_varshesha(
         .iter()
         .filter(|c| !(c.vishwa >= WEAK_BELOW && c.aspects_lagna))
     {
-        reasoning.push(format!(
-            "{} is set aside: {}",
-            graha_name(c.lord),
-            if c.vishwa < WEAK_BELOW {
-                format!("only {:.2} vishwas", c.vishwa)
-            } else {
-                "it does not aspect the annual lagna".to_string()
+        let why = if c.vishwa < WEAK_BELOW {
+            match lang {
+                Lang::En => format!("only {:.2} vishwas", c.vishwa),
+                Lang::Ml => format!("{:.2} വിശ്വ മാത്രം", c.vishwa),
+                Lang::Hi => format!("केवल {:.2} विश्वा", c.vishwa),
             }
-        ));
+        } else {
+            lang.pick([
+                "it does not aspect the annual lagna",
+                "വർഷലഗ്നത്തെ നോക്കുന്നില്ല",
+                "यह वर्ष लग्न को नहीं देखता",
+            ])
+            .to_string()
+        };
+        reasoning.push(match lang {
+            Lang::En => format!("{} is set aside: {}", graha_name(c.lord), why),
+            Lang::Ml => format!("{} ഒഴിവാകുന്നു: {}", graha_name(c.lord), why),
+            Lang::Hi => format!("{} हटता है: {}", graha_name(c.lord), why),
+        });
     }
     if q.is_empty() {
-        reasoning.push(format!(
-            "no office-bearer of {WEAK_BELOW:.0} vishwas or more aspects the annual lagna; the Muntha lord {} takes the year",
-            graha_name(muntha_lord)
-        ));
+        reasoning.push(match lang {
+            Lang::En => format!(
+                "no office-bearer of {WEAK_BELOW:.0} vishwas or more aspects the annual lagna; the Muntha lord {} takes the year",
+                graha_name(muntha_lord)
+            ),
+            Lang::Ml => format!(
+                "{WEAK_BELOW:.0} വിശ്വയോ അതിലധികമോ ഉള്ള ഒരു അധികാരിയും വർഷലഗ്നത്തെ നോക്കുന്നില്ല; മുന്ഥാധിപൻ {} വർഷം ഭരിക്കുന്നു",
+                graha_name(muntha_lord)
+            ),
+            Lang::Hi => format!(
+                "{WEAK_BELOW:.0} विश्वा या अधिक वाला कोई पदाधिकारी वर्ष लग्न को नहीं देखता; मुंथा स्वामी {} वर्ष का स्वामी बनता है",
+                graha_name(muntha_lord)
+            ),
+        });
         return muntha_lord;
     }
     q.sort_by(|a, b| {
@@ -340,10 +401,20 @@ pub fn choose_varshesha(
             .then(b.offices.len().cmp(&a.offices.len()))
     });
     if q[0].lord == DashaLord::Moon && q.len() > 1 && q[0].vishwa < MOON_RULES_FROM {
-        reasoning.push(format!(
-            "the Moon, though strongest at {:.2} vishwas, is mild by nature and steps down (it would rule only from {MOON_RULES_FROM:.0})",
-            q[0].vishwa
-        ));
+        reasoning.push(match lang {
+            Lang::En => format!(
+                "the Moon, though strongest at {:.2} vishwas, is mild by nature and steps down (it would rule only from {MOON_RULES_FROM:.0})",
+                q[0].vishwa
+            ),
+            Lang::Ml => format!(
+                "{:.2} വിശ്വയോടെ ഏറ്റവും ബലവാനെങ്കിലും ചന്ദ്രൻ സ്വഭാവത്തിൽ സൗമ്യനായതിനാൽ മാറിനിൽക്കുന്നു ({MOON_RULES_FROM:.0} മുതലേ ഭരിക്കൂ)",
+                q[0].vishwa
+            ),
+            Lang::Hi => format!(
+                "{:.2} विश्वा के साथ सबसे बलवान होकर भी चंद्र स्वभाव से सौम्य है, इसलिए हट जाता है (वह {MOON_RULES_FROM:.0} से ही स्वामी बनता)",
+                q[0].vishwa
+            ),
+        });
         q.remove(0);
     }
     let best = q[0];
@@ -353,12 +424,26 @@ pub fn choose_varshesha(
         .filter(|c| (c.vishwa - best.vishwa).abs() < 1e-9)
         .collect();
     if tied.len() == 1 {
-        reasoning.push(format!(
-            "{} is the strongest office-bearer that aspects the annual lagna, {:.2} vishwas ({}); it is the lord of the year",
-            graha_name(best.lord),
-            best.vishwa,
-            grade(best.vishwa)
-        ));
+        reasoning.push(match lang {
+            Lang::En => format!(
+                "{} is the strongest office-bearer that aspects the annual lagna, {:.2} vishwas ({}); it is the lord of the year",
+                graha_name(best.lord),
+                best.vishwa,
+                grade(best.vishwa)
+            ),
+            Lang::Ml => format!(
+                "വർഷലഗ്നത്തെ നോക്കുന്ന അധികാരികളിൽ ഏറ്റവും ബലവാൻ {}, {:.2} വിശ്വ ({}); ഇതാണ് വർഷാധിപൻ",
+                graha_name(best.lord),
+                best.vishwa,
+                grade_in(best.vishwa, lang)
+            ),
+            Lang::Hi => format!(
+                "वर्ष लग्न को देखने वाले पदाधिकारियों में सबसे बलवान {} है, {:.2} विश्वा ({}); यही वर्षेश है",
+                graha_name(best.lord),
+                best.vishwa,
+                grade_in(best.vishwa, lang)
+            ),
+        });
         return best.lord;
     }
     let most = tied.iter().map(|c| c.offices.len()).max().unwrap_or(0);
@@ -368,29 +453,64 @@ pub fn choose_varshesha(
         .filter(|c| c.offices.len() == most)
         .collect();
     if holders.len() == 1 {
-        reasoning.push(format!(
-            "{} tie at {:.2} vishwas; {} holds more offices ({}) and is the lord of the year",
-            tied.iter()
-                .map(|c| graha_name(c.lord))
-                .collect::<Vec<_>>()
-                .join(", "),
-            best.vishwa,
-            graha_name(holders[0].lord),
-            most
-        ));
-        return holders[0].lord;
-    }
-    reasoning.push(format!(
-        "{} tie outright at {:.2} vishwas with {} offices each; the Muntha lord {} takes the year",
-        holders
+        let list = tied
             .iter()
             .map(|c| graha_name(c.lord))
             .collect::<Vec<_>>()
-            .join(", "),
-        best.vishwa,
-        most,
-        graha_name(muntha_lord)
-    ));
+            .join(", ");
+        reasoning.push(match lang {
+            Lang::En => format!(
+                "{} tie at {:.2} vishwas; {} holds more offices ({}) and is the lord of the year",
+                list,
+                best.vishwa,
+                graha_name(holders[0].lord),
+                most
+            ),
+            Lang::Ml => format!(
+                "{} {:.2} വിശ്വയിൽ തുല്യം; {} കൂടുതൽ അധികാരങ്ങൾ ({}) വഹിക്കുന്നു, ഇതാണ് വർഷാധിപൻ",
+                list,
+                best.vishwa,
+                graha_name(holders[0].lord),
+                most
+            ),
+            Lang::Hi => format!(
+                "{} {:.2} विश्वा पर बराबर; {} के पास अधिक पद ({}) हैं, यही वर्षेश है",
+                list,
+                best.vishwa,
+                graha_name(holders[0].lord),
+                most
+            ),
+        });
+        return holders[0].lord;
+    }
+    let list = holders
+        .iter()
+        .map(|c| graha_name(c.lord))
+        .collect::<Vec<_>>()
+        .join(", ");
+    reasoning.push(match lang {
+        Lang::En => format!(
+            "{} tie outright at {:.2} vishwas with {} offices each; the Muntha lord {} takes the year",
+            list,
+            best.vishwa,
+            most,
+            graha_name(muntha_lord)
+        ),
+        Lang::Ml => format!(
+            "{} {:.2} വിശ്വയിലും ഓരോന്നിനും {} അധികാരങ്ങളിലും പൂർണമായി തുല്യം; മുന്ഥാധിപൻ {} വർഷം ഭരിക്കുന്നു",
+            list,
+            best.vishwa,
+            most,
+            graha_name(muntha_lord)
+        ),
+        Lang::Hi => format!(
+            "{} {:.2} विश्वा और {} पदों के साथ पूरी तरह बराबर; मुंथा स्वामी {} वर्ष का स्वामी बनता है",
+            list,
+            best.vishwa,
+            most,
+            graha_name(muntha_lord)
+        ),
+    });
     muntha_lord
 }
 
@@ -404,7 +524,8 @@ fn stamp(t: Instant) -> String {
 
 /// The varshaphala for calendar `year`: the sidereal return of the natal Sun, the annual
 /// chart at `obs` (Placidus), and everything read from it. `natal` must have been
-/// computed with the same `ayanamsa`.
+/// computed with the same `ayanamsa`. The reasoning and the yogas' words are written in
+/// `lang`.
 pub fn varshaphala(
     spk: &Spk,
     eop: Option<&EopTable>,
@@ -412,6 +533,7 @@ pub fn varshaphala(
     obs: &Observer,
     ayanamsa: Ayanamsa,
     year: i64,
+    lang: Lang,
 ) -> Result<Varshaphala, TajikaError> {
     let birth = Utc::from_instant(natal.instant);
     if year < birth.year {
@@ -458,51 +580,136 @@ pub fn varshaphala(
         .filter_map(|g| panchavargeeya(&sky, *g))
         .collect();
 
+    let (ns, ew) = (
+        if obs.latitude_deg >= 0.0 { "N" } else { "S" },
+        if obs.longitude_deg >= 0.0 { "E" } else { "W" },
+    );
     let mut reasoning = vec![
-        format!(
-            "Varsha Pravesha {} for the {}th year, by {} at {:.4}°{} {:.4}°{}; annual lagna {} {:.2}°",
-            stamp(instant),
-            age + 1,
-            if day { "day" } else { "night" },
-            obs.latitude_deg.abs(),
-            if obs.latitude_deg >= 0.0 { "N" } else { "S" },
-            obs.longitude_deg.abs(),
-            if obs.longitude_deg >= 0.0 { "E" } else { "W" },
-            SIGN_NAMES[sky.lagna_sign()],
-            within_sign(sky.lagna)
-        ),
-        format!(
-            "Muntha in {} {:.2}° (house {}), lord {}",
-            SIGN_NAMES[muntha_sign],
-            within_sign(muntha_longitude),
-            muntha_house,
-            graha_name(muntha_lord)
-        ),
+        match lang {
+            Lang::En => format!(
+                "Varsha Pravesha {} for the {}th year, by {} at {:.4}°{} {:.4}°{}; annual lagna {} {:.2}°",
+                stamp(instant),
+                age + 1,
+                if day { "day" } else { "night" },
+                obs.latitude_deg.abs(),
+                ns,
+                obs.longitude_deg.abs(),
+                ew,
+                SIGN_NAMES[sky.lagna_sign()],
+                within_sign(sky.lagna)
+            ),
+            Lang::Ml => format!(
+                "വർഷപ്രവേശം {}, {}-ാം വർഷത്തിന്, {}, {:.4}°{} {:.4}°{}-ൽ; വർഷലഗ്നം {} {:.2}°",
+                stamp(instant),
+                age + 1,
+                if day { "പകൽ" } else { "രാത്രി" },
+                obs.latitude_deg.abs(),
+                ns,
+                obs.longitude_deg.abs(),
+                ew,
+                sign_in(sky.lagna_sign(), lang),
+                within_sign(sky.lagna)
+            ),
+            Lang::Hi => format!(
+                "वर्ष प्रवेश {}, {}वें वर्ष के लिए, {} में, {:.4}°{} {:.4}°{} पर; वर्ष लग्न {} {:.2}°",
+                stamp(instant),
+                age + 1,
+                if day { "दिन" } else { "रात" },
+                obs.latitude_deg.abs(),
+                ns,
+                obs.longitude_deg.abs(),
+                ew,
+                sign_in(sky.lagna_sign(), lang),
+                within_sign(sky.lagna)
+            ),
+        },
+        match lang {
+            Lang::En => format!(
+                "Muntha in {} {:.2}° (house {}), lord {}",
+                SIGN_NAMES[muntha_sign],
+                within_sign(muntha_longitude),
+                muntha_house,
+                graha_name(muntha_lord)
+            ),
+            Lang::Ml => format!(
+                "മുന്ഥ {} {:.2}°-ൽ ({}-ാം ഭാവം), അധിപൻ {}",
+                sign_in(muntha_sign, lang),
+                within_sign(muntha_longitude),
+                muntha_house,
+                graha_in(muntha_lord, lang)
+            ),
+            Lang::Hi => format!(
+                "मुंथा {} {:.2}° में (भाव {}), स्वामी {}",
+                sign_in(muntha_sign, lang),
+                within_sign(muntha_longitude),
+                muntha_house,
+                graha_in(muntha_lord, lang)
+            ),
+        },
     ];
     for c in &candidates {
-        reasoning.push(format!(
-            "{}: {}; {:.2} vishwas (Kshetra {:.1}, Uchcha {:.1}, Hadda {:.2}, Drekkana {:.1}, Navamsa {:.2}); {} the annual lagna from {}",
-            graha_name(c.lord),
-            c.offices
-                .iter()
-                .map(|o| o.name())
-                .collect::<Vec<_>>()
-                .join(", "),
-            c.vishwa,
-            c.bala.kshetra,
-            c.bala.uchcha,
-            c.bala.hadda,
-            c.bala.drekkana,
-            c.bala.navamsa,
-            if c.aspects_lagna {
-                "aspects"
-            } else {
-                "does not aspect"
-            },
-            SIGN_NAMES[sky.sign(c.lord).unwrap_or(0)]
-        ));
+        let offices = c
+            .offices
+            .iter()
+            .map(|o| o.name_in(lang))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let from = sign_in(sky.sign(c.lord).unwrap_or(0), lang);
+        reasoning.push(match lang {
+            Lang::En => format!(
+                "{}: {}; {:.2} vishwas (Kshetra {:.1}, Uchcha {:.1}, Hadda {:.2}, Drekkana {:.1}, Navamsa {:.2}); {} the annual lagna from {}",
+                graha_name(c.lord),
+                offices,
+                c.vishwa,
+                c.bala.kshetra,
+                c.bala.uchcha,
+                c.bala.hadda,
+                c.bala.drekkana,
+                c.bala.navamsa,
+                if c.aspects_lagna {
+                    "aspects"
+                } else {
+                    "does not aspect"
+                },
+                from
+            ),
+            Lang::Ml => format!(
+                "{}: {}; {:.2} വിശ്വ (ക്ഷേത്രം {:.1}, ഉച്ചം {:.1}, ഹദ്ദ {:.2}, ദ്രേക്കാണം {:.1}, നവാംശം {:.2}); {}-ൽ നിന്ന് വർഷലഗ്നത്തെ {}",
+                graha_in(c.lord, lang),
+                offices,
+                c.vishwa,
+                c.bala.kshetra,
+                c.bala.uchcha,
+                c.bala.hadda,
+                c.bala.drekkana,
+                c.bala.navamsa,
+                from,
+                if c.aspects_lagna {
+                    "നോക്കുന്നു"
+                } else {
+                    "നോക്കുന്നില്ല"
+                }
+            ),
+            Lang::Hi => format!(
+                "{}: {}; {:.2} विश्वा (क्षेत्र {:.1}, उच्च {:.1}, हद्दा {:.2}, द्रेष्काण {:.1}, नवांश {:.2}); {} से वर्ष लग्न को {}",
+                graha_in(c.lord, lang),
+                offices,
+                c.vishwa,
+                c.bala.kshetra,
+                c.bala.uchcha,
+                c.bala.hadda,
+                c.bala.drekkana,
+                c.bala.navamsa,
+                from,
+                if c.aspects_lagna {
+                    "देखता है"
+                } else {
+                    "नहीं देखता"
+                }
+            ),
+        });
     }
-    let varshesha = choose_varshesha(&candidates, muntha_lord, &mut reasoning);
+    let varshesha = choose_varshesha_in(&candidates, muntha_lord, &mut reasoning, lang);
 
     Ok(Varshaphala {
         year,
@@ -511,7 +718,7 @@ pub fn varshaphala(
         next_return,
         day,
         sahams: sahams(&sky, day),
-        yogas: tajika_yogas(&sky),
+        yogas: tajika_yogas_in(&sky, lang),
         mudda: mudda(natal_moon, instant, next_return, age),
         chart,
         sky,
@@ -588,8 +795,8 @@ mod tests {
         let Some((spk, natal)) = fixture() else {
             return;
         };
-        let v25 = varshaphala(&spk, None, &natal, &KOCHI, Ayanamsa::Lahiri, 2025).unwrap();
-        let v26 = varshaphala(&spk, None, &natal, &KOCHI, Ayanamsa::Lahiri, 2026).unwrap();
+        let v25 = varshaphala(&spk, None, &natal, &KOCHI, Ayanamsa::Lahiri, 2025, Lang::En).unwrap();
+        let v26 = varshaphala(&spk, None, &natal, &KOCHI, Ayanamsa::Lahiri, 2026, Lang::En).unwrap();
         assert_eq!((v25.age, v26.age), (35, 36));
         // Muntha advances one sign a year from the natal lagna
         assert_eq!(
@@ -648,7 +855,7 @@ mod tests {
             return;
         };
         assert_eq!(
-            varshaphala(&spk, None, &natal, &KOCHI, Ayanamsa::Lahiri, 1989).err(),
+            varshaphala(&spk, None, &natal, &KOCHI, Ayanamsa::Lahiri, 1989, Lang::En).err(),
             Some(TajikaError::BeforeBirth)
         );
     }

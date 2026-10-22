@@ -18,6 +18,7 @@ kshana-vedic = { workspace = true }
 kshana-western = { workspace = true }
 kshana-chart = { workspace = true }
 kshana-rules = { workspace = true }
+kshana-speak = { workspace = true }
 kshana-forecast = { workspace = true }
 kshana-trace = { workspace = true }
 kshana-houses = { workspace = true }

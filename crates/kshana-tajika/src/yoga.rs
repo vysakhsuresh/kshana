@@ -41,10 +41,10 @@
 use crate::bala::{relation, Relation};
 use crate::sky::AnnualSky;
 use crate::tables::{
-    deeptamsa, drekkana_lord, graha_name, hadda_lord, navamsa_lord, sign_index, speed_rank,
-    within_sign, SEVEN, SIGN_NAMES,
+    deeptamsa, drekkana_lord, graha_in, hadda_lord, navamsa_lord, sign_in, sign_index,
+    speed_rank, within_sign, SEVEN,
 };
-use kshana_rules::{dignity, Dignity};
+use kshana_rules::{dignity, Dignity, Lang};
 use kshana_vedic::{sign_lord, DashaLord};
 
 /// A Tajika aspect, by the sign distance between two planets.
@@ -68,6 +68,24 @@ impl Drishti {
             Drishti::SecretFriend => "secretly friendly (3/11)",
             Drishti::Inimical => "inimical (1/7)",
             Drishti::SecretEnemy => "secretly inimical (4/10)",
+        }
+    }
+
+    /// Word for the aspect in the reader's language.
+    pub fn name_in(self, lang: Lang) -> &'static str {
+        match self {
+            Drishti::Friendly => lang.pick(["friendly (5/9)", "മിത്രദൃഷ്ടി (5/9)", "मित्र दृष्टि (5/9)"]),
+            Drishti::SecretFriend => lang.pick([
+                "secretly friendly (3/11)",
+                "ഗൂഢമിത്രദൃഷ്ടി (3/11)",
+                "गुप्त मित्र दृष्टि (3/11)",
+            ]),
+            Drishti::Inimical => lang.pick(["inimical (1/7)", "ശത്രുദൃഷ്ടി (1/7)", "शत्रु दृष्टि (1/7)"]),
+            Drishti::SecretEnemy => lang.pick([
+                "secretly inimical (4/10)",
+                "ഗൂഢശത്രുദൃഷ്ടി (4/10)",
+                "गुप्त शत्रु दृष्टि (4/10)",
+            ]),
         }
     }
 
@@ -124,6 +142,20 @@ impl LinkKind {
             LinkKind::Poorna => "Poorna Ithasala",
             LinkKind::Bhavishyat => "Bhavishyat Ithasala",
             LinkKind::Ishrafa => "Ishrafa",
+        }
+    }
+
+    /// Word for the kind in the reader's language.
+    pub fn name_in(self, lang: Lang) -> &'static str {
+        match self {
+            LinkKind::Vartamana => {
+                lang.pick(["Vartamana Ithasala", "വർത്തമാന ഇത്ഥശാല", "वर्तमान इत्थशाल"])
+            }
+            LinkKind::Poorna => lang.pick(["Poorna Ithasala", "പൂർണ ഇത്ഥശാല", "पूर्ण इत्थशाल"]),
+            LinkKind::Bhavishyat => {
+                lang.pick(["Bhavishyat Ithasala", "ഭവിഷ്യത് ഇത്ഥശാല", "भविष्यत् इत्थशाल"])
+            }
+            LinkKind::Ishrafa => lang.pick(["Ishrafa", "ഈസറാഫ", "ईसराफ"]),
         }
     }
 }
@@ -227,6 +259,20 @@ impl YogaKind {
             YogaKind::Kamboola => "Kamboola",
         }
     }
+
+    /// Name of the yoga in the reader's language.
+    pub fn name_in(self, lang: Lang) -> &'static str {
+        match self {
+            YogaKind::Ikkavala => lang.pick(["Ikkavala", "ഇക്കവാല", "इक्कबाल"]),
+            YogaKind::Induvara => lang.pick(["Induvara", "ഇന്ദുവാര", "इंदुवार"]),
+            YogaKind::Ithasala => lang.pick(["Ithasala", "ഇത്ഥശാല", "इत्थशाल"]),
+            YogaKind::Ishrafa => lang.pick(["Ishrafa", "ഈസറാഫ", "ईसराफ"]),
+            YogaKind::Nakta => lang.pick(["Nakta", "നക്ത", "नक्त"]),
+            YogaKind::Yamaya => lang.pick(["Yamaya", "യമയ", "यमया"]),
+            YogaKind::Manau => lang.pick(["Manau", "മണഊ", "मणऊ"]),
+            YogaKind::Kamboola => lang.pick(["Kamboola", "കംബൂല", "कंबूल"]),
+        }
+    }
 }
 
 /// One detected yoga.
@@ -267,6 +313,16 @@ impl Adhikara {
             Adhikara::Adhama => "Adhama",
         }
     }
+
+    /// Word for the office in the reader's language.
+    pub fn name_in(self, lang: Lang) -> &'static str {
+        match self {
+            Adhikara::Uttama => lang.pick(["Uttama", "ഉത്തമം", "उत्तम"]),
+            Adhikara::Madhyama => lang.pick(["Madhyama", "മധ്യമം", "मध्यम"]),
+            Adhikara::Sama => lang.pick(["Sama", "സമം", "सम"]),
+            Adhikara::Adhama => lang.pick(["Adhama", "അധമം", "अधम"]),
+        }
+    }
 }
 
 /// Office of one of the seven in the annual sky, `None` for a node. Debilitation is
@@ -290,60 +346,81 @@ pub fn adhikara(sky: &AnnualSky, g: DashaLord) -> Option<Adhikara> {
     Some(Adhikara::Sama)
 }
 
-fn place(sky: &AnnualSky, g: DashaLord) -> String {
+fn place(sky: &AnnualSky, g: DashaLord, lang: Lang) -> String {
     let l = sky.longitude(g).unwrap_or(0.0);
     format!(
         "{} ({} {:.2}°)",
-        graha_name(g),
-        SIGN_NAMES[sign_index(l)],
+        graha_in(g, lang),
+        sign_in(sign_index(l), lang),
         within_sign(l)
     )
 }
 
-fn link_words(sky: &AnnualSky, l: &Link) -> String {
-    match l.kind {
-        LinkKind::Ishrafa => format!(
+fn link_words(sky: &AnnualSky, l: &Link, lang: Lang) -> String {
+    let (a, b) = (place(sky, l.fast, lang), place(sky, l.slow, lang));
+    let (d, k) = (l.drishti.name_in(lang), l.kind.name_in(lang));
+    match (l.kind, lang) {
+        (LinkKind::Ishrafa, Lang::En) => format!(
             "{} has passed {} by {:.2}° within the {:.1}° orb, {} aspect: {}",
-            place(sky, l.fast),
-            place(sky, l.slow),
-            -l.apart,
-            l.orb,
-            l.drishti.name(),
-            l.kind.name()
+            a, b, -l.apart, l.orb, d, k
         ),
-        LinkKind::Bhavishyat => format!(
+        (LinkKind::Ishrafa, Lang::Ml) => format!(
+            "{} {}-യെ {:.2}° കടന്നുപോയി, {:.1}° ദീപ്താംശത്തിനുള്ളിൽ, {}: {}",
+            a, b, -l.apart, l.orb, d, k
+        ),
+        (LinkKind::Ishrafa, Lang::Hi) => format!(
+            "{} {} से {:.2}° आगे निकल चुका है, {:.1}° दीप्तांश के भीतर, {}: {}",
+            a, b, -l.apart, l.orb, d, k
+        ),
+        (LinkKind::Bhavishyat, Lang::En) => format!(
             "{} at the end of its sign will apply to {} {:.2}° on entering the next, {} aspect: {}",
-            place(sky, l.fast),
-            place(sky, l.slow),
-            l.apart,
-            l.orb,
-            l.kind.name()
+            a, b, l.apart, l.orb, k
         ),
-        LinkKind::Poorna => format!(
+        (LinkKind::Bhavishyat, Lang::Ml) => format!(
+            "{} രാശിയുടെ അവസാനത്തിൽ; അടുത്ത രാശിയിൽ കടക്കുമ്പോൾ {}-യോട് {:.2}° അടുക്കും, {:.1}° ദീപ്താംശം: {}",
+            a, b, l.apart, l.orb, k
+        ),
+        (LinkKind::Bhavishyat, Lang::Hi) => format!(
+            "{} अपनी राशि के अंत में है; अगली राशि में जाते ही {} से {:.2}° पर जुड़ेगा, {:.1}° दीप्तांश: {}",
+            a, b, l.apart, l.orb, k
+        ),
+        (LinkKind::Poorna, Lang::En) => format!(
             "{} and {} are within a degree ({:+.2}° from the faster to the slower) within the {:.1}° orb, {} aspect: {}",
-            place(sky, l.fast),
-            place(sky, l.slow),
-            l.apart,
-            l.orb,
-            l.drishti.name(),
-            l.kind.name()
+            a, b, l.apart, l.orb, d, k
         ),
-        LinkKind::Vartamana => format!(
+        (LinkKind::Poorna, Lang::Ml) => format!(
+            "{}, {} ഒരു ഡിഗ്രിക്കുള്ളിൽ (വേഗമുള്ളതിൽ നിന്ന് മന്ദമായതിലേക്ക് {:+.2}°), {:.1}° ദീപ്താംശത്തിനുള്ളിൽ, {}: {}",
+            a, b, l.apart, l.orb, d, k
+        ),
+        (LinkKind::Poorna, Lang::Hi) => format!(
+            "{} और {} एक अंश के भीतर हैं (तेज़ से धीमे तक {:+.2}°), {:.1}° दीप्तांश के भीतर, {}: {}",
+            a, b, l.apart, l.orb, d, k
+        ),
+        (LinkKind::Vartamana, Lang::En) => format!(
             "{} applies to {} {:.2}° behind within the {:.1}° orb, {} aspect: {}",
-            place(sky, l.fast),
-            place(sky, l.slow),
-            l.apart,
-            l.orb,
-            l.drishti.name(),
-            l.kind.name()
+            a, b, l.apart, l.orb, d, k
+        ),
+        (LinkKind::Vartamana, Lang::Ml) => format!(
+            "{} {:.2}° പിന്നിൽ നിന്ന് {}-യോട് അടുക്കുന്നു, {:.1}° ദീപ്താംശത്തിനുള്ളിൽ, {}: {}",
+            a, l.apart, b, l.orb, d, k
+        ),
+        (LinkKind::Vartamana, Lang::Hi) => format!(
+            "{} {:.2}° पीछे से {} की ओर बढ़ रहा है, {:.1}° दीप्तांश के भीतर, {}: {}",
+            a, l.apart, b, l.orb, d, k
         ),
     }
 }
 
-fn yoga(kind: YogaKind, planets: Vec<DashaLord>, exact: bool, words: String) -> TajikaYoga {
+fn yoga(
+    kind: YogaKind,
+    planets: Vec<DashaLord>,
+    exact: bool,
+    words: String,
+    lang: Lang,
+) -> TajikaYoga {
     TajikaYoga {
         kind,
-        name: kind.name(),
+        name: kind.name_in(lang),
         planets,
         exact,
         words,
@@ -352,6 +429,14 @@ fn yoga(kind: YogaKind, planets: Vec<DashaLord>, exact: bool, words: String) -> 
 
 /// Every yoga in the annual sky, chart-wide ones first, then pair by pair.
 pub fn tajika_yogas(sky: &AnnualSky) -> Vec<TajikaYoga> {
+    tajika_yogas_in(sky, Lang::En)
+}
+
+/// [`tajika_yogas`] with the names and words in the reader's language.
+pub fn tajika_yogas_in(sky: &AnnualSky, lang: Lang) -> Vec<TajikaYoga> {
+    let graha_name = |g: DashaLord| graha_in(g, lang);
+    let place = |sky: &AnnualSky, g: DashaLord| place(sky, g, lang);
+    let yoga = |kind, planets, exact, words| yoga(kind, planets, exact, words, lang);
     let mut out = Vec::new();
     let houses: Vec<u8> = SEVEN
         .iter()
@@ -364,14 +449,24 @@ pub fn tajika_yogas(sky: &AnnualSky) -> Vec<TajikaYoga> {
                 YogaKind::Ikkavala,
                 SEVEN.to_vec(),
                 true,
-                "all seven planets stand in kendras or panapharas from the lagna".into(),
+                lang.pick([
+                    "all seven planets stand in kendras or panapharas from the lagna",
+                    "ഏഴു ഗ്രഹങ്ങളും ലഗ്നത്തിൽ നിന്ന് കേന്ദ്രങ്ങളിലോ പണപരങ്ങളിലോ നിൽക്കുന്നു",
+                    "सातों ग्रह लग्न से केंद्र या पणफर भावों में हैं",
+                ])
+                .into(),
             ));
         } else if houses.iter().all(|h| matches!(h, 3 | 6 | 9 | 12)) {
             out.push(yoga(
                 YogaKind::Induvara,
                 SEVEN.to_vec(),
                 true,
-                "all seven planets stand in apoklimas from the lagna".into(),
+                lang.pick([
+                    "all seven planets stand in apoklimas from the lagna",
+                    "ഏഴു ഗ്രഹങ്ങളും ലഗ്നത്തിൽ നിന്ന് ആപോക്ലിമങ്ങളിൽ നിൽക്കുന്നു",
+                    "सातों ग्रह लग्न से आपोक्लिम भावों में हैं",
+                ])
+                .into(),
             ));
         }
     }
@@ -394,7 +489,7 @@ pub fn tajika_yogas(sky: &AnnualSky) -> Vec<TajikaYoga> {
             kind,
             vec![l.fast, l.slow],
             l.kind == LinkKind::Poorna,
-            link_words(sky, l),
+            link_words(sky, l, lang),
         ));
     }
 
@@ -423,28 +518,64 @@ pub fn tajika_yogas(sky: &AnnualSky) -> Vec<TajikaYoga> {
                         YogaKind::Nakta,
                         vec![a, b, c],
                         exact,
-                        format!(
-                            "{} and {} do not aspect each other; the faster {} applies to both ({:.2}° and {:.2}° behind) and carries the light",
-                            place(sky, a),
-                            place(sky, b),
-                            graha_name(c),
-                            x.apart,
-                            y.apart
-                        ),
+                        match lang {
+                            Lang::En => format!(
+                                "{} and {} do not aspect each other; the faster {} applies to both ({:.2}° and {:.2}° behind) and carries the light",
+                                place(sky, a),
+                                place(sky, b),
+                                graha_name(c),
+                                x.apart,
+                                y.apart
+                            ),
+                            Lang::Ml => format!(
+                                "{}, {} പരസ്പരം നോക്കുന്നില്ല; വേഗമേറിയ {} രണ്ടിനോടും അടുക്കുന്നു ({:.2}°, {:.2}° പിന്നിൽ), പ്രകാശം കൈമാറുന്നു",
+                                place(sky, a),
+                                place(sky, b),
+                                graha_name(c),
+                                x.apart,
+                                y.apart
+                            ),
+                            Lang::Hi => format!(
+                                "{} और {} एक-दूसरे को नहीं देखते; तेज़ {} दोनों की ओर बढ़ता है ({:.2}° और {:.2}° पीछे) और प्रकाश पहुँचाता है",
+                                place(sky, a),
+                                place(sky, b),
+                                graha_name(c),
+                                x.apart,
+                                y.apart
+                            ),
+                        },
                     ));
                 } else if x.slow == c && y.slow == c {
                     out.push(yoga(
                         YogaKind::Yamaya,
                         vec![a, b, c],
                         exact,
-                        format!(
-                            "{} and {} do not aspect each other; both apply to the slower {} ({:.2}° and {:.2}° behind)",
-                            place(sky, a),
-                            place(sky, b),
-                            graha_name(c),
-                            x.apart,
-                            y.apart
-                        ),
+                        match lang {
+                            Lang::En => format!(
+                                "{} and {} do not aspect each other; both apply to the slower {} ({:.2}° and {:.2}° behind)",
+                                place(sky, a),
+                                place(sky, b),
+                                graha_name(c),
+                                x.apart,
+                                y.apart
+                            ),
+                            Lang::Ml => format!(
+                                "{}, {} പരസ്പരം നോക്കുന്നില്ല; രണ്ടും മന്ദമായ {}-യോട് അടുക്കുന്നു ({:.2}°, {:.2}° പിന്നിൽ)",
+                                place(sky, a),
+                                place(sky, b),
+                                graha_name(c),
+                                x.apart,
+                                y.apart
+                            ),
+                            Lang::Hi => format!(
+                                "{} और {} एक-दूसरे को नहीं देखते; दोनों धीमे {} की ओर बढ़ते हैं ({:.2}° और {:.2}° पीछे)",
+                                place(sky, a),
+                                place(sky, b),
+                                graha_name(c),
+                                x.apart,
+                                y.apart
+                            ),
+                        },
                     ));
                 }
             }
@@ -473,16 +604,38 @@ pub fn tajika_yogas(sky: &AnnualSky) -> Vec<TajikaYoga> {
                     YogaKind::Manau,
                     vec![l.fast, l.slow, m],
                     gap <= 1.0,
-                    format!(
-                        "the Ithasala of {} and {} is spoiled: {} stands in {} aspect to {} {:.2}° off, within its {:.0}° orb",
-                        graha_name(l.fast),
-                        graha_name(l.slow),
-                        place(sky, m),
-                        d.name(),
-                        graha_name(l.fast),
-                        gap,
-                        orb
-                    ),
+                    match lang {
+                        Lang::En => format!(
+                            "the Ithasala of {} and {} is spoiled: {} stands in {} aspect to {} {:.2}° off, within its {:.0}° orb",
+                            graha_name(l.fast),
+                            graha_name(l.slow),
+                            place(sky, m),
+                            d.name(),
+                            graha_name(l.fast),
+                            gap,
+                            orb
+                        ),
+                        Lang::Ml => format!(
+                            "{}, {} ഇവരുടെ ഇത്ഥശാല കേടാകുന്നു: {} {}-നെ {} ആയി നോക്കുന്നു, {:.2}° അകലെ, അതിന്റെ {:.0}° ദീപ്താംശത്തിനുള്ളിൽ",
+                            graha_name(l.fast),
+                            graha_name(l.slow),
+                            place(sky, m),
+                            graha_name(l.fast),
+                            d.name_in(lang),
+                            gap,
+                            orb
+                        ),
+                        Lang::Hi => format!(
+                            "{} और {} का इत्थशाल बिगड़ता है: {} {} को {} से देखता है, {:.2}° दूर, अपने {:.0}° दीप्तांश के भीतर",
+                            graha_name(l.fast),
+                            graha_name(l.slow),
+                            place(sky, m),
+                            graha_name(l.fast),
+                            d.name_in(lang),
+                            gap,
+                            orb
+                        ),
+                    },
                 ));
             }
         }
@@ -500,24 +653,57 @@ pub fn tajika_yogas(sky: &AnnualSky) -> Vec<TajikaYoga> {
             if !ml.kind.is_applying() {
                 continue;
             }
-            let moon_office = adhikara(sky, DashaLord::Moon).map_or("-", Adhikara::name);
-            let p_office = adhikara(sky, p).map_or("-", Adhikara::name);
+            let moon_office = adhikara(sky, DashaLord::Moon).map_or("-", |a| a.name_in(lang));
+            let p_office = adhikara(sky, p).map_or("-", |a| a.name_in(lang));
+            let moon_sign = sign_in(sky.sign(DashaLord::Moon).unwrap_or(0), lang);
+            let p_sign = sign_in(sky.sign(p).unwrap_or(0), lang);
+            let moon = graha_name(DashaLord::Moon);
             out.push(yoga(
                 YogaKind::Kamboola,
                 vec![l.fast, l.slow, DashaLord::Moon],
                 ml.kind == LinkKind::Poorna,
-                format!(
-                    "the Moon ({}) applies to {} ({}) {:.2}° behind and joins the Ithasala of {} and {}; Moon {}, {} {}",
-                    SIGN_NAMES[sky.sign(DashaLord::Moon).unwrap_or(0)],
-                    graha_name(p),
-                    SIGN_NAMES[sky.sign(p).unwrap_or(0)],
-                    ml.apart,
-                    graha_name(l.fast),
-                    graha_name(l.slow),
-                    moon_office,
-                    graha_name(p),
-                    p_office
-                ),
+                match lang {
+                    Lang::En => format!(
+                        "the Moon ({}) applies to {} ({}) {:.2}° behind and joins the Ithasala of {} and {}; Moon {}, {} {}",
+                        moon_sign,
+                        graha_name(p),
+                        p_sign,
+                        ml.apart,
+                        graha_name(l.fast),
+                        graha_name(l.slow),
+                        moon_office,
+                        graha_name(p),
+                        p_office
+                    ),
+                    Lang::Ml => format!(
+                        "{} ({}) {:.2}° പിന്നിൽ നിന്ന് {} ({})-യോട് അടുക്കുന്നു, {}, {} ഇവരുടെ ഇത്ഥശാലയിൽ ചേരുന്നു; {} {}, {} {}",
+                        moon,
+                        moon_sign,
+                        ml.apart,
+                        graha_name(p),
+                        p_sign,
+                        graha_name(l.fast),
+                        graha_name(l.slow),
+                        moon,
+                        moon_office,
+                        graha_name(p),
+                        p_office
+                    ),
+                    Lang::Hi => format!(
+                        "{} ({}) {:.2}° पीछे से {} ({}) की ओर बढ़ता है और {} व {} के इत्थशाल से जुड़ता है; {} {}, {} {}",
+                        moon,
+                        moon_sign,
+                        ml.apart,
+                        graha_name(p),
+                        p_sign,
+                        graha_name(l.fast),
+                        graha_name(l.slow),
+                        moon,
+                        moon_office,
+                        graha_name(p),
+                        p_office
+                    ),
+                },
             ));
             break;
         }

@@ -72,18 +72,17 @@ private enum class SahamGroup(val label: String) {
     ALL("All"), FORTUNE("Fortune"), LEARNING("Learning"), FAMILY("Family"), WORK("Work"), HEALTH("Health"), OTHER("Other"),
 }
 
-private fun sahamGroupOf(s: SahamRecord): SahamGroup {
-    val t = "${s.name} ${s.meaning}".lowercase()
-    fun any(vararg keys: String): Boolean = keys.any { t.contains(it) }
-    return when {
-        any("fortune", "merit", "fame") -> SahamGroup.FORTUNE
-        any("learning") -> SahamGroup.LEARNING
-        any("mother", "father", "child", "brother", "marriage", "spouse") -> SahamGroup.FAMILY
-        any("work", "profession", "trade", "wealth") -> SahamGroup.WORK
-        any("disease", "illness", "health", "safety") -> SahamGroup.HEALTH
-        else -> SahamGroup.OTHER
-    }
-}
+/** The group of each saham, by its stable English key (the shown name and meaning follow the language). */
+private val SAHAM_GROUPS: Map<String, SahamGroup> = mapOf(
+    "Punya" to SahamGroup.FORTUNE, "Yasas" to SahamGroup.FORTUNE,
+    "Vidya" to SahamGroup.LEARNING, "Sastra" to SahamGroup.LEARNING,
+    "Bhratri" to SahamGroup.FAMILY, "Pitri" to SahamGroup.FAMILY, "Matri" to SahamGroup.FAMILY,
+    "Putra" to SahamGroup.FAMILY, "Vivaha" to SahamGroup.FAMILY,
+    "Karma" to SahamGroup.WORK, "Artha" to SahamGroup.WORK, "Vanik" to SahamGroup.WORK,
+    "Roga" to SahamGroup.HEALTH, "Mrityu" to SahamGroup.HEALTH, "Jadya" to SahamGroup.HEALTH, "Apamrityu" to SahamGroup.HEALTH,
+)
+
+private fun sahamGroupOf(s: SahamRecord): SahamGroup = SAHAM_GROUPS[s.key] ?: SahamGroup.OTHER
 
 private fun ordinal(n: Int): String {
     val suffix = when {
@@ -127,15 +126,15 @@ fun YearScreen(profile: BirthProfile, here: Place, settings: EngineSettings, onB
     val defaultYear = remember(profile, zone) { defaultReturnYear(profile, zone).toLong() }
     var year by remember(profile, here, settings) { mutableLongStateOf(defaultYear) }
     var refined by remember(profile, here, settings) { mutableStateOf(false) }
-    val cache = remember(profile, here, settings) { mutableStateMapOf<Long, VarshaphalaRecord>() }
-    val errors = remember(profile, here, settings) { mutableStateMapOf<Long, String>() }
+    val cache = remember(profile, here, settings, com.kshana.app.data.Lang.code) { mutableStateMapOf<Long, VarshaphalaRecord>() }
+    val errors = remember(profile, here, settings, com.kshana.app.data.Lang.code) { mutableStateMapOf<Long, String>() }
     var group by remember { mutableStateOf(SahamGroup.ALL) }
     var picked by remember(profile, here, settings) { mutableStateOf<Int?>(null) }
     var showBalas by remember { mutableStateOf(false) }
     var showAllMudda by remember { mutableStateOf(false) }
 
     // One return per year, solved off the main thread and kept.
-    LaunchedEffect(profile, here, settings, year) {
+    LaunchedEffect(profile, here, settings, year, com.kshana.app.data.Lang.code) {
         if (cache.containsKey(year)) return@LaunchedEffect
         errors.remove(year)
         try {
@@ -143,7 +142,7 @@ fun YearScreen(profile: BirthProfile, here: Place, settings: EngineSettings, onB
             val birth = profile.birthInstant()
             val y = year
             val r = withContext(Dispatchers.Default) {
-                engine.varshaphala(birth, profile.latitude, profile.longitude, settings.ayanamsa, y, here.latitude, here.longitude)
+                engine.varshaphala(birth, profile.latitude, profile.longitude, settings.ayanamsa, y, here.latitude, here.longitude, com.kshana.app.data.Lang.code)
             }
             cache[y] = r
         } catch (e: CancellationException) {

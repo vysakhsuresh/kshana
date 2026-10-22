@@ -63,6 +63,7 @@ pub struct UpagrahaRecord {
 #[allow(missing_docs)]
 pub struct SpecialLagnaRecord {
     pub name: String,
+    pub key: String,
     pub sidereal: f64,
 }
 
@@ -113,7 +114,10 @@ impl Engine {
         latitude_deg: f64,
         longitude_deg: f64,
         ayanamsa: AyanamsaChoice,
+        lang: String,
     ) -> Result<DayClockRecord, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
+        let w = |s: &str| kshana_day::word_in(s, lang);
         let o = obs(latitude_deg, longitude_deg);
         let at_i: Instant = at.into();
         let day = solar_day(&self.spk, self.eop.as_ref(), &o, at_i)
@@ -123,8 +127,8 @@ impl Engine {
         let (gf, vf, _) = kshana_day::ghati_vighati(&day, at_i, GhatiConvention::Fixed);
         let mw = |m: &kshana_day::MuhurtaWindow| DayWindowRecord {
             kind: "muhurta".into(),
-            name: m.muhurta.name.to_string(),
-            lord: m.muhurta.alias.unwrap_or("").to_string(),
+            name: w(m.muhurta.name),
+            lord: w(m.muhurta.alias.unwrap_or("")),
             night: m.night,
             index: m.muhurta.number,
             start: m.start.into(),
@@ -133,8 +137,8 @@ impl Engine {
         };
         let cw = |c: &kshana_day::ChoghadiyaWindow| DayWindowRecord {
             kind: "choghadiya".into(),
-            name: c.kind.name().to_string(),
-            lord: c.kind.lord().to_string(),
+            name: w(c.kind.name()),
+            lord: w(c.kind.lord()),
             night: c.night,
             index: c.slot,
             start: c.start.into(),
@@ -162,7 +166,8 @@ impl Engine {
         ] {
             if let Ok(l) = kshana_day::special_lagna_at(&ctx, which, &day, at_i) {
                 special.push(SpecialLagnaRecord {
-                    name: which.name().to_string(),
+                    name: w(which.name()),
+                    key: which.name().to_string(),
                     sidereal: l,
                 });
             }
@@ -171,8 +176,7 @@ impl Engine {
             sunrise: day.sunrise.into(),
             sunset: day.sunset.into(),
             next_sunrise: day.next_sunrise.into(),
-            weekday_lord: kshana_day::WEEKDAY_LORDS[kshana_day::weekday(&day, &o) as usize % 7]
-                .to_string(),
+            weekday_lord: w(kshana_day::WEEKDAY_LORDS[kshana_day::weekday(&day, &o) as usize % 7]),
             ghati: g,
             vighati: v,
             vipala: p,
@@ -189,8 +193,8 @@ impl Engine {
             upagrahas: kshana_day::upagraha_longitudes(self.eop.as_ref(), &o, &day, at_i, ay)
                 .iter()
                 .map(|u| UpagrahaRecord {
-                    name: u.which.name().to_string(),
-                    point: format!("{:?}", u.point),
+                    name: w(u.which.name()),
+                    point: w(&format!("{:?}", u.point)),
                     night: u.night,
                     at: u.at.into(),
                     sidereal: u.sidereal,
@@ -210,7 +214,9 @@ impl Engine {
         natal_moon_sidereal: f64,
         from: ExactInstant,
         to: ExactInstant,
+        lang: String,
     ) -> Result<Vec<LunarWindowRecord>, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let ay = ayanamsa.into();
         let (f, t): (Instant, Instant) = (from.into(), to.into());
         if t.ns_since(f) > 400 * 86_400 * 1_000_000_000 {
@@ -231,7 +237,7 @@ impl Engine {
         Ok(w.into_iter()
             .map(|x| LunarWindowRecord {
                 kind: kind.clone(),
-                label: x.label.to_string(),
+                label: kshana_day::word_in(x.label, lang),
                 index: x.index as u32,
                 start: x.start.into(),
                 end: x.end.into(),
@@ -250,7 +256,9 @@ impl Engine {
         at: ExactInstant,
         latitude_deg: f64,
         longitude_deg: f64,
+        lang: String,
     ) -> Result<Vec<PakshiRecord>, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let ay = ayanamsa.into();
         let bird = kshana_day::birth_bird_at(&self.spk, birth.into(), ay).map_err(err)?;
         let o = obs(latitude_deg, longitude_deg);
@@ -263,8 +271,8 @@ impl Engine {
                 end: x.end.into(),
                 night: x.night,
                 yama: x.yama,
-                bird: x.bird.name().to_string(),
-                activity: x.activity.name().to_string(),
+                bird: kshana_day::word_in(x.bird.name(), lang),
+                activity: kshana_day::word_in(x.activity.name(), lang),
                 strength: x.strength,
                 favourable: x.favourable,
             })
@@ -274,10 +282,11 @@ impl Engine {
 
 /// The birth bird's name for a sidereal Moon and the paksha.
 #[uniffi::export]
-pub fn birth_bird(moon_sidereal: f64, shukla: bool) -> String {
-    kshana_day::birth_bird(moon_sidereal, shukla)
-        .name()
-        .to_string()
+pub fn birth_bird(moon_sidereal: f64, shukla: bool, lang: String) -> String {
+    kshana_day::word_in(
+        kshana_day::birth_bird(moon_sidereal, shukla).name(),
+        kshana_rules::Lang::parse(&lang),
+    )
 }
 
 #[cfg(test)]
@@ -306,7 +315,7 @@ mod tests {
         };
         let at = u(2026, 10, 16, 3, 30);
         let d = engine
-            .day_clock(at, 9.9312, 76.2673, AyanamsaChoice::Lahiri)
+            .day_clock(at, 9.9312, 76.2673, AyanamsaChoice::Lahiri, "en".into())
             .unwrap();
         assert_eq!(d.muhurtas.len(), 30);
         assert_eq!(d.choghadiyas.len(), 16);
@@ -320,6 +329,7 @@ mod tests {
                 0.0,
                 at,
                 u(2026, 11, 16, 0, 0),
+                "en".into(),
             )
             .unwrap();
         assert!(!g.is_empty());
@@ -330,9 +340,10 @@ mod tests {
                 at,
                 9.9312,
                 76.2673,
+                "ml".into(),
             )
             .unwrap();
         assert_eq!(pk.len(), 10);
-        assert!(!birth_bird(316.344, true).is_empty());
+        assert!(!birth_bird(316.344, true, "hi".into()).is_empty());
     }
 }

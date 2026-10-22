@@ -434,7 +434,7 @@ fn feeds(range: std::ops::Range<usize>, name: &str) {
             a.run(&tag("parihara"), || e.parihara(b, la, lo, AY, t, None));
             a.run(&tag("timeline"), || e.timeline(b, la, lo, HS, AY, t));
             a.run(&tag("plain_reading"), || e.plain_reading(b, la, lo, AY, t));
-            a.run(&tag("daily"), || e.daily(b, la, lo, AY, t, hla, hlo));
+            a.run(&tag("daily"), || e.daily(b, la, lo, AY, t, hla, hlo, LANGS[ci % LANGS.len()].into()));
             a.run(&tag("transits"), || e.transits(b, la, lo, AY, t, 60));
             a.run(&tag("chart_yogas"), || e.chart_yogas(b, la, lo, AY, t));
             a.run(&tag("couple"), || e.couple(b, la, lo, ob, ola, olo, hla, hlo, HS, AY, male, t));
@@ -560,8 +560,9 @@ fn chart_pages() {
     let ds = dates();
     for (ci, &(b, la, lo, _)) in cs.iter().enumerate() {
         let t = ds[ci % ds.len()];
+        let lg = LANGS[ci % LANGS.len()];
         let tag = |s: &str| format!("c{ci}.{s}");
-        a.run(&tag("varsha"), || e.varshaphala(b, la, lo, AY, 2026 + (ci as i64 % 4), la, lo));
+        a.run(&tag("varsha"), || e.varshaphala(b, la, lo, AY, 2026 + (ci as i64 % 4), la, lo, lg.into()));
         a.run(&tag("jaimini_extras"), || e.jaimini_extras(b, la, lo, AY));
         a.run(&tag("sandhi"), || e.dasha_sandhi_windows(b, la, lo, AY, at(2026, 1, 1, 0, 0), at(2036, 1, 1, 0, 0), None));
         for lord in ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"] {
@@ -571,13 +572,13 @@ fn chart_pages() {
         a.run(&tag("dashas"), || e.dasha_systems_at(b, la, lo, AY, t));
         a.run(&tag("dashas_more"), || e.dasha_systems_more_at(b, la, lo, AY, t));
         a.run(&tag("patyayini"), || e.patyayini(b, la, lo, AY, 2027, la, lo));
-        a.run(&tag("pakshi"), || e.pancha_pakshi(b, AY, t, la, lo));
-        a.run(&tag("day_clock"), || e.day_clock(t, la, lo, AY));
+        a.run(&tag("pakshi"), || e.pancha_pakshi(b, AY, t, la, lo, lg.into()));
+        a.run(&tag("day_clock"), || e.day_clock(t, la, lo, AY, lg.into()));
         a.run(&tag("kp_full"), || e.kp_full(b, la, lo, AY, t, la, lo));
         a.run(&tag("shadbala"), || e.shadbala(b, la, lo, AY));
         a.run(&tag("ashtakavarga"), || e.ashtakavarga(b, la, lo, AY));
         a.run(&tag("retrodict"), || e.retrodict(b, la, lo, AY, at(2010, 1, 1, 0, 0), at(2026, 1, 1, 0, 0)));
-        a.run(&tag("transit_windows"), || e.transit_windows(b, la, lo, AY, t, at(2029, 1, 1, 0, 0)));
+        a.run(&tag("transit_windows"), || e.transit_windows(b, la, lo, AY, t, at(2029, 1, 1, 0, 0), lg.into()));
         a.run(&tag("areas"), || e.area_readings(b, la, lo, 0.0, HS, AY, t, 3));
         a.run(&tag("profections"), || e.profections(b, la, lo, AY, t));
         a.run(&tag("firdaria"), || e.firdaria(b, la, lo, AY));
@@ -586,7 +587,7 @@ fn chart_pages() {
         a.run(&tag("panchanga"), || e.panchanga_detail(t, la, lo, AY));
         a.run(&tag("sphutas"), || e.prasna_marga_sphutas(t, la, lo, AY));
         a.run(&tag("arudha"), || e.prasna_arudha_sphutas(t, la, lo, AY, (ci % 12) as u8));
-        a.run(&tag("calendar"), || e.calendar(t, 30, la, lo, AY));
+        a.run(&tag("calendar"), || e.calendar(t, 30, la, lo, AY, lg.into()));
         a.run(&tag("calendar_days"), || e.calendar_days(la, lo, 330, 2026, 1 + (ci as u32 % 12), 1, 31, AY));
         a.run(&tag("calendar_festivals"), || e.calendar_festivals(la, lo, 330, 2026, 1 + (ci as u32 % 12), 1, 31, AY));
         a.run(&tag("eclipses"), || e.eclipses(t, at(2036, 1, 1, 0, 0), la, lo));
@@ -619,7 +620,7 @@ fn catalogues_and_questions() {
     a.read("purposes", format!("{:?}", purposes()));
     a.read("topics", format!("{:?}", topics()));
     a.read("hora_lore", format!("{:?}", hora_lore_all()));
-    a.read("glossary", format!("{:?}", glossary()));
+    a.read("glossary", format!("{:?}", glossary("en".into())));
     a.read("yoga_catalogue", format!("{:?}", yoga_catalogue()));
     a.read("dasha_names", format!("{:?} {:?} {:?}", dasha_system_names(), more_dasha_system_names(), dasha_level_names()));
     for lang in ["en", "ml", "hi", "ta", "te", "kn"] {

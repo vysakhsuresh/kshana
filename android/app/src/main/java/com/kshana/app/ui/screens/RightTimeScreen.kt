@@ -68,7 +68,7 @@ fun RightTimeScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
 
-    LaunchedEffect(profile, here, settings) {
+    LaunchedEffect(profile, here, settings, com.kshana.app.data.Lang.code) {
         daily = null
         error = null
         if (profile == null) return@LaunchedEffect
@@ -77,7 +77,7 @@ fun RightTimeScreen(
             val engine = EngineProvider.get(context)
             val birth = profile.birthInstant()
             daily = withContext(Dispatchers.Default) {
-                engine.daily(birth, profile.latitude, profile.longitude, settings.ayanamsa, Instants.now(), here.latitude, here.longitude)
+                engine.daily(birth, profile.latitude, profile.longitude, settings.ayanamsa, Instants.now(), here.latitude, here.longitude, com.kshana.app.data.Lang.code)
             }
         } catch (e: Exception) {
             error = e.message ?: e.toString()

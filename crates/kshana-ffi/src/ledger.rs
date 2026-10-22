@@ -305,7 +305,9 @@ impl Engine {
         ayanamsa: AyanamsaChoice,
         from: ExactInstant,
         to: ExactInstant,
+        lang: String,
     ) -> Result<Vec<TransitWindowRecord>, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let ch = chart_of(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let from_i: Instant = from.into();
         let to_i: Instant = to.into();
@@ -314,7 +316,7 @@ impl Engine {
                 "transit windows cover at most 800 days per call".to_string(),
             ));
         }
-        let w = kshana_forecast::transit_windows(&self.spk, &ch, ayanamsa.into(), from_i, to_i)
+        let w = kshana_forecast::transit_windows(&self.spk, &ch, ayanamsa.into(), from_i, to_i, lang)
             .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         Ok(w.into_iter()
             .map(|t| TransitWindowRecord {
@@ -327,9 +329,12 @@ impl Engine {
                 bav: t.bav,
                 sav: t.sav,
                 favourable: t.verdict.favourable,
-                vedha_by: t.verdict.vedha_by.map(lord),
+                vedha_by: t
+                    .verdict
+                    .vedha_by
+                    .map(|g| kshana_speak::lexicon::graha(g, lang).to_string()),
                 verdict_words: t.verdict.words,
-                moorthi: t.moorthi.map(|m| m.name().to_string()),
+                moorthi: t.moorthi.map(|m| m.name_in(lang).to_string()),
                 score: t.score,
                 factors: t.factors,
             })
@@ -381,10 +386,12 @@ impl Engine {
         longitude_deg: f64,
         ayanamsa: AyanamsaChoice,
         at: ExactInstant,
+        lang: String,
     ) -> Result<TransitScoreRecord, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let ch = chart_of(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let (score, lines) =
-            kshana_forecast::today_transit_score(&self.spk, &ch, ayanamsa.into(), at.into())
+            kshana_forecast::today_transit_score(&self.spk, &ch, ayanamsa.into(), at.into(), lang)
                 .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         Ok(TransitScoreRecord { score, lines })
     }
@@ -493,6 +500,7 @@ mod tests {
                 AyanamsaChoice::Lahiri,
                 u(2026, 10, 1, 0, 0),
                 u(2026, 11, 1, 0, 0),
+                "en".into(),
             )
             .unwrap();
         assert!(w.iter().any(|x| x.body == "Moon"));
@@ -515,6 +523,7 @@ mod tests {
                 76.2673,
                 AyanamsaChoice::Lahiri,
                 u(2026, 10, 16, 3, 30),
+                "ml".into(),
             )
             .unwrap();
         assert_eq!(t.lines.len(), 9);

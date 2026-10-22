@@ -211,6 +211,7 @@ pub struct CompatibilityRecord {
 #[allow(missing_docs)]
 pub struct ObservanceRecord {
     pub name: String,
+    pub key: String,
     pub exact: ExactInstant,
     pub observed_sunrise: Option<ExactInstant>,
     pub note: String,
@@ -243,6 +244,7 @@ pub struct GlossaryRecord {
     pub term: String,
     pub meaning: String,
     pub tradition: String,
+    pub tradition_key: String,
 }
 
 fn mangal(m: &kshana_rules::MangalDosha) -> MangalRecord {
@@ -309,7 +311,9 @@ impl Engine {
         at: ExactInstant,
         here_latitude_deg: f64,
         here_longitude_deg: f64,
+        lang: String,
     ) -> Result<DailyRecord, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let ch = natal_chart(
             self,
             birth,
@@ -329,6 +333,7 @@ impl Engine {
             &ch,
             at.into(),
             ayanamsa.into(),
+            lang,
         )
         .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         Ok(DailyRecord {
@@ -470,7 +475,9 @@ impl Engine {
         latitude_deg: f64,
         longitude_deg: f64,
         ayanamsa: AyanamsaChoice,
+        lang: String,
     ) -> Result<Vec<ObservanceRecord>, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let obs = Observer {
             latitude_deg,
             longitude_deg,
@@ -487,10 +494,11 @@ impl Engine {
         .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         Ok(o.into_iter()
             .map(|x| ObservanceRecord {
-                name: x.name.to_string(),
+                name: kshana_forecast::observance_words(x.name, lang).to_string(),
+                key: x.name.to_string(),
                 exact: x.exact.into(),
                 observed_sunrise: x.observed_sunrise.map(Into::into),
-                note: x.note.to_string(),
+                note: kshana_forecast::observance_words(x.note, lang).to_string(),
             })
             .collect())
     }
@@ -531,13 +539,15 @@ pub fn naming(moon_sidereal: f64) -> NamingRecord {
 
 /// The glossary.
 #[uniffi::export]
-pub fn glossary() -> Vec<GlossaryRecord> {
-    kshana_speak::glossary()
+pub fn glossary(lang: String) -> Vec<GlossaryRecord> {
+    let lang = kshana_rules::Lang::parse(&lang);
+    kshana_speak::glossary::glossary_in(lang)
         .into_iter()
         .map(|g| GlossaryRecord {
             term: g.term.to_string(),
             meaning: g.meaning.to_string(),
-            tradition: g.tradition.to_string(),
+            tradition: kshana_speak::glossary::tradition_name(g.tradition, lang).to_string(),
+            tradition_key: g.tradition.to_string(),
         })
         .collect()
 }
@@ -585,6 +595,7 @@ mod tests {
                 at,
                 12.97,
                 77.59,
+                "hi".into(),
             )
             .unwrap();
         assert!(d.sunrise.is_some() && !d.windows.is_empty());
@@ -606,7 +617,7 @@ mod tests {
         assert_eq!(c.kutas.len(), 8);
         assert!(c.total <= 36.0 && !c.sentences.is_empty());
         let cal = engine
-            .calendar(at, 40, 9.9312, 76.2673, AyanamsaChoice::Lahiri)
+            .calendar(at, 40, 9.9312, 76.2673, AyanamsaChoice::Lahiri, "ml".into())
             .unwrap();
         assert!(cal.len() >= 8);
         let k = engine
@@ -614,6 +625,6 @@ mod tests {
             .unwrap();
         assert_eq!(k.len(), 7);
         assert_eq!(naming(0.5).syllable, "Chu");
-        assert!(glossary().len() >= 50);
+        assert!(glossary("en".into()).len() >= 50);
     }
 }

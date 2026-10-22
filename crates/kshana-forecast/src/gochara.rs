@@ -23,7 +23,7 @@
 
 use kshana_chart::Chart;
 use kshana_ephem::{Body, Spk, SpkError};
-use kshana_rules::{bhinna_for, sarva_for, Facts};
+use kshana_rules::{bhinna_for, sarva_for, Facts, Lang};
 use kshana_sky::{apparent, lunar_node, node_longitude, LunarNode};
 use kshana_solver::{find_root, wrap180};
 use kshana_time::{Instant, NS_PER_DAY, NS_PER_SEC};
@@ -258,8 +258,24 @@ pub fn gochara_verdict(
     house_from_moon: u8,
     occupants: &[(DashaLord, u8)],
 ) -> GocharaVerdict {
-    let who = name(planet);
+    gochara_verdict_in(planet, house_from_moon, occupants, Lang::En)
+}
+
+/// A graha's name in the reader's language.
+fn name_in(g: DashaLord, lang: Lang) -> &'static str {
+    crate::daily::words::graha(name(g), lang)
+}
+
+/// [`gochara_verdict`] with the words in the reader's language.
+pub fn gochara_verdict_in(
+    planet: DashaLord,
+    house_from_moon: u8,
+    occupants: &[(DashaLord, u8)],
+    lang: Lang,
+) -> GocharaVerdict {
+    let who = name_in(planet, lang);
     let at = ordinal(house_from_moon);
+    let h = house_from_moon;
     let Some(&(_, vedha)) = vedha_table(planet)
         .iter()
         .find(|(h, _)| *h == house_from_moon)
@@ -267,9 +283,17 @@ pub fn gochara_verdict(
         return GocharaVerdict {
             favourable: false,
             vedha_by: None,
-            words: format!(
-                "{who} in the {at} from your Moon: not a favourable house for its transit (Phaladeepika 26)"
-            ),
+            words: match lang {
+                Lang::En => format!(
+                    "{who} in the {at} from your Moon: not a favourable house for its transit (Phaladeepika 26)"
+                ),
+                Lang::Ml => format!(
+                    "{who} ജന്മചന്ദ്രനിൽ നിന്ന് {h}-ാം ഭാവത്തിൽ: ഗോചരത്തിന് അനുകൂലമായ ഭാവമല്ല (ഫലദീപിക 26)"
+                ),
+                Lang::Hi => format!(
+                    "{who} जन्म चंद्र से {h}वें भाव में: इसके गोचर के लिए अनुकूल भाव नहीं (फलदीपिका 26)"
+                ),
+            },
         };
     };
     let vedha_by = occupants
@@ -280,19 +304,37 @@ pub fn gochara_verdict(
         Some(g) => GocharaVerdict {
             favourable: false,
             vedha_by: Some(g),
-            words: format!(
-                "{who} in the {at} from your Moon: a favourable house, but {} in the {} obstructs it (vedha)",
-                name(g),
-                ordinal(vedha)
-            ),
+            words: match lang {
+                Lang::En => format!(
+                    "{who} in the {at} from your Moon: a favourable house, but {} in the {} obstructs it (vedha)",
+                    name(g),
+                    ordinal(vedha)
+                ),
+                Lang::Ml => format!(
+                    "{who} ജന്മചന്ദ്രനിൽ നിന്ന് {h}-ാം ഭാവത്തിൽ: അനുകൂല ഭാവം, പക്ഷേ {vedha}-ാം ഭാവത്തിലെ {} തടയുന്നു (വേധം)",
+                    name_in(g, lang)
+                ),
+                Lang::Hi => format!(
+                    "{who} जन्म चंद्र से {h}वें भाव में: अनुकूल भाव, पर {vedha}वें भाव में {} रोकता है (वेध)",
+                    name_in(g, lang)
+                ),
+            },
         },
         None => GocharaVerdict {
             favourable: true,
             vedha_by: None,
-            words: format!(
-                "{who} in the {at} from your Moon: a favourable house, unobstructed (no graha in the {})",
-                ordinal(vedha)
-            ),
+            words: match lang {
+                Lang::En => format!(
+                    "{who} in the {at} from your Moon: a favourable house, unobstructed (no graha in the {})",
+                    ordinal(vedha)
+                ),
+                Lang::Ml => format!(
+                    "{who} ജന്മചന്ദ്രനിൽ നിന്ന് {h}-ാം ഭാവത്തിൽ: അനുകൂല ഭാവം, തടസ്സമില്ല ({vedha}-ാം ഭാവത്തിൽ ഗ്രഹമില്ല)"
+                ),
+                Lang::Hi => format!(
+                    "{who} जन्म चंद्र से {h}वें भाव में: अनुकूल भाव, कोई वेध नहीं ({vedha}वें भाव में कोई ग्रह नहीं)"
+                ),
+            },
         },
     }
 }
@@ -337,6 +379,26 @@ impl Moorthi {
             Moorthi::Rajata => "Rajata",
             Moorthi::Tamra => "Tamra",
             Moorthi::Loha => "Loha",
+        }
+    }
+
+    /// The Sanskrit name in the reader's script.
+    pub fn name_in(self, lang: Lang) -> &'static str {
+        match self {
+            Moorthi::Swarna => lang.pick(["Swarna", "സ്വർണ", "स्वर्ण"]),
+            Moorthi::Rajata => lang.pick(["Rajata", "രജത", "रजत"]),
+            Moorthi::Tamra => lang.pick(["Tamra", "താമ്ര", "ताम्र"]),
+            Moorthi::Loha => lang.pick(["Loha", "ലോഹ", "लोह"]),
+        }
+    }
+
+    /// The metal in the reader's language.
+    pub fn metal_in(self, lang: Lang) -> &'static str {
+        match self {
+            Moorthi::Swarna => lang.pick(["gold", "സ്വർണം", "सोना"]),
+            Moorthi::Rajata => lang.pick(["silver", "വെള്ളി", "चाँदी"]),
+            Moorthi::Tamra => lang.pick(["copper", "ചെമ്പ്", "ताँबा"]),
+            Moorthi::Loha => lang.pick(["iron", "ഇരുമ്പ്", "लोहा"]),
         }
     }
 
@@ -841,7 +903,11 @@ fn describe(
     sav: u8,
     moorthi: Option<Moorthi>,
     kakshya: Option<(KakshyaLord, bool)>,
+    lang: Lang,
 ) -> Vec<String> {
+    if lang != Lang::En {
+        return describe_in(planet, sign, verdict, bav, sav, moorthi, kakshya, lang);
+    }
     let who = name(planet);
     let sn = SIGN_NAMES[usize::from(sign % 12)];
     let mut out = vec![verdict.words.clone()];
@@ -879,6 +945,88 @@ fn describe(
                 "Kakshya: in {}'s kakshya of {sn}, which gave {who} no bindu here",
                 lord.name()
             )
+        });
+    }
+    out
+}
+
+/// [`describe`] in Malayalam or Hindi.
+#[allow(clippy::too_many_arguments)]
+fn describe_in(
+    planet: DashaLord,
+    sign: u8,
+    verdict: &GocharaVerdict,
+    bav: Option<u8>,
+    sav: u8,
+    moorthi: Option<Moorthi>,
+    kakshya: Option<(KakshyaLord, bool)>,
+    lang: Lang,
+) -> Vec<String> {
+    let ml = lang == Lang::Ml;
+    let who = name_in(planet, lang);
+    let sn = crate::daily::words::sign(usize::from(sign % 12), lang);
+    let mut out = vec![verdict.words.clone()];
+    out.push(match (bav, ml) {
+        (Some(b), true) if b >= 4 => {
+            format!("ഭിന്നാഷ്ടകവർഗം ({who}): {sn}-ൽ {b} ബിന്ദു (4-ഓ അധികമോ നല്ലത്)")
+        }
+        (Some(b), false) if b >= 4 => {
+            format!("भिन्नाष्टकवर्ग ({who}): {sn} में {b} बिंदु (4 या अधिक अच्छा)")
+        }
+        (Some(b), true) => {
+            format!("ഭിന്നാഷ്ടകവർഗം ({who}): {sn}-ൽ {b} ബിന്ദു മാത്രം (4-ൽ കുറവ് ദുർബലം)")
+        }
+        (Some(b), false) => {
+            format!("भिन्नाष्टकवर्ग ({who}): {sn} में केवल {b} बिंदु (4 से कम दुर्बल)")
+        }
+        (None, true) => {
+            format!("ഭിന്നാഷ്ടകവർഗം ({who}): ഇല്ല; സർവാഷ്ടകവർഗം കൊണ്ട് വിധിക്കുന്നു")
+        }
+        (None, false) => {
+            format!("{who} का भिन्नाष्टकवर्ग नहीं होता; सर्वाष्टकवर्ग से आँका गया")
+        }
+    });
+    out.push(match (sav >= 28, ml) {
+        (true, true) => format!("സർവാഷ്ടകവർഗം: {sn}-ൽ {sav} ബിന്ദു (28-ഓ അധികമോ നല്ലത്)"),
+        (false, true) => {
+            format!("സർവാഷ്ടകവർഗം: {sn}-ൽ {sav} ബിന്ദു (28-ൽ കുറവ് ഫലം തടയുന്നു)")
+        }
+        (true, false) => format!("सर्वाष्टकवर्ग: {sn} में {sav} बिंदु (28 या अधिक अच्छा)"),
+        (false, false) => format!("सर्वाष्टकवर्ग: {sn} में {sav} बिंदु (28 से कम फल रोकता है)"),
+    });
+    if let Some(m) = moorthi {
+        out.push(if ml {
+            format!(
+                "മൂർത്തി നിർണയം: {} ({}) — {who} {sn}-ൽ പ്രവേശിച്ചപ്പോൾ ജന്മചന്ദ്രനിൽ നിന്ന് ഗോചരചന്ദ്രന്റെ ഭാവം",
+                m.name_in(lang),
+                m.metal_in(lang)
+            )
+        } else {
+            format!(
+                "मूर्ति निर्णय: {} ({}) — जब {who} ने {sn} में प्रवेश किया, तब जन्म चंद्र से गोचर चंद्र का भाव",
+                m.name_in(lang),
+                m.metal_in(lang)
+            )
+        });
+    }
+    if let Some((lord, good)) = kakshya {
+        let l = match lord {
+            KakshyaLord::Lagna => lang.pick(["Lagna", "ലഗ്നം", "लग्न"]),
+            other => crate::daily::words::graha(other.name(), lang),
+        };
+        out.push(match (good, ml) {
+            (true, true) => format!(
+                "കക്ഷ്യ: {sn}-ലെ {l} കക്ഷ്യയിൽ; ഇവിടെ {who} ഗ്രഹത്തിന് ഒരു ബിന്ദു നൽകിയിട്ടുണ്ട്"
+            ),
+            (false, true) => format!(
+                "കക്ഷ്യ: {sn}-ലെ {l} കക്ഷ്യയിൽ; ഇവിടെ {who} ഗ്രഹത്തിന് ബിന്ദു നൽകിയിട്ടില്ല"
+            ),
+            (true, false) => {
+                format!("कक्ष्या: {sn} में {l} की कक्ष्या में, जिसने यहाँ {who} को एक बिंदु दिया")
+            }
+            (false, false) => format!(
+                "कक्ष्या: {sn} में {l} की कक्ष्या में, जिसने यहाँ {who} को कोई बिंदु नहीं दिया"
+            ),
         });
     }
     out
@@ -967,6 +1115,7 @@ pub fn transit_windows(
     ayanamsa: Ayanamsa,
     from: Instant,
     to: Instant,
+    lang: Lang,
 ) -> Result<Vec<TransitWindow>, SpkError> {
     let facts = Facts::from_chart(natal);
     let natal_moon = natal_moon_sidereal(natal);
@@ -1000,11 +1149,11 @@ pub fn transit_windows(
                 .collect();
             let house_from_moon = house_between(moon_sign, sign);
             let house_from_lagna = house_between(lagna_sign, sign);
-            let verdict = gochara_verdict(planet, house_from_moon, &occupants);
+            let verdict = gochara_verdict_in(planet, house_from_moon, &occupants, lang);
             let (bav, sav) = transit_bindus(&facts, planet, sign);
             let bav_opt = bav_row(planet).map(|_| bav);
             let score = score_blend(&verdict, bav_opt, sav, moorthi, None);
-            let factors = describe(planet, sign, &verdict, bav_opt, sav, moorthi, None);
+            let factors = describe(planet, sign, &verdict, bav_opt, sav, moorthi, None, lang);
             out.push(TransitWindow {
                 body: planet,
                 sign,
@@ -1033,6 +1182,7 @@ pub fn today_transit_score(
     natal: &Chart,
     ayanamsa: Ayanamsa,
     at: Instant,
+    lang: Lang,
 ) -> Result<(f64, Vec<String>), SpkError> {
     let facts = Facts::from_chart(natal);
     let moon_sign = sign_of(natal_moon_sidereal(natal));
@@ -1046,7 +1196,7 @@ pub fn today_transit_score(
     for (g, lon) in &positions {
         let sign = sign_of(*lon);
         let house = house_between(moon_sign, sign);
-        let verdict = gochara_verdict(*g, house, &occupants);
+        let verdict = gochara_verdict_in(*g, house, &occupants, lang);
         let (bav, sav) = transit_bindus(&facts, *g, sign);
         let bav_opt = bav_row(*g).map(|_| bav);
         let (_, _, lord) = kakshya_of(*lon);
@@ -1061,14 +1211,29 @@ pub fn today_transit_score(
             sav,
             None,
             kakshya.map(|k| (lord, k)),
+            lang,
         );
-        lines.push(format!(
-            "{} in {} ({} from your Moon), {score:.2}: {}",
-            name(*g),
-            SIGN_NAMES[usize::from(sign)],
-            ordinal(house),
-            factors.join("; ")
-        ));
+        lines.push(match lang {
+            Lang::En => format!(
+                "{} in {} ({} from your Moon), {score:.2}: {}",
+                name(*g),
+                SIGN_NAMES[usize::from(sign)],
+                ordinal(house),
+                factors.join("; ")
+            ),
+            Lang::Ml => format!(
+                "{} {}-ൽ (ജന്മചന്ദ്രനിൽ നിന്ന് {house}-ാം ഭാവം), {score:.2}: {}",
+                name_in(*g, lang),
+                crate::daily::words::sign(usize::from(sign), lang),
+                factors.join("; ")
+            ),
+            Lang::Hi => format!(
+                "{} {} में (जन्म चंद्र से {house}वाँ भाव), {score:.2}: {}",
+                name_in(*g, lang),
+                crate::daily::words::sign(usize::from(sign), lang),
+                factors.join("; ")
+            ),
+        });
     }
     Ok((total / positions.len() as f64, lines))
 }
@@ -1346,7 +1511,7 @@ mod tests {
         };
         let from = utc(2026, 1, 1, 0);
         let to = utc(2027, 1, 1, 0);
-        let all = transit_windows(&spk, &ch, Ayanamsa::Lahiri, from, to).unwrap();
+        let all = transit_windows(&spk, &ch, Ayanamsa::Lahiri, from, to, Lang::En).unwrap();
         let moon_sign = sign_of(natal_moon_sidereal(&ch));
         let lagna_sign = sign_of(ch.cusps_sidereal[0]);
         for planet in GOCHARA_PLANETS {
@@ -1521,7 +1686,7 @@ mod tests {
             return;
         };
         let at = utc(2026, 10, 15, 9);
-        let (s, lines) = today_transit_score(&spk, &ch, Ayanamsa::Lahiri, at).unwrap();
+        let (s, lines) = today_transit_score(&spk, &ch, Ayanamsa::Lahiri, at, Lang::En).unwrap();
         assert!((0.0..=1.0).contains(&s), "{s}");
         assert_eq!(lines.len(), 9);
         for (g, line) in GOCHARA_PLANETS.iter().zip(lines.iter()) {
