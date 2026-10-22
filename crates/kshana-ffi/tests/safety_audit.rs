@@ -425,15 +425,15 @@ fn feeds(range: std::ops::Range<usize>, name: &str) {
                 let group = vec![PersonInput { birth: b, lat: la, lon: lo }, PersonInput { birth: ob, lat: ola, lon: olo }];
                 a.run(&l("together"), || e.best_slots_together(group, hla, hlo, HS, AY, "family".into(), t, 7, 4, lang.into()));
             }
-            a.run(&tag("letter"), || e.letter(b, la, lo, hla, hlo, HS, AY, t, vec![]));
-            a.run(&tag("year"), || e.year_chapter(b, la, lo, hla, hlo, HS, AY, t));
-            a.run(&tag("countdowns"), || e.countdowns(b, la, lo, hla, hlo, HS, AY, t));
+            a.run(&tag("letter"), || e.letter(b, la, lo, hla, hlo, HS, AY, t, vec![], LANGS[ci % 3].into()));
+            a.run(&tag("year"), || e.year_chapter(b, la, lo, hla, hlo, HS, AY, t, LANGS[ci % 3].into()));
+            a.run(&tag("countdowns"), || e.countdowns(b, la, lo, hla, hlo, HS, AY, t, LANGS[ci % 3].into()));
             a.run(&tag("festivals"), || e.festivals(b, la, lo, HS, AY, t, 35));
-            a.run(&tag("festivals_here"), || e.festivals_here(b, la, lo, HS, AY, hla, hlo, off, t, 35));
+            a.run(&tag("festivals_here"), || e.festivals_here(b, la, lo, HS, AY, hla, hlo, off, t, 35, LANGS[ci % 3].into()));
             a.run(&tag("slow"), || e.slow_horizon(b, la, lo, hla, hlo, HS, AY, t, 12));
             a.run(&tag("parihara"), || e.parihara(b, la, lo, AY, t, None));
-            a.run(&tag("timeline"), || e.timeline(b, la, lo, HS, AY, t));
-            a.run(&tag("plain_reading"), || e.plain_reading(b, la, lo, AY, t));
+            a.run(&tag("timeline"), || e.timeline(b, la, lo, HS, AY, t, LANGS[ci % 3].into()));
+            a.run(&tag("plain_reading"), || e.plain_reading(b, la, lo, AY, t, LANGS[ci % 3].into()));
             a.run(&tag("daily"), || e.daily(b, la, lo, AY, t, hla, hlo));
             a.run(&tag("transits"), || e.transits(b, la, lo, AY, t, 60));
             a.run(&tag("chart_yogas"), || e.chart_yogas(b, la, lo, AY, t));
@@ -441,7 +441,7 @@ fn feeds(range: std::ops::Range<usize>, name: &str) {
             a.run(&tag("talk"), || e.talk_window(b, la, lo, ob, ola, olo, hla, hlo, HS, AY, t, 14));
             if di == 0 || full() {
                 for life in life_names() {
-                    a.run(&tag(&format!("explain_{life}")), || e.explain(b, la, lo, hla, hlo, HS, AY, life.clone(), t));
+                    a.run(&tag(&format!("explain_{life}")), || e.explain(b, la, lo, hla, hlo, HS, AY, life.clone(), t, LANGS[ci % 3].into()));
                 }
             }
             // The family's shared windows, one language per chart in turn.
@@ -532,9 +532,11 @@ fn every_question() {
         for q in &qs {
             a.run(&tag(&format!("couple_ask_{}", q.key)), || e.couple_ask(b, la, lo, ob, ola, olo, la, lo, HS, AY, q.key.clone(), t));
         }
-        for pu in purposes() {
-            a.run(&tag(&format!("appointment_{}", pu.key)), || e.appointment(b, la, lo, la, lo, HS, AY, pu.key.clone(), t));
-            a.run(&tag(&format!("slots_{}", pu.key)), || e.best_slots(b, la, lo, la, lo, HS, AY, pu.key.clone(), t, 7, 4));
+        for (pi, pu) in purposes().into_iter().enumerate() {
+            // Each purpose in one language, rotating.
+            let lang = LANGS[(pi + ci) % 3];
+            a.run(&tag(&format!("{lang}.appointment_{}", pu.key)), || e.appointment(b, la, lo, la, lo, HS, AY, pu.key.clone(), t, lang.into()));
+            a.run(&tag(&format!("slots_{}", pu.key)), || e.best_slots(b, la, lo, la, lo, HS, AY, pu.key.clone(), t, 7, 4, lang.into()));
         }
         for (li, lang) in LANGS.into_iter().enumerate() {
             for (i, life) in life_names().into_iter().enumerate() {
@@ -587,7 +589,7 @@ fn chart_pages() {
         a.run(&tag("sphutas"), || e.prasna_marga_sphutas(t, la, lo, AY));
         a.run(&tag("arudha"), || e.prasna_arudha_sphutas(t, la, lo, AY, (ci % 12) as u8));
         a.run(&tag("calendar"), || e.calendar(t, 30, la, lo, AY));
-        a.run(&tag("calendar_days"), || e.calendar_days(la, lo, 330, 2026, 1 + (ci as u32 % 12), 1, 31, AY));
+        a.run(&tag("calendar_days"), || e.calendar_days(la, lo, 330, 2026, 1 + (ci as u32 % 12), 1, 31, AY, LANGS[ci % 3].into()));
         a.run(&tag("calendar_festivals"), || e.calendar_festivals(la, lo, 330, 2026, 1 + (ci as u32 % 12), 1, 31, AY));
         a.run(&tag("eclipses"), || e.eclipses(t, at(2036, 1, 1, 0, 0), la, lo));
         a.read(&tag("refine"), format!("{:?}", e.refine_birth_time(b, la, lo, HS, AY, 30.0, vec![])));

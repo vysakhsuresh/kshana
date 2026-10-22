@@ -256,6 +256,56 @@ pub fn influence_span(l: DashaLord) -> &'static str {
     }
 }
 
+/// [`level_noun`] in the reader's language.
+pub fn level_noun_in(lang: Lang, level: usize) -> &'static str {
+    let t = match level {
+        0 => ["long chapter of your life", "ജീവിതത്തിലെ നീണ്ട അധ്യായം", "जीवन का लंबा अध्याय"],
+        1 => ["stretch inside it", "അതിനുള്ളിലെ ഘട്ടം", "उसके भीतर का दौर"],
+        2 => ["season of a few months", "ഏതാനും മാസത്തെ കാലം", "कुछ महीनों का समय"],
+        3 => ["run of a few weeks", "ഏതാനും ആഴ്ചകളുടെ കാലം", "कुछ हफ़्तों का समय"],
+        _ => ["run of a few days", "ഏതാനും ദിവസത്തെ കാലം", "कुछ दिनों का समय"],
+    };
+    lang.pick(t)
+}
+
+/// [`birth_base`] in the reader's language; `name` is the life's name in that language.
+pub fn birth_base_in(lang: Lang, name: &str, score: f64) -> String {
+    match lang {
+        Lang::En => birth_base(name, score),
+        Lang::Ml => {
+            if score >= 0.6 {
+                format!("{name} എന്ന കാര്യത്തിൽ ജനനം മുതലേ നിങ്ങൾക്ക് നല്ല കരുത്തുണ്ട്: മോശം കാലത്തുനിന്ന് അത് നന്നായി തിരിച്ചുവരും")
+            } else if score >= 0.45 {
+                format!("{name} എന്ന കാര്യത്തിൽ ജനനം മുതൽ ശരാശരി അടിത്തറയാണ്: ഇടുന്ന അധ്വാനത്തിനനുസരിച്ച് ഫലം വരും")
+            } else {
+                format!("{name} ജനനം മുതലേ അൽപം ദുർബലമായ ഭാഗമാണ്: ജീവിതകാലം മുഴുവൻ സ്ഥിരമായ ശ്രദ്ധ വേണം")
+            }
+        }
+        Lang::Hi => {
+            if score >= 0.6 {
+                format!("{name} में आप जन्म से ही मज़बूत हैं: बुरे दौर से यह अच्छी तरह उबर आता है")
+            } else if score >= 0.45 {
+                format!("{name} में जन्म से औसत नींव है: जितनी मेहनत, उतना फल")
+            } else {
+                format!("{name} जन्म से थोड़ा कमज़ोर पहलू है: इसे जीवन भर लगातार देखभाल चाहिए")
+            }
+        }
+    }
+}
+
+/// [`influence_span`] in the reader's language.
+pub fn influence_span_in(lang: Lang, l: DashaLord) -> &'static str {
+    let t = match l {
+        DashaLord::Moon => ["a couple of days", "രണ്ടുമൂന്ന് ദിവസം", "दो-एक दिन"],
+        DashaLord::Sun | DashaLord::Mercury | DashaLord::Venus => ["a few weeks", "ഏതാനും ആഴ്ചകൾ", "कुछ हफ़्ते"],
+        DashaLord::Mars => ["about six weeks", "ഏകദേശം ആറ് ആഴ്ച", "लगभग छह हफ़्ते"],
+        DashaLord::Jupiter => ["about a year", "ഏകദേശം ഒരു വർഷം", "लगभग एक साल"],
+        DashaLord::Saturn => ["over two years", "രണ്ടു വർഷത്തിലേറെ", "दो साल से ज़्यादा"],
+        DashaLord::Rahu | DashaLord::Ketu => ["about eighteen months", "ഏകദേശം പതിനെട്ട് മാസം", "लगभग अठारह महीने"],
+    };
+    lang.pick(t)
+}
+
 /// The language a person reads. English is the source; Malayalam and Hindi are written
 /// for a common reader, not translated word by word (see `crate::lang`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]

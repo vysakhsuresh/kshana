@@ -5,8 +5,8 @@
 //! reads and why, and the days to circle in the month ahead. Used on the Loop for one
 //! person and under Us for each of the two.
 
-use crate::explain::explain;
-use crate::forecast::{date_words, moment, series, Band, ForecastError, Life, Moment, Natal, SIGN_NAMES};
+use crate::explain::explain_in;
+use crate::forecast::{date_words, moment_in, series, Band, ForecastError, Life, Moment, Natal, SIGN_NAMES};
 use crate::gochara::SaturnPhase;
 use crate::parihara::parihara_from_facts;
 use crate::plain::Lang;
@@ -240,8 +240,39 @@ pub fn briefing(
     lives: &[Life],
     at: Instant,
 ) -> Result<Briefing, ForecastError> {
+    briefing_in(Lang::En, spk, eop, natal, obs, system, ayanamsa, lives, at)
+}
+
+/// A graha's name in the reader's script, for the expert line of the periods.
+fn graha_name(lang: Lang, l: DashaLord) -> String {
+    let i = DashaLord::ORDER.iter().position(|x| *x == l).unwrap_or(0);
+    // ORDER is Ketu, Venus, Sun, Moon, Mars, Rahu, Jupiter, Saturn, Mercury.
+    const ML: [&str; 9] = ["കേതു", "ശുക്രൻ", "സൂര്യൻ", "ചന്ദ്രൻ", "ചൊവ്വ", "രാഹു", "വ്യാഴം", "ശനി", "ബുധൻ"];
+    const HI: [&str; 9] = ["केतु", "शुक्र", "सूर्य", "चंद्र", "मंगल", "राहु", "गुरु", "शनि", "बुध"];
+    match lang {
+        Lang::En => format!("{l:?}"),
+        Lang::Ml => ML[i].to_string(),
+        Lang::Hi => HI[i].to_string(),
+    }
+}
+
+/// [`briefing`] with every sentence in `lang`.
+#[allow(clippy::too_many_arguments)]
+pub fn briefing_in(
+    lang: Lang,
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    natal: &Natal,
+    obs: &Observer,
+    system: HouseSystem,
+    ayanamsa: Ayanamsa,
+    lives: &[Life],
+    at: Instant,
+) -> Result<Briefing, ForecastError> {
     let lon = obs.longitude_deg;
-    let m = moment(spk, eop, natal, obs, system, ayanamsa, at)?;
+    let d = |t: Instant| crate::lang::date(lang, t, lon);
+    let stop = if lang == Lang::Hi { "।" } else { "." };
+    let m = moment_in(lang, spk, eop, natal, obs, system, ayanamsa, at)?;
     let n = nakshatra(natal.moon_sidereal);
     let moon_sign = (natal.moon_sign().rem_euclid(12)) as u8;
     let moon = format!("{} · {}", SIGN_NAMES[moon_sign as usize], NAKSHATRA_NAMES[n.index]);
@@ -250,32 +281,18 @@ pub fn briefing(
         .iter()
         .enumerate()
         .take(2)
-        .map(|(i, p)| format!("{:?} {} (to {})", p.lord, ["mahadasha", "antardasha"][i], date_words(p.end, lon)))
+        .map(|(i, p)| match lang {
+            Lang::En => format!("{:?} {} (to {})", p.lord, ["mahadasha", "antardasha"][i], date_words(p.end, lon)),
+            Lang::Ml => format!("{} {} ({} വരെ)", graha_name(lang, p.lord), ["ദശ", "അപഹാരം"][i], d(p.end)),
+            Lang::Hi => format!("{} {} ({} तक)", graha_name(lang, p.lord), ["महादशा", "अंतर्दशा"][i], d(p.end)),
+        })
         .collect::<Vec<_>>()
         .join(" › ");
-    let (saturn_words, saturn_until) = saturn_sentence(spk, ayanamsa, natal, m.saturn, at, lon);
+    let (saturn_words, saturn_until) = saturn_sentence_in(lang, spk, ayanamsa, natal, m.saturn, at, lon);
 
     let mut paragraphs = Vec::new();
     // Paragraph 1: the season of life, as what it brings and until when.
-    if let (Some(maha), Some(antar)) = (levels.first(), levels.get(1)) {
-        let mut s = format!(
-            "Until {} your life centres on {}. {}",
-            date_words(maha.end, lon),
-            crate::plain::chapter_theme(maha.lord),
-            crate::plain::chapter_prediction(maha.lord)
-        );
-        if antar.lord != maha.lord {
-            s.push_str(&format!(
-                " Until {} the most movement is in {}.",
-                date_words(antar.end, lon),
-                crate::plain::chapter_theme(antar.lord)
-            ));
-        }
-        s.push_str(&format!(" {saturn_words}."));
-        paragraphs.push(s);
-    } else {
-        paragraphs.push(format!("{saturn_words}."));
-    }
+    paragraphs.push(season_paragraph_in(lang, natal, at, lon, &saturn_words));
     // Paragraph 3: the moment.
     let top = m.lives.iter().max_by(|a, b| a.score.partial_cmp(&b.score).unwrap_or(std::cmp::Ordering::Equal));
     let low = m.lives.iter().min_by(|a, b| a.score.partial_cmp(&b.score).unwrap_or(std::cmp::Ordering::Equal));
@@ -283,17 +300,33 @@ pub fn briefing(
         let hora = m
             .hora
             .as_ref()
-            .map(|h| format!(" Right now it is {}.", crate::plain::hour_nature(h.lord)))
+            .map(|h| match lang {
+                Lang::En => format!(" Right now it is {}.", crate::plain::hour_nature(h.lord)),
+                Lang::Ml => format!(" ഇപ്പോൾ {}.", crate::lang::hour_nature(lang, h.lord)),
+                Lang::Hi => format!(" अभी {}।", crate::lang::hour_nature(lang, h.lord)),
+            })
             .unwrap_or_default();
-        paragraphs.push(format!(
-            "Today is {}. {} is your strongest side now: {}. {} needs the most care: {}.{}",
-            crate::plain::day_quality(m.tara),
-            t.life.name(),
-            t.because,
-            l.life.name(),
-            l.because,
-            hora
-        ));
+        let (tn, ln) = (crate::lang::life_name(lang, t.life), crate::lang::life_name(lang, l.life));
+        let dq = crate::lang::day_quality(lang, m.tara);
+        paragraphs.push(match lang {
+            Lang::En => format!(
+                "Today is {}. {} is your strongest side now: {}. {} needs the most care: {}.{}",
+                dq,
+                t.life.name(),
+                t.because,
+                l.life.name(),
+                l.because,
+                hora
+            ),
+            Lang::Ml => format!(
+                "ഇന്ന് {dq}. ഇപ്പോൾ ഏറ്റവും ശക്തമായ ഭാഗം {tn}: {}. ഏറ്റവും ശ്രദ്ധ വേണ്ടത് {ln}: {}.{hora}",
+                t.because, l.because
+            ),
+            Lang::Hi => format!(
+                "आज {dq}। अभी आपका सबसे मज़बूत पहलू {tn} है: {}। सबसे ज़्यादा ध्यान {ln} को चाहिए: {}।{hora}",
+                t.because, l.because
+            ),
+        });
     }
 
     // Days to circle: the best day in the next thirty for each chosen life.
@@ -311,11 +344,11 @@ pub fn briefing(
                 at: best.at,
                 score: s,
                 words: format!(
-                    "{}: {}, {}. {}",
-                    life.name(),
-                    date_words(best.at, lon),
-                    crate::plain::day_short(best.tara),
-                    crate::forecast::headline(life, Band::of(s), (best.at.tai_ns() / NS_PER_DAY) as u64)
+                    "{}: {}, {}{stop} {}",
+                    crate::lang::life_name(lang, life),
+                    d(best.at),
+                    crate::lang::day_short(lang, best.tara),
+                    crate::forecast::headline_in(lang, life, Band::of(s), (best.at.tai_ns() / NS_PER_DAY) as u64)
                 ),
             });
         }
@@ -355,21 +388,30 @@ pub fn briefing(
     if let Some(life) = weakest {
         let idx = Life::ALL.iter().position(|l| *l == life).unwrap_or(0);
         if m.lives[idx].band <= Band::Steady {
-            if let Ok(e) = explain(spk, eop, natal, obs, system, ayanamsa, life, at) {
+            if let Ok(e) = explain_in(lang, spk, eop, natal, obs, system, ayanamsa, life, at) {
                 let mut s = String::new();
                 if let Some(c) = e.causes.iter().find(|c| matches!(c.kind, "dasha" | "gochara")) {
-                    s.push_str(&format!("What holds {} back: {}", life.name().to_ascii_lowercase(), c.what));
+                    s.push_str(&match lang {
+                        Lang::En => format!("What holds {} back: {}", life.name().to_ascii_lowercase(), c.what),
+                        Lang::Ml => format!("{} തടസ്സമാകുന്നത്: {}", crate::forecast::life_in(lang, life), c.what),
+                        Lang::Hi => format!("{} रुकावट: {}", crate::forecast::life_in(lang, life), c.what),
+                    });
                     if !c.until_words.is_empty() {
                         s.push_str(&format!(", {}", c.until_words));
                     }
-                    s.push_str(". ");
+                    s.push_str(stop);
+                    s.push(' ');
                 }
                 if let Some(r) = e.relief.iter().find(|r| r.lasting && r.gain >= 0.015) {
-                    s.push_str(&format!("It first lifts for good on {}: {}. ", date_words(r.at, lon), r.what));
+                    s.push_str(&match lang {
+                        Lang::En => format!("It first lifts for good on {}: {}. ", date_words(r.at, lon), r.what),
+                        Lang::Ml => format!("{} മുതൽ ഇത് ആദ്യമായി നല്ലവണ്ണം അയയും: {}. ", d(r.at), r.what),
+                        Lang::Hi => format!("{} से यह पहली बार टिककर हल्का होगा: {}। ", d(r.at), r.what),
+                    });
                 }
                 if let Some(t) = &e.eases {
                     s.push_str(&t.words);
-                    s.push('.');
+                    s.push_str(stop);
                 }
                 if !s.is_empty() {
                     paragraphs.push(s);

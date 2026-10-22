@@ -407,9 +407,9 @@ private fun Sparkline(values: List<Double>) {
 }
 
 // ---- The whole-life reading: who you are, right now, the life areas, the years ahead ----
-private const val WHO = "Who you are"
-private const val NOW = "Right now"
-private const val NEXT = "The next 10 years"
+private const val WHO = "who"
+private const val NOW = "now"
+private const val NEXT = "next"
 
 /**
  * The "life" tab: an overload of the LifeScreen above, told apart by its parameters.
@@ -433,13 +433,13 @@ fun LifeScreen(
     var loading by remember { mutableStateOf(true) }
     var expanded by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(profile, settings) {
+    LaunchedEffect(profile, settings, com.kshana.app.data.Lang.code) {
         loading = true
         try {
             val engine = EngineProvider.get(context)
             val birth = profile.birthInstant()
             sections = withContext(Dispatchers.Default) {
-                engine.plainReading(birth, profile.latitude, profile.longitude, settings.ayanamsa, Instants.now())
+                engine.plainReading(birth, profile.latitude, profile.longitude, settings.ayanamsa, Instants.now(), com.kshana.app.data.Lang.code)
             }
             error = null
         } catch (e: Exception) {
@@ -449,10 +449,10 @@ fun LifeScreen(
     }
 
     // Split once; the cards only re-read these when the reading itself changes.
-    val who = remember(sections) { sections.firstOrNull { it.title == WHO } }
-    val rightNow = remember(sections) { sections.firstOrNull { it.title == NOW } }
-    val next = remember(sections) { sections.firstOrNull { it.title == NEXT } }
-    val areas = remember(sections) { sections.filter { it.title != WHO && it.title != NOW && it.title != NEXT } }
+    val who = remember(sections) { sections.firstOrNull { it.key == WHO } }
+    val rightNow = remember(sections) { sections.firstOrNull { it.key == NOW } }
+    val next = remember(sections) { sections.firstOrNull { it.key == NEXT } }
+    val areas = remember(sections) { sections.filter { it.key != WHO && it.key != NOW && it.key != NEXT } }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(top = 48.dp, bottom = 32.dp),
@@ -530,7 +530,7 @@ private fun ReadingCard(section: SectionRecord, showWhy: Boolean) {
 @Composable
 private fun AreaTile(section: SectionRecord, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
-    val promised = section.summary.trim().equals("promised", ignoreCase = true)
+    val promised = section.mark == "promised"
     Column(
         modifier
             .heightIn(min = 84.dp)

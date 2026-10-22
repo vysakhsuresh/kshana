@@ -3,11 +3,11 @@
 //! what asks patience, which day, what to do) and never names a planet. The astrology
 //! that produced it travels alongside as `why`, for the tap that asks.
 
-use crate::explain::explain;
+use crate::explain::explain_in;
 use crate::feed::next_good;
-use crate::forecast::{date_words, moment, series, slow_series, story, Band, ForecastError, Life, Natal, Story};
+use crate::forecast::{date_words, moment_in, series, slow_series, story_in, Band, ForecastError, Life, Natal, Story};
 use crate::gochara::SaturnPhase;
-use crate::varsha::year_chapter;
+use crate::varsha::year_chapter_in;
 use crate::plain::Lang;
 use kshana_ephem::Spk;
 use kshana_houses::HouseSystem;
@@ -339,8 +339,8 @@ pub fn outlook_in(
     };
     let aw = |life: Life, band: Band| -> String { crate::lang::advice_sentence(lang, life, band).map(|s| s.to_string()).unwrap_or_else(|| advice_words(life, band).to_string()) };
     let lon = obs.longitude_deg;
-    let m = moment(spk, eop, natal, obs, system, ayanamsa, at)?;
-    let season_why = m.saturn.expert().to_string();
+    let m = moment_in(lang, spk, eop, natal, obs, system, ayanamsa, at)?;
+    let season_why = m.saturn.expert_in(lang).to_string();
     let levels = &m.dasha;
     let long_season = {
         let (test, _) = crate::briefing::saturn_sentence_in(lang, spk, ayanamsa, natal, m.saturn, at, lon);
@@ -409,7 +409,7 @@ pub fn outlook_in(
             let lives = Life::ALL
                 .iter()
                 .map(|&life| {
-                    let st: Story = story(life, &samples);
+                    let st: Story = story_in(lang, life, &samples);
                     let band = Band::of(st.mean);
                     let mut words = bw(life, band);
                     let nn = crate::lang::span_noun(lang, span.key());
@@ -445,7 +445,7 @@ pub fn outlook_in(
                             });
                         }
                     }
-                    let why: Vec<String> = st.shifts.iter().map(|s| format!("{}: {}", date_words(s.at, lon), s.what)).collect();
+                    let why: Vec<String> = st.shifts.iter().map(|s| format!("{}: {}", ld(s.at), s.what)).collect();
                     LifeOutlook {
                         life,
                         score: st.mean,
@@ -464,7 +464,7 @@ pub fn outlook_in(
             (at, at.add_ns(n as i128 * NS_PER_DAY), lives, stretch_season(lang, span, &samples, levels, lon, focus))
         }
         Span::Year => {
-            let yc = year_chapter(spk, eop, natal, obs, system, ayanamsa, at).ok();
+            let yc = year_chapter_in(lang, spk, eop, natal, obs, system, ayanamsa, at).ok();
             let month = (30.4375 * NS_PER_DAY as f64) as i128;
             let slow = slow_series(spk, eop, natal, obs, ayanamsa, at, month, 13)?;
             // The two lives that most need it get the exact turning dates from Explain.
@@ -506,7 +506,7 @@ pub fn outlook_in(
                     }
                     let mut why = Vec::new();
                     if weak_two.contains(&i) && band <= Band::Steady {
-                        if let Ok(e) = explain(spk, eop, natal, obs, system, ayanamsa, life, at) {
+                        if let Ok(e) = explain_in(lang, spk, eop, natal, obs, system, ayanamsa, life, at) {
                             if let Some(t) = &e.eases {
                                 words.push_str(&match lang {
                                     Lang::En => format!(" It eases from {}.", date_words(t.at, lon)),
@@ -518,7 +518,7 @@ pub fn outlook_in(
                                 why.push(format!("{}{}", c.what, if c.until_words.is_empty() { String::new() } else { format!(", {}", c.until_words) }));
                             }
                             for r in e.relief.iter().filter(|r| r.lasting).take(3) {
-                                why.push(format!("{}: {} ({:+.0})", date_words(r.at, lon), r.what, r.gain * 100.0));
+                                why.push(format!("{}: {} ({:+.0})", ld(r.at), r.what, r.gain * 100.0));
                             }
                         }
                     }

@@ -63,29 +63,29 @@ pub mod witness;
 pub use areas::{area, Area, AREAS};
 pub use appointment::{appointment, best_slots, best_slots_together, Appointment, DaySlot, GroupSlot, Purpose, Slot};
 pub use ask::{answer, answer_topic, Answer, Question};
-pub use briefing::{briefing, saturn_sentence, saturn_sentence_in, season_paragraph_in, Briefing, Circled, RemedyBrief};
+pub use briefing::{briefing, briefing_in, saturn_sentence, saturn_sentence_in, season_paragraph_in, Briefing, Circled, RemedyBrief};
 pub use calibrate::{calibrate, Calibration, LifeCalibration, Record};
 pub use doshas::{badhaka, doshas, Badhaka, Dosha};
-pub use feed::{countdowns, day_title, festivals, next_good, Countdown, Festival, GoodMinute};
-pub use letter::{letter, Letter};
+pub use feed::{countdowns, countdowns_in, day_title, festivals, next_good, Countdown, Festival, GoodMinute};
+pub use letter::{letter, letter_in, Letter};
 pub use prose::{outlook, outlook_in, saturn_plain, LifeOutlook, Outlook, Span};
 pub use plain::Lang;
 pub use pastcheck::{past_checks, PastCheck};
 pub use reveal::{past_reveal, refine_birth, refine_birth_detail, seal_pick, suggested_shift, Answer as PastAnswer, BirthFit, BirthRefine, Verdict as PastVerdict};
 pub use remedy_tree::{remedy_tree, Branch, CauseNode, RemedyTree, TreeRemedy};
-pub use hora::{hora_lore, moment_title, HoraLore};
+pub use hora::{hora_lore, hora_lore_in, moment_title, moment_title_in, HoraLore};
 pub use topics::{topic, topics_for, Topic, TOPICS};
-pub use varsha::{year_chapter, YearChapter};
+pub use varsha::{year_chapter, year_chapter_in, YearChapter};
 pub use explain::{explain, Cause, Explanation, Relief, Turning};
 pub use kundali::{couple, couple_ask, kundali, talk_window, BondCare, Couple, CoupleAnswer, DoshaRemedy, Koota, Kundali};
-pub use timeline::{timeline, Chapter, Passage, Return, SaturnSpan, Timeline};
+pub use timeline::{timeline, timeline_in, Chapter, Passage, Return, SaturnSpan, Timeline};
 pub use transit::{next_sign_change, returns, sidereal_longitude, sign_changes, SignChange};
 pub use facts::{Facts, PlanetFact};
 pub use forecast::{
-    headline, moment, series, slow_series, story, Band, Component, Hora, Life, LifeScore, Moment, Natal,
+    headline, headline_in, moment, moment_in, series, slow_series, story, story_in, Band, Component, Hora, Life, LifeScore, Moment, Natal,
     Sample, Shift, Story, Window,
 };
-pub use gochara::{tara_index, tara_words, SaturnPhase, TARA_NAMES, TARA_SCORE};
+pub use gochara::{tara_index, tara_name_in, tara_words, tara_words_in, SaturnPhase, TARA_NAMES, TARA_SCORE};
 pub use karma::{classify, KarmaClass, KarmaKind, KarmaVerdict, TransitSigns};
 pub use kp::{
     agreeing_levels, funnel_strength, node_agents, period_supports, promise, significators,

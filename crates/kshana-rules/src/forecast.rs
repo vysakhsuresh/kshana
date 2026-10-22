@@ -20,6 +20,7 @@ use crate::facts::Facts;
 use crate::gochara::*;
 use crate::kp::period_supports;
 use crate::parashari::{bhinna_for, dignity, period_quality};
+use crate::plain::Lang;
 use kshana_chart::{compute, ChartInput};
 use kshana_ephem::{Body, Spk};
 use kshana_events::{
@@ -556,6 +557,53 @@ pub fn natal_component(natal: &Natal, life: Life) -> Component {
     natal_component_for(natal, life.area(), &life.name().to_ascii_lowercase())
 }
 
+/// The Malayalam genitive of a life's name: "പ്രണയത്തിന്റെ".
+fn ml_genitive(life: Life) -> &'static str {
+    match life {
+        Life::Love => "പ്രണയത്തിന്റെ",
+        Life::Family => "കുടുംബത്തിന്റെ",
+        Life::Career => "ജോലിയുടെ",
+        Life::Money => "പണത്തിന്റെ",
+        Life::Health => "ആരോഗ്യത്തിന്റെ",
+        Life::Study => "പഠനത്തിന്റെ",
+        Life::Home => "വീടിന്റെ",
+        Life::Travel => "യാത്രയുടെ",
+        Life::Children => "മക്കളുടെ",
+    }
+}
+
+/// A life inside a sentence: "love" in English, "പ്രണയത്തിന്റെ കാര്യത്തിൽ" in
+/// Malayalam, "प्रेम के मामले में" in Hindi (case forms that fit any verb).
+pub(crate) fn life_in(lang: Lang, life: Life) -> String {
+    match lang {
+        Lang::En => life.name().to_ascii_lowercase(),
+        Lang::Ml => format!("{} കാര്യത്തിൽ", ml_genitive(life)),
+        Lang::Hi => format!("{} के मामले में", crate::lang::life_name(lang, life)),
+    }
+}
+
+/// [`natal_component`] with its note in `lang`.
+pub(crate) fn natal_component_in(lang: Lang, natal: &Natal, life: Life) -> Component {
+    let mut c = natal_component(natal, life);
+    if lang != Lang::En {
+        let p = crate::kp::promise(&natal.facts, life.area());
+        let b = crate::parashari::assess(&natal.facts, life.area());
+        let n = crate::lang::life_name(lang, life);
+        let k = life_in(lang, life);
+        c.note = match (lang, p.promised, b.score >= 0.5) {
+            (Lang::Ml, true, true) => format!("{k} നിങ്ങളുടെ ജീവിതത്തിൽ തെളിഞ്ഞ അനുഗ്രഹമുണ്ട്; മിക്കവരേക്കാളും എളുപ്പം അത് നിങ്ങളിലേക്ക് വരും"),
+            (Lang::Ml, true, false) => format!("{k} നിങ്ങളുടെ ജീവിതത്തിൽ അനുഗ്രഹമുണ്ട്, പക്ഷേ കുറച്ച് അധ്വാനത്തോടെയാണ് വരിക"),
+            (Lang::Ml, false, true) => format!("സ്ഥിരമായ ശ്രമം കൊണ്ട് {n} നിങ്ങൾക്ക് നേടാം; വെറുതെ കൈയിൽ കിട്ടില്ല"),
+            (Lang::Ml, false, false) => format!("{k} കഷ്ടപ്പെട്ടാണ് നിങ്ങൾ നേടേണ്ടത്; ക്ഷമയും അധ്വാനവുമാണ് അത് തീരുമാനിക്കുന്നത്"),
+            (_, true, true) => format!("{k} आपके जीवन में साफ़ आशीर्वाद है; यह ज़्यादातर लोगों से आसानी से आपके पास आता है"),
+            (_, true, false) => format!("{k} आपके जीवन में आशीर्वाद है, पर कुछ मेहनत के साथ आता है"),
+            (_, false, true) => format!("लगातार कोशिश से {n} आपको मिल सकता है; यह यूँ ही हाथ नहीं आता"),
+            (_, false, false) => format!("{k} आपको मेहनत से कमाना पड़ता है; धैर्य और मेहनत ही इसे तय करते हैं"),
+        };
+    }
+    c
+}
+
 /// The same for any KP house group (a topic of the question dictionary), named `name`.
 pub fn natal_component_for(natal: &Natal, area: Area, name: &str) -> Component {
     let p = crate::kp::promise(&natal.facts, area);
@@ -611,20 +659,51 @@ pub(crate) fn lord_score(natal: &Natal, life: Life, lord: DashaLord) -> (f64, St
 }
 
 pub(crate) fn dasha_items(natal: &Natal, life: Life, levels: &[DashaPeriod]) -> Vec<DashaItem> {
+    dasha_items_in(Lang::En, natal, life, levels)
+}
+
+/// [`dasha_items`] with the words in `lang`.
+pub(crate) fn dasha_items_in(lang: Lang, natal: &Natal, life: Life, levels: &[DashaPeriod]) -> Vec<DashaItem> {
     levels
         .iter()
         .enumerate()
         .take(5)
         .map(|(i, p)| {
             let (s, houses) = lord_score(natal, life, p.lord);
-            let level = ["chapter of your life", "stretch of your life", "shorter phase of a few months", "phase of a few weeks", "phase of a few days"][i.min(4)];
-            let name = life.name().to_ascii_lowercase();
-            let words = if houses.is_empty() {
-                format!("this {level} leaves {name} to run on its own")
-            } else if s >= 0.5 {
-                format!("this {level} brings {} to {name}", crate::plain::support(p.lord))
-            } else {
-                format!("this {level} brings {} to {name}", crate::plain::pressure(p.lord))
+            let words = match lang {
+                Lang::En => {
+                    let level = ["chapter of your life", "stretch of your life", "shorter phase of a few months", "phase of a few weeks", "phase of a few days"][i.min(4)];
+                    let name = life.name().to_ascii_lowercase();
+                    if houses.is_empty() {
+                        format!("this {level} leaves {name} to run on its own")
+                    } else if s >= 0.5 {
+                        format!("this {level} brings {} to {name}", crate::plain::support(p.lord))
+                    } else {
+                        format!("this {level} brings {} to {name}", crate::plain::pressure(p.lord))
+                    }
+                }
+                Lang::Ml => {
+                    let level = ["ജീവിതത്തിലെ ഈ അധ്യായം", "ജീവിതത്തിലെ ഈ ഘട്ടം", "ഏതാനും മാസത്തെ ഈ ചെറിയ ഘട്ടം", "ഏതാനും ആഴ്ചകളുടെ ഈ ഘട്ടം", "ഏതാനും ദിവസത്തെ ഈ ഘട്ടം"][i.min(4)];
+                    let k = life_in(lang, life);
+                    if houses.is_empty() {
+                        format!("{level} {k} ഇടപെടുന്നില്ല; അത് സ്വന്തം വഴിക്ക് പോകും")
+                    } else if s >= 0.5 {
+                        format!("{level} {k} {} കൊണ്ടുവരുന്നു", crate::lang::support(lang, p.lord))
+                    } else {
+                        format!("{level} {k} {} കൊണ്ടുവരുന്നു", crate::lang::pressure(lang, p.lord))
+                    }
+                }
+                Lang::Hi => {
+                    let level = ["जीवन का यह अध्याय", "जीवन का यह दौर", "कुछ महीनों का यह छोटा दौर", "कुछ हफ़्तों का यह दौर", "कुछ दिनों का यह दौर"][i.min(4)];
+                    let k = life_in(lang, life);
+                    if houses.is_empty() {
+                        format!("{level} {k} दख़ल नहीं देता; वह अपने ढंग से चलता है")
+                    } else if s >= 0.5 {
+                        format!("{level} {k} {} लाता है", crate::lang::support(lang, p.lord))
+                    } else {
+                        format!("{level} {k} {} लाता है", crate::lang::pressure(lang, p.lord))
+                    }
+                }
             };
             DashaItem {
                 lord: p.lord,
@@ -640,7 +719,11 @@ pub(crate) fn dasha_items(natal: &Natal, life: Life, levels: &[DashaPeriod]) -> 
 }
 
 fn dasha_component(natal: &Natal, life: Life, levels: &[DashaPeriod]) -> Component {
-    let items = dasha_items(natal, life, levels);
+    dasha_component_in(Lang::En, natal, life, levels)
+}
+
+fn dasha_component_in(lang: Lang, natal: &Natal, life: Life, levels: &[DashaPeriod]) -> Component {
+    let items = dasha_items_in(lang, natal, life, levels);
     let mut num = 0.0;
     let mut den = 0.0;
     let mut best: Option<(f64, String)> = None;
@@ -666,7 +749,7 @@ fn dasha_component(natal: &Natal, life: Life, levels: &[DashaPeriod]) -> Compone
             }
         }
         (Some(_), Some(w)) => w.1,
-        _ => "no running period".into(),
+        _ => lang.pick(["no running period", "ഇപ്പോൾ നടക്കുന്ന ഒരു കാലഘട്ടവും കണ്ടെത്താനായില്ല", "अभी कोई चलता दौर नहीं मिला"]).into(),
     };
     Component {
         key: "dasha",
@@ -697,6 +780,17 @@ pub(crate) struct GocharaItem {
 /// Every graha's transit bearing on a life, given each graha's house from the natal Moon
 /// and its sidereal sign (Sun..Ketu). Returns the items and the sum of relevances.
 pub(crate) fn gochara_items(
+    natal: &Natal,
+    from_moon: &[u8; 9],
+    signs: &[u8; 9],
+    life: Life,
+) -> (Vec<GocharaItem>, f64) {
+    gochara_items_in(Lang::En, natal, from_moon, signs, life)
+}
+
+/// [`gochara_items`] with the words in `lang`.
+pub(crate) fn gochara_items_in(
+    lang: Lang,
     natal: &Natal,
     from_moon: &[u8; 9],
     signs: &[u8; 9],
@@ -759,18 +853,52 @@ pub(crate) fn gochara_items(
         };
         let contrib = r * v * av;
         den += r;
-        let words = if saturn_phase != SaturnPhase::Clear {
-            format!("{} is running", saturn_phase.words())
-        } else if g == DashaLord::Moon && h == 8 {
-            "these are the two heaviest days of your month: moods dip and plans slip".to_string()
-        } else if fav && obstructed {
-            format!("a season of {} is held back for now", crate::plain::support(g))
-        } else if fav {
-            format!("the present season brings {}", crate::plain::support(g))
-        } else if adverse {
-            format!("the present season brings {}", crate::plain::pressure(g))
-        } else {
-            "a neutral season, neither helping nor hindering".to_string()
+        let words = match lang {
+            Lang::En => {
+                if saturn_phase != SaturnPhase::Clear {
+                    format!("{} is running", saturn_phase.words())
+                } else if g == DashaLord::Moon && h == 8 {
+                    "these are the two heaviest days of your month: moods dip and plans slip".to_string()
+                } else if fav && obstructed {
+                    format!("a season of {} is held back for now", crate::plain::support(g))
+                } else if fav {
+                    format!("the present season brings {}", crate::plain::support(g))
+                } else if adverse {
+                    format!("the present season brings {}", crate::plain::pressure(g))
+                } else {
+                    "a neutral season, neither helping nor hindering".to_string()
+                }
+            }
+            Lang::Ml => {
+                if saturn_phase != SaturnPhase::Clear {
+                    format!("{} നടക്കുന്നു", crate::lang::long_test(lang, saturn_phase))
+                } else if g == DashaLord::Moon && h == 8 {
+                    "മാസത്തിലെ ഏറ്റവും ഭാരമുള്ള രണ്ടു ദിവസങ്ങളാണിത്: മനസ്സ് താഴും, പദ്ധതികൾ തെറ്റാം".to_string()
+                } else if fav && obstructed {
+                    format!("{} തരുന്ന ഒരു കാലം ഇപ്പോൾ തടഞ്ഞുനിൽക്കുന്നു", crate::lang::support(lang, g))
+                } else if fav {
+                    format!("ഇപ്പോഴത്തെ കാലം {} കൊണ്ടുവരുന്നു", crate::lang::support(lang, g))
+                } else if adverse {
+                    format!("ഇപ്പോഴത്തെ കാലം {} കൊണ്ടുവരുന്നു", crate::lang::pressure(lang, g))
+                } else {
+                    "സഹായിക്കുകയോ തടയുകയോ ചെയ്യാത്ത ഒരു സാധാരണ കാലം".to_string()
+                }
+            }
+            Lang::Hi => {
+                if saturn_phase != SaturnPhase::Clear {
+                    format!("{} चल रहा है", crate::lang::long_test(lang, saturn_phase))
+                } else if g == DashaLord::Moon && h == 8 {
+                    "ये आपके महीने के सबसे भारी दो दिन हैं: मन उदास रहता है और योजनाएँ खिसकती हैं".to_string()
+                } else if fav && obstructed {
+                    format!("{} का समय अभी रुका हुआ है", crate::lang::support(lang, g))
+                } else if fav {
+                    format!("मौजूदा समय {} लाता है", crate::lang::support(lang, g))
+                } else if adverse {
+                    format!("मौजूदा समय {} लाता है", crate::lang::pressure(lang, g))
+                } else {
+                    "एक सामान्य समय, जो न मदद करता है न रोकता है".to_string()
+                }
+            }
         };
         items.push(GocharaItem {
             graha: g,
@@ -788,7 +916,11 @@ pub(crate) fn gochara_items(
 }
 
 fn gochara_component(natal: &Natal, sky: &Sky, life: Life) -> Component {
-    let (items, den) = gochara_items(natal, &sky.from_moon, &sky.signs(), life);
+    gochara_component_in(Lang::En, natal, sky, life)
+}
+
+fn gochara_component_in(lang: Lang, natal: &Natal, sky: &Sky, life: Life) -> Component {
+    let (items, den) = gochara_items_in(lang, natal, &sky.from_moon, &sky.signs(), life);
     let mut num = 0.0;
     let mut best: Option<(f64, String)> = None;
     let mut worst: Option<(f64, String)> = None;
@@ -835,6 +967,11 @@ const BHAVA_WEIGHT: [f64; 9] = [0.5, 1.0, 0.7, 0.5, 1.0, 0.7, 1.0, 0.6, 0.5];
 /// the transits counted from the Moon, this differs from one life to the next, so each
 /// life has its own good and hard days. `with_moon` is false for the slow, monthly view.
 pub(crate) fn bhava_component(natal: &Natal, signs: &[u8; 9], life: Life, with_moon: bool) -> Component {
+    bhava_component_in(Lang::En, natal, signs, life, with_moon)
+}
+
+/// [`bhava_component`] with its note in `lang`.
+pub(crate) fn bhava_component_in(lang: Lang, natal: &Natal, signs: &[u8; 9], life: Life, with_moon: bool) -> Component {
     let area = life.area();
     let lagna = natal.facts.lagna_sign as i64;
     let mut num = 0.0;
@@ -864,17 +1001,45 @@ pub(crate) fn bhava_component(natal: &Natal, signs: &[u8; 9], life: Life, with_m
     let den = den.max(2.0);
     let score = (0.5 + 0.5 * num / den).clamp(0.0, 1.0);
     let who = crate::plain::subject(life.name()).to_ascii_lowercase();
-    let note = if score >= 0.58 {
-        format!("the timing in your own birth chart favours {who} just now")
-    } else if score <= 0.42 {
-        format!("{who} is going through a slow patch of its own in your birth chart")
-    } else {
-        format!("nothing in your own birth chart pushes {who} either way just now")
+    let k = life_in(lang, life);
+    let note = match lang {
+        Lang::En => {
+            if score >= 0.58 {
+                format!("the timing in your own birth chart favours {who} just now")
+            } else if score <= 0.42 {
+                format!("{who} is going through a slow patch of its own in your birth chart")
+            } else {
+                format!("nothing in your own birth chart pushes {who} either way just now")
+            }
+        }
+        Lang::Ml => {
+            if score >= 0.58 {
+                format!("ഇപ്പോൾ നിങ്ങളുടെ സ്വന്തം സമയം {k} അനുകൂലമാണ്")
+            } else if score <= 0.42 {
+                format!("{k} നിങ്ങൾക്ക് സ്വന്തമായ ഒരു മന്ദകാലം നടക്കുന്നു")
+            } else {
+                format!("ഇപ്പോൾ നിങ്ങളുടെ സ്വന്തം സമയം {k} ഒരു വഴിക്കും തള്ളുന്നില്ല")
+            }
+        }
+        Lang::Hi => {
+            if score >= 0.58 {
+                format!("अभी आपका अपना समय {k} साथ दे रहा है")
+            } else if score <= 0.42 {
+                format!("{k} आपका अपना एक धीमा दौर चल रहा है")
+            } else {
+                format!("अभी आपका अपना समय {k} किसी ओर नहीं धकेलता")
+            }
+        }
     };
     Component { key: "bhava", score, weight: 0.22, note, rule_id: "KS-B-0001" }
 }
 
 pub(crate) fn tara_component(natal: &Natal, sky: &Sky) -> (usize, Component) {
+    tara_component_in(Lang::En, natal, sky)
+}
+
+/// [`tara_component`] with its note in `lang`.
+pub(crate) fn tara_component_in(lang: Lang, natal: &Natal, sky: &Sky) -> (usize, Component) {
     let t = tara_index(natal.janma(), nakshatra(sky.moon_sidereal).index);
     (
         t,
@@ -882,13 +1047,27 @@ pub(crate) fn tara_component(natal: &Natal, sky: &Sky) -> (usize, Component) {
             key: "tara",
             score: TARA_SCORE[t],
             weight: 0.12,
-            note: tara_words(t).to_string(),
+            note: tara_words_in(lang, t).to_string(),
             rule_id: "KS-T-0001",
         },
     )
 }
 
 pub(crate) fn hora_component(natal: &Natal, life: Life, hora: &Hora) -> Component {
+    hora_component_in(Lang::En, natal, life, hora)
+}
+
+/// "this is a good hour for …" in `lang`.
+fn hour_is(lang: Lang, l: DashaLord) -> String {
+    match lang {
+        Lang::En => format!("this is {}", crate::plain::hour_nature(l)),
+        Lang::Ml => format!("ഇപ്പോൾ {}", crate::lang::hour_nature(lang, l)),
+        Lang::Hi => format!("अभी {}", crate::lang::hour_nature(lang, l)),
+    }
+}
+
+/// [`hora_component`] with its note in `lang`.
+pub(crate) fn hora_component_in(lang: Lang, natal: &Natal, life: Life, hora: &Hora) -> Component {
     let p = natal.facts.planet(hora.lord);
     let d = dignity(hora.lord, p.sidereal).score();
     let score = (life.hora_affinity(hora.lord) * (0.5 + 0.5 * d)).clamp(0.0, 1.0);
@@ -896,12 +1075,17 @@ pub(crate) fn hora_component(natal: &Natal, life: Life, hora: &Hora) -> Componen
         key: "hora",
         score,
         weight: 0.13,
-        note: format!("this is {}", crate::plain::hour_nature(hora.lord)),
+        note: hour_is(lang, hora.lord),
         rule_id: "KS-H-0001",
     }
 }
 
 pub(crate) fn kala_component(sky: &Sky, day: Option<&SolarDay>, obs: &Observer, at: Instant) -> Component {
+    kala_component_in(Lang::En, sky, day, obs, at)
+}
+
+/// [`kala_component`] with its notes in `lang`.
+pub(crate) fn kala_component_in(lang: Lang, sky: &Sky, day: Option<&SolarDay>, obs: &Observer, at: Instant) -> Component {
     let n = nakshatra(sky.moon_sidereal);
     let ti = tithi(sky.moon_sidereal, sky.sun_sidereal);
     let k = karana(sky.moon_sidereal, sky.sun_sidereal);
@@ -911,32 +1095,32 @@ pub(crate) fn kala_component(sky: &Sky, day: Option<&SolarDay>, obs: &Observer, 
         let wd = weekday(d, obs) as usize;
         if in_window(at, rahu_kala(d, obs)) {
             score = 0.1;
-            notes.push("the day's unlucky stretch: finish what you started, begin nothing".into());
+            notes.push(lang.pick(["the day's unlucky stretch: finish what you started, begin nothing", "ദിവസത്തിലെ നിർഭാഗ്യ സമയം: തുടങ്ങിയത് തീർക്കുക, പുതിയതൊന്നും തുടങ്ങരുത്", "दिन का अशुभ समय: जो शुरू किया है वह पूरा करें, नया कुछ शुरू न करें"]).into());
         } else if in_window(at, slot_window(d, YAMAGANDA[wd])) {
             score = 0.15;
-            notes.push("a risky stretch of the day: pause, do not start".into());
+            notes.push(lang.pick(["a risky stretch of the day: pause, do not start", "ദിവസത്തിലെ ജാഗ്രതാ സമയം: ഒന്നു നിൽക്കുക, തുടങ്ങരുത്", "दिन का जोखिम भरा समय: रुकें, शुरू न करें"]).into());
         } else if in_window(at, slot_window(d, GULIKA[wd])) {
             score = 0.2;
-            notes.push("a quiet stretch of the day: let things stand".into());
+            notes.push(lang.pick(["a quiet stretch of the day: let things stand", "ദിവസത്തിലെ ശാന്തമായ സമയം: കാര്യങ്ങൾ അങ്ങനെ നിൽക്കട്ടെ", "दिन का शांत समय: चीज़ों को वैसे ही रहने दें"]).into());
         } else if in_window(at, abhijit_window(d)) {
             score = 1.0;
-            notes.push("the day's lucky minutes: begin what matters".into());
+            notes.push(lang.pick(["the day's lucky minutes: begin what matters", "ദിവസത്തിലെ ഭാഗ്യ നിമിഷങ്ങൾ: പ്രധാനപ്പെട്ടത് തുടങ്ങുക", "दिन की शुभ घड़ी: ज़रूरी काम शुरू करें"]).into());
         }
     }
     if GOOD_STARS.contains(&n.index) {
         score += 0.15;
-        notes.push("the calendar marks today as lucky for beginnings".into());
+        notes.push(lang.pick(["the calendar marks today as lucky for beginnings", "കലണ്ടർ പ്രകാരം ഇന്ന് തുടക്കങ്ങൾക്ക് നല്ല ദിവസമാണ്", "पंचांग के हिसाब से आज शुरुआत के लिए शुभ दिन है"]).into());
     }
     if matches!(ti.number % 15, 4 | 9 | 14) || ti.number == 30 {
         score -= 0.2;
-        notes.push("the calendar marks today as an empty day: avoid starting new things".into());
+        notes.push(lang.pick(["the calendar marks today as an empty day: avoid starting new things", "കലണ്ടർ പ്രകാരം ഇന്ന് ഒഴിഞ്ഞ ദിവസമാണ്: പുതിയ കാര്യങ്ങൾ തുടങ്ങരുത്", "पंचांग के हिसाब से आज खाली दिन है: नए काम शुरू न करें"]).into());
     }
     if k.name == "Vishti" {
         score -= 0.2;
-        notes.push("a blocked half-day on the calendar: avoid starting new things".into());
+        notes.push(lang.pick(["a blocked half-day on the calendar: avoid starting new things", "കലണ്ടറിൽ തടസ്സമുള്ള പകുതി ദിവസം: പുതിയ കാര്യങ്ങൾ തുടങ്ങരുത്", "पंचांग में रुकावट वाला आधा दिन: नए काम शुरू न करें"]).into());
     }
     if notes.is_empty() {
-        notes.push("an ordinary day on the calendar".into());
+        notes.push(lang.pick(["an ordinary day on the calendar", "കലണ്ടറിൽ ഒരു സാധാരണ ദിവസം", "पंचांग में एक साधारण दिन"]).into());
     }
     Component {
         key: "kala",
@@ -1147,55 +1331,70 @@ pub fn headline(life: Life, band: Band, seed: u64) -> &'static str {
     v[(seed as usize) % v.len()]
 }
 
-fn moment_words(band: Band, hora: Option<&Hora>, tara: usize) -> String {
+/// [`headline`] in `lang`. Malayalam and Hindi use the one written sentence for the
+/// life and band (`crate::lang::band_sentence`).
+pub fn headline_in(lang: Lang, life: Life, band: Band, seed: u64) -> &'static str {
+    crate::lang::band_sentence(lang, life, band).unwrap_or_else(|| headline(life, band, seed))
+}
+
+fn moment_words(lang: Lang, band: Band, hora: Option<&Hora>, tara: usize) -> String {
     let lead = match band {
-        Band::Bright => "A bright stretch",
-        Band::Good => "A good stretch",
-        Band::Steady => "An even stretch",
-        Band::Slow => "A slow stretch",
-        Band::Hold => "A stretch to hold still",
+        Band::Bright => ["A bright stretch", "തിളക്കമുള്ള സമയം", "चमकदार समय"],
+        Band::Good => ["A good stretch", "നല്ല സമയം", "अच्छा समय"],
+        Band::Steady => ["An even stretch", "സമനിലയുള്ള സമയം", "बराबर समय"],
+        Band::Slow => ["A slow stretch", "മന്ദമായ സമയം", "धीमा समय"],
+        Band::Hold => ["A stretch to hold still", "അനങ്ങാതെ നിൽക്കേണ്ട സമയം", "ठहरने का समय"],
     };
-    let mut s = lead.to_string();
+    let mut s = lang.pick(lead).to_string();
     if let Some(h) = hora {
         s.push_str(" · ");
-        s.push_str(crate::plain::hour_short(h.lord));
+        s.push_str(crate::lang::hour_short(lang, h.lord));
     }
     s.push_str(" · ");
-    s.push_str(crate::plain::day_short(tara));
+    s.push_str(crate::lang::day_short(lang, tara));
     s
 }
 
 /// The calendar side of the moment in plain words: a caution window, the winning
 /// minutes, or the day's own quality.
+#[allow(dead_code)]
 pub(crate) fn kala_plain(sky: &Sky, day: Option<&SolarDay>, obs: &Observer, at: Instant) -> String {
+    kala_plain_in(Lang::En, sky, day, obs, at)
+}
+
+/// [`kala_plain`] in `lang`.
+pub(crate) fn kala_plain_in(lang: Lang, sky: &Sky, day: Option<&SolarDay>, obs: &Observer, at: Instant) -> String {
     if let Some(d) = day {
         let wd = weekday(d, obs) as usize;
         if in_window(at, rahu_kala(d, obs)) {
-            return "this is the day's unlucky window: finish what you started, begin nothing".into();
+            return lang.pick(["this is the day's unlucky window: finish what you started, begin nothing", "ഇത് ദിവസത്തിലെ നിർഭാഗ്യ സമയമാണ്: തുടങ്ങിയത് തീർക്കുക, പുതിയതൊന്നും തുടങ്ങരുത്", "यह दिन का अशुभ समय है: जो शुरू किया है वह पूरा करें, नया कुछ शुरू न करें"]).into();
         }
         if in_window(at, slot_window(d, YAMAGANDA[wd])) || in_window(at, slot_window(d, GULIKA[wd])) {
-            return "this is a stalled window of the day: let things stand for now".into();
+            return lang.pick(["this is a stalled window of the day: let things stand for now", "ഇത് ദിവസത്തിലെ മുടങ്ങിനിൽക്കുന്ന സമയമാണ്: ഇപ്പോൾ കാര്യങ്ങൾ അങ്ങനെ നിൽക്കട്ടെ", "यह दिन का अटका हुआ समय है: अभी चीज़ों को वैसे ही रहने दें"]).into();
         }
         if in_window(at, abhijit_window(d)) {
-            return "these are the day's winning minutes: begin what matters".into();
+            return lang.pick(["these are the day's winning minutes: begin what matters", "ഇത് ദിവസത്തിലെ വിജയ നിമിഷങ്ങളാണ്: പ്രധാനപ്പെട്ടത് തുടങ്ങുക", "यह दिन की जीत की घड़ी है: ज़रूरी काम शुरू करें"]).into();
         }
     }
     let n = nakshatra(sky.moon_sidereal);
     let ti = tithi(sky.moon_sidereal, sky.sun_sidereal);
     let k = karana(sky.moon_sidereal, sky.sun_sidereal);
     if matches!(ti.number % 15, 4 | 9 | 14) || ti.number == 30 || k.name == "Vishti" {
-        "the calendar marks today as an empty day: avoid starting new things".into()
+        lang.pick(["the calendar marks today as an empty day: avoid starting new things", "കലണ്ടർ പ്രകാരം ഇന്ന് ഒഴിഞ്ഞ ദിവസമാണ്: പുതിയ കാര്യങ്ങൾ തുടങ്ങരുത്", "पंचांग के हिसाब से आज खाली दिन है: नए काम शुरू न करें"]).into()
     } else if GOOD_STARS.contains(&n.index) {
-        "the calendar marks today as a lucky day for beginnings".into()
+        lang.pick(["the calendar marks today as a lucky day for beginnings", "കലണ്ടർ പ്രകാരം ഇന്ന് തുടക്കങ്ങൾക്ക് നല്ല ദിവസമാണ്", "पंचांग के हिसाब से आज शुरुआत के लिए शुभ दिन है"]).into()
     } else {
-        "an ordinary day on the calendar".into()
+        lang.pick(["an ordinary day on the calendar", "കലണ്ടറിൽ ഒരു സാധാരണ ദിവസം", "पंचांग में एक साधारण दिन"]).into()
     }
 }
 
 /// Why a life stands where it does, in plain words: the strongest pull among the
 /// components, said as what it means for the person. Never names the astrology.
 #[allow(clippy::too_many_arguments)]
-fn plain_because(natal: &Natal, life: Life, comps: &[Component], levels: &[DashaPeriod], sky: &Sky, hora: Option<&Hora>, tara: usize, kala: &str) -> String {
+fn plain_because(lang: Lang, natal: &Natal, life: Life, comps: &[Component], levels: &[DashaPeriod], sky: &Sky, hora: Option<&Hora>, tara: usize, kala: &str) -> String {
+    if lang != Lang::En {
+        return plain_because_indic(lang, natal, life, comps, levels, sky, hora, tara, kala);
+    }
     let name = life.name().to_ascii_lowercase();
     let Some(c) = comps.iter().max_by(|a, b| {
         let fa = (a.score - 0.5).abs() * a.weight;
@@ -1251,6 +1450,91 @@ fn plain_because(natal: &Natal, life: Life, comps: &[Component], levels: &[Dasha
     }
 }
 
+/// [`plain_because`] in Malayalam or Hindi.
+#[allow(clippy::too_many_arguments)]
+fn plain_because_indic(lang: Lang, natal: &Natal, life: Life, comps: &[Component], levels: &[DashaPeriod], sky: &Sky, hora: Option<&Hora>, tara: usize, kala: &str) -> String {
+    let ml = lang == Lang::Ml;
+    let k = life_in(lang, life);
+    let Some(c) = comps.iter().max_by(|a, b| {
+        let fa = (a.score - 0.5).abs() * a.weight;
+        let fb = (b.score - 0.5).abs() * b.weight;
+        fa.partial_cmp(&fb).unwrap_or(std::cmp::Ordering::Equal)
+    }) else {
+        return String::new();
+    };
+    let good = c.score >= 0.5;
+    let by = |a: f64, b: f64| a.partial_cmp(&b).unwrap_or(std::cmp::Ordering::Equal);
+    match c.key {
+        "natal" => match (ml, good) {
+            (true, true) => format!("{k} നിങ്ങൾക്ക് സ്വാഭാവികമായ മിടുക്കുണ്ട്; ജനനം മുതലേ അതിന് നല്ല അടിത്തറയുണ്ട്"),
+            (true, false) => format!("{k} മിക്കവരേക്കാളും കൂടുതൽ അധ്വാനം എന്നും നിങ്ങളിൽ നിന്ന് വേണ്ടിവന്നിട്ടുണ്ട്"),
+            (false, true) => format!("{k} आपको सहज बढ़त है; जन्म से इसकी नींव मज़बूत है"),
+            (false, false) => format!("{k} आपको हमेशा ज़्यादातर लोगों से ज़्यादा मेहनत करनी पड़ी है"),
+        },
+        "dasha" => {
+            let items = dasha_items(natal, life, levels);
+            let pick = if good {
+                items.iter().max_by(|a, b| by(a.weight * (a.score - 0.5), b.weight * (b.score - 0.5)))
+            } else {
+                items.iter().min_by(|a, b| by(a.weight * (a.score - 0.5), b.weight * (b.score - 0.5)))
+            };
+            match pick {
+                Some(it) => {
+                    let w = if good { crate::lang::support(lang, it.lord) } else { crate::lang::pressure(lang, it.lord) };
+                    if ml {
+                        format!("ജീവിതത്തിലെ ഈ ഘട്ടം {k} {w} കൊണ്ടുവരുന്നു")
+                    } else {
+                        format!("जीवन का यह दौर {k} {w} लाता है")
+                    }
+                }
+                None => String::new(),
+            }
+        }
+        "gochara" => {
+            let (items, _) = gochara_items(natal, &sky.from_moon, &sky.signs(), life);
+            let pick = if good {
+                items.iter().max_by(|a, b| by(a.contrib, b.contrib))
+            } else {
+                items.iter().min_by(|a, b| by(a.contrib, b.contrib))
+            };
+            match pick {
+                Some(it) if it.saturn_phase != SaturnPhase::Clear => {
+                    let lt = crate::lang::long_test(lang, it.saturn_phase);
+                    if ml { format!("{lt} നടക്കുന്നു") } else { format!("{lt} चल रहा है") }
+                }
+                Some(it) if it.graha == DashaLord::Moon && it.house == 8 => lang
+                    .pick(["", "ഈ രണ്ടു ദിവസം മാസത്തിലെ ഏറ്റവും ഭാരമുള്ളതാണ്: മനസ്സ് താഴും, പദ്ധതികൾ തെറ്റാം", "ये दो दिन महीने के सबसे भारी हैं: मन उदास रहता है और योजनाएँ खिसकती हैं"])
+                    .to_string(),
+                Some(it) if good => {
+                    let w = crate::lang::support(lang, it.graha);
+                    if ml { format!("ഇപ്പോഴത്തെ കാലം {w} കൊണ്ടുവരുന്നു") } else { format!("मौजूदा समय {w} लाता है") }
+                }
+                Some(it) => {
+                    let w = crate::lang::pressure(lang, it.graha);
+                    if ml { format!("ഇപ്പോഴത്തെ കാലം {k} {w} കൊണ്ടുവരുന്നു") } else { format!("मौजूदा समय {k} {w} लाता है") }
+                }
+                None => String::new(),
+            }
+        }
+        "tara" => {
+            let q = crate::lang::day_quality(lang, tara);
+            if ml { format!("ഇന്ന് {q}") } else { format!("आज {q}") }
+        }
+        "hora" => match hora {
+            Some(h) if good => hour_is(lang, h.lord),
+            Some(_) => {
+                if ml {
+                    format!("ഈ മണിക്കൂർ {k} അനുകൂലമല്ല; ഇന്ന് പിന്നീട് നല്ലൊരു സമയം വരും")
+                } else {
+                    format!("यह घंटा {k} ठीक नहीं; आज बाद में बेहतर घंटा आएगा")
+                }
+            }
+            None => String::new(),
+        },
+        _ => kala.to_string(),
+    }
+}
+
 // ---------------------------------------------------------------------------------
 // The moment
 // ---------------------------------------------------------------------------------
@@ -1259,6 +1543,56 @@ fn plain_because(natal: &Natal, life: Life, comps: &[Component], levels: &[Dasha
 /// the moment (the birth chart's facts are already in `natal`).
 #[allow(clippy::too_many_arguments)]
 pub fn moment(
+    spk: &Spk,
+    eop: Option<&EopTable>,
+    natal: &Natal,
+    obs: &Observer,
+    system: HouseSystem,
+    ayanamsa: Ayanamsa,
+    at: Instant,
+) -> Result<Moment, ForecastError> {
+    moment_in(Lang::En, spk, eop, natal, obs, system, ayanamsa, at)
+}
+
+/// "The lunar day changes to Dashami (waxing)" for lunar day `n` (1–30), in `lang`.
+/// Malayalam and Hindi count the day in its half of the month, without the name.
+fn lunar_day_words(lang: Lang, n: usize) -> String {
+    let k = (n - 1) % 15 + 1;
+    let waxing = n <= 15;
+    match lang {
+        Lang::En => format!("The lunar day changes to {} ({})", TITHI_NAMES[(n - 1) % 15], if waxing { "waxing" } else { "waning" }),
+        Lang::Ml => match (k, waxing) {
+            (15, true) => "ചാന്ദ്രദിവസം മാറുന്നു: വെളുത്തവാവ്".to_string(),
+            (15, false) => "ചാന്ദ്രദിവസം മാറുന്നു: കറുത്തവാവ്".to_string(),
+            (k, true) => format!("ചാന്ദ്രദിവസം മാറുന്നു: വെളുത്ത പക്ഷത്തിലെ {k}-ാം ദിവസം"),
+            (k, false) => format!("ചാന്ദ്രദിവസം മാറുന്നു: കറുത്ത പക്ഷത്തിലെ {k}-ാം ദിവസം"),
+        },
+        Lang::Hi => match (k, waxing) {
+            (15, true) => "चाँद का दिन बदलता है: पूर्णिमा".to_string(),
+            (15, false) => "चाँद का दिन बदलता है: अमावस्या".to_string(),
+            (k, true) => format!("चाँद का दिन बदलता है: शुक्ल पक्ष का {} दिन", hi_ordinal(k)),
+            (k, false) => format!("चाँद का दिन बदलता है: कृष्ण पक्ष का {} दिन", hi_ordinal(k)),
+        },
+    }
+}
+
+/// A Hindi ordinal: पहला, दूसरा … 7वाँ.
+pub(crate) fn hi_ordinal(k: usize) -> String {
+    match k {
+        1 => "पहला".into(),
+        2 => "दूसरा".into(),
+        3 => "तीसरा".into(),
+        4 => "चौथा".into(),
+        5 => "पाँचवाँ".into(),
+        6 => "छठा".into(),
+        k => format!("{k}वाँ"),
+    }
+}
+
+/// [`moment`] with every sentence in `lang`.
+#[allow(clippy::too_many_arguments)]
+pub fn moment_in(
+    lang: Lang,
     spk: &Spk,
     eop: Option<&EopTable>,
     natal: &Natal,
@@ -1276,26 +1610,26 @@ pub fn moment(
             lord,
             start: s,
             end: e,
-            words: hora_words(lord),
+            words: hora_words_in(lang, lord),
         })
     });
-    let (tara, tara_c) = tara_component(natal, &sky);
-    let kala_c = kala_component(&sky, day.as_ref(), obs, at);
-    let kala_words = kala_plain(&sky, day.as_ref(), obs, at);
+    let (tara, tara_c) = tara_component_in(lang, natal, &sky);
+    let kala_c = kala_component_in(lang, &sky, day.as_ref(), obs, at);
+    let kala_words = kala_plain_in(lang, &sky, day.as_ref(), obs, at);
     let seed = (at.tai_ns() / NS_PER_DAY) as u64;
 
     let lives: Vec<LifeScore> = Life::ALL
         .iter()
         .map(|&life| {
             let mut comps = vec![
-                natal_component(natal, life),
-                dasha_component(natal, life, &levels),
-                gochara_component(natal, &sky, life),
-                bhava_component(natal, &sky.signs(), life, true),
+                natal_component_in(lang, natal, life),
+                dasha_component_in(lang, natal, life, &levels),
+                gochara_component_in(lang, natal, &sky, life),
+                bhava_component_in(lang, natal, &sky.signs(), life, true),
                 tara_c.clone(),
             ];
             if let Some(h) = &hora {
-                comps.push(hora_component(natal, life, h));
+                comps.push(hora_component_in(lang, natal, life, h));
             }
             comps.push(kala_c.clone());
             let score = combine(&comps);
@@ -1304,8 +1638,8 @@ pub fn moment(
                 life,
                 score,
                 band,
-                headline: headline(life, band, seed).to_string(),
-                because: plain_because(natal, life, &comps, &levels, &sky, hora.as_ref(), tara, &kala_words),
+                headline: headline_in(lang, life, band, seed).to_string(),
+                because: plain_because(lang, natal, life, &comps, &levels, &sky, hora.as_ref(), tara, &kala_words),
                 components: comps,
             }
         })
@@ -1346,7 +1680,17 @@ pub fn moment(
             caution: false,
         });
         windows.sort_by(|a, b| a.start.cmp(&b.start));
+        if lang != Lang::En {
+            for w in windows.iter_mut() {
+                w.label = crate::lang::window_label(lang, &w.label);
+            }
+        }
     }
+    let begins = |what: &str| match lang {
+        Lang::En => format!("{what} begins"),
+        Lang::Ml => format!("{what} തുടങ്ങുന്നു"),
+        Lang::Hi => format!("{what} शुरू"),
+    };
 
     // Upcoming shifts.
     let horizon = at.add_ns(NS_PER_DAY + 6 * 3_600 * NS_PER_SEC);
@@ -1361,8 +1705,8 @@ pub fn moment(
             }
             let (next, _, _) = hora_at(d, obs, e.add_ns(NS_PER_SEC));
             let what = match hora_lord(next) {
-                Some(l) => format!("{} begins", crate::plain::cap(crate::plain::hour_short(l))),
-                None => "A new hour begins".to_string(),
+                Some(l) => begins(&crate::plain::cap(crate::lang::hour_short(lang, l))),
+                None => lang.pick(["A new hour begins", "പുതിയ മണിക്കൂർ തുടങ്ങുന്നു", "नया घंटा शुरू"]).to_string(),
             };
             shifts.push(Shift {
                 at: e,
@@ -1375,14 +1719,18 @@ pub fn moment(
             if w.start > at {
                 shifts.push(Shift {
                     at: w.start,
-                    what: format!("{} begins", w.label),
+                    what: begins(&w.label),
                     kind: "kala",
                 });
             }
             if w.end > at {
                 shifts.push(Shift {
                     at: w.end,
-                    what: format!("{} ends", w.label),
+                    what: match lang {
+                        Lang::En => format!("{} ends", w.label),
+                        Lang::Ml => format!("{} തീരുന്നു", w.label),
+                        Lang::Hi => format!("{} ख़त्म", w.label),
+                    },
                     kind: "kala",
                 });
             }
@@ -1390,13 +1738,13 @@ pub fn moment(
         if d.sunset > at {
             shifts.push(Shift {
                 at: d.sunset,
-                what: "Sunset".into(),
+                what: lang.pick(["Sunset", "അസ്തമയം", "सूर्यास्त"]).into(),
                 kind: "sun",
             });
         }
         shifts.push(Shift {
             at: d.next_sunrise,
-            what: "Sunrise: a new day begins".into(),
+            what: lang.pick(["Sunrise: a new day begins", "ഉദയം: പുതിയ ദിവസം തുടങ്ങുന്നു", "सूर्योदय: नया दिन शुरू"]).into(),
             kind: "sun",
         });
     }
@@ -1407,7 +1755,11 @@ pub fn moment(
             let t = tara_index(natal.janma(), next);
             shifts.push(Shift {
                 at: e.root.t,
-                what: format!("The day turns: {}", crate::plain::day_short(t)),
+                what: match lang {
+                    Lang::En => format!("The day turns: {}", crate::plain::day_short(t)),
+                    Lang::Ml => format!("ദിവസം മാറുന്നു: {}", crate::lang::day_short(lang, t)),
+                    Lang::Hi => format!("दिन बदलता है: {}", crate::lang::day_short(lang, t)),
+                },
                 kind: "star",
             });
         }
@@ -1418,11 +1770,7 @@ pub fn moment(
             let n = (cur as usize + i) % 30 + 1;
             shifts.push(Shift {
                 at: e.root.t,
-                what: format!(
-                    "The lunar day changes to {} ({})",
-                    TITHI_NAMES[(n - 1) % 15],
-                    if n <= 15 { "waxing" } else { "waning" }
-                ),
+                what: lunar_day_words(lang, n),
                 kind: "tithi",
             });
         }
@@ -1443,9 +1791,9 @@ pub fn moment(
                 shifts.push(Shift {
                     at: e.root.t,
                     what: match h {
-                        8 => "Two heavy days begin: moods dip; keep plans small".to_string(),
-                        1 | 3 | 6 | 7 | 10 | 11 => "Two lighter days begin: the mood lifts".to_string(),
-                        _ => "The mood of the next two days changes".to_string(),
+                        8 => lang.pick(["Two heavy days begin: moods dip; keep plans small", "ഭാരമുള്ള രണ്ടു ദിവസം തുടങ്ങുന്നു: മനസ്സ് താഴും; പദ്ധതികൾ ചെറുതാക്കുക", "दो भारी दिन शुरू: मन उदास रहेगा; योजनाएँ छोटी रखें"]).to_string(),
+                        1 | 3 | 6 | 7 | 10 | 11 => lang.pick(["Two lighter days begin: the mood lifts", "ലഘുവായ രണ്ടു ദിവസം തുടങ്ങുന്നു: മനസ്സ് തെളിയും", "दो हल्के दिन शुरू: मन खिलेगा"]).to_string(),
+                        _ => lang.pick(["The mood of the next two days changes", "അടുത്ത രണ്ടു ദിവസത്തെ മനോനില മാറുന്നു", "अगले दो दिनों का मिज़ाज बदलता है"]).to_string(),
                     },
                     kind: "sign",
                 });
@@ -1459,7 +1807,11 @@ pub fn moment(
             let next = DashaLord::ORDER[(idx + 1) % 9];
             shifts.push(Shift {
                 at: p.end,
-                what: format!("A new phase of a few days begins, about {}", crate::plain::chapter_theme(next)),
+                what: match lang {
+                    Lang::En => format!("A new phase of a few days begins, about {}", crate::plain::chapter_theme(next)),
+                    Lang::Ml => format!("ഏതാനും ദിവസത്തെ പുതിയ ഘട്ടം തുടങ്ങുന്നു: {}", crate::lang::chapter_theme(lang, next)),
+                    Lang::Hi => format!("कुछ दिनों का नया दौर शुरू: {}", crate::lang::chapter_theme(lang, next)),
+                },
                 kind: "dasha",
             });
         }
@@ -1509,30 +1861,39 @@ pub fn moment(
             t = e.add_ns(NS_PER_SEC);
         }
     }
-    let title = crate::hora::moment_title(
-        tara,
-        hora.as_ref().map(|h| h.lord),
-        sky.facts.moon_phase_deg < 180.0,
-        nakshatra(sky.moon_sidereal).name(),
-    );
-    let day_title = crate::feed::day_title(
-        tara,
-        &tithi(sky.moon_sidereal, sky.sun_sidereal),
-        crate::prashna::day_lord(at, obs.longitude_deg),
-    );
+    let (title, day_title) = if lang == Lang::En {
+        (
+            crate::hora::moment_title(
+                tara,
+                hora.as_ref().map(|h| h.lord),
+                sky.facts.moon_phase_deg < 180.0,
+                nakshatra(sky.moon_sidereal).name(),
+            ),
+            crate::feed::day_title(
+                tara,
+                &tithi(sky.moon_sidereal, sky.sun_sidereal),
+                crate::prashna::day_lord(at, obs.longitude_deg),
+            ),
+        )
+    } else {
+        (
+            crate::lang::moment_title(lang, tara, hora.as_ref().map(|h| h.lord)),
+            crate::lang::day_title(lang, tara, crate::prashna::day_lord(at, obs.longitude_deg)),
+        )
+    };
     Ok(Moment {
         hours,
         at,
         overall,
         band,
-        headline: moment_words(band, hora.as_ref(), tara),
+        headline: moment_words(lang, band, hora.as_ref(), tara),
         title,
         day_title,
         lives,
         hora,
         moon_star,
         tara,
-        tara_words: tara_words(tara),
+        tara_words: tara_words_in(lang, tara),
         moon_from_moon: sky.from_moon[1],
         saturn: SaturnPhase::from_house(sky.from_moon[6]),
         dasha: levels,
@@ -1661,6 +2022,11 @@ impl Natal {
 
 /// The story of one life over a series.
 pub fn story(life: Life, samples: &[Sample]) -> Story {
+    story_in(Lang::En, life, samples)
+}
+
+/// [`story`] with its words in `lang`.
+pub fn story_in(lang: Lang, life: Life, samples: &[Sample]) -> Story {
     let idx = Life::ALL.iter().position(|l| *l == life).unwrap_or(0);
     let n = samples.len();
     if n == 0 {
@@ -1722,11 +2088,23 @@ pub fn story(life: Life, samples: &[Sample]) -> Story {
             if a != b {
                 shifts.push(Shift {
                     at: q.at,
-                    what: format!(
-                        "A new {} begins, about {}",
-                        ["chapter of your life", "stretch of your life", "shorter phase of a few months", "phase of a few weeks", "phase of a few days"][lvl.min(4)],
-                        crate::plain::chapter_theme(*b)
-                    ),
+                    what: match lang {
+                        Lang::En => format!(
+                            "A new {} begins, about {}",
+                            ["chapter of your life", "stretch of your life", "shorter phase of a few months", "phase of a few weeks", "phase of a few days"][lvl.min(4)],
+                            crate::plain::chapter_theme(*b)
+                        ),
+                        Lang::Ml => format!(
+                            "{} തുടങ്ങുന്നു: {}",
+                            ["ജീവിതത്തിലെ പുതിയ അധ്യായം", "ജീവിതത്തിലെ പുതിയ ഘട്ടം", "ഏതാനും മാസത്തെ പുതിയ ഘട്ടം", "ഏതാനും ആഴ്ചകളുടെ പുതിയ ഘട്ടം", "ഏതാനും ദിവസത്തെ പുതിയ ഘട്ടം"][lvl.min(4)],
+                            crate::lang::chapter_theme(lang, *b)
+                        ),
+                        Lang::Hi => format!(
+                            "{} शुरू: {}",
+                            ["जीवन का नया अध्याय", "जीवन का नया दौर", "कुछ महीनों का नया दौर", "कुछ हफ़्तों का नया दौर", "कुछ दिनों का नया दौर"][lvl.min(4)],
+                            crate::lang::chapter_theme(lang, *b)
+                        ),
+                    },
                     kind: "dasha",
                 });
                 break;
@@ -1739,12 +2117,37 @@ pub fn story(life: Life, samples: &[Sample]) -> Story {
             {
                 let h = q.houses_from_moon[i];
                 let name = life.name().to_ascii_lowercase();
-                let what = if favourable_from_moon(g).contains(&h) {
-                    format!("A helpful season for {name} begins: {}", crate::plain::support(g))
-                } else if adverse_from_moon(g).contains(&h) {
-                    format!("A harder season for {name} begins: {}", crate::plain::pressure(g))
-                } else {
-                    format!("The season for {name} turns neutral")
+                let k = life_in(lang, life);
+                let fav = favourable_from_moon(g).contains(&h);
+                let adv = adverse_from_moon(g).contains(&h);
+                let what = match lang {
+                    Lang::En => {
+                        if fav {
+                            format!("A helpful season for {name} begins: {}", crate::plain::support(g))
+                        } else if adv {
+                            format!("A harder season for {name} begins: {}", crate::plain::pressure(g))
+                        } else {
+                            format!("The season for {name} turns neutral")
+                        }
+                    }
+                    Lang::Ml => {
+                        if fav {
+                            format!("{k} സഹായകമായ കാലം തുടങ്ങുന്നു: {}", crate::lang::support(lang, g))
+                        } else if adv {
+                            format!("{k} കഠിനമായ കാലം തുടങ്ങുന്നു: {}", crate::lang::pressure(lang, g))
+                        } else {
+                            format!("{k} കാലം സാധാരണ നിലയിലാകുന്നു")
+                        }
+                    }
+                    Lang::Hi => {
+                        if fav {
+                            format!("{k} मददगार समय शुरू: {}", crate::lang::support(lang, g))
+                        } else if adv {
+                            format!("{k} कठिन समय शुरू: {}", crate::lang::pressure(lang, g))
+                        } else {
+                            format!("{k} समय सामान्य हो जाता है")
+                        }
+                    }
                 };
                 shifts.push(Shift {
                     at: q.at,
@@ -1755,14 +2158,31 @@ pub fn story(life: Life, samples: &[Sample]) -> Story {
         }
     }
     shifts.truncate(6);
-    let trend_words = match (trend, Band::of(mean)) {
-        ("rising", _) => format!("{} improves as the period goes on.", life.name()),
-        ("falling", _) => format!("{} starts stronger than it ends; act early.", life.name()),
-        (_, Band::Bright) | (_, Band::Good) => {
-            format!("{} holds a good level throughout.", life.name())
-        }
-        (_, Band::Steady) => format!("{} stays even; no big swings.", life.name()),
-        _ => format!("{} stays slow; patience is the work.", life.name()),
+    let n = crate::lang::life_name(lang, life);
+    let trend_words = match lang {
+        Lang::En => match (trend, Band::of(mean)) {
+            ("rising", _) => format!("{} improves as the period goes on.", life.name()),
+            ("falling", _) => format!("{} starts stronger than it ends; act early.", life.name()),
+            (_, Band::Bright) | (_, Band::Good) => {
+                format!("{} holds a good level throughout.", life.name())
+            }
+            (_, Band::Steady) => format!("{} stays even; no big swings.", life.name()),
+            _ => format!("{} stays slow; patience is the work.", life.name()),
+        },
+        Lang::Ml => match (trend, Band::of(mean)) {
+            ("rising", _) => format!("{n}: കാലം പോകുന്തോറും മെച്ചപ്പെടും."),
+            ("falling", _) => format!("{n}: തുടക്കത്തിൽ ശക്തം, അവസാനം മങ്ങും; നേരത്തെ പ്രവർത്തിക്കുക."),
+            (_, Band::Bright) | (_, Band::Good) => format!("{n}: മുഴുവൻ സമയവും നല്ല നിലയിൽ തുടരും."),
+            (_, Band::Steady) => format!("{n}: സമനിലയിൽ തുടരും; വലിയ ചാഞ്ചാട്ടമില്ല."),
+            _ => format!("{n}: മന്ദമായി തുടരും; ഇവിടെ ക്ഷമയാണ് വേണ്ടത്."),
+        },
+        Lang::Hi => match (trend, Band::of(mean)) {
+            ("rising", _) => format!("{n}: समय के साथ सुधार होता जाएगा।"),
+            ("falling", _) => format!("{n}: शुरुआत अंत से बेहतर है; जल्दी कदम उठाएँ।"),
+            (_, Band::Bright) | (_, Band::Good) => format!("{n}: पूरे समय अच्छा स्तर बना रहेगा।"),
+            (_, Band::Steady) => format!("{n}: सब बराबर रहेगा; कोई बड़ा उतार-चढ़ाव नहीं।"),
+            _ => format!("{n}: धीमा दौर है; यहाँ धैर्य ही काम है।"),
+        },
     };
     Story {
         life,

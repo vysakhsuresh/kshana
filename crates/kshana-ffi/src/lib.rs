@@ -1473,9 +1473,38 @@ pub struct AshtakavargaRecord {
     pub lagna_sign: u8,
 }
 
-/// The error budget, as documented in docs/PRECISION.md.
+/// The error budget, as documented in docs/PRECISION.md, in the reader's language. The
+/// exported report keeps the English (see `english_error_budget`).
 #[uniffi::export]
-pub fn error_budget() -> Vec<BudgetRow> {
+pub fn error_budget(lang: String) -> Vec<BudgetRow> {
+    let lang = kshana_rules::Lang::parse(&lang);
+    let row = |l: [&str; 3], m: [&str; 3], e: [&str; 3]| BudgetRow {
+        layer: lang.pick(l).into(),
+        method: lang.pick(m).into(),
+        error: lang.pick(e).into(),
+    };
+    if lang == kshana_rules::Lang::En {
+        return english_error_budget();
+    }
+    // The English column is never read here: English returns above.
+    vec![
+        row(["", "സാധാരണ സമയം → TAI", "नागरिक समय → TAI"], ["", "ലീപ് സെക്കൻഡുകളുടെ പട്ടിക (IERS Bulletin C)", "लीप सेकंड की तालिका (IERS Bulletin C)"], ["", "കൃത്യം", "सटीक"]),
+        row(["", "TAI → TT", "TAI → TT"], ["", "നിർവചനപ്രകാരം +32.184 സെക്കൻഡ്", "परिभाषा से +32.184 सेकंड"], ["", "കൃത്യം", "सटीक"]),
+        row(["", "TT → TDB", "TT → TDB"], ["", "ചുരുക്കിയ Fairhead–Bretagnon ശ്രേണി", "छोटी की गई Fairhead–Bretagnon श्रेणी"], ["", "സമയത്തിൽ ഏകദേശം 30 µs; സ്ഥാനങ്ങളിൽ കാണാവുന്ന മാറ്റമില്ല", "समय में लगभग 30 µs; स्थितियों पर कोई दिखने वाला असर नहीं"]),
+        row(["", "UTC → UT1", "UTC → UT1"], ["", "ലഭ്യമെങ്കിൽ IERS finals2000A, അല്ലെങ്കിൽ IERS-ന്റെ മാസംതോറുമുള്ള ΔT (1973 മുതൽ), അതിനുമുമ്പ് Morrison et al. 2021", "उपलब्ध हो तो IERS finals2000A, नहीं तो IERS की मासिक ΔT श्रृंखला (1973 से), और उससे पहले Morrison et al. 2021"], ["", "അളന്നത് 0.1 ms; പട്ടികയ്ക്കപ്പുറമുള്ള വർഷങ്ങളിൽ ഏതാനും സെക്കൻഡ് വരെ", "मापा गया 0.1 ms; तालिका से आगे के वर्षों में कुछ सेकंड तक"]),
+        row(["", "ആകാശഗോളങ്ങളുടെ സ്ഥാനം", "आकाशीय पिंडों की स्थिति"], ["", "JPL DE440s കേർണൽ നേരിട്ട് വായിക്കുന്നു (1849–2150)", "JPL DE440s कर्नेल सीधे पढ़ा जाता है (1849–2150)"], ["", "ചന്ദ്രന് ഏതാനും സെന്റിമീറ്റർ; മറ്റുള്ളവയ്ക്ക് 0.01″-ൽ താഴെ", "चाँद के लिए कुछ सेंटीमीटर; बाक़ी के लिए 0.01″ से कम"]),
+        row(["", "നിർദേശാങ്ക ചട്ടക്കൂടുകൾ", "निर्देशांक ढाँचे"], ["", "IAU 2006 പുരസ്സരണം, IAU 2000A ന്യൂട്ടേഷൻ, CIO അടിസ്ഥാനമായ നക്ഷത്രസമയം; ERFA-യുമായി 1e-12 rad വരെ ഒത്തുപോകുന്നു", "IAU 2006 अयन, IAU 2000A न्यूटेशन, CIO पर आधारित नाक्षत्र समय; ERFA से 1e-12 rad तक मेल"], ["", "0.001″-ൽ താഴെ", "0.001″ से कम"]),
+        row(["", "കാണുന്ന സ്ഥാനങ്ങൾ", "दिखने वाली स्थितियाँ"], ["", "പ്രകാശസമയം, അബറേഷൻ; ഗുരുത്വാകർഷണ വ്യതിചലനം ഇതുവരെ ഇല്ല", "प्रकाश-समय, विपथन; गुरुत्वीय विचलन अभी नहीं"], ["", "0.02″-ൽ താഴെ, സൂര്യന്റെ 10°-നുള്ളിൽ ഒഴികെ (1.75″ വരെ)", "0.02″ से कम, सूरज के 10° के भीतर को छोड़कर (1.75″ तक)"]),
+        row(["", "നിരീക്ഷകനിൽ നിന്നുള്ള ചന്ദ്രൻ", "देखने वाले की जगह से चाँद"], ["", "WGS84 നിരീക്ഷകൻ, ധ്രുവചലനമില്ലാതെ", "WGS84 पर देखने वाला, ध्रुव-गति के बिना"], ["", "0.3″-ൽ താഴെ", "0.3″ से कम"]),
+        row(["", "കൃത്യ നിമിഷങ്ങൾ", "सटीक पल"], ["", "മുകളിലുള്ളവയിൽ Brent മൂലം കണ്ടെത്തൽ", "ऊपर वाले पर Brent मूल-खोज"], ["", "സമയത്തിൽ 1 µs; മുകളിലെ സ്ഥാനപ്പിഴവുകളാണ് പരിധി", "समय में 1 µs; ऊपर की स्थिति-त्रुटियाँ ही सीमा हैं"]),
+        row(["", "അയനാംശം", "अयनांश"], ["", "ആരംഭമൂല്യവും IAU 2006 പുരസ്സരണവും; ഇന്ത്യൻ ആസ്ട്രോണമിക്കൽ എഫെമെറിസുമായി ഇതുവരെ ഒത്തുനോക്കിയിട്ടില്ല", "आरंभिक मान और IAU 2006 अयन; भारतीय खगोलीय पंचांग से अभी मिलान नहीं हुआ"], ["", "1″-ൽ താഴെ അറിയില്ല; താരതമ്യം ബാക്കി", "1″ से नीचे अज्ञात; तुलना बाक़ी"]),
+        row(["", "നിങ്ങളുടെ ജനനസമയം", "आपका जन्म समय"], ["", "നിങ്ങൾ നൽകിയ സമയപരിധി", "आपकी दी हुई समय-सीमा"], ["", "എല്ലാ കണക്കിലെയും ഏറ്റവും വലിയ പിഴവ്: 4 മിനിറ്റ് ഉദയരാശിയെ ഏകദേശം 1° നീക്കും", "हर गणना की सबसे बड़ी त्रुटि: 4 मिनट उदय बिंदु को लगभग 1° खिसका देते हैं"]),
+        row(["", "വ്യാഖ്യാനം", "व्याख्या"], ["", "നമ്പറും ഉറവിടവുമുള്ള നിയമങ്ങൾ (docs/RULES.md); നിയമമില്ലാതെ ഒരു വാക്യവുമില്ല", "पहचान और स्रोत वाले नियम (docs/RULES.md); बिना नियम कोई वाक्य नहीं"], ["", "ഇതൊരു അളവല്ല: ഒരു പാരമ്പര്യത്തിന്റെ അവകാശവാദം, നിങ്ങളുടെ സ്വന്തം അനുഭവം കൊണ്ട് ക്രമീകരിക്കുന്നത്", "यह कोई माप नहीं: एक परंपरा का दावा, जिसे आपके अपने अनुभव से परखा जाता है"]),
+    ]
+}
+
+/// The error budget in English, as the exported report carries it.
+fn english_error_budget() -> Vec<BudgetRow> {
     let row = |l: &str, m: &str, e: &str| BudgetRow {
         layer: l.into(),
         method: m.into(),
@@ -1735,7 +1764,7 @@ impl Engine {
                 "funnel": r.funnel.iter().map(|l| json!({"level": l.level, "lord": l.lord, "start": inst(&l.start), "end": inst(&l.end),
                     "supports": l.supports.iter().map(|s| json!({"house": s.house, "level": s.level})).collect::<Vec<_>>()})).collect::<Vec<_>>(),
             })).collect::<Vec<_>>(),
-            "error_budget": error_budget().iter().map(|b| json!({"layer": b.layer, "method": b.method, "error": b.error})).collect::<Vec<_>>(),
+            "error_budget": english_error_budget().iter().map(|b| json!({"layer": b.layer, "method": b.method, "error": b.error})).collect::<Vec<_>>(),
             "statement": "Every number above is reproducible from the named kernel and models. Every sentence the app shows traces to a rule listed here. Nothing is computed on a server."
         });
         serde_json::to_string_pretty(&report).map_err(|e| KshanaError::Engine(e.to_string()))
@@ -2360,7 +2389,9 @@ impl Engine {
             longitude_deg: lon,
             height_m: 0.0,
         };
-        let m = kshana_rules::moment(
+        let lang = kshana_rules::Lang::parse(&lang);
+        let m = kshana_rules::moment_in(
+            lang,
             &self.spk,
             self.eop.as_ref(),
             &natal,
@@ -2371,7 +2402,6 @@ impl Engine {
         )
         .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         let mut rec = moment_record(&m);
-        let lang = kshana_rules::Lang::parse(&lang);
         if lang != kshana_rules::Lang::En {
             localise_moment(&mut rec, &m, lang, lon);
         }
@@ -2392,7 +2422,9 @@ impl Engine {
         from: ExactInstant,
         step_days: f64,
         count: u32,
+        lang: String,
     ) -> Result<HorizonRecord, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
         let obs = Observer {
             latitude_deg: lat,
@@ -2414,7 +2446,7 @@ impl Engine {
         let stories = kshana_rules::Life::ALL
             .iter()
             .map(|&life| {
-                let s = kshana_rules::story(life, &samples);
+                let s = kshana_rules::story_in(lang, life, &samples);
                 StoryRecord {
                     life: life.name().to_string(),
                     trend: s.trend.to_string(),
@@ -2676,6 +2708,7 @@ impl Engine {
         ayanamsa: AyanamsaChoice,
         life: String,
         at: ExactInstant,
+        lang: String,
     ) -> Result<ExplanationRecord, KshanaError> {
         let life = kshana_rules::Life::parse(&life)
             .ok_or_else(|| KshanaError::Engine(format!("unknown life {life}")))?;
@@ -2685,7 +2718,8 @@ impl Engine {
             longitude_deg: lon,
             height_m: 0.0,
         };
-        let e = kshana_rules::explain(
+        let e = kshana_rules::explain::explain_in(
+            kshana_rules::Lang::parse(&lang),
             &self.spk,
             self.eop.as_ref(),
             &natal,
@@ -2809,6 +2843,7 @@ impl Engine {
         ayanamsa: AyanamsaChoice,
         purpose: String,
         at: ExactInstant,
+        lang: String,
     ) -> Result<AppointmentRecord, KshanaError> {
         let purpose = kshana_rules::Purpose::parse(&purpose)
             .ok_or_else(|| KshanaError::Engine(format!("unknown purpose {purpose}")))?;
@@ -2818,7 +2853,9 @@ impl Engine {
             longitude_deg: lon,
             height_m: 0.0,
         };
-        let a = kshana_rules::appointment(
+        let lg = kshana_rules::Lang::parse(&lang);
+        let a = kshana_rules::appointment::appointment_in(
+            lg,
             &self.spk,
             self.eop.as_ref(),
             &natal,
@@ -2829,10 +2866,11 @@ impl Engine {
             at.into(),
         )
         .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
-        let moment = self.forecast_moment(birth, birth_lat, birth_lon, lat, lon, system, ayanamsa, at, "en".into())?;
+        let moment = self.forecast_moment(birth, birth_lat, birth_lon, lat, lon, system, ayanamsa, at, lang)?;
+        let en = lg == kshana_rules::Lang::En;
         Ok(AppointmentRecord {
             purpose: a.purpose.key().to_string(),
-            purpose_words: a.purpose.words().to_string(),
+            purpose_words: a.purpose.words_in(lg).to_string(),
             at: a.at.into(),
             score: a.score * 100.0,
             band: a.band.word().to_string(),
@@ -2848,10 +2886,11 @@ impl Engine {
                     score: s * 100.0,
                 })
                 .collect(),
-            hora: a.hora.as_ref().map(hora_record),
+            // The moment's own hour record carries the hour's words in the reader's language.
+            hora: if en { a.hora.as_ref().map(hora_record) } else { moment.hora.clone() },
             caution: a.caution.clone(),
             abhijit: a.abhijit,
-            tara_name: kshana_rules::TARA_NAMES[a.tara].to_string(),
+            tara_name: kshana_rules::muhurta::tara_name_in(lg, a.tara).to_string(),
             better_today: a
                 .better_today
                 .iter()
@@ -3385,9 +3424,11 @@ impl Engine {
         system: HouseSystem,
         ayanamsa: AyanamsaChoice,
         at: ExactInstant,
+        lang: String,
     ) -> Result<TimelineRecord, KshanaError> {
         let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
-        let t = kshana_rules::timeline(&self.spk, &natal, ayanamsa.into(), birth_lon, at.into());
+        let lang = kshana_rules::Lang::parse(&lang);
+        let t = kshana_rules::timeline_in(lang, &self.spk, &natal, ayanamsa.into(), birth_lon, at.into());
         Ok(TimelineRecord {
             birth: t.birth.into(),
             at: t.at.into(),
@@ -3420,7 +3461,7 @@ impl Engine {
                 .map(|p| PassageRecord {
                     start: p.start.into(),
                     end: p.end.into(),
-                    sign: kshana_rules::forecast::SIGN_NAMES[p.sign as usize % 12].to_string(),
+                    sign: name_words(lang, kshana_rules::forecast::SIGN_NAMES[p.sign as usize % 12]),
                     house: p.house,
                     favourable: p.favourable,
                     current: p.current,
@@ -3491,12 +3532,12 @@ mod layer_tests {
         .unwrap();
         let (lat, lon) = (9.9312, 76.2673);
         let e = engine
-            .explain(birth, lat, lon, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, "Love".into(), at)
+            .explain(birth, lat, lon, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, "Love".into(), at, "en".into())
             .unwrap();
         assert!(!e.headline.is_empty() && !e.relief.is_empty() && e.slow.len() == 36);
         assert!(purposes().len() == 11);
         let a = engine
-            .appointment(birth, lat, lon, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, "interview".into(), at)
+            .appointment(birth, lat, lon, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, "interview".into(), at, "en".into())
             .unwrap();
         assert!(!a.verdict.is_empty() && a.moment.lives.len() == 9);
         let k = engine
@@ -3512,7 +3553,7 @@ mod layer_tests {
             .unwrap();
         assert!(!q.verdict.is_empty());
         let t = engine
-            .timeline(birth, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, at)
+            .timeline(birth, lat, lon, HouseSystem::Placidus, AyanamsaChoice::Lahiri, at, "en".into())
             .unwrap();
         assert_eq!(t.chapters.len(), 9);
         assert!(t.saturn.len() >= 5 && !t.returns.is_empty());
@@ -3665,7 +3706,9 @@ impl Engine {
             longitude_deg: lon,
             height_m: 0.0,
         };
-        let b = kshana_rules::briefing(
+        let lang = kshana_rules::Lang::parse(&lang);
+        let b = kshana_rules::briefing_in(
+            lang,
             &self.spk,
             self.eop.as_ref(),
             &natal,
@@ -3676,15 +3719,9 @@ impl Engine {
             at.into(),
         )
         .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
-        let lang = kshana_rules::Lang::parse(&lang);
         let mut r = briefing_record(&b);
         if lang != kshana_rules::Lang::En {
-            let (sw, _) = kshana_rules::saturn_sentence_in(lang, &self.spk, ayanamsa.into(), &natal, b.saturn, at.into(), lon);
-            if let Some(p) = r.paragraphs.first_mut() {
-                *p = kshana_rules::season_paragraph_in(lang, &natal, at.into(), lon, &sw);
-            }
-            r.saturn_words = sw;
-            localise_moment(&mut r.moment, &b.moment, lang, lon);
+            localise_briefing(&mut r, &b, lang, lon);
         }
         Ok(r)
     }
@@ -3973,6 +4010,7 @@ impl Engine {
         system: HouseSystem,
         ayanamsa: AyanamsaChoice,
         at: ExactInstant,
+        lang: String,
     ) -> Result<YearChapterRecord, KshanaError> {
         let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
         let obs = Observer {
@@ -3980,14 +4018,15 @@ impl Engine {
             longitude_deg: lon,
             height_m: 0.0,
         };
-        let y = kshana_rules::year_chapter(&self.spk, self.eop.as_ref(), &natal, &obs, to_house_system(system), ayanamsa.into(), at.into())
+        let lang = kshana_rules::Lang::parse(&lang);
+        let y = kshana_rules::year_chapter_in(lang, &self.spk, self.eop.as_ref(), &natal, &obs, to_house_system(system), ayanamsa.into(), at.into())
             .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         Ok(YearChapterRecord {
             start: y.start.into(),
             end: y.end.into(),
             age: y.age,
-            lagna_sign: kshana_rules::forecast::SIGN_NAMES[y.lagna_sign as usize % 12].to_string(),
-            moon_star: y.moon_star.clone(),
+            lagna_sign: name_words(lang, kshana_rules::forecast::SIGN_NAMES[y.lagna_sign as usize % 12]),
+            moon_star: star_words(lang, &y.moon_star),
             lord: lord_name(y.lord),
             tones: y.tones.iter().map(|v| v * 100.0).collect(),
             tone: y.tone * 100.0,
@@ -4168,10 +4207,11 @@ impl Engine {
         system: HouseSystem,
         ayanamsa: AyanamsaChoice,
         at: ExactInstant,
+        lang: String,
     ) -> Result<Vec<CountdownRecord>, KshanaError> {
         let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
         let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
-        Ok(kshana_rules::countdowns(&self.spk, self.eop.as_ref(), &natal, &obs, ayanamsa.into(), at.into())
+        Ok(kshana_rules::countdowns_in(kshana_rules::Lang::parse(&lang), &self.spk, self.eop.as_ref(), &natal, &obs, ayanamsa.into(), at.into())
             .iter()
             .map(countdown_record)
             .collect())
@@ -4209,11 +4249,17 @@ impl Engine {
         ayanamsa: AyanamsaChoice,
         at: ExactInstant,
         focus: Vec<String>,
+        lang: String,
     ) -> Result<LetterRecord, KshanaError> {
         let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
         let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
-        let l = kshana_rules::letter(&self.spk, self.eop.as_ref(), &natal, &obs, to_house_system(system), ayanamsa.into(), at.into(), &focus_of(&focus))
+        let lang = kshana_rules::Lang::parse(&lang);
+        let l = kshana_rules::letter_in(lang, &self.spk, self.eop.as_ref(), &natal, &obs, to_house_system(system), ayanamsa.into(), at.into(), &focus_of(&focus))
             .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
+        let mut briefing = briefing_record(&l.briefing);
+        if lang != kshana_rules::Lang::En {
+            localise_briefing(&mut briefing, &l.briefing, lang, lon);
+        }
         Ok(LetterRecord {
             from: l.from.into(),
             to: l.to.into(),
@@ -4222,7 +4268,7 @@ impl Engine {
             stories: l.stories.iter().map(story_record).collect(),
             festivals: l.festivals.iter().map(festival_record).collect(),
             countdowns: l.countdowns.iter().map(countdown_record).collect(),
-            briefing: briefing_record(&l.briefing),
+            briefing,
         })
     }
 
@@ -4241,7 +4287,10 @@ impl Engine {
         from: ExactInstant,
         days: u32,
         limit: u32,
+        lang: String,
     ) -> Result<Vec<DaySlotRecord>, KshanaError> {
+        // The slots carry no words today; `lang` keeps the call in step with the rest.
+        let _ = lang;
         let purpose = kshana_rules::Purpose::parse(&purpose).ok_or_else(|| KshanaError::Engine(format!("unknown purpose {purpose}")))?;
         let natal = self.natal(birth, birth_lat, birth_lon, system, ayanamsa)?;
         let obs = Observer { latitude_deg: lat, longitude_deg: lon, height_m: 0.0 };
@@ -4611,17 +4660,17 @@ mod plain_audit {
                 let tag = |s: &str| format!("p{pi}t{ti}.{s}");
                 audit(&tag("moment"), format!("{:?}", engine.forecast_moment(b, la, lo, la, lo, hs, ay, t, "en".into()).unwrap()), &mut hits);
                 audit(&tag("briefing"), format!("{:?}", engine.briefing(b, la, lo, la, lo, hs, ay, vec!["Love".into(), "Career".into(), "Money".into(), "Health".into()], t, "en".into()).unwrap()), &mut hits);
-                audit(&tag("letter"), format!("{:?}", engine.letter(b, la, lo, la, lo, hs, ay, t, vec![]).unwrap()), &mut hits);
+                audit(&tag("letter"), format!("{:?}", engine.letter(b, la, lo, la, lo, hs, ay, t, vec![], "en".into()).unwrap()), &mut hits);
                 for s in ["day", "week", "month", "year"] {
                     audit(&tag(&format!("outlook_{s}")), format!("{:?}", engine.outlook(b, la, lo, la, lo, hs, ay, s.into(), t, "en".into(), vec![]).unwrap()), &mut hits);
                 }
-                audit(&tag("countdowns"), format!("{:?}", engine.countdowns(b, la, lo, la, lo, hs, ay, t).unwrap()), &mut hits);
+                audit(&tag("countdowns"), format!("{:?}", engine.countdowns(b, la, lo, la, lo, hs, ay, t, "en".into()).unwrap()), &mut hits);
                 audit(&tag("festivals"), format!("{:?}", engine.festivals(b, la, lo, hs, ay, t, 35).unwrap()), &mut hits);
-                audit(&tag("year"), format!("{:?}", engine.year_chapter(b, la, lo, la, lo, hs, ay, t).unwrap()), &mut hits);
+                audit(&tag("year"), format!("{:?}", engine.year_chapter(b, la, lo, la, lo, hs, ay, t, "en".into()).unwrap()), &mut hits);
                 audit(&tag("parihara"), format!("{:?}", parihara_shown(engine.parihara(b, la, lo, ay, t, None).unwrap())), &mut hits);
                 for life in life_names() {
                     if ti == 0 || full {
-                        audit(&tag(&format!("explain_{life}")), format!("{:?}", engine.explain(b, la, lo, la, lo, hs, ay, life.clone(), t).unwrap()), &mut hits);
+                        audit(&tag(&format!("explain_{life}")), format!("{:?}", engine.explain(b, la, lo, la, lo, hs, ay, life.clone(), t, "en".into()).unwrap()), &mut hits);
                         audit(&tag(&format!("parihara_{life}")), format!("{:?}", parihara_shown(engine.parihara(b, la, lo, ay, t, Some(life.clone())).unwrap())), &mut hits);
                     }
                     for q in questions() {
@@ -4639,10 +4688,10 @@ mod plain_audit {
                         }
                     }
                     for pu in purposes() {
-                        audit(&tag(&format!("appointment_{}", pu.key)), format!("{:?}", engine.appointment(b, la, lo, la, lo, hs, ay, pu.key.clone(), t).unwrap()), &mut hits);
-                        audit(&tag(&format!("slots_{}", pu.key)), format!("{:?}", engine.best_slots(b, la, lo, la, lo, hs, ay, pu.key.clone(), t, 7, 5).unwrap()), &mut hits);
+                        audit(&tag(&format!("appointment_{}", pu.key)), format!("{:?}", engine.appointment(b, la, lo, la, lo, hs, ay, pu.key.clone(), t, "en".into()).unwrap()), &mut hits);
+                        audit(&tag(&format!("slots_{}", pu.key)), format!("{:?}", engine.best_slots(b, la, lo, la, lo, hs, ay, pu.key.clone(), t, 7, 5, "en".into()).unwrap()), &mut hits);
                     }
-                    audit(&tag("timeline"), format!("{:?}", engine.timeline(b, la, lo, hs, ay, t).unwrap()), &mut hits);
+                    audit(&tag("timeline"), format!("{:?}", engine.timeline(b, la, lo, hs, ay, t, "en".into()).unwrap()), &mut hits);
                     audit(&tag("chart_yogas"), format!("{:?}", engine.chart_yogas(b, la, lo, ay, t).unwrap()), &mut hits);
                     audit(&tag("kundali"), format!("{:?}", engine.kundali(b, la, lo, ob, ola, olo, hs, ay, true).unwrap()), &mut hits);
                     audit(&tag("talk"), format!("{:?}", engine.talk_window(b, la, lo, ob, ola, olo, la, lo, hs, ay, t, 14).unwrap()), &mut hits);
@@ -4707,8 +4756,52 @@ fn localise_moment(rec: &mut MomentRecord, m: &kshana_rules::Moment, lang: kshan
         w.label = l::window_label(lang, &w.label);
     }
     if let (Some(h), Some(hr)) = (m.hora.as_ref(), rec.hora.as_mut()) {
-        hr.words = l::hour_nature(lang, h.lord).to_string();
+        hr.words = kshana_rules::gochara::hora_words_in(lang, h.lord).to_string();
+        let lore = kshana_rules::hora_lore_in(lang, h.lord);
+        hr.deity = lore.deity.to_string();
+        hr.colour = lore.colour.to_string();
+        hr.direction = lore.direction.to_string();
+        hr.metal = lore.metal.to_string();
+        hr.mantra = lore.mantra.to_string();
+        hr.for_words = lore.for_.to_string();
+        hr.avoid = lore.avoid.to_string();
     }
+    rec.moon_star = star_words(lang, &rec.moon_star);
+    rec.tara_name = kshana_rules::tara_name_in(lang, m.tara).to_string();
+}
+
+/// The lexicon's language for the reader's language.
+fn lexicon_language(lang: kshana_rules::Lang) -> kshana_speak::lexicon::Language {
+    match lang {
+        kshana_rules::Lang::Ml => kshana_speak::lexicon::Language::Malayalam,
+        kshana_rules::Lang::Hi => kshana_speak::lexicon::Language::Hindi,
+        kshana_rules::Lang::En => kshana_speak::lexicon::Language::English,
+    }
+}
+
+/// An engine name ("Mula", "Sagittarius") in the reader's script, from the lexicon;
+/// the name itself when the lexicon has no cell for it.
+fn name_words(lang: kshana_rules::Lang, name: &str) -> String {
+    let t = kshana_speak::lexicon::term(name, lexicon_language(lang));
+    if t.is_empty() { name.to_string() } else { t.to_string() }
+}
+
+/// "Mula 2" (a star and its quarter) in the reader's script.
+fn star_words(lang: kshana_rules::Lang, s: &str) -> String {
+    if lang == kshana_rules::Lang::En {
+        return s.to_string();
+    }
+    match s.rsplit_once(' ') {
+        Some((name, pada)) if pada.chars().all(|c| c.is_ascii_digit()) => format!("{} {pada}", name_words(lang, name)),
+        _ => name_words(lang, s),
+    }
+}
+
+/// The briefing's names in the reader's script: the birth Moon's sign and star, and the
+/// moment (its sentences are already written in that language by the engine).
+fn localise_briefing(r: &mut BriefingRecord, b: &kshana_rules::Briefing, lang: kshana_rules::Lang, lon: f64) {
+    r.moon = b.moon.split(" · ").map(|p| name_words(lang, p)).collect::<Vec<_>>().join(" · ");
+    localise_moment(&mut r.moment, &b.moment, lang, lon);
 }
 
 /// How sure an answer is, in words, in the reader's language; `confidence` is 0–100.
@@ -5231,7 +5324,7 @@ mod distinct {
         let plans: Vec<(String, String)> = purposes()
             .iter()
             .map(|pu| {
-                let a = engine.appointment(b, la, lo, la, lo, hs, ay, pu.key.clone(), t).unwrap();
+                let a = engine.appointment(b, la, lo, la, lo, hs, ay, pu.key.clone(), t, "en".into()).unwrap();
                 (pu.key.clone(), format!("{} {}", a.headline, a.advice.join(" ")))
             })
             .collect();
@@ -5240,7 +5333,7 @@ mod distinct {
         let explains: Vec<(String, String)> = life_names()
             .into_iter()
             .map(|l| {
-                let e = engine.explain(b, la, lo, la, lo, hs, ay, l.clone(), t).unwrap();
+                let e = engine.explain(b, la, lo, la, lo, hs, ay, l.clone(), t, "en".into()).unwrap();
                 (l, e.headline)
             })
             .collect();

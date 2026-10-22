@@ -56,11 +56,12 @@ import uniffi.kshana_ffi.ExplanationRecord
 fun ExplainPanel(profile: BirthProfile, place: Place, settings: EngineSettings, life: String, onRemedy: () -> Unit) {
     val context = LocalContext.current
     var open by remember { mutableStateOf(false) }
-    var ex by remember { mutableStateOf<ExplanationRecord?>(null) }
+    val lang = com.kshana.app.data.Lang.code
+    var ex by remember(lang) { mutableStateOf<ExplanationRecord?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var showAllRelief by remember { mutableStateOf(false) }
 
-    LaunchedEffect(open, profile, place, settings, life) {
+    LaunchedEffect(open, profile, place, settings, life, lang) {
         if (!open || ex != null) return@LaunchedEffect
         try {
             val engine = EngineProvider.get(context)
@@ -68,7 +69,7 @@ fun ExplainPanel(profile: BirthProfile, place: Place, settings: EngineSettings, 
                 engine.explain(
                     profile.birthInstant(), profile.latitude, profile.longitude,
                     place.latitude, place.longitude,
-                    settings.houseSystem, settings.ayanamsa, life, Instants.now(),
+                    settings.houseSystem, settings.ayanamsa, life, Instants.now(), lang,
                 )
             }
             error = null

@@ -110,12 +110,12 @@ fun AlmanacScreen(place: Place, settings: EngineSettings, onBack: () -> Unit) {
     var days by remember { mutableStateOf<List<uniffi.kshana_ffi.CalendarDayRecord>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     val expert = com.kshana.app.data.Expert.on(context)
-    LaunchedEffect(place) {
+    LaunchedEffect(place, com.kshana.app.data.Lang.code) {
         runCatching {
             val engine = EngineProvider.get(context)
             val today = java.time.LocalDate.now(com.kshana.app.data.CityClocks.of(place.zoneId))
             days = withContext(Dispatchers.Default) {
-                engine.calendarDays(place.latitude, place.longitude, PlaceClock.offsetMinutes(place), today.year.toLong(), today.monthValue.toUInt(), today.dayOfMonth.toUInt(), 45u, settings.ayanamsa)
+                engine.calendarDays(place.latitude, place.longitude, PlaceClock.offsetMinutes(place), today.year.toLong(), today.monthValue.toUInt(), today.dayOfMonth.toUInt(), 45u, settings.ayanamsa, com.kshana.app.data.Lang.code)
             }
         }.onFailure { error = it.message }
     }

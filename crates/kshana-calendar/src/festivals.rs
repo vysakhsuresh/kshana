@@ -382,6 +382,162 @@ pub fn festivals(cal: &Calendar) -> Result<Vec<Festival>, CalendarError> {
     Ok(out)
 }
 
+/// The name and the plain words of every festival by key, `[en, ml, hi]`, as people say
+/// them in Kerala and in Hindi. The English is exactly what [`festivals`] writes (the
+/// Ekadashis are named apart: see [`localise`]).
+const WORDS: &[(&str, [&str; 3], [&str; 3])] = &[
+    ("ugadi", ["Ugadi / Gudi Padwa", "യുഗാദി", "गुड़ी पड़वा / उगादी"],
+        ["The lunar new year: a fresh start, a bitter-sweet dish for the year's mixed days, and the year's almanac read aloud.",
+         "ചാന്ദ്രവർഷത്തിന്റെ പുതുവർഷം: ഒരു പുതിയ തുടക്കം, വർഷത്തിലെ ഇടകലർന്ന ദിവസങ്ങൾക്കായി കയ്പും മധുരവുമുള്ള ഒരു വിഭവം, വർഷത്തെ പഞ്ചാംഗം ഉറക്കെ വായിക്കൽ.",
+         "चांद्र नववर्ष: एक नई शुरुआत, साल के मिले-जुले दिनों के लिए खट्टा-मीठा व्यंजन, और साल का पंचांग पढ़कर सुनाया जाता है।"]),
+    ("chaitra_navaratri", ["Chaitra Navaratri begins", "ചൈത്ര നവരാത്രി തുടങ്ങുന്നു", "चैत्र नवरात्रि आरंभ"],
+        ["Nine nights of the Goddess in spring: a lamp each evening and a lighter diet.",
+         "വസന്തകാലത്ത് ദേവിയുടെ ഒൻപത് രാത്രികൾ: എല്ലാ സന്ധ്യക്കും ഒരു വിളക്ക്, ലഘുവായ ഭക്ഷണം.",
+         "वसंत में देवी की नौ रातें: हर शाम एक दीया और हल्का भोजन।"]),
+    ("rama_navami", ["Rama Navami", "ശ്രീരാമനവമി", "राम नवमी"],
+        ["Rama's birthday, kept at midday: a fast till noon, the story read, sweet water and fruit shared.",
+         "ശ്രീരാമന്റെ ജന്മദിനം, ഉച്ചയ്ക്ക് ആചരിക്കുന്നു: ഉച്ചവരെ ഉപവാസം, രാമകഥ വായന, പാനകവും പഴങ്ങളും പങ്കുവയ്ക്കൽ.",
+         "श्रीराम का जन्मदिन, दोपहर में मनाया जाता है: दोपहर तक उपवास, रामकथा का पाठ, शरबत और फल बाँटे जाते हैं।"]),
+    ("akshaya_tritiya", ["Akshaya Tritiya", "അക്ഷയതൃതീയ", "अक्षय तृतीया"],
+        ["What is begun or given today is said never to run out: a good day to start, buy gold or give food.",
+         "ഇന്ന് തുടങ്ങുന്നതും കൊടുക്കുന്നതും ഒരിക്കലും തീരില്ല എന്നാണ് വിശ്വാസം: തുടങ്ങാനും സ്വർണം വാങ്ങാനും അന്നദാനത്തിനും നല്ല ദിവസം.",
+         "मान्यता है कि आज शुरू किया या दिया हुआ कभी ख़त्म नहीं होता: शुरुआत करने, सोना ख़रीदने या अन्न दान के लिए अच्छा दिन।"]),
+    ("guru_purnima", ["Guru Purnima", "വ്യാസപൂർണിമ", "गुरुपूर्णिमा"],
+        ["The teachers' day: thank and honour those who taught you.",
+         "അധ്യാപകരുടെ ദിവസം: നിങ്ങളെ പഠിപ്പിച്ചവരോട് നന്ദി പറയുക, അവരെ ആദരിക്കുക.",
+         "शिक्षकों का दिन: जिन्होंने आपको सिखाया, उनका धन्यवाद करें और उन्हें सम्मान दें।"]),
+    ("raksha_bandhan", ["Raksha Bandhan", "രക്ഷാബന്ധൻ", "रक्षाबंधन"],
+        ["Sisters tie a protective thread on brothers' wrists; brothers promise care in return.",
+         "സഹോദരിമാർ സഹോദരന്മാരുടെ കൈയിൽ രക്ഷാച്ചരട് കെട്ടുന്നു; സഹോദരന്മാർ തിരികെ കരുതൽ വാഗ്ദാനം ചെയ്യുന്നു.",
+         "बहनें भाइयों की कलाई पर रक्षा सूत्र बाँधती हैं; भाई बदले में रक्षा का वचन देते हैं।"]),
+    ("janmashtami", ["Krishna Janmashtami", "ശ്രീകൃഷ്ണ ജന്മാഷ്ടമി", "कृष्ण जन्माष्टमी"],
+        ["Krishna's birth at midnight: a fast through the day, songs, and the fast broken after midnight.",
+         "അർധരാത്രിയിലെ ശ്രീകൃഷ്ണജനനം: പകൽ മുഴുവൻ ഉപവാസം, ഭജന, അർധരാത്രി കഴിഞ്ഞ് ഉപവാസം മുറിക്കൽ.",
+         "आधी रात को श्रीकृष्ण का जन्म: दिन भर उपवास, भजन, और आधी रात के बाद व्रत खोलना।"]),
+    ("ganesh_chaturthi", ["Ganesh Chaturthi", "വിനായക ചതുർത്ഥി", "गणेश चतुर्थी"],
+        ["Ganesha is welcomed home at midday; begin the new and clear what blocks you.",
+         "ഉച്ചയ്ക്ക് ഗണപതിയെ വീട്ടിലേക്ക് സ്വാഗതം ചെയ്യുന്നു; പുതിയത് തുടങ്ങുക, തടസ്സമായതെല്ലാം നീക്കുക.",
+         "दोपहर में गणेश जी का घर में स्वागत होता है; नया शुरू करें और जो अड़चन है उसे हटाएँ।"]),
+    ("navaratri", ["Navaratri begins", "നവരാത്രി തുടങ്ങുന്നു", "नवरात्रि आरंभ"],
+        ["Nine nights of the Goddess: the pot is set up in the morning and a lamp kept each evening.",
+         "ദേവിയുടെ ഒൻപത് രാത്രികൾ: രാവിലെ കലശം വയ്ക്കുന്നു, എല്ലാ സന്ധ്യക്കും വിളക്ക് കൊളുത്തുന്നു.",
+         "देवी की नौ रातें: सुबह कलश स्थापना होती है और हर शाम दीया जलाया जाता है।"]),
+    ("dussehra", ["Dussehra / Vijayadashami", "വിജയദശമി", "दशहरा / विजयादशमी"],
+        ["Victory of good over evil: begin learning, honour your tools and books, and make peace.",
+         "തിന്മയുടെ മേൽ നന്മയുടെ വിജയം: വിദ്യാരംഭം കുറിക്കുക, പണിയായുധങ്ങളെയും പുസ്തകങ്ങളെയും ആദരിക്കുക, പിണക്കങ്ങൾ തീർക്കുക.",
+         "बुराई पर अच्छाई की जीत: पढ़ाई शुरू करें, अपने औज़ारों और किताबों का पूजन करें, और मेल-मिलाप करें।"]),
+    ("karva_chauth", ["Karva Chauth", "കർവാ ചൗത്ത്", "करवा चौथ"],
+        ["Wives fast from dawn for their husbands and break the fast at moonrise.",
+         "ഭാര്യമാർ ഭർത്താക്കന്മാർക്കായി പുലർച്ചെ മുതൽ ഉപവസിക്കുന്നു, ചന്ദ്രോദയത്തിൽ ഉപവാസം മുറിക്കുന്നു.",
+         "पत्नियाँ पति के लिए भोर से व्रत रखती हैं और चाँद निकलने पर व्रत खोलती हैं।"]),
+    ("diwali", ["Diwali (Lakshmi Puja)", "ദീപാവലി (ലക്ഷ്മീപൂജ)", "दीपावली (लक्ष्मी पूजा)"],
+        ["The festival of lights: lamps at dusk, Lakshmi welcomed, the home cleaned and accounts begun afresh.",
+         "ദീപങ്ങളുടെ ഉത്സവം: സന്ധ്യക്ക് വിളക്കുകൾ, ലക്ഷ്മീദേവിക്ക് സ്വാഗതം, വീട് വൃത്തിയാക്കൽ, കണക്കുകൾ പുതുതായി തുടങ്ങൽ.",
+         "रोशनी का त्योहार: शाम को दीये, लक्ष्मी जी का स्वागत, घर की सफ़ाई और नए बही-खाते।"]),
+    ("vasant_panchami", ["Vasant Panchami", "വസന്തപഞ്ചമി", "वसंत पंचमी"],
+        ["Saraswati's day at the start of spring: children begin letters, books and instruments are honoured.",
+         "വസന്തത്തിന്റെ തുടക്കത്തിലെ സരസ്വതീദിനം: കുട്ടികൾ അക്ഷരം കുറിക്കുന്നു, പുസ്തകങ്ങളും വാദ്യങ്ങളും ആദരിക്കപ്പെടുന്നു.",
+         "वसंत की शुरुआत में सरस्वती का दिन: बच्चे अक्षर सीखना शुरू करते हैं, किताबों और वाद्यों का पूजन होता है।"]),
+    ("maha_shivaratri", ["Maha Shivaratri", "ശിവരാത്രി", "महाशिवरात्रि"],
+        ["The great night of Shiva: a fast, a lamp and a night's vigil, at least till midnight.",
+         "ശിവന്റെ മഹാരാത്രി: ഉപവാസം, വിളക്ക്, ഉറക്കമൊഴിയൽ, കുറഞ്ഞത് അർധരാത്രി വരെ.",
+         "शिव की महान रात: उपवास, दीया और रात भर जागरण, कम से कम आधी रात तक।"]),
+    ("holika_dahan", ["Holika Dahan", "ഹോളികാ ദഹനം", "होलिका दहन"],
+        ["The bonfire at dusk on the eve of Holi: old grudges and the year's waste go into the fire.",
+         "ഹോളിയുടെ തലേന്ന് സന്ധ്യക്കുള്ള അഗ്നി: പഴയ പിണക്കങ്ങളും വർഷത്തെ മാലിന്യവും തീയിലേക്ക്.",
+         "होली की पूर्व संध्या पर अलाव: पुराने गिले-शिकवे और साल का कचरा आग में।"]),
+    ("holi", ["Holi", "ഹോളി", "होली"],
+        ["The festival of colours, the morning after the bonfire: play, forgive and visit.",
+         "അഗ്നിക്ക് പിറ്റേന്ന് രാവിലെ നിറങ്ങളുടെ ഉത്സവം: കളിക്കുക, ക്ഷമിക്കുക, സന്ദർശിക്കുക.",
+         "अलाव के अगले दिन सुबह रंगों का त्योहार: खेलें, माफ़ करें और मिलने जाएँ।"]),
+    ("pradosham", ["Pradosham", "പ്രദോഷം", "प्रदोष व्रत"],
+        ["The dusk hours are Shiva's: light a lamp and make an apology; it eases delays.",
+         "സന്ധ്യാസമയം ശിവന്റേതാണ്: ഒരു വിളക്ക് കൊളുത്തുക, ഒരു ക്ഷമ ചോദിക്കുക; താമസങ്ങൾ അയയും.",
+         "शाम का समय शिव का है: दीया जलाएँ और किसी से माफ़ी माँगें; रुकावटें कम होती हैं।"]),
+    ("sankashti", ["Sankashti Chaturthi", "സങ്കടഹര ചതുർത്ഥി", "संकष्टी चतुर्थी"],
+        ["Ganesha's fast, broken after moonrise: finish what was left undone; obstacles ease.",
+         "ഗണപതിക്കുള്ള വ്രതം, ചന്ദ്രോദയത്തിന് ശേഷം മുറിക്കുന്നു: ബാക്കിവച്ചത് പൂർത്തിയാക്കുക; തടസ്സങ്ങൾ നീങ്ങും.",
+         "गणेश जी का व्रत, चाँद निकलने के बाद खोला जाता है: अधूरा काम पूरा करें; अड़चनें कम होती हैं।"]),
+    ("masik_shivaratri", ["Masik Shivaratri", "മാസശിവരാത്രി", "मासिक शिवरात्रि"],
+        ["The month's night of Shiva: a lamp kept through the night, or at least till midnight.",
+         "മാസത്തിലെ ശിവരാത്രി: രാത്രി മുഴുവൻ, അല്ലെങ്കിൽ കുറഞ്ഞത് അർധരാത്രി വരെ, ഒരു വിളക്ക്.",
+         "महीने की शिवरात्रि: रात भर, या कम से कम आधी रात तक, एक दीया।"]),
+    ("purnima", ["Purnima", "പൗർണമി", "पूर्णिमा"],
+        ["Full moon: honour your mother, feed women and children, sit by water.",
+         "വെളുത്തവാവ്: അമ്മയെ ആദരിക്കുക, സ്ത്രീകൾക്കും കുട്ടികൾക്കും ഭക്ഷണം കൊടുക്കുക, വെള്ളത്തിനരികെ ഇരിക്കുക.",
+         "पूरा चाँद: अपनी माँ का सम्मान करें, स्त्रियों और बच्चों को भोजन कराएँ, पानी के पास बैठें।"]),
+    ("amavasya", ["Amavasya", "കറുത്തവാവ്", "अमावस्या"],
+        ["The ancestors' day: give food in their name and begin nothing new.",
+         "പിതൃക്കളുടെ ദിവസം: അവരുടെ പേരിൽ അന്നദാനം ചെയ്യുക, പുതിയതൊന്നും തുടങ്ങരുത്.",
+         "पितरों का दिन: उनके नाम पर अन्न दान करें और कुछ नया शुरू न करें।"]),
+    ("vinayaka_chaturthi", ["Vinayaka Chaturthi", "വിനായക ചതുർത്ഥി", "विनायक चतुर्थी"],
+        ["Ganesha's day of the bright fortnight, kept at midday.",
+         "വെളുത്ത പക്ഷത്തിലെ ഗണപതിദിനം, ഉച്ചയ്ക്ക് ആചരിക്കുന്നു.",
+         "शुक्ल पक्ष का गणेश जी का दिन, दोपहर में मनाया जाता है।"]),
+    ("makar_sankranti", ["Makar Sankranti", "മകരസംക്രാന്തി", "मकर संक्रांति"],
+        ["The turn towards longer days: til and jaggery shared, a bath at dawn, gifts to those in need.",
+         "പകൽ നീളുന്നതിലേക്കുള്ള തിരിവ്: എള്ളും ശർക്കരയും പങ്കുവയ്ക്കൽ, പുലർച്ചെ കുളി, ആവശ്യക്കാർക്ക് ദാനം.",
+         "लंबे दिनों की ओर मोड़: तिल-गुड़ बाँटना, भोर में स्नान, ज़रूरतमंदों को दान।"]),
+    ("pongal", ["Pongal", "പൊങ്കൽ", "पोंगल"],
+        ["The harvest festival: rice boiled over in a new pot, thanks given to the land and cattle.",
+         "വിളവെടുപ്പുത്സവം: പുതിയ കലത്തിൽ അരി തിളച്ചുതൂവുന്നു, മണ്ണിനും കന്നുകാലികൾക്കും നന്ദി.",
+         "फ़सल का त्योहार: नए बर्तन में चावल उफनता है, धरती और पशुओं का धन्यवाद।"]),
+    ("puthandu", ["Puthandu (Tamil New Year)", "പുത്താണ്ട് (തമിഴ് പുതുവർഷം)", "पुथांडु (तमिल नववर्ष)"],
+        ["The Tamil new year: a tray of fruit, flowers and a mirror seen first in the morning.",
+         "തമിഴ് പുതുവർഷം: രാവിലെ ആദ്യം കാണുന്നത് പഴങ്ങളും പൂക്കളും കണ്ണാടിയും വച്ച ഒരു താലം.",
+         "तमिल नववर्ष: सुबह सबसे पहले फल, फूल और दर्पण से सजी थाली देखी जाती है।"]),
+    ("vishu", ["Vishu", "വിഷു", "विषु"],
+        ["Kerala's new year: the Vishukkani seen first at dawn, and coins given to the young.",
+         "കേരളത്തിന്റെ പുതുവർഷം: പുലർച്ചെ ആദ്യം വിഷുക്കണി കാണൽ, കുട്ടികൾക്ക് വിഷുക്കൈനീട്ടം.",
+         "केरल का नववर्ष: भोर में सबसे पहले विषुक्कणि का दर्शन, और बच्चों को सिक्के दिए जाते हैं।"]),
+    ("pohela_boishakh", ["Pohela Boishakh (Bengali New Year)", "പൊയ്‌ല ബൈശാഖ് (ബംഗാളി പുതുവർഷം)", "पोइला बैसाख (बंगाली नववर्ष)"],
+        ["The Bengali new year: new account books opened, sweets shared.",
+         "ബംഗാളി പുതുവർഷം: പുതിയ കണക്കുപുസ്തകങ്ങൾ തുറക്കുന്നു, മധുരം പങ്കുവയ്ക്കുന്നു.",
+         "बंगाली नववर्ष: नए बही-खाते खुलते हैं, मिठाई बाँटी जाती है।"]),
+    ("pana_sankranti", ["Pana Sankranti (Odia New Year)", "പണ സംക്രാന്തി (ഒഡിയ പുതുവർഷം)", "पना संक्रांति (ओड़िया नववर्ष)"],
+        ["The Odia new year: a cooling drink shared and water given to the thirsty.",
+         "ഒഡിയ പുതുവർഷം: തണുത്ത പാനീയം പങ്കുവയ്ക്കൽ, ദാഹിക്കുന്നവർക്ക് വെള്ളം.",
+         "ओड़िया नववर्ष: ठंडा पना बाँटा जाता है और प्यासों को पानी पिलाया जाता है।"]),
+    ("onam", ["Onam (Thiruvonam)", "തിരുവോണം", "ओणम (तिरुवोणम)"],
+        ["Kerala's harvest festival: a flower carpet at the door, a feast on a banana leaf, the family together.",
+         "കേരളത്തിന്റെ വിളവെടുപ്പുത്സവം: വാതിൽക്കൽ പൂക്കളം, ഇലയിൽ ഓണസദ്യ, കുടുംബം ഒന്നിച്ച്.",
+         "केरल का फ़सल त्योहार: दरवाज़े पर फूलों की रंगोली, केले के पत्ते पर भोज, पूरा परिवार साथ।"]),
+];
+
+/// The name and the plain words of a festival in the reader's language (`"en"`, `"ml"`,
+/// `"hi"`; anything else is English). English returns the festival's own text unchanged.
+pub fn localise(f: &Festival, lang: &str) -> (String, &'static str) {
+    let l = crate::names::lang_index(lang);
+    if l == 0 {
+        return (f.name.clone(), f.what);
+    }
+    if f.key == "ekadashi" || f.key == "ekadashi_vaishnava" {
+        let base = f.name.trim_end_matches(" (Vaishnava)").trim_end_matches(" Ekadashi");
+        let own = crate::names::ekadashi_name_in(base, lang).unwrap_or(base);
+        let name = match (l, f.key == "ekadashi_vaishnava") {
+            (1, false) => format!("{own} ഏകാദശി"),
+            (1, true) => format!("{own} ഏകാദശി (വൈഷ്ണവർ)"),
+            (_, false) => format!("{own} एकादशी"),
+            (_, true) => format!("{own} एकादशी (वैष्णव)"),
+        };
+        let what = if f.key == "ekadashi" {
+            ["", "വിഷ്ണുവിനായുള്ള വ്രതം: അരിയാഹാരം ഇല്ല, മനസ്സ് ലഘുവായി, പിറ്റേന്ന് രാവിലെ വ്രതം മുറിക്കും.", "विष्णु का व्रत: अन्न नहीं, मन हल्का रखें, अगली सुबह व्रत खोलें।"][l]
+        } else {
+            ["", "വൈഷ്ണവ കുടുംബങ്ങൾ നോക്കുന്ന അതേ വ്രതം, ഇത്തവണ ഒരു ദിവസം കഴിഞ്ഞ്.", "वैष्णव परिवारों का वही व्रत, इस बार एक दिन बाद।"][l]
+        };
+        return (name, what);
+    }
+    // Pradosham has two plain lines (the bright fortnight's asks for an apology too).
+    if f.key == "pradosham" && f.what.ends_with("light a lamp; it eases delays.") {
+        let w = ["", "സന്ധ്യാസമയം ശിവന്റേതാണ്: ഒരു വിളക്ക് കൊളുത്തുക; താമസങ്ങൾ അയയും.", "शाम का समय शिव का है: दीया जलाएँ; रुकावटें कम होती हैं।"][l];
+        return (["", "പ്രദോഷം", "प्रदोष व्रत"][l].to_string(), w);
+    }
+    match WORDS.iter().find(|(k, _, _)| *k == f.key) {
+        Some((_, n, w)) => (n[l].to_string(), w[l]),
+        None => (f.name.clone(), f.what),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -460,5 +616,28 @@ mod tests {
         let ek: Vec<&str> = f.iter().filter(|x| x.key == "ekadashi").map(|x| x.name.as_str()).collect();
         assert_eq!(ek, vec!["Padmini Ekadashi", "Parama Ekadashi"]);
         assert!(f.iter().all(|x| !YEARLY.iter().any(|r| r.key == x.key)));
+    }
+
+    #[test]
+    fn every_festival_has_its_words_in_three_languages() {
+        let Some(spk) = kernel() else { return };
+        let mut seen = std::collections::BTreeSet::new();
+        for (obs, from) in [(DELHI, Date::new(2025, 1, 1)), (KOCHI, Date::new(2025, 1, 1)), (CHENNAI, Date::new(2025, 1, 1))] {
+            for f in on(&spk, obs, from, 366) {
+                assert_eq!(localise(&f, "en"), (f.name.clone(), f.what));
+                if !f.key.starts_with("ekadashi") && !(f.key == "pradosham" && f.what.ends_with("light a lamp; it eases delays.")) {
+                    let row = WORDS.iter().find(|(k, _, _)| *k == f.key).unwrap_or_else(|| panic!("no words for {}", f.key));
+                    assert_eq!((row.1[0], row.2[0]), (f.name.as_str(), f.what), "{}", f.key);
+                }
+                for lang in ["ml", "hi"] {
+                    let (n, w) = localise(&f, lang);
+                    assert!(!n.is_empty() && !w.is_empty(), "{} {lang}", f.key);
+                    assert!(!n.chars().any(|c| c.is_ascii_alphabetic()), "{lang}: {n}");
+                    assert!(!w.chars().any(|c| c.is_ascii_alphabetic()), "{lang}: {w}");
+                }
+                seen.insert(f.key);
+            }
+        }
+        assert!(seen.contains("onam") && seen.contains("vishu") && seen.contains("diwali"));
     }
 }
