@@ -128,7 +128,7 @@ fun TransitsScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -
 
     var range by remember { mutableStateOf(TransitRange.THIS_YEAR) }
     val span = remember(range, zone) { spanFor(range, zone) }
-    val cache = remember(profile, settings) { mutableStateMapOf<TransitRange, List<TransitWindowRecord>>() }
+    val cache = remember(profile, settings, com.kshana.app.data.Lang.code) { mutableStateMapOf<TransitRange, List<TransitWindowRecord>>() }
     var windowsLoading by remember { mutableStateOf(false) }
     var windowsError by remember { mutableStateOf<String?>(null) }
     var selected by remember(profile, settings) { mutableStateOf<TransitWindowRecord?>(null) }
@@ -144,13 +144,13 @@ fun TransitsScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -
     val padPx = with(density) { TL_PAD.toPx() }
 
     // The sky's score at this instant: nine lines, one per graha.
-    LaunchedEffect(profile, settings) {
+    LaunchedEffect(profile, settings, com.kshana.app.data.Lang.code) {
         scoreLoading = true
         try {
             val engine = EngineProvider.get(context)
             val birth = profile.birthInstant()
             scoreNow = withContext(Dispatchers.Default) {
-                engine.transitScore(birth, profile.latitude, profile.longitude, settings.ayanamsa, now)
+                engine.transitScore(birth, profile.latitude, profile.longitude, settings.ayanamsa, now, com.kshana.app.data.Lang.code)
             }
             scoreError = null
         } catch (e: CancellationException) {
@@ -162,7 +162,7 @@ fun TransitsScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -
     }
 
     // The windows for the chosen range, solved once and kept.
-    LaunchedEffect(profile, settings, range) {
+    LaunchedEffect(profile, settings, range, com.kshana.app.data.Lang.code) {
         if (cache.containsKey(range)) return@LaunchedEffect
         windowsLoading = true
         windowsError = null
@@ -170,7 +170,7 @@ fun TransitsScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -
             val engine = EngineProvider.get(context)
             val birth = profile.birthInstant()
             val list = withContext(Dispatchers.Default) {
-                engine.transitWindows(birth, profile.latitude, profile.longitude, settings.ayanamsa, span.from, span.to)
+                engine.transitWindows(birth, profile.latitude, profile.longitude, settings.ayanamsa, span.from, span.to, com.kshana.app.data.Lang.code)
             }
             cache[range] = list
         } catch (e: CancellationException) {

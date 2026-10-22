@@ -108,7 +108,7 @@ fun TodayScreen(
 
     // Recompute when the person, the place, the settings or the local date change.
     val dayKey = remember(now, zone) { Instants.toLocal(now, zone).toLocalDate() }
-    LaunchedEffect(profile, here, settings, dayKey) {
+    LaunchedEffect(profile, here, settings, dayKey, com.kshana.app.data.Lang.code) {
         loading = true
         val problems = mutableListOf<String>()
         try {
@@ -118,7 +118,7 @@ fun TodayScreen(
             now = at
             try {
                 daily = withContext(Dispatchers.Default) {
-                    engine.daily(birth, profile.latitude, profile.longitude, settings.ayanamsa, at, here.latitude, here.longitude)
+                    engine.daily(birth, profile.latitude, profile.longitude, settings.ayanamsa, at, here.latitude, here.longitude, com.kshana.app.data.Lang.code)
                 }
             } catch (e: Exception) {
                 problems += e.message ?: e.toString()

@@ -27,7 +27,7 @@ pub use kp::{
     dms_in_sign, horary_longitude, kp_lords, lord_chain, sign_lord, sub_bounds, sub_of, sub_table,
     ChainLevel, KpLords, Sub,
 };
-pub use naming::{naming_for, syllable, SYLLABLES};
+pub use naming::{naming_for, syllable, syllable_native, SYLLABLES};
 pub use panchanga::{
     karana, nakshatra, tithi, yoga, Karana, Nakshatra, Tithi, Yoga, NAKSHATRA_SPAN,
 };

@@ -107,16 +107,16 @@ private fun strengthColour(ratio: Double): Color = if (ratio >= 1.0) KshanaColor
 @Composable
 fun StrengthScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -> Unit) {
     val context = LocalContext.current
-    var record by remember(profile, settings) { mutableStateOf<ShadbalaRecord?>(null) }
+    var record by remember(profile, settings, com.kshana.app.data.Lang.code) { mutableStateOf<ShadbalaRecord?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var selected by remember(profile, settings) { mutableStateOf<Int?>(null) }
 
-    LaunchedEffect(profile, settings) {
+    LaunchedEffect(profile, settings, com.kshana.app.data.Lang.code) {
         try {
             val engine = EngineProvider.get(context)
             val birth = profile.birthInstant()
             record = withContext(Dispatchers.Default) {
-                engine.shadbala(birth, profile.latitude, profile.longitude, settings.ayanamsa)
+                engine.shadbala(birth, profile.latitude, profile.longitude, settings.ayanamsa, com.kshana.app.data.Lang.code)
             }
             error = null
         } catch (e: CancellationException) {
@@ -385,9 +385,9 @@ private fun AvasthaRow(a: AvasthaRecord) {
         }
         Text(
             listOf(
-                BALADI_WORDS[a.baladi] ?: a.baladi.lowercase(),
-                JAGRADADI_WORDS[a.jagradadi] ?: a.jagradadi.lowercase(),
-                DEEPTADI_WORDS[a.deeptadi] ?: a.deeptadi.lowercase(),
+                BALADI_WORDS[a.baladiKey] ?: a.baladi.lowercase(),
+                JAGRADADI_WORDS[a.jagradadiKey] ?: a.jagradadi.lowercase(),
+                DEEPTADI_WORDS[a.deeptadiKey] ?: a.deeptadi.lowercase(),
             ).joinToString(" · "),
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
         )

@@ -56,7 +56,7 @@ fun NamingScreen(settings: EngineSettings, onBack: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
 
-    LaunchedEffect(selected, settings) {
+    LaunchedEffect(selected, settings, com.kshana.app.data.Lang.code) {
         val p = selected ?: return@LaunchedEffect
         busy = true
         try {
@@ -64,7 +64,7 @@ fun NamingScreen(settings: EngineSettings, onBack: () -> Unit) {
             result = withContext(Dispatchers.Default) {
                 val chart = engine.chart(p.birthInstant(), p.latitude, p.longitude, 0.0, settings.houseSystem, settings.ayanamsa, false)
                 val moon = chart.panchanga.moonSidereal
-                NamingResult(naming(moon), moon)
+                NamingResult(naming(moon, com.kshana.app.data.Lang.code), moon)
             }
             error = null
         } catch (e: Exception) {

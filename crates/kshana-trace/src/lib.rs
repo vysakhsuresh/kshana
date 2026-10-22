@@ -24,7 +24,7 @@ use kshana_vedic::panchanga::{NAKSHATRA_NAMES, TITHI_NAMES, YOGA_NAMES};
 use kshana_vedic::{ayanamsa_degrees, karana, sidereal, sub_table, Ayanamsa, DashaLord};
 
 pub use crossings::{crossings, Crossing};
-pub use dasha::{chain_at, dasha_transitions, DashaTransition, LEVEL_NAMES, MAX_DEPTH};
+pub use dasha::{chain_at, dasha_transitions, level_name_in, DashaTransition, LEVEL_NAMES, MAX_DEPTH};
 pub use lagna::{
     ascendant_sidereal, dasha_shift_per_second_ns, first_lord_years, meaningful_depth,
 };
@@ -98,6 +98,11 @@ impl Transition {
     /// The transition in words.
     pub fn describe(&self) -> String {
         describe(&self.change)
+    }
+
+    /// The transition in the reader's language.
+    pub fn describe_in(&self, lang: kshana_rules::Lang) -> String {
+        describe_in(&self.change, lang)
     }
 
     /// How far the real sky's event may lie from this instant, in nanoseconds, from
@@ -221,6 +226,161 @@ pub fn describe(c: &Change) -> String {
         Change::Hora(l) => format!("{l} hora begins"),
         Change::Sunrise => "Sunrise".to_string(),
         Change::Sunset => "Sunset".to_string(),
+    }
+}
+
+/// [`describe`] in the reader's language. English is [`describe`] itself; Malayalam and
+/// Hindi name every planet, sign, star, tithi, karana and yoga as the almanacs print them.
+pub fn describe_in(c: &Change, lang: kshana_rules::Lang) -> String {
+    use kshana_rules::Lang;
+    use kshana_speak::lexicon::name;
+    if lang == Lang::En {
+        return describe(c);
+    }
+    let ml = lang == Lang::Ml;
+    let lord = |l: &DashaLord| name(&format!("{l:?}"), lang).to_string();
+    let star = |i: usize| name(NAKSHATRA_NAMES[i % 27], lang);
+    match c {
+        Change::Dasha { level, chain, .. } => {
+            let lords: Vec<String> = chain.iter().map(lord).collect();
+            let level = dasha::level_name_in(*level as usize, lang);
+            if ml {
+                format!("{level} തുടങ്ങുന്നു: {}", lords.join(" › "))
+            } else {
+                format!("{level} आरंभ: {}", lords.join(" › "))
+            }
+        }
+        Change::Enter {
+            body,
+            division,
+            index,
+            direct,
+        } => {
+            let body = name(body, lang);
+            let motion = match (ml, *direct) {
+                (true, true) => "പ്രവേശിക്കുന്നു",
+                (true, false) => "പിന്നോട്ട് കടക്കുന്നു",
+                (false, true) => "प्रवेश करता है",
+                (false, false) => "वापस लौटता है",
+            };
+            match division {
+                Division::Sign => {
+                    let sign = name(SIGN_NAMES[*index % 12], lang);
+                    if ml {
+                        format!("{body} {sign} രാശിയിൽ {motion}")
+                    } else {
+                        format!("{body} {sign} राशि में {motion}")
+                    }
+                }
+                Division::Nakshatra => {
+                    if ml {
+                        format!("{body} {} നക്ഷത്രത്തിൽ {motion}", star(*index))
+                    } else {
+                        format!("{body} {} नक्षत्र में {motion}", star(*index))
+                    }
+                }
+                Division::Pada => {
+                    let (s, p) = (star(*index / 4), index % 4 + 1);
+                    if ml {
+                        format!("{body} {s} {p}-ാം പാദത്തിൽ {motion}")
+                    } else {
+                        format!("{body} {s} के पाद {p} में {motion}")
+                    }
+                }
+                Division::Sub => {
+                    let t = sub_table();
+                    let s = t[*index % t.len()];
+                    let st = star(((s.start + 1e-6) / (360.0 / 27.0)).floor() as usize);
+                    if ml {
+                        format!(
+                            "{body} {st} നക്ഷത്രത്തിലെ {} ഉപഭാഗത്തിൽ {motion} (KP {})",
+                            lord(&s.sub),
+                            s.number
+                        )
+                    } else {
+                        format!(
+                            "{body} {st} नक्षत्र में {} के उप-भाग में {motion} (KP {})",
+                            lord(&s.sub),
+                            s.number
+                        )
+                    }
+                }
+                Division::SubSub => {
+                    let t = subsub_table();
+                    let s = t[*index % t.len()];
+                    if ml {
+                        format!(
+                            "{body} {} നക്ഷത്രാധിപന്റെ കീഴിൽ {} ഉപത്തിലെ {} ഉപ-ഉപഭാഗത്തിൽ {motion}",
+                            lord(&s.star),
+                            lord(&s.sub),
+                            lord(&s.subsub)
+                        )
+                    } else {
+                        format!(
+                            "{body} {} के नक्षत्र में {} के नीचे {} के उप-उप भाग में {motion}",
+                            lord(&s.star),
+                            lord(&s.sub),
+                            lord(&s.subsub)
+                        )
+                    }
+                }
+                Division::Tithi | Division::Karana | Division::Yoga => {
+                    let d = match division {
+                        Division::Tithi => lang.pick(["tithi", "തിഥി", "तिथि"]),
+                        Division::Karana => lang.pick(["karana", "കരണം", "करण"]),
+                        _ => lang.pick(["yoga", "യോഗം", "योग"]),
+                    };
+                    if ml {
+                        format!("{body} {d} {index}-ാം കളത്തിൽ {motion}")
+                    } else {
+                        format!("{body} {d} के {index}वें खाने में {motion}")
+                    }
+                }
+            }
+        }
+        Change::Tithi(n) => {
+            let n = (*n).clamp(1, 30);
+            let key = if n == 30 {
+                "Amavasya".to_string()
+            } else if n == 15 {
+                "Purnima".to_string()
+            } else {
+                let paksha = if n <= 15 { "Shukla" } else { "Krishna" };
+                format!("{paksha} {}", TITHI_NAMES[((n - 1) % 15) as usize])
+            };
+            let t = name(&key, lang).to_string();
+            if ml {
+                format!("{t} തുടങ്ങുന്നു")
+            } else {
+                format!("{t} आरंभ")
+            }
+        }
+        Change::Karana(k) => {
+            let k = name(karana_name(*k), lang);
+            if ml {
+                format!("{k} കരണം തുടങ്ങുന്നു")
+            } else {
+                format!("{k} करण आरंभ")
+            }
+        }
+        Change::Yoga(y) => {
+            let y = name(YOGA_NAMES[(*y as usize) % 27], lang);
+            if ml {
+                format!("{y} യോഗം തുടങ്ങുന്നു")
+            } else {
+                format!("{y} योग आरंभ")
+            }
+        }
+        Change::Hora(l) => {
+            let l = name(l, lang);
+            if ml {
+                format!("{l} ഹോര തുടങ്ങുന്നു")
+            } else {
+                format!("{l} होरा आरंभ")
+            }
+        }
+        Change::Sunrise => lang.pick(["Sunrise", "സൂര്യോദയം", "सूर्योदय"]).to_string(),
+        Change::Sunset => lang.pick(["Sunset", "സൂര്യാസ്തമയം", "सूर्यास्त"]).to_string(),
     }
 }
 

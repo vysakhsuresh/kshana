@@ -102,6 +102,132 @@ pub const WEEKDAY_LORDS: [&str; 7] = [
     "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn",
 ];
 
+/// The day clocks' own names in Malayalam and Hindi, `(English, ml, hi)`: the thirty
+/// muhurtas and their other names, the choghadiyas, the clock lagnas, the upagrahas, the
+/// Pancha Pakshi birds and what they do, the Moon's window labels and the nine taras.
+/// Mrityu, Mars's upagraha, is named by its father in Malayalam and Hindi, as the app never
+/// prints the word for death.
+const DAY_WORDS: &[(&str, &str, &str)] = &[
+    // Muhurtas (Muhurta Chintamani's thirty), and their other names.
+    ("Rudra", "രുദ്ര", "रुद्र"),
+    ("Ahi", "അഹി", "अहि"),
+    ("Mitra", "മിത്രം", "मित्र"),
+    ("Pitri", "പിതൃ", "पितृ"),
+    ("Vasu", "വസു", "वसु"),
+    ("Varaha", "വരാഹ", "वराह"),
+    ("Vishvedeva", "വിശ്വേദേവ", "विश्वेदेव"),
+    ("Vidhi", "വിധി", "विधि"),
+    ("Satamukhi", "ശതമുഖി", "शतमुखी"),
+    ("Puruhuta", "പുരുഹൂത", "पुरुहूत"),
+    ("Vahini", "വാഹിനി", "वाहिनी"),
+    ("Naktanakara", "നക്തനകര", "नक्तनकर"),
+    ("Varuna", "വരുണ", "वरुण"),
+    ("Aryaman", "അര്യമാവ്", "अर्यमा"),
+    ("Bhaga", "ഭഗ", "भग"),
+    ("Girisha", "ഗിരീശ", "गिरीश"),
+    ("Ajapada", "അജപാദ", "अजपाद"),
+    ("Ahirbudhnya", "അഹിർബുധ്ന്യ", "अहिर्बुध्न्य"),
+    ("Pushya", "പുഷ്യ", "पुष्य"),
+    ("Ashwini", "അശ്വിനി", "अश्विनी"),
+    ("Yama", "യമ", "यम"),
+    ("Agni", "അഗ്നി", "अग्नि"),
+    ("Vidhatri", "വിധാതൃ", "विधातृ"),
+    ("Kanda", "കണ്ഡ", "कण्ड"),
+    ("Aditi", "അദിതി", "अदिति"),
+    ("Jiva", "ജീവ", "जीव"),
+    ("Vishnu", "വിഷ്ണു", "विष्णु"),
+    ("Dyumadgadyuti", "ദ്യുമദ്ഗദ്യുതി", "द्युमद्गद्युति"),
+    ("Brahma", "ബ്രഹ്മ", "ब्रह्मा"),
+    ("Samudram", "സമുദ്രം", "समुद्र"),
+    ("Abhijit", "അഭിജിത്", "अभिजित्"),
+    ("Amrita", "അമൃത", "अमृत"),
+    ("Yumigadyuti", "യുമിഗദ്യുതി", "युमिगद्युति"),
+    // Choghadiyas.
+    ("Udveg", "ഉദ്വേഗ", "उद्वेग"),
+    ("Chal", "ചല", "चल"),
+    ("Labh", "ലാഭ", "लाभ"),
+    ("Amrit", "അമൃത്", "अमृत"),
+    ("Kaal", "കാല", "काल"),
+    ("Shubh", "ശുഭ", "शुभ"),
+    ("Rog", "രോഗ", "रोग"),
+    // Clock lagnas.
+    ("Bhava lagna", "ഭാവലഗ്നം", "भाव लग्न"),
+    ("Hora lagna", "ഹോരാലഗ്നം", "होरा लग्न"),
+    ("Ghati lagna", "ഘടികാലഗ്നം", "घटी लग्न"),
+    ("Vighati lagna", "വിഘടികാലഗ്നം", "विघटी लग्न"),
+    ("Pranapada", "പ്രാണപദം", "प्राणपद"),
+    ("Sree lagna", "ശ്രീലഗ്നം", "श्री लग्न"),
+    // Upagrahas, and where in its part each is taken.
+    ("Kala", "കാലൻ", "काल"),
+    ("Mrityu", "കുജോപഗ്രഹം", "मंगल उपग्रह"),
+    ("Ardhaprahara", "അർധപ്രഹരൻ", "अर्धप्रहर"),
+    ("Yamaghantaka", "യമകണ്ടകൻ", "यमघंटक"),
+    ("Gulika", "ഗുളികൻ", "गुलिक"),
+    ("Mandi", "മാന്ദി", "मांदि"),
+    ("Dhuma", "ധൂമം", "धूम"),
+    ("Vyatipata", "വ്യതീപാതം", "व्यतीपात"),
+    ("Parivesha", "പരിവേഷം", "परिवेश"),
+    ("Indrachapa", "ഇന്ദ്രചാപം", "इंद्रचाप"),
+    ("Upaketu", "ഉപകേതു", "उपकेतु"),
+    ("Start", "ആരംഭം", "आरंभ"),
+    ("Middle", "മധ്യം", "मध्य"),
+    ("End", "അവസാനം", "अंत"),
+    // Pancha Pakshi.
+    ("Vulture", "കഴുകൻ", "गिद्ध"),
+    ("Owl", "മൂങ്ങ", "उल्लू"),
+    ("Crow", "കാക്ക", "कौआ"),
+    ("Cock", "കോഴി", "मुर्गा"),
+    ("Peacock", "മയിൽ", "मोर"),
+    ("Ruling", "ഭരണം", "शासन"),
+    ("Eating", "ഭക്ഷണം", "भोजन"),
+    ("Walking", "നടത്തം", "चलना"),
+    ("Sleeping", "ഉറക്കം", "निद्रा"),
+    ("Fading", "ക്ഷയം", "क्षय"),
+    // The Moon's windows.
+    ("Cancer–Leo gandanta", "കർക്കടകം–ചിങ്ങം ഗണ്ഡാന്തം", "कर्क–सिंह गंडांत"),
+    ("Scorpio–Sagittarius gandanta", "വൃശ്ചികം–ധനു ഗണ്ഡാന്തം", "वृश्चिक–धनु गंडांत"),
+    ("Pisces–Aries gandanta", "മീനം–മേടം ഗണ്ഡാന്തം", "मीन–मेष गंडांत"),
+    ("Panchaka", "പഞ്ചകം", "पंचक"),
+    ("Vishti (Bhadra)", "വിഷ്ടി (ഭദ്ര)", "विष्टि (भद्रा)"),
+    // The nine taras.
+    ("Janma", "ജന്മ", "जन्म"),
+    ("Sampat", "സമ്പത്ത്", "संपत्"),
+    ("Vipat", "വിപത്ത്", "विपत्"),
+    ("Kshema", "ക്ഷേമം", "क्षेम"),
+    ("Pratyak", "പ്രത്യക്", "प्रत्यक्"),
+    ("Sadhana", "സാധന", "साधना"),
+    ("Naidhana", "നൈധനം", "नैधन"),
+    ("Parama Mitra", "പരമമിത്രം", "परम मित्र"),
+];
+
+/// A name the day's clocks print, in the reader's language: a muhurta, choghadiya,
+/// clock lagna, upagraha, bird, activity, Moon window, tara or Chandra bala label; planet,
+/// sign, star and yoga names go through the lexicon. English, and anything unknown, comes
+/// back unchanged.
+pub fn word_in(key: &str, lang: kshana_rules::Lang) -> String {
+    use kshana_rules::Lang;
+    if lang == Lang::En {
+        return key.to_string();
+    }
+    if let Some((_, ml, hi)) = DAY_WORDS.iter().find(|(k, _, _)| *k == key) {
+        return lang.pick([key, ml, hi]).to_string();
+    }
+    if let Some(i) = windows::CHANDRA_LABELS.iter().position(|l| *l == key) {
+        let n = i + 1;
+        return match (lang, n) {
+            (Lang::Ml, 8) => "ചന്ദ്രാഷ്ടമം: ജന്മചന്ദ്രനിൽ നിന്ന് 8-ാം രാശിയിൽ ചന്ദ്രൻ".to_string(),
+            (Lang::Hi, 8) => "चंद्राष्टम: जन्म चंद्र से 8वीं राशि में चंद्र".to_string(),
+            (Lang::Ml, _) => format!("ജന്മചന്ദ്രനിൽ നിന്ന് {n}-ാം രാശിയിൽ ചന്ദ്രൻ"),
+            (_, 2) => "जन्म चंद्र से दूसरी राशि में चंद्र".to_string(),
+            (_, 3) => "जन्म चंद्र से तीसरी राशि में चंद्र".to_string(),
+            (_, 4) => "जन्म चंद्र से चौथी राशि में चंद्र".to_string(),
+            (_, 1) => "जन्म चंद्र की ही राशि में चंद्र".to_string(),
+            _ => format!("जन्म चंद्र से {n}वीं राशि में चंद्र"),
+        };
+    }
+    kshana_speak::lexicon::names_in(key, lang)
+}
+
 /// Weekday (0 = Sunday) of the solar day: the local civil date at its sunrise, the
 /// local offset taken from the observer's longitude (the same rule as
 /// `kshana_events::vara_name`).

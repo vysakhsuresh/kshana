@@ -3,6 +3,7 @@
 use kshana_sky::Observer;
 use kshana_time::Instant;
 use kshana_trace::{Change, Division, Person, TraceOptions};
+use kshana_rules::Lang;
 use kshana_vedic::dasha::YEAR_365_25_NS;
 
 use crate::{AyanamsaChoice, Engine, ExactInstant, KshanaError};
@@ -98,8 +99,9 @@ pub struct SnapshotRecord {
 }
 
 /// A transition as the app receives it.
-fn transition_record(x: kshana_trace::Transition) -> TransitionRecord {
-    let words = x.describe();
+fn transition_record(x: kshana_trace::Transition, lang: Lang) -> TransitionRecord {
+    let words = x.describe_in(lang);
+    let name = |s: &str| kshana_speak::lexicon::name(s, lang).to_string();
     let physical_ns = x.physical_uncertainty_ns().min(i64::MAX as i128) as i64;
     let mut r = TransitionRecord {
         at: x.at.into(),
@@ -124,7 +126,7 @@ fn transition_record(x: kshana_trace::Transition) -> TransitionRecord {
         } => {
             r.kind = "dasha".into();
             r.level = level;
-            r.chain = chain.iter().map(|l| format!("{l:?}")).collect();
+            r.chain = chain.iter().map(|l| name(&format!("{l:?}"))).collect();
             r.until = Some(until.into());
         }
         Change::Enter {
@@ -153,7 +155,7 @@ fn transition_record(x: kshana_trace::Transition) -> TransitionRecord {
         }
         Change::Hora(l) => {
             r.kind = "hora".into();
-            r.lord = l.into();
+            r.lord = name(l);
         }
         Change::Sunrise => r.kind = "sunrise".into(),
         Change::Sunset => r.kind = "sunset".into(),
@@ -201,7 +203,9 @@ impl Engine {
         panchanga: bool,
         horas: bool,
         lagna_finest: Finest,
+        lang: String,
     ) -> Result<Vec<TransitionRecord>, KshanaError> {
+        let lang = Lang::parse(&lang);
         let who = person(birth, moon_sidereal, latitude_deg, longitude_deg, ayanamsa);
         let (from_i, to_i) = self.clip_to_kernel(from.into(), to.into())?;
         if to_i.ns_since(from_i) > 400 * 86_400 * 1_000_000_000 {
@@ -219,7 +223,7 @@ impl Engine {
         };
         let t = kshana_trace::trace(&self.spk, self.eop.as_ref(), &who, from_i, to_i, opts)
             .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
-        Ok(t.into_iter().map(transition_record).collect())
+        Ok(t.into_iter().map(|x| transition_record(x, lang)).collect())
     }
 
     /// Everything running at `at` for a person, dasha chain to `depth` (1–9).
@@ -233,7 +237,10 @@ impl Engine {
         ayanamsa: AyanamsaChoice,
         at: ExactInstant,
         depth: u8,
+        lang: String,
     ) -> Result<SnapshotRecord, KshanaError> {
+        let lang = Lang::parse(&lang);
+        let name = |s: &str| kshana_speak::lexicon::name(s, lang).to_string();
         let who = person(birth, moon_sidereal, latitude_deg, longitude_deg, ayanamsa);
         let s = kshana_trace::snapshot(
             &self.spk,
@@ -244,7 +251,7 @@ impl Engine {
         )
         .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
         Ok(SnapshotRecord {
-            dasha_lords: s.dashas.iter().map(|p| format!("{:?}", p.lord)).collect(),
+            dasha_lords: s.dashas.iter().map(|p| name(&format!("{:?}", p.lord))).collect(),
             dasha_starts: s.dashas.iter().map(|p| p.start.into()).collect(),
             dasha_ends: s.dashas.iter().map(|p| p.end.into()).collect(),
             grahas: s
@@ -257,10 +264,10 @@ impl Engine {
                     nakshatra: g.nakshatra as u8,
                     pada: g.pada,
                     sub_index: g.sub.0 as u16,
-                    star_lord: format!("{:?}", g.sub.1),
-                    sub_lord: format!("{:?}", g.sub.2),
+                    star_lord: name(&format!("{:?}", g.sub.1)),
+                    sub_lord: name(&format!("{:?}", g.sub.2)),
                     subsub_index: g.subsub.0 as u16,
-                    subsub_lord: format!("{:?}", g.subsub.1),
+                    subsub_lord: name(&format!("{:?}", g.subsub.1)),
                     direct: g.direct,
                 })
                 .collect(),
@@ -268,7 +275,7 @@ impl Engine {
             tithi_fraction: s.tithi.1,
             karana: s.karana,
             yoga: s.yoga,
-            hora_lord: s.hora.map(|h| h.0.to_string()),
+            hora_lord: s.hora.map(|h| name(h.0)),
             hora_start: s.hora.map(|h| h.1.into()),
             hora_end: s.hora.map(|h| h.2.into()),
         })
@@ -363,7 +370,7 @@ impl Engine {
                 return Ok(t
                     .into_iter()
                     .take(count as usize)
-                    .map(transition_record)
+                    .map(|x| transition_record(x, Lang::En))
                     .collect());
             }
         }
@@ -431,7 +438,9 @@ pub fn dasha_sensitivity(
     moon_sidereal: f64,
     moon_speed_deg_per_day: f64,
     half_window_seconds: f64,
+    lang: String,
 ) -> DashaSensitivityRecord {
+    let lang = Lang::parse(&lang);
     let years = kshana_trace::first_lord_years(moon_sidereal);
     let per_s =
         kshana_trace::dasha_shift_per_second_ns(moon_speed_deg_per_day, years, YEAR_365_25_NS)
@@ -444,27 +453,79 @@ pub fn dasha_sensitivity(
         half_window_seconds,
         YEAR_365_25_NS,
     );
-    let human = if shift >= 86_400.0 * 2.0 {
-        format!("{:.0} days", shift / 86_400.0)
-    } else if shift >= 7_200.0 {
-        format!("{:.1} hours", shift / 3_600.0)
-    } else {
-        format!("{:.0} minutes", shift / 60.0)
+    let human = match lang {
+        Lang::En => {
+            if shift >= 86_400.0 * 2.0 {
+                format!("{:.0} days", shift / 86_400.0)
+            } else if shift >= 7_200.0 {
+                format!("{:.1} hours", shift / 3_600.0)
+            } else {
+                format!("{:.0} minutes", shift / 60.0)
+            }
+        }
+        Lang::Ml => {
+            if shift >= 86_400.0 * 2.0 {
+                format!("{:.0} ദിവസം", shift / 86_400.0)
+            } else if shift >= 7_200.0 {
+                format!("{:.1} മണിക്കൂർ", shift / 3_600.0)
+            } else {
+                format!("{:.0} മിനിറ്റ്", shift / 60.0)
+            }
+        }
+        Lang::Hi => {
+            if shift >= 86_400.0 * 2.0 {
+                format!("{:.0} दिन", shift / 86_400.0)
+            } else if shift >= 7_200.0 {
+                format!("{:.1} घंटे", shift / 3_600.0)
+            } else {
+                format!("{:.0} मिनट", shift / 60.0)
+            }
+        }
     };
+    let window = match (lang, half_window_seconds >= 3_600.0) {
+        (Lang::En, true) => format!("{:.0} h", half_window_seconds / 3_600.0),
+        (Lang::En, false) => format!("{:.0} min", half_window_seconds / 60.0),
+        (Lang::Ml, true) => format!("{:.0} മണിക്കൂർ", half_window_seconds / 3_600.0),
+        (Lang::Ml, false) => format!("{:.0} മിനിറ്റ്", half_window_seconds / 60.0),
+        (Lang::Hi, true) => format!("{:.0} घंटे", half_window_seconds / 3_600.0),
+        (Lang::Hi, false) => format!("{:.0} मिनट", half_window_seconds / 60.0),
+    };
+    let level = kshana_trace::level_name_in((depth as usize).clamp(1, 9), lang);
     DashaSensitivityRecord {
         shift_seconds_per_second: per_s,
         shift_seconds: shift,
         meaningful_depth: depth,
         words: if half_window_seconds <= 0.0 {
-            "Your birth time is exact, so every dasha level down to minutes stands.".to_string()
+            lang.pick([
+                "Your birth time is exact, so every dasha level down to minutes stands.",
+                "നിങ്ങളുടെ ജനനസമയം കൃത്യമാണ്, അതിനാൽ മിനിറ്റുകൾ വരെയുള്ള എല്ലാ ദശാതലങ്ങളും ഉറച്ചുനിൽക്കുന്നു.",
+                "आपका जन्म समय सटीक है, इसलिए मिनटों तक की हर दशा का स्तर टिका रहता है।",
+            ])
+            .to_string()
         } else {
-            format!(
-                "Each second of birth-time error moves every dasha boundary by about {:.0} hours; your window of ±{} moves them by ±{}, so levels below {} are shown greyed.",
-                per_s / 3_600.0,
-                if half_window_seconds >= 3_600.0 { format!("{:.0} h", half_window_seconds / 3_600.0) } else { format!("{:.0} min", half_window_seconds / 60.0) },
-                human,
-                kshana_trace::LEVEL_NAMES[(depth as usize).clamp(1, 9) - 1]
-            )
+            match lang {
+                Lang::En => format!(
+                    "Each second of birth-time error moves every dasha boundary by about {:.0} hours; your window of ±{} moves them by ±{}, so levels below {} are shown greyed.",
+                    per_s / 3_600.0,
+                    window,
+                    human,
+                    level
+                ),
+                Lang::Ml => format!(
+                    "ജനനസമയത്തിലെ ഓരോ സെക്കൻഡ് പിഴവും എല്ലാ ദശാ അതിരുകളെയും ഏകദേശം {:.0} മണിക്കൂർ നീക്കുന്നു; നിങ്ങളുടെ ±{} ഇടവേള അവയെ ±{} നീക്കുന്നു, അതിനാൽ {} എന്നതിനു താഴെയുള്ള തലങ്ങൾ മങ്ങിച്ചു കാണിക്കുന്നു.",
+                    per_s / 3_600.0,
+                    window,
+                    human,
+                    level
+                ),
+                Lang::Hi => format!(
+                    "जन्म समय की हर सेकंड की चूक हर दशा सीमा को लगभग {:.0} घंटे खिसकाती है; आपकी ±{} की खिड़की उन्हें ±{} खिसकाती है, इसलिए {} से नीचे के स्तर धुंधले दिखाए गए हैं।",
+                    per_s / 3_600.0,
+                    window,
+                    human,
+                    level
+                ),
+            }
         },
     }
 }
@@ -499,10 +560,10 @@ pub fn rise_convention() -> String {
 
 /// Names of the dasha levels, 1-based.
 #[uniffi::export]
-pub fn dasha_level_names() -> Vec<String> {
-    kshana_trace::LEVEL_NAMES
-        .iter()
-        .map(|s| s.to_string())
+pub fn dasha_level_names(lang: String) -> Vec<String> {
+    let lang = Lang::parse(&lang);
+    (1..=kshana_trace::LEVEL_NAMES.len())
+        .map(|i| kshana_trace::level_name_in(i, lang).to_string())
         .collect()
 }
 
@@ -548,6 +609,7 @@ mod tests {
                 true,
                 true,
                 Finest::Nakshatra,
+                "ml".into(),
             )
             .unwrap();
         assert!(t.len() > 100);
@@ -579,7 +641,7 @@ mod tests {
         assert!(
             cov.start.tai_seconds < birth.tai_seconds && cov.end.tai_seconds > from.tai_seconds
         );
-        assert_eq!(dasha_sensitivity(20.0, 13.2, 300.0).meaningful_depth, 3);
+        assert_eq!(dasha_sensitivity(20.0, 13.2, 300.0, "hi".into()).meaningful_depth, 3);
         assert!(t.iter().all(|x| !x.words.is_empty() && !x.kind.is_empty()));
         let s = engine
             .snapshot(
@@ -590,10 +652,11 @@ mod tests {
                 AyanamsaChoice::Lahiri,
                 from,
                 9,
+                "hi".into(),
             )
             .unwrap();
         assert_eq!(s.dasha_lords.len(), 9);
         assert_eq!(s.grahas.len(), 10);
-        assert_eq!(dasha_level_names().len(), 9);
+        assert_eq!(dasha_level_names("ml".into()).len(), 9);
     }
 }

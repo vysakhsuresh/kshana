@@ -103,6 +103,25 @@ pub const LUNATION_PHASES: [&str; 8] = [
     "Balsamic",
 ];
 
+/// A lunation phase from [`LUNATION_PHASES`] in the reader's language; other text comes
+/// back unchanged.
+pub fn lunation_phase_in(phase: &str, lang: kshana_rules::Lang) -> &str {
+    const WORDS: [[&str; 3]; 8] = [
+        ["New", "അമാവാസി", "नव चंद्र"],
+        ["Crescent", "വളരുന്ന ചന്ദ്രക്കല", "बढ़ती कला"],
+        ["First Quarter", "അർധചന്ദ്രൻ (വളരുന്ന)", "प्रथम चतुर्थांश"],
+        ["Gibbous", "വളർന്ന ചന്ദ്രൻ", "उभरा चंद्र"],
+        ["Full", "പൗർണമി", "पूर्ण चंद्र"],
+        ["Disseminating", "കുറഞ്ഞുതുടങ്ങിയ ചന്ദ്രൻ", "प्रसारी चंद्र"],
+        ["Last Quarter", "അർധചന്ദ്രൻ (കുറയുന്ന)", "अंतिम चतुर्थांश"],
+        ["Balsamic", "അവസാന ചന്ദ്രക്കല", "क्षीण कला"],
+    ];
+    WORDS
+        .iter()
+        .find(|w| w[0] == phase)
+        .map_or(phase, |w| lang.pick(*w))
+}
+
 /// Phase name for a Moon − Sun elongation in degrees.
 pub fn lunation_phase_name(phase_deg: f64) -> &'static str {
     LUNATION_PHASES[((phase_deg.rem_euclid(360.0) / 45.0).floor() as usize).min(7)]

@@ -567,6 +567,7 @@ fn main() {
             &input.observer,
             Ayanamsa::Lahiri,
             year,
+            kshana_rules::Lang::En,
         )
         .unwrap_or_else(|e| {
             eprintln!("varsha: {e:?}");

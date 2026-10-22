@@ -34,6 +34,7 @@ pub struct YearLordCandidateRecord {
 #[allow(missing_docs)]
 pub struct SahamRecord {
     pub name: String,
+    pub key: String,
     pub longitude: f64,
     pub house: u8,
     pub meaning: String,
@@ -110,7 +111,9 @@ impl Engine {
         year: i64,
         here_latitude_deg: f64,
         here_longitude_deg: f64,
+        lang: String,
     ) -> Result<VarshaphalaRecord, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let natal = natal_chart(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let obs = Observer {
             latitude_deg: here_latitude_deg,
@@ -124,9 +127,10 @@ impl Engine {
             &obs,
             ayanamsa.into(),
             year,
+            lang,
         )
         .map_err(|e| KshanaError::Engine(format!("{e:?}")))?;
-        let g = |l: kshana_vedic::DashaLord| format!("{l:?}");
+        let g = |l: kshana_vedic::DashaLord| kshana_speak::lexicon::graha(l, lang).to_string();
         Ok(VarshaphalaRecord {
             year: v.year,
             age: v.age,
@@ -140,7 +144,7 @@ impl Engine {
                 .bodies
                 .iter()
                 .map(|b| AnnualBodyRecord {
-                    name: b.name.to_string(),
+                    name: kshana_speak::lexicon::name(b.name, lang).to_string(),
                     sidereal: b.sidereal,
                     house: b.house,
                     speed: b.speed,
@@ -169,7 +173,7 @@ impl Engine {
                 .iter()
                 .map(|c| YearLordCandidateRecord {
                     lord: g(c.lord),
-                    offices: c.offices.iter().map(|o| o.name().to_string()).collect(),
+                    offices: c.offices.iter().map(|o| o.name_in(lang).to_string()).collect(),
                     vishwa: c.vishwa,
                     aspects_lagna: c.aspects_lagna,
                 })
@@ -180,10 +184,11 @@ impl Engine {
                 .sahams
                 .iter()
                 .map(|s| SahamRecord {
-                    name: s.name.to_string(),
+                    name: kshana_tajika::saham_in(s.name, lang).0.to_string(),
+                    key: s.name.to_string(),
                     longitude: s.longitude,
                     house: s.house,
-                    meaning: s.meaning.to_string(),
+                    meaning: kshana_tajika::saham_in(s.name, lang).1.to_string(),
                 })
                 .collect(),
             yogas: v
@@ -244,6 +249,7 @@ mod tests {
                 2026,
                 12.97,
                 77.59,
+                "en".into(),
             )
             .unwrap();
         assert_eq!(v.age, 36);

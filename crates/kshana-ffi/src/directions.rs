@@ -12,6 +12,7 @@ use kshana_ephem::Body;
 use kshana_sky::{apparent, Observer};
 use kshana_time::{Instant, NS_PER_DAY};
 use kshana_western::{Aspect, Sign};
+use kshana_rules::Lang;
 
 use crate::life::natal_chart;
 use crate::{AyanamsaChoice, Engine, ExactInstant, KshanaError};
@@ -24,6 +25,7 @@ const TRANSIT_MAX_DAYS: i128 = 800;
 #[allow(missing_docs)]
 pub struct ProgressedBodyRecord {
     pub name: String,
+    pub key: String,
     /// Progressed tropical longitude of date, degrees.
     pub longitude: f64,
     /// Degrees per ephemeris day, which is degrees per year of life.
@@ -153,8 +155,12 @@ fn major_aspects() -> Vec<Aspect> {
         .collect()
 }
 
-fn sign_name(s: Sign) -> String {
-    format!("{s:?}")
+fn sign_name(s: Sign, lang: Lang) -> String {
+    kshana_speak::lexicon::name(&format!("{s:?}"), lang).to_string()
+}
+
+fn point_name(n: &str, lang: Lang) -> String {
+    kshana_speak::lexicon::name(n, lang).to_string()
 }
 
 #[uniffi::export]
@@ -168,7 +174,9 @@ impl Engine {
         longitude_deg: f64,
         ayanamsa: AyanamsaChoice,
         at: ExactInstant,
+        lang: String,
     ) -> Result<ProgressedRecord, KshanaError> {
+        let lang = Lang::parse(&lang);
         let natal = natal_chart(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let p = progressions(&self.spk, &natal, latitude_deg, at.into()).map_err(err)?;
         Ok(ProgressedRecord {
@@ -177,7 +185,8 @@ impl Engine {
                 .bodies
                 .iter()
                 .map(|b| ProgressedBodyRecord {
-                    name: b.name.to_string(),
+                    name: point_name(b.name, lang),
+                    key: b.name.to_string(),
                     longitude: b.longitude,
                     speed: b.speed,
                 })
@@ -186,7 +195,7 @@ impl Engine {
             mc: p.mc,
             asc: p.asc,
             moon_phase_deg: p.moon_phase_deg,
-            lunation_phase: p.lunation_phase.to_string(),
+            lunation_phase: kshana_directions::lunation_phase_in(p.lunation_phase, lang).to_string(),
         })
     }
 
@@ -201,7 +210,9 @@ impl Engine {
         ayanamsa: AyanamsaChoice,
         from: ExactInstant,
         to: ExactInstant,
+        lang: String,
     ) -> Result<Vec<DirectionHitRecord>, KshanaError> {
+        let lang = Lang::parse(&lang);
         let natal = natal_chart(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let from_i = Instant::from(from).max(natal.instant);
         let to_i: Instant = to.into();
@@ -227,9 +238,9 @@ impl Engine {
                         out.push(DirectionHitRecord {
                             at: t.into(),
                             kind: "progressed".into(),
-                            moving: name.into(),
-                            natal: p.name.into(),
-                            aspect: aspect.name().into(),
+                            moving: point_name(name, lang),
+                            natal: point_name(p.name, lang),
+                            aspect: kshana_speak::lexicon::aspect(aspect, lang).into(),
                             retrograde: Some(speed < 0.0),
                         });
                     }
@@ -240,9 +251,9 @@ impl Engine {
             out.push(DirectionHitRecord {
                 at: h.at.into(),
                 kind: "solar_arc".into(),
-                moving: h.directed.into(),
-                natal: h.natal.into(),
-                aspect: h.aspect.name().into(),
+                moving: point_name(h.directed, lang),
+                natal: point_name(h.natal, lang),
+                aspect: kshana_speak::lexicon::aspect(h.aspect, lang).into(),
                 retrograde: None,
             });
         }
@@ -259,18 +270,20 @@ impl Engine {
         longitude_deg: f64,
         ayanamsa: AyanamsaChoice,
         at: ExactInstant,
+        lang: String,
     ) -> Result<ProfectionRecord, KshanaError> {
+        let lang = Lang::parse(&lang);
         let natal = natal_chart(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let p = profections(&self.spk, &natal, at.into()).map_err(err)?;
         Ok(ProfectionRecord {
             age: p.age,
-            year_sign: sign_name(p.year_sign),
-            year_lord: format!("{:?}", p.year_lord),
+            year_sign: sign_name(p.year_sign, lang),
+            year_lord: point_name(&format!("{:?}", p.year_lord), lang),
             year_start: p.year_start.into(),
             year_end: p.year_end.into(),
             month: p.month,
-            month_sign: sign_name(p.month_sign),
-            month_lord: format!("{:?}", p.month_lord),
+            month_sign: sign_name(p.month_sign, lang),
+            month_lord: point_name(&format!("{:?}", p.month_lord), lang),
             month_start: p.month_start.into(),
             month_end: p.month_end.into(),
         })
@@ -286,15 +299,17 @@ impl Engine {
         latitude_deg: f64,
         longitude_deg: f64,
         ayanamsa: AyanamsaChoice,
+        lang: String,
     ) -> Result<Vec<FirdariaRecord>, KshanaError> {
+        let lang = Lang::parse(&lang);
         let _ = ayanamsa;
         let obs = observer(latitude_deg, longitude_deg);
         let is_day = is_day_at(&self.spk, self.eop.as_ref(), &obs, birth.into()).map_err(err)?;
         Ok(firdaria(birth.into(), is_day)
             .into_iter()
             .map(|p| FirdariaRecord {
-                lord: p.lord.name().to_string(),
-                sub: p.sub.map(|s| s.name().to_string()),
+                lord: p.lord.name_in(lang).to_string(),
+                sub: p.sub.map(|s| s.name_in(lang).to_string()),
                 start: p.start.into(),
                 end: p.end.into(),
             })
@@ -316,7 +331,9 @@ impl Engine {
         lot: String,
         levels: u8,
         until: ExactInstant,
+        lang: String,
     ) -> Result<Vec<ZrRecord>, KshanaError> {
+        let lang = Lang::parse(&lang);
         let natal = natal_chart(self, birth, latitude_deg, longitude_deg, ayanamsa)?;
         let obs = observer(latitude_deg, longitude_deg);
         let is_day = is_day_at(&self.spk, self.eop.as_ref(), &obs, natal.instant).map_err(err)?;
@@ -345,7 +362,7 @@ impl Engine {
         .into_iter()
         .map(|p| ZrRecord {
             level: p.level,
-            sign: sign_name(p.sign),
+            sign: sign_name(p.sign, lang),
             start: p.start.into(),
             end: p.end.into(),
             loosing: p.loosing,
@@ -462,7 +479,7 @@ mod tests {
         let at = u(2026, 10, 16, 0, 0);
 
         // progressions: about 36 years, so about 36 days and 36 degrees of arc
-        let pr = engine.progressions(birth, lat, lon, ay, at).unwrap();
+        let pr = engine.progressions(birth, lat, lon, ay, at, "en".into()).unwrap();
         assert_eq!(pr.bodies.len(), 10);
         assert_eq!(pr.bodies[0].name, "Sun");
         let days = (pr.instant.tai_seconds - birth.tai_seconds) as f64 / 86_400.0;
@@ -481,6 +498,7 @@ mod tests {
                 ay,
                 u(2024, 1, 1, 0, 0),
                 u(2027, 1, 1, 0, 0),
+                "en".into(),
             )
             .unwrap();
         assert!(!hits.is_empty());
@@ -497,7 +515,7 @@ mod tests {
             .all(|h| !h.natal.is_empty() && !h.aspect.is_empty()));
 
         // profections: the 36th birthday is 2026-10-29, so still age 35 in mid October
-        let pf = engine.profections(birth, lat, lon, ay, at).unwrap();
+        let pf = engine.profections(birth, lat, lon, ay, at, "ml".into()).unwrap();
         assert!((35..=36).contains(&pf.age), "{}", pf.age);
         assert!(pf.month <= 11);
         assert!(key(pf.year_start) <= key(at) && key(at) < key(pf.year_end));
@@ -506,7 +524,7 @@ mod tests {
         assert!(!pf.month_sign.is_empty() && !pf.month_lord.is_empty());
 
         // firdaria: a day birth, 51 contiguous periods
-        let f = engine.firdaria(birth, lat, lon, ay).unwrap();
+        let f = engine.firdaria(birth, lat, lon, ay, "en".into()).unwrap();
         assert_eq!(f.len(), 51);
         assert_eq!(f[0].lord, "Sun");
         assert_eq!(f[0].sub.as_deref(), Some("Sun"));
@@ -517,7 +535,7 @@ mod tests {
         // zodiacal releasing from both lots
         let until = u(2030, 1, 1, 0, 0);
         let zr = engine
-            .zodiacal_releasing(birth, lat, lon, ay, "fortune".into(), 2, until)
+            .zodiacal_releasing(birth, lat, lon, ay, "fortune".into(), 2, until, "en".into())
             .unwrap();
         assert!(zr.iter().any(|p| p.level == 1));
         assert!(zr.iter().any(|p| p.level == 2));
@@ -527,11 +545,11 @@ mod tests {
         assert!(l1.windows(2).all(|w| key(w[0].end) == key(w[1].start)));
         assert!(l1[0].peak);
         let spirit = engine
-            .zodiacal_releasing(birth, lat, lon, ay, "spirit".into(), 1, until)
+            .zodiacal_releasing(birth, lat, lon, ay, "spirit".into(), 1, until, "hi".into())
             .unwrap();
         assert!(!spirit.is_empty());
         assert!(engine
-            .zodiacal_releasing(birth, lat, lon, ay, "fate".into(), 1, until)
+            .zodiacal_releasing(birth, lat, lon, ay, "fate".into(), 1, until, "en".into())
             .is_err());
 
         // lunar returns: three or four in a hundred days

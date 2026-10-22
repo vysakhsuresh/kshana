@@ -143,9 +143,9 @@ fun DayScreen(profile: BirthProfile?, here: Place, settings: EngineSettings, onB
     var error by remember { mutableStateOf<String?>(null) }
 
     // The natal Moon and the bird of birth, once per person.
-    var natalMoon by remember(profile, settings) { mutableStateOf<Double?>(null) }
-    var bird by remember(profile, settings) { mutableStateOf<String?>(null) }
-    LaunchedEffect(profile, settings) {
+    var natalMoon by remember(profile, settings, com.kshana.app.data.Lang.code) { mutableStateOf<Double?>(null) }
+    var bird by remember(profile, settings, com.kshana.app.data.Lang.code) { mutableStateOf<String?>(null) }
+    LaunchedEffect(profile, settings, com.kshana.app.data.Lang.code) {
         if (profile == null) return@LaunchedEffect
         try {
             val engine = EngineProvider.get(context)
@@ -154,7 +154,7 @@ fun DayScreen(profile: BirthProfile?, here: Place, settings: EngineSettings, onB
             }
             val moon = chart.panchanga.moonSidereal
             natalMoon = moon
-            bird = birthBird(moon, chart.panchanga.tithiNumber.toInt() <= 15)
+            bird = birthBird(moon, chart.panchanga.tithiNumber.toInt() <= 15, com.kshana.app.data.Lang.code)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -163,19 +163,19 @@ fun DayScreen(profile: BirthProfile?, here: Place, settings: EngineSettings, onB
     }
 
     // The day's clocks, solved once per day and kept. Today is solved at now; another day at its noon.
-    val cache = remember(here, settings, profile) { mutableStateMapOf<LocalDate, DaySolve>() }
+    val cache = remember(here, settings, profile, com.kshana.app.data.Lang.code) { mutableStateMapOf<LocalDate, DaySolve>() }
     val solve = cache[date]
     val stale = isToday && solve != null && nowState.value >= millisOf(solve.clock.nextSunrise)
-    LaunchedEffect(date, here, settings, profile, stale) {
+    LaunchedEffect(date, here, settings, profile, stale, com.kshana.app.data.Lang.code) {
         if (stale) cache.remove(date)
         if (cache.containsKey(date)) return@LaunchedEffect
         try {
             val engine = EngineProvider.get(context)
             val at = if (date == today) Instants.now() else Instants.fromInstant(date.atTime(12, 0).atZone(zone).toInstant())
             val solved = withContext(Dispatchers.Default) {
-                val clock = engine.dayClock(at, here.latitude, here.longitude, settings.ayanamsa)
+                val clock = engine.dayClock(at, here.latitude, here.longitude, settings.ayanamsa, com.kshana.app.data.Lang.code)
                 val birds = if (profile == null) emptyList() else runCatching {
-                    engine.panchaPakshi(profile.birthInstant(), settings.ayanamsa, at, here.latitude, here.longitude)
+                    engine.panchaPakshi(profile.birthInstant(), settings.ayanamsa, at, here.latitude, here.longitude, com.kshana.app.data.Lang.code)
                 }.getOrDefault(emptyList())
                 DaySolve(clock, birds)
             }
@@ -191,7 +191,7 @@ fun DayScreen(profile: BirthProfile?, here: Place, settings: EngineSettings, onB
     // The Moon's windows for the month from today, one kind at a time, kept per kind.
     var moonKind by remember { mutableStateOf(MoonKind.Gandanta) }
     var moonError by remember { mutableStateOf<String?>(null) }
-    val moonCache = remember(here, settings, natalMoon, today) { mutableStateMapOf<MoonKind, List<LunarWindowRecord>>() }
+    val moonCache = remember(here, settings, natalMoon, today, com.kshana.app.data.Lang.code) { mutableStateMapOf<MoonKind, List<LunarWindowRecord>>() }
     LaunchedEffect(moonKind, moonCache) {
         if (moonCache.containsKey(moonKind)) return@LaunchedEffect
         if (moonKind.natal && natalMoon == null) return@LaunchedEffect
@@ -200,7 +200,7 @@ fun DayScreen(profile: BirthProfile?, here: Place, settings: EngineSettings, onB
             val from = Instants.fromInstant(today.atStartOfDay(zone).toInstant())
             val to = Instants.fromInstant(today.plusDays(MOON_DAYS).atStartOfDay(zone).toInstant())
             val found = withContext(Dispatchers.Default) {
-                engine.moonWindows(moonKind.kind, settings.ayanamsa, natalMoon ?: 0.0, from, to)
+                engine.moonWindows(moonKind.kind, settings.ayanamsa, natalMoon ?: 0.0, from, to, com.kshana.app.data.Lang.code)
             }
             moonCache[moonKind] = found.sortedBy { it.start.seconds() }
             moonError = null
@@ -411,7 +411,7 @@ private fun RunningLine(clock: DayClockRecord, pakshi: List<PakshiRecord>, nowTa
     val parts = listOfNotNull(
         m?.let { "muhurta ${it.index.toInt() + 1} ${it.name}" },
         ch?.let { "choghadiya ${it.name}" },
-        p?.let { "${it.bird} ${it.activity.lowercase()}" },
+        p?.let { "${it.bird} ${if (com.kshana.app.data.Lang.code == "en") it.activity.lowercase() else it.activity}" },
     )
     if (parts.isNotEmpty()) Text("now · " + parts.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
 }
@@ -641,7 +641,7 @@ private fun LagnaLine(l: SpecialLagnaRecord) {
             Text(l.name, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text, modifier = Modifier.weight(1f))
             Text("${signName(l.sidereal)} ${dms(l.sidereal)}", fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = KshanaColors.Sky)
         }
-        Text(lagnaWords(l.name), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+        Text(lagnaWords(l.key), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
     }
 }
 
@@ -657,7 +657,7 @@ private fun PakshiLine(p: PakshiRecord, zone: ZoneId, nowTai: Double, onPick: ()
             fontFamily = KshanaFonts.mono, fontSize = 12.sp, color = if (live) KshanaColors.Gold else KshanaColors.Sky,
         )
         Text(
-            "${p.bird} ${p.activity.lowercase()}s · ${"%.0f".format(p.strength * 100.0)}%",
+            "${p.bird} ${if (com.kshana.app.data.Lang.code == "en") p.activity.lowercase() + "s" else "· " + p.activity} · ${"%.0f".format(p.strength * 100.0)}%",
             style = MaterialTheme.typography.bodyMedium, color = if (p.favourable) KshanaColors.TextSoft else KshanaColors.Muted,
             modifier = Modifier.weight(1f).padding(start = 12.dp),
         )

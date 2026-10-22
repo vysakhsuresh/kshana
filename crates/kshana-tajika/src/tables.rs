@@ -53,6 +53,16 @@ pub fn within_sign(lon: f64) -> f64 {
     lon.rem_euclid(30.0)
 }
 
+/// Graha name in the reader's language (English: [`graha_name`]).
+pub fn graha_in(g: DashaLord, lang: kshana_rules::Lang) -> &'static str {
+    kshana_speak::lexicon::name(graha_name(g), lang)
+}
+
+/// Sign name in the reader's language, 0 = Aries (English: [`SIGN_NAMES`]).
+pub fn sign_in(i: usize, lang: kshana_rules::Lang) -> &'static str {
+    kshana_speak::lexicon::name(SIGN_NAMES[i % 12], lang)
+}
+
 /// Graha name for words.
 pub fn graha_name(g: DashaLord) -> &'static str {
     match g {

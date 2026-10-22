@@ -266,11 +266,11 @@ fun ObservancesScreen(here: Place, settings: EngineSettings, onBack: () -> Unit)
         }
     }
 
-    LaunchedEffect(here, settings) {
+    LaunchedEffect(here, settings, com.kshana.app.data.Lang.code) {
         try {
             val engine = EngineProvider.get(context)
             val found = withContext(Dispatchers.Default) {
-                engine.calendar(Instants.now(), DAYS, here.latitude, here.longitude, settings.ayanamsa)
+                engine.calendar(Instants.now(), DAYS, here.latitude, here.longitude, settings.ayanamsa, com.kshana.app.data.Lang.code)
             }
             records = found.sortedBy { it.exact.seconds() }
             status = "${found.size} observances · next $DAYS days · ${here.name}"
@@ -284,7 +284,7 @@ fun ObservancesScreen(here: Place, settings: EngineSettings, onBack: () -> Unit)
     val shown: List<CalRow> = when (filter) {
         Filter.All -> records.map<ObservanceRecord, CalRow> { CalRow.Obs(it, zone) } + eclipses.map { CalRow.Ecl(it, zone) }
         Filter.Eclipses -> eclipses.map { CalRow.Ecl(it, zone) }
-        else -> records.filter { filter.test(it.name) }.map { CalRow.Obs(it, zone) }
+        else -> records.filter { filter.test(it.key) }.map { CalRow.Obs(it, zone) }
     }.sortedBy { it.at }
     val byMonth = shown.groupBy { YearMonth.from(it.day) }.toSortedMap()
 

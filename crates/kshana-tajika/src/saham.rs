@@ -163,6 +163,67 @@ pub const SAHAMS: [SahamFormula; 35] = [
     both("Labha", "gains", [Term::Cusp(11), Term::CuspLord(11), L]),
 ];
 
+/// The sahams' names and meanings in Malayalam and Hindi, keyed by the English name:
+/// `(key, ml name, ml meaning, hi name, hi meaning)`. The names are the Sanskrit saham names
+/// in script; the two eighth-house points are named by their house, as the English
+/// meanings name them by what to guard.
+const SAHAM_WORDS: [(&str, &str, &str, &str, &str); 35] = [
+    ("Punya", "പുണ്യം", "ഭാഗ്യം, പുണ്യം", "पुण्य", "भाग्य, पुण्य"),
+    ("Vidya", "വിദ്യ", "പഠനം", "विद्या", "शिक्षा"),
+    ("Yasas", "യശസ്സ്", "കീർത്തി", "यश", "कीर्ति"),
+    ("Mitra", "മിത്രം", "സുഹൃത്തുക്കൾ", "मित्र", "मित्र"),
+    ("Mahatmya", "മാഹാത്മ്യം", "മഹത്വം", "माहात्म्य", "महानता"),
+    ("Asha", "ആശ", "പ്രതീക്ഷകളും ആഗ്രഹങ്ങളും", "आशा", "आशाएँ और इच्छाएँ"),
+    ("Samartha", "സാമർഥ്യം", "കഴിവ്, സംരംഭം", "सामर्थ्य", "क्षमता, उद्यम"),
+    ("Bhratri", "ഭ്രാതൃ", "സഹോദരങ്ങൾ", "भ्रातृ", "भाई-बहन"),
+    ("Gaurava", "ഗൗരവം", "മാനം, ബഹുമാനം", "गौरव", "मान, सम्मान"),
+    ("Pitri", "പിതൃ", "അച്ഛൻ", "पितृ", "पिता"),
+    ("Matri", "മാതൃ", "അമ്മ", "मातृ", "माता"),
+    ("Putra", "പുത്ര", "മക്കൾ", "पुत्र", "संतान"),
+    ("Jeeva", "ജീവ", "ജീവിതം, ഉപജീവനം", "जीव", "जीवन, आजीविका"),
+    ("Karma", "കർമ", "തൊഴിൽ, ജോലി", "कर्म", "काम, व्यवसाय"),
+    ("Roga", "രോഗ", "ആരോഗ്യത്തിലെ ശ്രദ്ധ", "रोग", "स्वास्थ्य की देखभाल"),
+    ("Kali", "കലി", "കലഹം, വഴക്ക്", "कलि", "कलह, झगड़ा"),
+    ("Sastra", "ശാസ്ത്ര", "ശാസ്ത്രപഠനം", "शास्त्र", "शास्त्रों का ज्ञान"),
+    ("Bandhu", "ബന്ധു", "ബന്ധുക്കൾ", "बंधु", "रिश्तेदार"),
+    ("Mrityu", "അഷ്ടമ സഹം", "സൂക്ഷിക്കേണ്ട ആരോഗ്യം", "अष्टम सहम", "संभालने योग्य स्वास्थ्य"),
+    ("Paradesa", "പരദേശ", "വിദേശവാസം, യാത്ര", "परदेश", "विदेश में रहना, यात्रा"),
+    ("Artha", "അർഥ", "ധനം", "अर्थ", "धन"),
+    ("Paradara", "പരദാര", "വിവാഹത്തിനു പുറത്തുള്ള ബന്ധം", "परदारा", "विवाह से बाहर का संबंध"),
+    ("Vanik", "വണിക്", "കച്ചവടം", "वणिक", "व्यापार"),
+    ("Karyasiddhi", "കാര്യസിദ്ധി", "ഏറ്റെടുത്ത കാര്യങ്ങളിലെ വിജയം", "कार्यसिद्धि", "कामों में सफलता"),
+    ("Vivaha", "വിവാഹ", "വിവാഹം", "विवाह", "विवाह"),
+    ("Santapa", "സന്താപ", "ദുഃഖം, വിഷമം", "संताप", "दुःख, कष्ट"),
+    ("Sraddha", "ശ്രദ്ധ", "വിശ്വാസം, ഭക്തി", "श्रद्धा", "आस्था, भक्ति"),
+    ("Preeti", "പ്രീതി", "സ്നേഹം, വാത്സല്യം", "प्रीति", "प्रेम, स्नेह"),
+    ("Jadya", "ജാഡ്യ", "നീണ്ടുനിൽക്കുന്ന ക്ഷീണം, മന്ദത", "जाड्य", "लंबी थकान, सुस्ती"),
+    ("Vyapara", "വ്യാപാര", "ബിസിനസ്", "व्यापार", "कारोबार"),
+    ("Satru", "ശത്രു", "എതിരാളികൾ", "शत्रु", "विरोधी"),
+    ("Jalapatana", "ജലപതന", "വെള്ളം കടക്കൽ, കടൽയാത്ര", "जलपतन", "जल पार करना, समुद्री यात्रा"),
+    ("Bandhana", "ബന്ധന", "തടവ്, ബന്ധനം", "बंधन", "क़ैद, बंधन"),
+    ("Apamrityu", "രക്ഷാ സഹം", "വഴിയിലും സാഹസിക ജോലിയിലും സുരക്ഷ", "रक्षा सहम", "रास्ते और जोखिम भरे काम में सुरक्षा"),
+    ("Labha", "ലാഭ", "നേട്ടങ്ങൾ", "लाभ", "लाभ"),
+];
+
+/// A saham's `(name, meaning)` in the reader's language; English gives the table's own
+/// words, and a name not in the table comes back as given with an empty meaning.
+pub fn saham_in(name: &'static str, lang: kshana_rules::Lang) -> (&'static str, &'static str) {
+    use kshana_rules::Lang;
+    if lang == Lang::En {
+        return SAHAMS
+            .iter()
+            .find(|f| f.name == name)
+            .map_or((name, ""), |f| (f.name, f.meaning));
+    }
+    SAHAM_WORDS
+        .iter()
+        .find(|w| w.0 == name)
+        .map_or((name, ""), |w| match lang {
+            Lang::Ml => (w.1, w.2),
+            _ => (w.3, w.4),
+        })
+}
+
 /// A computed saham.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Saham {
@@ -244,6 +305,18 @@ mod tests {
             cusps: std::array::from_fn(|i| (lagna + 30.0 * i as f64).rem_euclid(360.0)),
             longitudes,
             speeds: [0.0; 7],
+        }
+    }
+
+    #[test]
+    fn every_saham_has_malayalam_and_hindi_words() {
+        use kshana_rules::Lang;
+        for f in SAHAMS.iter() {
+            assert_eq!(saham_in(f.name, Lang::En), (f.name, f.meaning));
+            for lang in [Lang::Ml, Lang::Hi] {
+                let (n, m) = saham_in(f.name, lang);
+                assert!(!n.is_ascii() && !m.is_ascii(), "{} {:?}", f.name, lang);
+            }
         }
     }
 

@@ -39,12 +39,24 @@ internal val PLANET_GLYPHS: Map<String, String> = mapOf(
     "Sun" to "☉", "Moon" to "☽", "Mercury" to "☿", "Venus" to "♀", "Mars" to "♂",
     "Jupiter" to "♃", "Saturn" to "♄", "Uranus" to "♅", "Neptune" to "♆", "Pluto" to "♇",
     "Rahu" to "☊", "Ketu" to "☋",
+    // The engine names the planets in Malayalam and Hindi on those languages' chart pages.
+    "സൂര്യൻ" to "☉", "ചന്ദ്രൻ" to "☽", "ബുധൻ" to "☿", "ശുക്രൻ" to "♀", "ചൊവ്വ" to "♂",
+    "വ്യാഴം" to "♃", "ശനി" to "♄", "യുറാനസ്" to "♅", "നെപ്റ്റ്യൂൺ" to "♆", "പ്ലൂട്ടോ" to "♇",
+    "രാഹു" to "☊", "കേതു" to "☋",
+    "सूर्य" to "☉", "चंद्र" to "☽", "बुध" to "☿", "शुक्र" to "♀", "मंगल" to "♂",
+    "गुरु" to "♃", "शनि" to "♄", "अरुण" to "♅", "वरुण" to "♆", "यम" to "♇",
+    "राहु" to "☊", "केतु" to "☋",
 )
 
 internal val PLANET_ABBR: Map<String, String> = mapOf(
     "Sun" to "Su", "Moon" to "Mo", "Mars" to "Ma", "Mercury" to "Me", "Jupiter" to "Ju",
     "Venus" to "Ve", "Saturn" to "Sa", "Rahu" to "Ra", "Ketu" to "Ke",
     "Uranus" to "Ur", "Neptune" to "Ne", "Pluto" to "Pl",
+    // The short forms Kerala and North Indian charts print in their boxes.
+    "സൂര്യൻ" to "ര", "ചന്ദ്രൻ" to "ച", "ചൊവ്വ" to "കു", "ബുധൻ" to "ബു", "വ്യാഴം" to "ഗു",
+    "ശുക്രൻ" to "ശു", "ശനി" to "മ", "രാഹു" to "സ", "കേതു" to "ശി",
+    "सूर्य" to "सू", "चंद्र" to "चं", "मंगल" to "मं", "बुध" to "बु", "गुरु" to "गु",
+    "शुक्र" to "शु", "शनि" to "श", "राहु" to "रा", "केतु" to "के",
 )
 
 internal val SIGN_SHORT = listOf("Ari", "Tau", "Gem", "Can", "Leo", "Vir", "Lib", "Sco", "Sag", "Cap", "Aqu", "Pis")
