@@ -8,7 +8,7 @@
 use crate::explain::explain_in;
 use crate::forecast::{date_words, moment_in, series, Band, ForecastError, Life, Moment, Natal, SIGN_NAMES};
 use crate::gochara::SaturnPhase;
-use crate::parihara::parihara_from_facts;
+use crate::parihara::parihara_from_facts_in;
 use crate::plain::Lang;
 use crate::transit::{next_sign_change, sign_changes};
 use kshana_ephem::Spk;
@@ -369,7 +369,7 @@ pub fn briefing_in(
             return None;
         }
         let lords: Vec<DashaLord> = levels.iter().take(2).map(|p| p.lord).collect();
-        let p = parihara_from_facts(&natal.facts, Some(life.area()), &lords);
+        let p = parihara_from_facts_in(&natal.facts, Some(life.area()), &lords, lang);
         Some(RemedyBrief {
             planet: p.planet,
             cause: p.plain.clone(),

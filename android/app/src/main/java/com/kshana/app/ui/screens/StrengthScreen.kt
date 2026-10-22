@@ -132,67 +132,67 @@ fun StrengthScreen(profile: BirthProfile, settings: EngineSettings, onBack: () -
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("SHADBALA", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-            QuietButton("BACK", onClick = onBack)
+            Text(tr("SHADBALA"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            QuietButton(tr("BACK"), onClick = onBack)
         }
-        Text("How strong each planet stands", style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
+        Text(tr("How strong each planet stands"), style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         Text(
-            "The six-fold strength of the seven grahas in your chart · ${profile.placeName}",
+            trf("The six-fold strength of the seven grahas in your chart · {0}", profile.placeName),
             style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted,
         )
         ErrorLine(error)
 
         val rec = record
         if (rec == null) {
-            if (error == null) Text("weighing the seven grahas…", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+            if (error == null) Text(tr("weighing the seven grahas…"), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
         } else {
-            SectionLabel("Strength against the required")
+            SectionLabel(tr("Strength against the required"))
             StrengthChart(rec.grahas, selected) { i -> selected = if (selected == i) null else i }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Legend(KshanaColors.Gold, "enough")
-                Legend(KshanaColors.Sky, "short")
-                Text("— required", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
+                Legend(KshanaColors.Gold, tr("enough"))
+                Legend(KshanaColors.Sky, tr("short"))
+                Text("— ${tr("required")}", fontFamily = KshanaFonts.mono, fontSize = 10.sp, color = KshanaColors.Muted)
             }
             Text(
-                "Your ${rec.strongest} stands strongest; your ${rec.weakest} weakest.",
+                trf("Your {0} stands strongest; your {1} weakest.", rec.strongest, rec.weakest),
                 fontFamily = KshanaFonts.serif, fontSize = 18.sp, lineHeight = 24.sp, color = KshanaColors.Text,
             )
             val chosen = selected?.let { rec.grahas.getOrNull(it) }
             if (chosen == null) {
-                Text("Tap a bar to open its six parts.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
+                Text(tr("Tap a bar to open its six parts."), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
             } else {
                 GrahaCard(chosen)
             }
 
-            SectionLabel("Time lords at birth")
-            MonoRow("Year lord", rec.yearLord)
-            MonoRow("Month lord", rec.monthLord)
-            MonoRow("Day lord", rec.dayLord)
-            MonoRow("Hora lord", rec.horaLord)
+            SectionLabel(tr("Time lords at birth"))
+            MonoRow(tr("Year lord"), rec.yearLord)
+            MonoRow(tr("Month lord"), rec.monthLord)
+            MonoRow(tr("Day lord"), rec.dayLord)
+            MonoRow(tr("Hora lord"), rec.horaLord)
 
             if (rec.wars.isNotEmpty()) {
-                SectionLabel("Planetary wars")
+                SectionLabel(tr("Planetary wars"))
                 for (w in rec.wars) {
                     Text(sentence(w), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
                 }
             }
 
-            SectionLabel("Houses")
+            SectionLabel(tr("Houses"))
             val maxRatio = rec.bhavas.maxOfOrNull { it.ratio }?.takeIf { it > 0.0 } ?: 1.0
             for (b in rec.bhavas) HouseRow(b, maxRatio)
 
-            SectionLabel("Avasthas")
+            SectionLabel(tr("Avasthas"))
             Row(Modifier.fillMaxWidth()) {
-                Text("GRAHA", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.weight(1.1f))
-                Text("BALADI", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.weight(1f))
-                Text("JAGRADADI", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.weight(1f))
-                Text("DEEPTADI", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.weight(1f))
+                Text(tr("GRAHA"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.weight(1.1f))
+                Text(tr("BALADI"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.weight(1f))
+                Text(tr("JAGRADADI"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.weight(1f))
+                Text(tr("DEEPTADI"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Muted, modifier = Modifier.weight(1f))
             }
             for (a in rec.avasthas) AvasthaRow(a)
         }
 
         Text(
-            "BPHS chapters 27 and 45; conventions stated in the engine's docs.",
+            tr("BPHS chapters 27 and 45; conventions stated in the engine's docs."),
             fontFamily = KshanaFonts.mono, fontSize = 10.sp, lineHeight = 15.sp, color = KshanaColors.Muted,
             modifier = Modifier.padding(vertical = 8.dp),
         )
@@ -290,43 +290,43 @@ private fun GrahaCard(g: GrahaBalaRecord) {
             Text(g.grahaName, style = MaterialTheme.typography.titleLarge, color = KshanaColors.Text)
         }
         Text(
-            "${v1(g.totalVirupas)} virupas = ${"%.2f".format(g.rupas)} rupas · required ${v1(g.required)} · ${pct(g.ratio)}",
+            trf("{0} virupas = {1} rupas · required {2} · {3}", v1(g.totalVirupas), "%.2f".format(g.rupas), v1(g.required), pct(g.ratio)),
             fontFamily = KshanaFonts.mono, fontSize = 11.sp, lineHeight = 16.sp, color = colour,
         )
         HorizontalDivider(color = KshanaColors.LineSoft)
-        MonoRow("Sthana", v1(g.sthana))
+        MonoRow(tr("Sthana"), v1(g.sthana))
         if (detail) {
-            SubRow("Uchcha", g.uchcha)
-            SubRow("Saptavargaja", g.saptavargaja)
-            SubRow("Ojhayugma", g.ojhayugma)
-            SubRow("Kendradi", g.kendradi)
-            SubRow("Drekkana", g.drekkana)
+            SubRow(tr("Uchcha"), g.uchcha)
+            SubRow(tr("Saptavargaja"), g.saptavargaja)
+            SubRow(tr("Ojhayugma"), g.ojhayugma)
+            SubRow(tr("Kendradi"), g.kendradi)
+            SubRow(tr("Drekkana"), g.drekkana)
         }
-        MonoRow("Dig", v1(g.dig))
-        MonoRow("Kala", v1(g.kala))
+        MonoRow(tr("Dig"), v1(g.dig))
+        MonoRow(tr("Kala"), v1(g.kala))
         if (detail) {
-            SubRow("Nathonnata", g.nathonnata)
-            SubRow("Paksha", g.paksha)
-            SubRow("Tribhaga", g.tribhaga)
-            SubRow("Abda", g.abda)
-            SubRow("Masa", g.masa)
-            SubRow("Vara", g.vara)
-            SubRow("Hora", g.hora)
-            SubRow("Ayana", g.ayana)
-            SubRow("Yuddha", g.yuddha)
+            SubRow(tr("Nathonnata"), g.nathonnata)
+            SubRow(tr("Paksha"), g.paksha)
+            SubRow(tr("Tribhaga"), g.tribhaga)
+            SubRow(tr("Abda"), g.abda)
+            SubRow(tr("Masa"), g.masa)
+            SubRow(tr("Vara"), g.vara)
+            SubRow(tr("Hora"), g.hora)
+            SubRow(tr("Ayana"), g.ayana)
+            SubRow(tr("Yuddha"), g.yuddha)
         }
-        MonoRow("Chesta", v1(g.chesta))
-        MonoRow("Naisargika", v1(g.naisargika))
-        MonoRow("Drik", v1(g.drik))
+        MonoRow(tr("Chesta"), v1(g.chesta))
+        MonoRow(tr("Naisargika"), v1(g.naisargika))
+        MonoRow(tr("Drik"), v1(g.drik))
         Text(
-            if (detail) "HIDE DETAIL" else "DETAIL",
+            if (detail) tr("HIDE DETAIL") else tr("DETAIL"),
             style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold,
             modifier = Modifier.clickable { detail = !detail }.padding(vertical = 6.dp),
         )
         HorizontalDivider(color = KshanaColors.LineSoft)
         val motion = g.motion
-        MonoRow("Motion", if (motion == null) "— (Ayana and Paksha instead)" else "${g.motionName ?: motion} · ${g.motionMeaning ?: MOTION_WORDS[motion] ?: motion.lowercase()}", KshanaColors.TextSoft)
-        MonoRow("Ishta · Kashta", "${v1(g.ishta)} · ${v1(g.kashta)}")
+        MonoRow(tr("Motion"), if (motion == null) "— (${tr("Ayana and Paksha instead")})" else "${g.motionName ?: motion} · ${g.motionMeaning ?: MOTION_WORDS[motion] ?: motion.lowercase()}", KshanaColors.TextSoft)
+        MonoRow(tr("Ishta · Kashta"), "${v1(g.ishta)} · ${v1(g.kashta)}")
         if (g.words.isNotEmpty()) {
             HorizontalDivider(color = KshanaColors.LineSoft)
             for (wd in g.words) {
@@ -361,7 +361,7 @@ private fun HouseRow(b: BhavaBalaRecord, maxRatio: Double) {
                 "${PLANET_GLYPHS[b.lord] ?: ""} ${b.lordName}",
                 style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft, modifier = Modifier.weight(1f),
             )
-            Text("${"%.2f".format(b.rupas)} rupas · ${pct(b.ratio)}", fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = colour)
+            Text(trf("{0} rupas · {1}", "%.2f".format(b.rupas), pct(b.ratio)), fontFamily = KshanaFonts.mono, fontSize = 11.sp, color = colour)
         }
         Box(Modifier.fillMaxWidth().padding(start = 24.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(KshanaColors.LineSoft)) {
             val f = (b.ratio / maxRatio).toFloat().coerceIn(0f, 1f)

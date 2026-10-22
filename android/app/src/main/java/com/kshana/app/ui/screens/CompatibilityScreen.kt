@@ -57,14 +57,14 @@ fun CompatibilityScreen(settings: EngineSettings, onFamily: () -> Unit, onBack: 
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
 
-    LaunchedEffect(request, settings) {
+    LaunchedEffect(request, settings, com.kshana.app.data.Lang.code) {
         val r = request ?: return@LaunchedEffect
         busy = true
         try {
             val engine = EngineProvider.get(context)
             val (a, b) = r
             result = withContext(Dispatchers.Default) {
-                engine.compatibility(a.birthInstant(), a.latitude, a.longitude, b.birthInstant(), b.latitude, b.longitude, settings.ayanamsa)
+                engine.compatibility(a.birthInstant(), a.latitude, a.longitude, b.birthInstant(), b.latitude, b.longitude, settings.ayanamsa, com.kshana.app.data.Lang.code)
             }
             error = null
         } catch (e: Exception) {

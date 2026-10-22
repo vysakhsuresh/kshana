@@ -35,7 +35,7 @@ use std::collections::HashMap;
 use crate::areas::Area;
 use crate::doshas::{doshas, Dosha};
 use crate::facts::Facts;
-use crate::karma::{classify, may_claim, KarmaVerdict, TransitSigns};
+use crate::karma::{classify, classify_in, may_claim_in, KarmaVerdict, TransitSigns};
 use crate::parashari::{dignity, period_quality, Dignity};
 use crate::plain::{jargon, Lang};
 use crate::remedy_timing::{fmt_utc, graha_word, nakshatra_word, weekday_of, RemedyWindow, TimingTable, WEEKDAY_NAMES};
@@ -2501,7 +2501,7 @@ fn into_remedy(
         effort: effort_words(lang, r.effort),
         day: effort_words(lang, r.day),
         optional: r.kind.is_optional(),
-        may_claim: may_claim(karma.class, karma.kind_in_play, r.kind.rung()),
+        may_claim: may_claim_in(karma.class, karma.kind_in_play, r.kind.rung(), lang),
         schedule: Schedule {
             cadence: cadence_words(lang, &r.cadence),
             count: r.count,
@@ -2767,8 +2767,10 @@ pub fn parihara_in(
             running_since,
             running_until,
             severity,
-            karma,
-            doshas: present,
+            // The karma verdict and the dosha rows the page shows, in the reader's language;
+            // the words above (the expert line) and the remedy rows read the English.
+            karma: if lang == Lang::En { karma } else { classify_in(&facts, planet, area, &lords, Some(&transits), lang) },
+            doshas: if lang == Lang::En { present } else { shown_doshas(&facts, at, phase, lang) },
             words,
         },
         plain,
@@ -2776,6 +2778,13 @@ pub fn parihara_in(
         signature: signature_in(lang, planet),
         ledger_hint,
     })
+}
+
+/// The present doshas, worst first, with their evidence, source and family in `lang`.
+fn shown_doshas(facts: &Facts, at: Instant, phase: u8, lang: Lang) -> Vec<Dosha> {
+    let mut v: Vec<Dosha> = crate::doshas::doshas_in(facts, at, phase, lang).into_iter().filter(|d| d.present).collect();
+    v.sort_by(|a, b| b.severity.partial_cmp(&a.severity).unwrap_or(std::cmp::Ordering::Equal));
+    v
 }
 
 /// The remedy plan from natal facts alone, without the sky: `period_lords` are the

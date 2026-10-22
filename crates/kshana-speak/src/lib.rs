@@ -11,7 +11,7 @@ use kshana_chart::Chart;
 use kshana_ephem::Spk;
 use kshana_forecast::{life_map, sade_sati, transits_at, TransitKind};
 use kshana_rules::{
-    agreeing_levels, assess, promise, timing, yogas, Ashtakoota, Facts, MangalDosha,
+    agreeing_levels, timing, Ashtakoota, Facts, MangalDosha,
     SynastryAspect, AREAS,
 };
 use kshana_rules::Lang;
@@ -351,13 +351,14 @@ pub fn who_in(lang: Lang, natal: &Chart) -> Section {
             )
         },
     ];
-    for y in yogas(&facts) {
+    for y in kshana_rules::parashari::yogas_in(&facts, lang) {
+        let yn = kshana_rules::parashari::yoga_name_in(lang, y.name);
         sentences.push(s(
             say!(
                 lang,
                 format!("{} is present in your chart.", y.name),
-                format!("{} നിങ്ങളുടെ ജാതകത്തിലുണ്ട്.", y.name),
-                format!("{} आपकी कुंडली में है।", y.name),
+                format!("{yn} നിങ്ങളുടെ ജാതകത്തിലുണ്ട്."),
+                format!("{yn} आपकी कुंडली में है।"),
             ),
             y.hit.factors.clone(),
             y.hit.weight,
@@ -394,8 +395,8 @@ pub fn area_section(natal: &Chart, area: kshana_rules::Area, at: Instant) -> Sec
 /// [`area_section`] in `lang`.
 pub fn area_section_in(lang: Lang, natal: &Chart, area: kshana_rules::Area, at: Instant) -> Section {
     let facts = Facts::from_chart(natal);
-    let p = promise(&facts, area);
-    let a = assess(&facts, area);
+    let p = kshana_rules::kp::promise_in(&facts, area, lang);
+    let a = kshana_rules::parashari::assess_in(&facts, area, lang);
     let funnel = timing(&facts, area, natal.bodies[1].sidereal, natal.instant, at, 5);
     let agree = agreeing_levels(&funnel);
     let words = area_words_in(lang, area.name);

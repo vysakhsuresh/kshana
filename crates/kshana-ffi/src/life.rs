@@ -253,6 +253,22 @@ pub struct GlossaryRecord {
     pub tradition_key: String,
 }
 
+/// A kuta's name in the reader's script; the English name is the key.
+fn kuta_name(name: &'static str, lang: kshana_rules::Lang) -> &'static str {
+    let t = match name {
+        "Varna" => ["Varna", "വർണം", "वर्ण"],
+        "Vashya" => ["Vashya", "വശ്യം", "वश्य"],
+        "Tara" => ["Tara", "താര", "तारा"],
+        "Yoni" => ["Yoni", "യോനി", "योनि"],
+        "Graha Maitri" => ["Graha Maitri", "ഗ്രഹമൈത്രി", "ग्रह मैत्री"],
+        "Gana" => ["Gana", "ഗണം", "गण"],
+        "Bhakoot" => ["Bhakoot", "ഭകൂടം", "भकूट"],
+        "Nadi" => ["Nadi", "നാഡി", "नाड़ी"],
+        _ => return name,
+    };
+    lang.pick(t)
+}
+
 fn mangal(m: &kshana_rules::MangalDosha) -> MangalRecord {
     MangalRecord {
         from_lagna: m.from_lagna,
@@ -431,7 +447,9 @@ impl Engine {
         latitude_b: f64,
         longitude_b: f64,
         ayanamsa: AyanamsaChoice,
+        lang: String,
     ) -> Result<CompatibilityRecord, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let a = natal_chart(self, birth_a, latitude_a, longitude_a, ayanamsa)?;
         let b = natal_chart(self, birth_b, latitude_b, longitude_b, ayanamsa)?;
         let ash = kshana_rules::ashtakoota(a.bodies[1].sidereal, b.bodies[1].sidereal);
@@ -441,12 +459,16 @@ impl Engine {
         let mb = kshana_rules::mangal_dosha(&fb);
         let syn = kshana_rules::synastry(&a, &b, 6.0);
         let words = kshana_speak::compatibility(&ash, &ma, &mb, &syn);
+        // The words above read the English verdict; the record shows the reader's.
+        let ash = kshana_rules::kuta::ashtakoota_in(a.bodies[1].sidereal, b.bodies[1].sidereal, lang);
+        let ma = kshana_rules::kuta::mangal_dosha_in(&fa, lang);
+        let mb = kshana_rules::kuta::mangal_dosha_in(&fb, lang);
         Ok(CompatibilityRecord {
             kutas: ash
                 .kutas
                 .iter()
                 .map(|k| KutaRecord {
-                    name: k.name.to_string(),
+                    name: kuta_name(k.name, lang).to_string(),
                     points: k.points,
                     max: k.max,
                     detail: k.detail.clone(),
@@ -622,6 +644,7 @@ mod tests {
                 12.97,
                 77.59,
                 AyanamsaChoice::Lahiri,
+                "en".into(),
             )
             .unwrap();
         assert_eq!(c.kutas.len(), 8);

@@ -468,7 +468,7 @@ fn feeds(range: std::ops::Range<usize>, name: &str) {
             a.run(&format!("c{ci}.{lang}.kundali"), || e.kundali(b, la, lo, ob, ola, olo, HS, AY, male, lang.into()));
             a.run(&format!("c{ci}.{lang}.kundali_rev"), || e.kundali(ob, ola, olo, b, la, lo, HS, AY, !male, lang.into()));
         }
-        a.run(&tag("compat"), || e.compatibility(b, la, lo, ob, ola, olo, AY));
+        a.run(&tag("compat"), || e.compatibility(b, la, lo, ob, ola, olo, AY, LANGS[ci % LANGS.len()].into()));
         a.run(&tag("life_map"), || e.life_map(b, la, lo, AY, 90));
         a.run(&tag("karakas"), || e.karakas(b, la, lo, AY, LANGS[ci % LANGS.len()].into()));
         a.run(&tag("jaimini_full"), || e.jaimini_full(b, la, lo, AY, ci % 2 == 0, t));

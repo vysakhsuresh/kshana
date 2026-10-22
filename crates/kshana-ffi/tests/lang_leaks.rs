@@ -50,129 +50,131 @@ use kshana_ffi::*;
 /// "both". From grepping the Kotlin (`android/app/src/main/java/com/kshana/app`).
 const FNS: &[(&str, bool, &str)] = &[
     // Engine methods
-    ("appointment", false, "plain"),       // PlanScreen
-    ("area_readings", false, "expert"),    // AreasScreen, ReadingScreen (reading_expert)
+    ("appointment", true, "plain"),       // PlanScreen
+    ("area_readings", true, "expert"),    // AreasScreen, ReadingScreen (reading_expert)
     ("ashtakavarga", false, "expert"),     // VedicScreen
-    ("ask", false, "plain"),               // AskScreen, ReadingScreen2
-    ("ask_topic", false, "plain"),         // AskScreen, ReadingScreen2
-    ("aspects", false, "expert"),          // ChartScreen
-    ("best_slots", false, "plain"),        // CalendarScreen (appointments), PlanScreen
+    ("ask", true, "plain"),               // AskScreen, ReadingScreen2
+    ("ask_topic", true, "plain"),         // AskScreen, ReadingScreen2
+    ("aspects", true, "expert"),          // ChartScreen
+    ("best_slots", true, "plain"),        // CalendarScreen (appointments), PlanScreen
     ("best_slots_together", true, "plain"), // FamilyDatesScreen
-    ("birth_posterior", false, "plain"),   // RectifyScreen
+    ("birth_posterior", true, "plain"),   // RectifyScreen
     ("birth_time_now", true, "plain"),     // PastCheckScreen
     ("briefing", true, "plain"),           // LoopScreen, ReadingScreen2, Hindsight, Sunrise notification
-    ("calendar", false, "expert"),         // CalendarScreen (skycalendar)
-    ("calendar_days", false, "plain"),     // AlmanacScreen (DepthScreens)
-    ("calibrate_ledger", false, "expert"), // LedgerScreen
+    ("calendar", true, "expert"),         // CalendarScreen (skycalendar)
+    ("calendar_days", true, "plain"),     // AlmanacScreen (DepthScreens)
+    ("calibrate_ledger", true, "expert"), // LedgerScreen
     ("chart", false, "both"),              // Loop, Day, Trace, Naming, Now, Vedic, Chart, …
     ("chart_facts", true, "plain"),        // PastCheckScreen
-    ("chart_yogas", false, "plain"),       // GiftsScreen (DepthScreens)
-    ("compatibility", false, "expert"),    // CompatibilityScreen
-    ("countdowns", false, "plain"),        // LoopScreen, WallScreen
-    ("couple", false, "plain"),            // TogetherScreen
-    ("couple_ask", false, "plain"),        // TogetherScreen
-    ("coverage_tally", false, "expert"),   // LedgerScreen
-    ("daily", false, "expert"),            // TodayScreen, RightTimeScreen
-    ("dasha_chidra_lords", false, "expert"), // MargaScreen
-    ("dasha_sandhi_windows", false, "expert"), // MargaScreen
-    ("dasha_system", false, "expert"),     // MargaScreen
-    ("dasha_systems_at", false, "expert"), // TimeLordsScreen
-    ("dasha_systems_more_at", false, "expert"), // DashasMoreScreen
-    ("day_clock", false, "expert"),        // DayScreen
+    ("chart_yogas", true, "plain"),       // GiftsScreen (DepthScreens)
+    ("compatibility", true, "expert"),    // CompatibilityScreen
+    ("countdowns", true, "plain"),        // LoopScreen, WallScreen
+    ("couple", true, "plain"),            // TogetherScreen
+    ("couple_ask", true, "plain"),        // TogetherScreen
+    ("coverage_tally", true, "expert"),   // LedgerScreen
+    ("daily", true, "expert"),            // TodayScreen, RightTimeScreen
+    ("dasha_chidra_lords", true, "expert"), // MargaScreen
+    ("dasha_sandhi_windows", true, "expert"), // MargaScreen
+    ("dasha_system", true, "expert"),     // MargaScreen
+    ("dasha_systems_at", true, "expert"), // TimeLordsScreen
+    ("dasha_systems_more_at", true, "expert"), // DashasMoreScreen
+    ("day_clock", true, "expert"),        // DayScreen
     ("eclipses", false, "expert"),         // CalendarScreen (skycalendar)
-    ("explain", false, "plain"),           // ExplainPanel (LifeScreen)
+    ("explain", true, "plain"),           // ExplainPanel (LifeScreen)
     ("family_proof", true, "plain"),       // FamilyProofScreen, Trust.kt
-    ("festivals_here", false, "plain"),    // LoopScreen, WallScreen
-    ("firdaria", false, "expert"),         // TimeLordsScreen
+    ("festivals_here", true, "plain"),    // LoopScreen, WallScreen
+    ("firdaria", true, "expert"),         // TimeLordsScreen
     ("firm_predictions", true, "plain"),   // Trust.kt (sealed claims)
-    ("forecast_horizon", false, "plain"),  // Forecast.kt
+    ("forecast_horizon", true, "plain"),  // Forecast.kt
     ("forecast_moment", true, "plain"),    // LoopScreen, TogetherScreen, notifications
     ("future_personal", true, "plain"),    // FutureScreen, ReadingScreen2
-    ("jaimini_extras", false, "expert"),   // MargaScreen
+    ("jaimini_extras", true, "expert"),   // MargaScreen
     ("kakshya_windows", false, "expert"),  // TransitsScreen
-    ("karakas", false, "expert"),          // MeScreen
-    ("kp_full", false, "expert"),          // KpFullScreen
-    ("kundali", false, "plain"),           // TogetherScreen
+    ("karakas", true, "expert"),          // MeScreen
+    ("kp_full", true, "expert"),          // KpFullScreen
+    ("kundali", true, "plain"),           // TogetherScreen
     ("learn_techniques", true, "plain"),   // PastCheckScreen
-    ("ledger_metrics", false, "expert"),   // LedgerScreen
-    ("letter", false, "plain"),            // LetterScreen
+    ("ledger_metrics", true, "expert"),   // LedgerScreen
+    ("letter", true, "plain"),            // LetterScreen
     ("life_map", false, "expert"),         // LifeMapScreen
-    ("moon_windows", false, "expert"),     // DayScreen
+    ("moon_windows", true, "expert"),     // DayScreen
     ("muhurta", false, "expert"),          // MuhurtaScreen
-    ("nazhika_to_instant", false, "plain"), // BirthScreen
+    ("nazhika_to_instant", true, "plain"), // BirthScreen
     ("next_events", false, "expert"),      // MomentsScreen, TodayScreen
     ("outlook", true, "plain"),            // AheadScreen
-    ("pancha_pakshi", false, "expert"),    // DayScreen
+    ("pancha_pakshi", true, "expert"),    // DayScreen
     ("panchanga_detail", false, "both"),   // Lamp (plain), LexiconScreen, VedicScreen
-    ("parihara", false, "expert"),         // PariharaScreen (parihara_classic)
+    ("parihara", true, "expert"),         // PariharaScreen (parihara_classic)
     ("past_checks", true, "plain"),        // ReadingScreen2
     ("past_reveal", true, "plain"),        // PastCheckScreen
-    ("plain_reading", false, "plain"),     // LifeScreen (life/{life} and mylife), NarrateScreen
-    ("prashna", false, "expert"),          // PrashnaScreen (prashna_expert)
-    ("prasna_arudha_sphutas", false, "expert"), // MargaScreen
-    ("prasna_marga_sphutas", false, "expert"), // MargaScreen
-    ("profections", false, "expert"),      // TimeLordsScreen
-    ("progressed_hits", false, "expert"),  // TimeLordsScreen
-    ("progressions", false, "expert"),     // TimeLordsScreen
+    ("plain_reading", true, "plain"),     // LifeScreen (life/{life} and mylife), NarrateScreen
+    ("prashna", true, "expert"),          // PrashnaScreen (prashna_expert)
+    ("prasna_arudha_sphutas", true, "expert"), // MargaScreen
+    ("prasna_marga_sphutas", true, "expert"), // MargaScreen
+    ("profections", true, "expert"),      // TimeLordsScreen
+    ("progressed_hits", true, "expert"),  // TimeLordsScreen
+    ("progressions", true, "expert"),     // TimeLordsScreen
     ("reading_report_json", false, "expert"), // NarrateScreen, TrustScreen
-    ("rectify", false, "plain"),           // RectifyScreen
-    ("rectify_kp", false, "plain"),        // RectifyScreen
+    ("rectify", true, "plain"),           // RectifyScreen
+    ("rectify_kp", true, "plain"),        // RectifyScreen
     ("remedy_schedule", true, "plain"),    // RemedyTreeScreen
     ("remedy_tree", true, "plain"),        // RemedyTreeScreen, ReadingScreen2
-    ("retrodict", false, "expert"),        // LedgerScreen
-    ("retrodiction_quiz", false, "expert"), // QuizScreen
-    ("score_events", false, "expert"),     // LedgerScreen
-    ("seal_forecast", false, "expert"),    // SealedScreen
+    ("retrodict", true, "expert"),        // LedgerScreen
+    ("retrodiction_quiz", true, "expert"), // QuizScreen
+    ("score_events", true, "expert"),     // LedgerScreen
+    ("seal_forecast", true, "expert"),    // SealedScreen
     ("seal_pick", true, "plain"),          // PastCheckScreen
     ("self_test", false, "expert"),        // TrustScreen
-    ("shadbala", false, "expert"),         // StrengthScreen
+    ("shadbala", true, "expert"),         // StrengthScreen
     ("slow_horizon", false, "plain"),      // HindsightScreen
-    ("snapshot", false, "expert"),         // DiaryScreen, TraceScreen
+    ("snapshot", true, "expert"),         // DiaryScreen, TraceScreen
     ("stability", false, "expert"),        // ChartScreen, TrustScreen
     ("sure_next", true, "plain"),          // SureScreen
     ("sure_window_hours", true, "plain"),  // SureScreen
     ("sure_windows_trusted", true, "plain"), // SureScreen, Trust.kt
     ("talk_window", false, "plain"),       // LoopScreen
-    ("time_shift_test", false, "expert"),  // LedgerScreen
-    ("timeline", false, "plain"),          // BookScreen
-    ("trace", false, "expert"),            // TraceScreen
-    ("transit_score", false, "expert"),    // TransitsScreen
-    ("transit_windows", false, "expert"),  // TransitsScreen
+    ("time_shift_test", true, "expert"),  // LedgerScreen
+    ("timeline", true, "plain"),          // BookScreen
+    ("trace", true, "expert"),            // TraceScreen
+    ("transit_score", true, "expert"),    // TransitsScreen
+    ("transit_windows", true, "expert"),  // TransitsScreen
     ("transits", false, "expert"),         // TodayScreen
-    ("varshaphala", false, "expert"),      // YearScreen
-    ("vimshopaka_bala", false, "expert"),  // MargaScreen
-    ("year_chapter", false, "plain"),      // BookScreen
-    ("zodiacal_releasing", false, "expert"), // TimeLordsScreen
+    ("varshaphala", true, "expert"),      // YearScreen
+    ("vimshopaka_bala", true, "expert"),  // MargaScreen
+    ("year_chapter", true, "plain"),      // BookScreen
+    ("zodiacal_releasing", true, "expert"), // TimeLordsScreen
     // Free functions
-    ("ashtamangala_number", false, "expert"), // MargaScreen
-    ("birth_bird", false, "expert"),       // DayScreen
+    ("ashtamangala_number", true, "expert"), // MargaScreen
+    ("birth_bird", true, "expert"),       // DayScreen
     ("blind_answers", true, "plain"),      // ScoreboardScreen
     ("blind_judge", true, "plain"),        // ScoreboardScreen
     ("blind_question", true, "plain"),     // ScoreboardScreen
     ("blind_resolve", true, "plain"),      // Integrity.kt
-    ("calibrate", false, "plain"),         // LifeScreen, RecordScreen, TrustScreen, PredictionStore
+    ("calibrate", true, "plain"),         // LifeScreen, RecordScreen, TrustScreen, PredictionStore
     ("confidence_line", true, "plain"),    // Integrity.kt
     ("dasha_chain", false, "expert"),      // VedicScreen
-    ("dasha_level_names", false, "expert"), // TraceScreen
-    ("dasha_sensitivity", false, "expert"), // TraceScreen
+    ("dasha_level_names", true, "expert"), // TraceScreen
+    ("dasha_sensitivity", true, "expert"), // TraceScreen
     ("dasha_table", false, "expert"),      // VedicScreen
-    ("error_budget", false, "expert"),     // TrustScreen
+    ("error_budget", true, "expert"),     // TrustScreen
     ("forecast_tilt", true, "plain"),      // ScoreboardScreen
-    ("glossary", false, "expert"),         // GlossaryScreen
-    ("grade_quiz", false, "expert"),       // QuizScreen
+    ("glossary", true, "expert"),         // GlossaryScreen
+    ("grade_quiz", true, "expert"),       // QuizScreen
     ("language_names", false, "plain"),    // SettingsScreen, LexiconScreen
+    ("ledger_event_kind_name", true, "expert"), // LedgerScreen, SealedScreen
+    ("sure_words", true, "plain"),         // AskScreen, ReadingScreen2, TogetherScreen
     ("ledger_event_kinds", false, "expert"), // LedgerScreen, SealedScreen
     ("lexicon", true, "expert"),           // LexiconScreen
     ("match_logged_event", true, "plain"), // Integrity.kt
-    ("naming", false, "expert"),           // NamingScreen
+    ("naming", true, "expert"),           // NamingScreen
     ("nazhika", false, "expert"),          // LexiconScreen
     ("open_test_contribution", true, "plain"), // OpenTest.kt
     ("open_test_own", true, "plain"),      // OpenTestScreen
     ("open_test_protocol", false, "plain"), // OpenTestScreen
-    ("purposes", false, "plain"),          // PlanScreen, FamilyDatesScreen
-    ("questions", false, "plain"),         // AskScreen, TogetherScreen
+    ("purposes", true, "plain"),          // PlanScreen, FamilyDatesScreen
+    ("questions", true, "plain"),         // AskScreen, TogetherScreen
     ("record_card", true, "plain"),        // Integrity.kt
-    ("remedy_how_it_helps", false, "both"), // PariharaScreen (expert), TogetherScreen (plain)
+    ("remedy_how_it_helps", true, "both"), // PariharaScreen (expert), TogetherScreen (plain)
     ("remedy_kept_compare", true, "plain"), // Integrity.kt
     ("resolve_forecast", false, "expert"), // SealedScreen
     ("scoreboard", true, "plain"),         // ScoreboardScreen, OpenTestScreen, TrustScreen
@@ -181,8 +183,8 @@ const FNS: &[(&str, bool, &str)] = &[
     ("source_lines", true, "plain"),       // WhereFrom.kt
     ("system_hit_rates", true, "plain"),   // Integrity.kt
     ("tier_of_probability", false, "plain"), // Integrity.kt
-    ("topics", false, "plain"),            // AskScreen, ReadingScreen2
-    ("understand", false, "plain"),        // AskScreen
+    ("topics", true, "plain"),            // AskScreen, ReadingScreen2
+    ("understand", true, "plain"),        // AskScreen
     ("hora_lore_all", false, "plain"),     // the hour's lore on the Loop comes through forecast_moment; this is the whole table
     ("vakya_note", false, "expert"),       // LexiconScreen
 ];
@@ -772,7 +774,7 @@ fn lang_leaks() {
             a.run("sure_next", lang, e.sure_next(b, la, lo, HS, AY, hla, hlo, off, now, 12, l()));
             a.run("chart_facts", lang, e.chart_facts(b, la, lo, HS, AY, now, l(), 30.0, vec![]));
             let group = vec![PersonInput { birth: b, lat: la, lon: lo }, PersonInput { birth: ob, lat: ola, lon: olo }];
-            for pu in purposes().into_iter().take(4).map(|p| p.key) {
+            for pu in purposes(l()).into_iter().take(4).map(|p| p.key) {
                 a.run("best_slots_together", lang, e.best_slots_together(group.clone(), hla, hlo, HS, AY, pu, now, 7, 4, l()));
             }
             let fam: Vec<FamilyMemberInput> = (0..3)
@@ -847,82 +849,15 @@ fn lang_leaks() {
 
         // ---- Functions that take no language: once per chart.
         let nl = "-";
-        let (hb, hla2, hlo2) = (b, la, lo);
-        for pu in purposes() {
-            a.run("appointment", nl, e.appointment(hb, hla2, hlo2, hla, hlo, HS, AY, pu.key.clone(), now));
-            a.run("best_slots", nl, e.best_slots(hb, hla2, hlo2, hla, hlo, HS, AY, pu.key.clone(), now, 7, 4));
-        }
-        let qs = questions();
-        for (i, life) in lives.iter().enumerate() {
-            for (qi, q) in qs.iter().enumerate() {
-                if ci == 0 || (qi + i + ci) % 3 == 0 {
-                    a.run("ask", nl, e.ask(b, la, lo, hla, hlo, HS, AY, life.clone(), q.key.clone(), now));
-                }
-            }
-            a.run("explain", nl, e.explain(b, la, lo, hla, hlo, HS, AY, life.clone(), now));
-        }
-        for (i, tp) in topics().into_iter().enumerate() {
-            for (qi, q) in qs.iter().enumerate() {
-                if ci == 0 || (qi + i + ci) % 3 == 0 {
-                    a.run("ask_topic", nl, e.ask_topic(b, la, lo, hla, hlo, HS, AY, tp.key.clone(), q.key.clone(), now));
-                }
-            }
-        }
-        for q in &qs {
-            a.run("couple_ask", nl, e.couple_ask(b, la, lo, ob, ola, olo, hla, hlo, HS, AY, q.key.clone(), now));
-        }
-        a.run("couple", nl, e.couple(b, la, lo, ob, ola, olo, hla, hlo, HS, AY, male, now));
-        a.run("kundali", nl, e.kundali(b, la, lo, ob, ola, olo, HS, AY, male));
         a.run("talk_window", nl, e.talk_window(b, la, lo, ob, ola, olo, hla, hlo, HS, AY, now, 14));
-        a.run("compatibility", nl, e.compatibility(b, la, lo, ob, ola, olo, AY));
-        a.run("countdowns", nl, e.countdowns(b, la, lo, hla, hlo, HS, AY, now));
-        a.run("festivals_here", nl, e.festivals_here(b, la, lo, HS, AY, hla, hlo, off, now, 60));
-        a.run("letter", nl, e.letter(b, la, lo, hla, hlo, HS, AY, now, vec![]));
-        a.run("year_chapter", nl, e.year_chapter(b, la, lo, hla, hlo, HS, AY, now));
-        a.run("timeline", nl, e.timeline(b, la, lo, HS, AY, now));
         a.run("slow_horizon", nl, e.slow_horizon(b, la, lo, hla, hlo, HS, AY, now, 12));
-        a.run("forecast_horizon", nl, e.forecast_horizon(b, la, lo, hla, hlo, HS, AY, now, 1.0, 14));
-        a.run("plain_reading", nl, e.plain_reading(b, la, lo, AY, now));
-        a.run("chart_yogas", nl, e.chart_yogas(b, la, lo, AY, now));
-        a.run("parihara", nl, e.parihara(b, la, lo, AY, now, None));
-        for life in &lives {
-            a.run("parihara", nl, e.parihara(b, la, lo, AY, now, Some(life.clone())));
-        }
-        a.run("daily", nl, e.daily(b, la, lo, AY, now, hla, hlo));
         a.run("transits", nl, e.transits(b, la, lo, AY, now, 30));
         a.run("life_map", nl, e.life_map(b, la, lo, AY, 90));
-        a.run("karakas", nl, e.karakas(b, la, lo, AY));
-        a.run("area_readings", nl, e.area_readings(b, la, lo, 0.0, HS, AY, now, 3));
         a.run("ashtakavarga", nl, e.ashtakavarga(b, la, lo, AY));
-        a.run("aspects", nl, e.aspects(b, la, lo, 8.0));
         a.run("stability", nl, e.stability(b, la, lo, 600, HS, AY));
-        a.run("shadbala", nl, e.shadbala(b, la, lo, AY));
-        a.run("vimshopaka_bala", nl, e.vimshopaka_bala(b, la, lo, AY));
-        a.run("varshaphala", nl, e.varshaphala(b, la, lo, AY, 2026, hla, hlo));
-        a.run("jaimini_extras", nl, e.jaimini_extras(b, la, lo, AY));
-        a.run("dasha_sandhi_windows", nl, e.dasha_sandhi_windows(b, la, lo, AY, at(2026, 1, 1, 0, 0), at(2036, 1, 1, 0, 0), None));
-        for lord in ["Sun", "Moon", "Saturn", "Rahu"] {
-            a.run("dasha_chidra_lords", nl, e.dasha_chidra_lords(b, la, lo, AY, lord.into()));
-        }
-        a.run("dasha_system", nl, e.dasha_system(b, la, lo, AY, "vimshottari".into(), now));
-        a.run("dasha_systems_at", nl, e.dasha_systems_at(b, la, lo, AY, now));
-        a.run("dasha_systems_more_at", nl, e.dasha_systems_more_at(b, la, lo, AY, now));
-        a.run("kp_full", nl, e.kp_full(b, la, lo, AY, now, hla, hlo));
-        a.run("profections", nl, e.profections(b, la, lo, AY, now));
-        a.run("firdaria", nl, e.firdaria(b, la, lo, AY));
-        a.run("progressions", nl, e.progressions(b, la, lo, AY, now));
-        a.run("progressed_hits", nl, e.progressed_hits(b, la, lo, AY, now, at(2031, 1, 1, 0, 0)));
-        for lot in ["fortune", "spirit"] {
-            a.run("zodiacal_releasing", nl, e.zodiacal_releasing(b, la, lo, AY, lot.into(), 2, at(2027, 10, 22, 0, 0)));
-        }
-        a.run("retrodict", nl, e.retrodict(b, la, lo, AY, at(2010, 1, 1, 0, 0), at(2026, 1, 1, 0, 0)));
-        a.run("transit_windows", nl, e.transit_windows(b, la, lo, AY, now, at(2028, 1, 1, 0, 0)));
-        a.run("transit_score", nl, e.transit_score(b, la, lo, AY, now));
         for pl in ["Saturn", "Jupiter"] {
             a.run("kakshya_windows", nl, e.kakshya_windows(b, la, lo, AY, pl.into(), now, at(2027, 6, 1, 0, 0)));
         }
-        a.run("snapshot", nl, e.snapshot(b, moon, hla, hlo, AY, now, 9));
-        a.run("trace", nl, e.trace(b, moon, hla, hlo, AY, now, at(2026, 10, 25, 0, 0), 5, Finest::Sub, Finest::Sign, true, true, Finest::Nakshatra));
         a.run("reading_report_json", nl, Ok::<_, ()>(()));
         if let Ok(js) = e.reading_report_json(b, la, lo, HS, AY, now) {
             if let Ok(v) = serde_json::from_str::<serde_json::Value>(&js) {
@@ -931,61 +866,133 @@ fn lang_leaks() {
                 a.take("reading_report_json", nl, out);
             }
         }
-        let ledger: Vec<LedgerEventRecord> = vec![
-            LedgerEventRecord { at: at(2012, 6, 1, 0, 0), area: "Career".into(), kind: "Began".into(), weight: 1.0, note: "".into() },
-            LedgerEventRecord { at: at(2016, 2, 14, 0, 0), area: "Marriage".into(), kind: "Milestone".into(), weight: 1.0, note: "".into() },
-            LedgerEventRecord { at: at(2019, 9, 1, 0, 0), area: "Wealth".into(), kind: "Loss".into(), weight: 1.0, note: "".into() },
-            LedgerEventRecord { at: at(2021, 3, 1, 0, 0), area: "Property".into(), kind: "Gain".into(), weight: 1.0, note: "".into() },
-            LedgerEventRecord { at: at(2023, 11, 1, 0, 0), area: "Health".into(), kind: "Crisis".into(), weight: 1.0, note: "".into() },
-        ];
-        let (lf, lt) = (b, now);
-        a.run("score_events", nl, e.score_events(b, la, lo, AY, ledger.clone()));
-        a.run("calibrate_ledger", nl, e.calibrate_ledger(b, la, lo, AY, ledger.clone(), lf, lt, 20));
-        a.run("coverage_tally", nl, e.coverage_tally(b, la, lo, AY, ledger.clone(), lf, lt));
-        a.run("ledger_metrics", nl, e.ledger_metrics(b, la, lo, AY, ledger.clone(), lf, lt, 20, 0));
-        a.run("time_shift_test", nl, e.time_shift_test(b, la, lo, AY, ledger.clone(), lf, lt, 8));
-        a.run("birth_posterior", nl, e.birth_posterior(b, la, lo, AY, 1800, 300, ledger.clone()));
-        let quiz = a.run("retrodiction_quiz", nl, e.retrodiction_quiz(b, la, lo, AY, "Career".into(), at(2005, 1, 1, 0, 0), now, 4, 3));
-        if let Some(qz) = quiz {
-            let n = qz.len();
-            a.run("grade_quiz", nl, ok(grade_quiz(qz, vec![0; n])));
-        }
-        if let Some(sf) = a.run("seal_forecast", nl, e.seal_forecast(b, la, lo, AY, now, "Career".into(), "Began".into(), at(2026, 11, 1, 0, 0), at(2027, 3, 1, 0, 0))) {
-            if let Ok(js) = sealed_forecast_to_json(sf) {
-                a.run("resolve_forecast", nl, resolve_forecast(js, true, at(2027, 1, 1, 0, 0)));
-            }
-        }
-        let lev = vec![
-            LifeEventRecord { at: at(2012, 6, 1, 0, 0), life: "Career".into(), good: true },
-            LifeEventRecord { at: at(2016, 2, 14, 0, 0), life: "Love".into(), good: true },
-            LifeEventRecord { at: at(2019, 9, 1, 0, 0), life: "Money".into(), good: false },
-        ];
-        a.run("rectify", nl, ok(e.rectify(la, lo, HS, AY, at(1990, 2, 20, 4, 0), at(1990, 2, 20, 6, 0), lev, 5)));
-        let kev = vec![
-            KpLifeEventRecord { area: "Career".into(), at: at(2012, 6, 1, 0, 0), label: "first job".into() },
-            KpLifeEventRecord { area: "Marriage".into(), at: at(2016, 2, 14, 0, 0), label: "wedding".into() },
-        ];
-        a.run("rectify_kp", nl, e.rectify_kp(b, 1800, 300, la, lo, AY, kev));
         a.run("muhurta", nl, e.muhurta(["Marriage", "Travel", "Business"][ci].into(), now, 14, hla, hlo, AY, Some(moon), 5));
-        let shapes = [QuestionShape::WillItHappen, QuestionShape::When, QuestionShape::Choice, QuestionShape::WillItReturn, QuestionShape::WillTheyRecover];
-        for (ai, area) in ["Career", "Marriage", "Children", "Wealth", "Health", "Property", "Education", "Family", "Foreign"].into_iter().enumerate() {
-            let shape = shapes[(ai + ci) % shapes.len()];
-            a.run("prashna", nl, e.prashna(now, hla, hlo, Some((ci * 40 + ai * 7 + 11) as u16), area.into(), shape, AY, 15));
-        }
-        a.run("prasna_marga_sphutas", nl, e.prasna_marga_sphutas(now, hla, hlo, AY));
-        a.run("prasna_arudha_sphutas", nl, e.prasna_arudha_sphutas(now, hla, hlo, AY, (ci * 4) as u8));
         a.run("dasha_table", nl, ok(dasha_table(moon, b)));
         a.run("dasha_chain", nl, ok(dasha_chain(moon, b, now, 5)));
-        a.run("dasha_sensitivity", nl, ok(dasha_sensitivity(moon, 13.2, 600.0)));
-        a.run("naming", nl, ok(naming(moon)));
-        a.read("birth_bird", nl, format!("{:?}", birth_bird(moon, shukla)));
-        for &r in &[100.0, 250.0] {
-            a.run("remedy_how_it_helps", nl, ok(remedy_how_it_helps(["Saturn", "Rahu"][(r as usize) % 2].into(), "dasha".into(), None)));
-        }
-        for planet in ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"] {
-            for (k, source) in ["dasha", "gochara", "natal"].into_iter().enumerate() {
-                if (k + ci) % 3 == 0 {
-                    a.read("remedy_how_it_helps", nl, format!("{:?}", remedy_how_it_helps(planet.into(), source.into(), lives.get(k).cloned())));
+
+        // ---- The rest of the chart functions, in Malayalam and Hindi.
+        for lang in LANGS {
+            let l = || lang.to_string();
+            let (hb, hla2, hlo2) = (b, la, lo);
+            for pu in purposes(l()) {
+                a.run("appointment", lang, e.appointment(hb, hla2, hlo2, hla, hlo, HS, AY, pu.key.clone(), now, l()));
+                a.run("best_slots", lang, e.best_slots(hb, hla2, hlo2, hla, hlo, HS, AY, pu.key.clone(), now, 7, 4, l()));
+            }
+            let qs = questions(l());
+            for (i, life) in lives.iter().enumerate() {
+                for (qi, q) in qs.iter().enumerate() {
+                    if ci == 0 || (qi + i + ci) % 3 == 0 {
+                        a.run("ask", lang, e.ask(b, la, lo, hla, hlo, HS, AY, life.clone(), q.key.clone(), now, l()));
+                    }
+                }
+                a.run("explain", lang, e.explain(b, la, lo, hla, hlo, HS, AY, life.clone(), now, l()));
+            }
+            for (i, tp) in topics(l()).into_iter().enumerate() {
+                for (qi, q) in qs.iter().enumerate() {
+                    if ci == 0 || (qi + i + ci) % 3 == 0 {
+                        a.run("ask_topic", lang, e.ask_topic(b, la, lo, hla, hlo, HS, AY, tp.key.clone(), q.key.clone(), now, l()));
+                    }
+                }
+            }
+            for q in &qs {
+                a.run("couple_ask", lang, e.couple_ask(b, la, lo, ob, ola, olo, hla, hlo, HS, AY, q.key.clone(), now, l()));
+            }
+            a.run("couple", lang, e.couple(b, la, lo, ob, ola, olo, hla, hlo, HS, AY, male, now, l()));
+            a.run("kundali", lang, e.kundali(b, la, lo, ob, ola, olo, HS, AY, male, l()));
+            a.run("compatibility", lang, e.compatibility(b, la, lo, ob, ola, olo, AY, l()));
+            a.run("countdowns", lang, e.countdowns(b, la, lo, hla, hlo, HS, AY, now, l()));
+            a.run("festivals_here", lang, e.festivals_here(b, la, lo, HS, AY, hla, hlo, off, now, 60, l()));
+            a.run("letter", lang, e.letter(b, la, lo, hla, hlo, HS, AY, now, vec![], l()));
+            a.run("year_chapter", lang, e.year_chapter(b, la, lo, hla, hlo, HS, AY, now, l()));
+            a.run("timeline", lang, e.timeline(b, la, lo, HS, AY, now, l()));
+            a.run("forecast_horizon", lang, e.forecast_horizon(b, la, lo, hla, hlo, HS, AY, now, 1.0, 14, l()));
+            a.run("plain_reading", lang, e.plain_reading(b, la, lo, AY, now, l()));
+            a.run("chart_yogas", lang, e.chart_yogas(b, la, lo, AY, now, l()));
+            a.run("parihara", lang, e.parihara(b, la, lo, AY, now, None, l()));
+            for life in &lives {
+                a.run("parihara", lang, e.parihara(b, la, lo, AY, now, Some(life.clone()), l()));
+            }
+            a.run("daily", lang, e.daily(b, la, lo, AY, now, hla, hlo, l()));
+            a.run("karakas", lang, e.karakas(b, la, lo, AY, l()));
+            a.run("area_readings", lang, e.area_readings(b, la, lo, 0.0, HS, AY, now, 3, l()));
+            a.run("aspects", lang, e.aspects(b, la, lo, 8.0, l()));
+            a.run("shadbala", lang, e.shadbala(b, la, lo, AY, l()));
+            a.run("vimshopaka_bala", lang, e.vimshopaka_bala(b, la, lo, AY, l()));
+            a.run("varshaphala", lang, e.varshaphala(b, la, lo, AY, 2026, hla, hlo, l()));
+            a.run("jaimini_extras", lang, e.jaimini_extras(b, la, lo, AY, l()));
+            a.run("dasha_sandhi_windows", lang, e.dasha_sandhi_windows(b, la, lo, AY, at(2026, 1, 1, 0, 0), at(2036, 1, 1, 0, 0), None, l()));
+            for lord in ["Sun", "Moon", "Saturn", "Rahu"] {
+                a.run("dasha_chidra_lords", lang, e.dasha_chidra_lords(b, la, lo, AY, lord.into(), l()));
+            }
+            a.run("dasha_system", lang, e.dasha_system(b, la, lo, AY, "vimshottari".into(), now, l()));
+            a.run("dasha_systems_at", lang, e.dasha_systems_at(b, la, lo, AY, now, l()));
+            a.run("dasha_systems_more_at", lang, e.dasha_systems_more_at(b, la, lo, AY, now, l()));
+            a.run("kp_full", lang, e.kp_full(b, la, lo, AY, now, hla, hlo, l()));
+            a.run("profections", lang, e.profections(b, la, lo, AY, now, l()));
+            a.run("firdaria", lang, e.firdaria(b, la, lo, AY, l()));
+            a.run("progressions", lang, e.progressions(b, la, lo, AY, now, l()));
+            a.run("progressed_hits", lang, e.progressed_hits(b, la, lo, AY, now, at(2031, 1, 1, 0, 0), l()));
+            for lot in ["fortune", "spirit"] {
+                a.run("zodiacal_releasing", lang, e.zodiacal_releasing(b, la, lo, AY, lot.into(), 2, at(2027, 10, 22, 0, 0), l()));
+            }
+            a.run("retrodict", lang, e.retrodict(b, la, lo, AY, at(2010, 1, 1, 0, 0), at(2026, 1, 1, 0, 0), l()));
+            a.run("transit_windows", lang, e.transit_windows(b, la, lo, AY, now, at(2028, 1, 1, 0, 0), l()));
+            a.run("transit_score", lang, e.transit_score(b, la, lo, AY, now, l()));
+            a.run("snapshot", lang, e.snapshot(b, moon, hla, hlo, AY, now, 9, l()));
+            a.run("trace", lang, e.trace(b, moon, hla, hlo, AY, now, at(2026, 10, 25, 0, 0), 5, Finest::Sub, Finest::Sign, true, true, Finest::Nakshatra, l()));
+            let ledger: Vec<LedgerEventRecord> = vec![
+                LedgerEventRecord { at: at(2012, 6, 1, 0, 0), area: "Career".into(), kind: "Began".into(), weight: 1.0, note: "".into() },
+                LedgerEventRecord { at: at(2016, 2, 14, 0, 0), area: "Marriage".into(), kind: "Milestone".into(), weight: 1.0, note: "".into() },
+                LedgerEventRecord { at: at(2019, 9, 1, 0, 0), area: "Wealth".into(), kind: "Loss".into(), weight: 1.0, note: "".into() },
+                LedgerEventRecord { at: at(2021, 3, 1, 0, 0), area: "Property".into(), kind: "Gain".into(), weight: 1.0, note: "".into() },
+                LedgerEventRecord { at: at(2023, 11, 1, 0, 0), area: "Health".into(), kind: "Crisis".into(), weight: 1.0, note: "".into() },
+            ];
+            let (lf, lt) = (b, now);
+            a.run("score_events", lang, e.score_events(b, la, lo, AY, ledger.clone(), l()));
+            a.run("calibrate_ledger", lang, e.calibrate_ledger(b, la, lo, AY, ledger.clone(), lf, lt, 20, l()));
+            a.run("coverage_tally", lang, e.coverage_tally(b, la, lo, AY, ledger.clone(), lf, lt, l()));
+            a.run("ledger_metrics", lang, e.ledger_metrics(b, la, lo, AY, ledger.clone(), lf, lt, 20, 0, l()));
+            a.run("time_shift_test", lang, e.time_shift_test(b, la, lo, AY, ledger.clone(), lf, lt, 8, l()));
+            a.run("birth_posterior", lang, e.birth_posterior(b, la, lo, AY, 1800, 300, ledger.clone(), l()));
+            let quiz = a.run("retrodiction_quiz", lang, e.retrodiction_quiz(b, la, lo, AY, "Career".into(), at(2005, 1, 1, 0, 0), now, 4, 3, l()));
+            if let Some(qz) = quiz {
+                let n = qz.len();
+                a.run("grade_quiz", lang, ok(grade_quiz(qz, vec![0; n], l())));
+            }
+            if let Some(sf) = a.run("seal_forecast", lang, e.seal_forecast(b, la, lo, AY, now, "Career".into(), "Began".into(), at(2026, 11, 1, 0, 0), at(2027, 3, 1, 0, 0), l())) {
+                if let Ok(js) = sealed_forecast_to_json(sf) {
+                    a.run("resolve_forecast", nl, resolve_forecast(js, true, at(2027, 1, 1, 0, 0)));
+                }
+            }
+            let lev = vec![
+                LifeEventRecord { at: at(2012, 6, 1, 0, 0), life: "Career".into(), good: true },
+                LifeEventRecord { at: at(2016, 2, 14, 0, 0), life: "Love".into(), good: true },
+                LifeEventRecord { at: at(2019, 9, 1, 0, 0), life: "Money".into(), good: false },
+            ];
+            a.run("rectify", lang, ok(e.rectify(la, lo, HS, AY, at(1990, 2, 20, 4, 0), at(1990, 2, 20, 6, 0), lev, 5, l())));
+            let kev = vec![
+                KpLifeEventRecord { area: "Career".into(), at: at(2012, 6, 1, 0, 0), label: "first job".into() },
+                KpLifeEventRecord { area: "Marriage".into(), at: at(2016, 2, 14, 0, 0), label: "wedding".into() },
+            ];
+            a.run("rectify_kp", lang, e.rectify_kp(b, 1800, 300, la, lo, AY, kev, l()));
+            let shapes = [QuestionShape::WillItHappen, QuestionShape::When, QuestionShape::Choice, QuestionShape::WillItReturn, QuestionShape::WillTheyRecover];
+            for (ai, area) in ["Career", "Marriage", "Children", "Wealth", "Health", "Property", "Education", "Family", "Foreign"].into_iter().enumerate() {
+                let shape = shapes[(ai + ci) % shapes.len()];
+                a.run("prashna", lang, e.prashna(now, hla, hlo, Some((ci * 40 + ai * 7 + 11) as u16), area.into(), shape, AY, 15, l()));
+            }
+            a.run("prasna_marga_sphutas", lang, e.prasna_marga_sphutas(now, hla, hlo, AY, l()));
+            a.run("prasna_arudha_sphutas", lang, e.prasna_arudha_sphutas(now, hla, hlo, AY, (ci * 4) as u8, l()));
+            a.run("dasha_sensitivity", lang, ok(dasha_sensitivity(moon, 13.2, 600.0, l())));
+            a.run("naming", lang, ok(naming(moon, l())));
+            a.read("birth_bird", lang, format!("{:?}", birth_bird(moon, shukla, l())));
+            for &r in &[100.0, 250.0] {
+                a.run("remedy_how_it_helps", lang, ok(remedy_how_it_helps(["Saturn", "Rahu"][(r as usize) % 2].into(), "dasha".into(), None, l())));
+            }
+            for planet in ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"] {
+                for (k, source) in ["dasha", "gochara", "natal"].into_iter().enumerate() {
+                    if (k + ci) % 3 == 0 {
+                        a.read("remedy_how_it_helps", lang, format!("{:?}", remedy_how_it_helps(planet.into(), source.into(), lives.get(k).cloned(), l())));
+                    }
                 }
             }
         }
@@ -995,37 +1002,46 @@ fn lang_leaks() {
     let nl = "-";
     let (la, lo) = (9.9312, 76.2673);
     a.run("panchanga_detail", nl, e.panchanga_detail(now, la, lo, AY));
-    a.run("day_clock", nl, e.day_clock(now, la, lo, AY));
-    a.run("pancha_pakshi", nl, e.pancha_pakshi(charts[0].0, AY, now, la, lo));
-    for k in ["gandanta", "panchaka", "bhadra", "yoga", "tara", "chandra"] {
-        a.run("moon_windows", nl, e.moon_windows(k.into(), AY, 100.0, now, at(2026, 11, 22, 0, 0)));
-    }
     a.run("next_events", nl, ok(e.next_events(now, 14, AY)));
-    a.run("calendar", nl, e.calendar(now, 30, la, lo, AY));
-    a.run("calendar_days", nl, e.calendar_days(la, lo, off, 2026, 10, 1, 31, AY));
     a.run("eclipses", nl, e.eclipses(now, at(2030, 1, 1, 0, 0), la, lo));
-    a.run("nazhika_to_instant", nl, e.nazhika_to_instant(2026, 10, 22, off * 60, la, lo, 0.0, 10, 30, true, false));
     a.run("nazhika", nl, ok(nazhika(at(2026, 10, 22, 0, 45), now)));
     a.run("self_test", nl, ok(e.self_test()));
-    a.run("error_budget", nl, ok(error_budget()));
-    a.run("dasha_level_names", nl, ok(dasha_level_names()));
     a.run("ledger_event_kinds", nl, ok(ledger_event_kinds()));
-    a.run("glossary", nl, ok(glossary()));
-    a.run("questions", nl, ok(questions()));
-    a.run("purposes", nl, ok(purposes()));
-    a.run("topics", nl, ok(topics()));
     a.run("hora_lore_all", nl, ok(hora_lore_all()));
     a.run("open_test_protocol", nl, ok(open_test_protocol()));
     a.run("language_names", nl, ok(language_names()));
     a.read("vakya_note", nl, format!("{:?}", vakya_note()));
-    for n in [111, 345, 678, 888] {
-        a.run("ashtamangala_number", nl, ok(ashtamangala_number(n)));
-    }
-    let recs: Vec<RecordInput> = (0..30).map(|k| RecordInput { life: life_names()[k % 9].clone(), predicted: (k * 7 % 100) as f64, happened: k % 3 != 0 }).collect();
-    a.run("calibrate", nl, ok(calibrate(recs)));
-    a.run("calibrate", nl, ok(calibrate(vec![])));
-    for s in ["when will i get a job", "kalyanam eppo", "मेरी शादी कब होगी", "എന്റെ വിവാഹം എപ്പോൾ", "is this a good week to travel", "my mother is ill", "money worries"] {
-        a.run("understand", nl, ok(understand(s.into())));
+    for lang in LANGS {
+        let l = || lang.to_string();
+        a.run("day_clock", lang, e.day_clock(now, la, lo, AY, l()));
+        a.run("pancha_pakshi", lang, e.pancha_pakshi(charts[0].0, AY, now, la, lo, l()));
+        for k in ["gandanta", "panchaka", "bhadra", "yoga", "tara", "chandra"] {
+            a.run("moon_windows", lang, e.moon_windows(k.into(), AY, 100.0, now, at(2026, 11, 22, 0, 0), l()));
+        }
+        a.run("calendar", lang, e.calendar(now, 30, la, lo, AY, l()));
+        a.run("calendar_days", lang, e.calendar_days(la, lo, off, 2026, 10, 1, 31, AY, l()));
+        a.run("nazhika_to_instant", lang, e.nazhika_to_instant(2026, 10, 22, off * 60, la, lo, 0.0, 10, 30, true, false, l()));
+        a.run("error_budget", lang, ok(error_budget(l())));
+        a.run("dasha_level_names", lang, ok(dasha_level_names(l())));
+        a.run("glossary", lang, ok(glossary(l())));
+        a.run("questions", lang, ok(questions(l())));
+        a.run("purposes", lang, ok(purposes(l())));
+        a.run("topics", lang, ok(topics(l())));
+        for n in [111, 345, 678, 888] {
+            a.run("ashtamangala_number", lang, ok(ashtamangala_number(n, l())));
+        }
+        let recs: Vec<RecordInput> = (0..30).map(|k| RecordInput { life: life_names()[k % 9].clone(), predicted: (k * 7 % 100) as f64, happened: k % 3 != 0 }).collect();
+        a.run("calibrate", lang, ok(calibrate(recs, l())));
+        a.run("calibrate", lang, ok(calibrate(vec![], l())));
+        for s in ["when will i get a job", "kalyanam eppo", "मेरी शादी कब होगी", "എന്റെ വിവാഹം എപ്പോൾ", "is this a good week to travel", "my mother is ill", "money worries"] {
+            a.run("understand", lang, ok(understand(s.into(), l())));
+        }
+        for k in ledger_event_kinds() {
+            a.read("ledger_event_kind_name", lang, format!("{:?}", ledger_event_kind_name(k, l())));
+        }
+        for c in [0.2, 0.5, 0.75, 0.9, 0.97] {
+            a.read("sure_words", lang, format!("{:?}", sure_words(l(), c)));
+        }
     }
     for lang in LANGS {
         a.run("lexicon", lang, ok(lexicon(lang.into())));

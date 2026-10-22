@@ -1096,12 +1096,12 @@ impl Engine {
             signature: p.signature.clone(),
             cause_house: c.house,
             placed_in: c.placed_in,
-            dignity: format!("{:?}", c.dignity),
+            dignity: kshana_rules::yogas::words::dignity(lang, c.dignity).to_string(),
             running_level: c.running_level.map(|l| l.to_string()),
             running_since: c.running_since.map(Into::into),
             running_until: c.running_until.map(Into::into),
-            karma_class: c.karma.class.name().to_string(),
-            karma_kind: c.karma.kind_in_play.name().to_string(),
+            karma_class: c.karma.class.name_in(lang).to_string(),
+            karma_kind: c.karma.kind_in_play.name_in(lang).to_string(),
             karma_basis: c.karma.basis.clone(),
             may_claim: c.karma.may_claim.to_string(),
             karma_source: c.karma.source.to_string(),
@@ -1109,7 +1109,7 @@ impl Engine {
                 .doshas
                 .iter()
                 .map(|d| DoshaRecord {
-                    name: d.name.to_string(),
+                    name: if lang == kshana_rules::Lang::En { d.name } else { d.name_in(lang) }.to_string(),
                     rule_id: d.rule_id.to_string(),
                     planet: lord_name(d.planet),
                     present: d.present,
@@ -1131,7 +1131,10 @@ impl Engine {
 pub struct AspectRecord {
     pub body_a: String,
     pub body_b: String,
+    /// The aspect in the reader's language ("Square" in English).
     pub aspect: String,
+    /// The aspect's English name ("Square"), for the app to compare.
+    pub aspect_key: String,
     pub orb: f64,
     pub applying: Option<bool>,
 }
@@ -1156,7 +1159,9 @@ impl Engine {
         latitude_deg: f64,
         longitude_deg: f64,
         max_orb_deg: f64,
+        lang: String,
     ) -> Result<Vec<AspectRecord>, KshanaError> {
+        let lang = kshana_rules::Lang::parse(&lang);
         let input = ChartInput {
             instant: at.into(),
             observer: Observer {
@@ -1185,7 +1190,12 @@ impl Engine {
                     out.push(AspectRecord {
                         body_a: a.name.to_string(),
                         body_b: b.name.to_string(),
-                        aspect: format!("{:?}", h.aspect),
+                        aspect: if lang == kshana_rules::Lang::En {
+                            format!("{:?}", h.aspect)
+                        } else {
+                            kshana_speak::lexicon::aspect(h.aspect, lang).to_string()
+                        },
+                        aspect_key: format!("{:?}", h.aspect),
                         orb: h.orb,
                         applying: h.applying,
                     });

@@ -69,13 +69,13 @@ fun ChartScreen(profile: BirthProfile, settings: EngineSettings) {
     var error by remember { mutableStateOf<String?>(null) }
     var sidereal by remember { mutableStateOf(false) }
 
-    LaunchedEffect(profile, settings) {
+    LaunchedEffect(profile, settings, com.kshana.app.data.Lang.code) {
         try {
             val engine = EngineProvider.get(context)
             val birth = profile.birthInstant()
             val result = withContext(Dispatchers.Default) {
                 val c = engine.chart(birth, profile.latitude, profile.longitude, 0.0, settings.houseSystem, settings.ayanamsa, settings.topocentricMoon)
-                val a = engine.aspects(birth, profile.latitude, profile.longitude, MAX_ORB_DEG)
+                val a = engine.aspects(birth, profile.latitude, profile.longitude, MAX_ORB_DEG, com.kshana.app.data.Lang.code)
                 val s = engine.stability(
                     birth, profile.latitude, profile.longitude,
                     profile.uncertaintySeconds().toULong(), settings.houseSystem, settings.ayanamsa,
@@ -192,12 +192,12 @@ private fun NatalWheel(chart: ChartRecord, aspects: List<AspectRecord>, sidereal
         for (a in aspects) {
             val pa = byName[a.bodyA] ?: continue
             val pb = byName[a.bodyB] ?: continue
-            val colour = when (a.aspect) {
+            val colour = when (a.aspectKey) {
                 in MAJOR_GOLD -> KshanaColors.Gold.copy(alpha = 0.75f)
                 in MAJOR_SKY -> KshanaColors.Sky.copy(alpha = 0.75f)
                 else -> KshanaColors.Muted.copy(alpha = 0.6f)
             }
-            val minor = a.aspect !in MAJOR_GOLD && a.aspect !in MAJOR_SKY
+            val minor = a.aspectKey !in MAJOR_GOLD && a.aspectKey !in MAJOR_SKY
             drawLine(colour, at(lonOf(pa), rInner), at(lonOf(pb), rInner), if (minor) 1f else 1.5f, pathEffect = if (minor) dash else null)
         }
         // planets: tick on the sign ring, glyph on the planet ring
@@ -247,7 +247,7 @@ private fun NodeRow(name: String, lon: Double, chart: ChartRecord, sidereal: Boo
 
 @Composable
 private fun AspectRow(a: AspectRecord) {
-    val colour = when (a.aspect) {
+    val colour = when (a.aspectKey) {
         in MAJOR_GOLD -> KshanaColors.Gold
         in MAJOR_SKY -> KshanaColors.Sky
         else -> KshanaColors.Muted

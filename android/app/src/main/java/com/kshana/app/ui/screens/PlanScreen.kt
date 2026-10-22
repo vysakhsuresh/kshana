@@ -101,7 +101,7 @@ fun PlanScreen(
 
     val chosen: ZonedDateTime = ZonedDateTime.of(date, time, zone)
 
-    LaunchedEffect(request) {
+    LaunchedEffect(request, com.kshana.app.data.Lang.code) {
         val r = request ?: return@LaunchedEffect
         reading = true
         try {
@@ -218,7 +218,7 @@ fun PlanScreen(
             },
             modifier = Modifier.fillMaxWidth(),
         )
-        LaunchedEffect(findingBest, purpose, planPlace) {
+        LaunchedEffect(findingBest, purpose, planPlace, com.kshana.app.data.Lang.code) {
             if (!findingBest) return@LaunchedEffect
             try {
                 val engine = EngineProvider.get(context)
@@ -290,12 +290,12 @@ fun PlanScreen(
                 a.caution?.let { label ->
                     val w = a.moment.windows.firstOrNull { it.label == label }
                     Text(
-                        if (w != null) "That day has a ${label.lowercase()} from ${localText(w.start, TIME_HM, zone)} to ${localText(w.end, TIME_HM, zone)}. Finish things in it, do not begin; start after ${localText(w.end, TIME_HM, zone)}."
-                        else "That time falls in a ${label.lowercase()}. Finish things, do not begin.",
+                        if (w != null) trf("That day has a {0} from {1} to {2}. Finish things in it, do not begin; start after {2}.", label.lowercase(), localText(w.start, TIME_HM, zone), localText(w.end, TIME_HM, zone))
+                        else trf("That time falls in a {0}. Finish things, do not begin.", label.lowercase()),
                         style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Ember,
                     )
                 }
-                if (a.abhijit) Text("These are the luckiest minutes of the day: a winning time to begin.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Gold)
+                if (a.abhijit) Text(tr("These are the luckiest minutes of the day: a winning time to begin."), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Gold)
                 HorizontalDivider(color = KshanaColors.LineSoft)
                 for (line in a.advice) {
                     Row(verticalAlignment = Alignment.Top) {

@@ -41,7 +41,7 @@ private fun Page(label: String, title: String, help: String, onBack: () -> Unit,
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).padding(top = 44.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("‹ BACK", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onBack).padding(vertical = 4.dp))
+        Text(tr("‹ BACK"), style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold, modifier = Modifier.clickable(onClick = onBack).padding(vertical = 4.dp))
         Text(label, style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         Text(title, style = MaterialTheme.typography.displayMedium, color = KshanaColors.Text)
         Text(help, style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Muted)
@@ -120,22 +120,22 @@ fun AlmanacScreen(place: Place, settings: EngineSettings, onBack: () -> Unit) {
             }
         }.onFailure { error = it.message }
     }
-    Page("CALENDAR", "The days ahead", "Worked out for ${place.name} from the real sky: the dates, the moon's month and the festivals.", onBack) {
+    Page(tr("CALENDAR"), tr("The days ahead"), trf("Worked out for {0} from the real sky: the dates, the moon's month and the festivals.", place.name), onBack) {
         ErrorLine(error)
-        val d = days ?: run { if (error == null) Working("working out the calendar…"); return@Page }
+        val d = days ?: run { if (error == null) Working(tr("working out the calendar…")); return@Page }
         val today = d.firstOrNull() ?: return@Page
         Column(Modifier.fillMaxWidth().glass(18.dp).padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("TODAY · ${today.weekday.uppercase()} ${today.day} ${java.time.Month.of(today.month.toInt()).name.take(3)} ${today.year}", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
-            Text("${today.lunarMonth}${if (today.extraMonth) " (the extra month)" else ""} · ${today.fortnight}", fontFamily = FontFamily.Serif, fontSize = 20.sp, color = KshanaColors.Text)
+            Text("${tr("TODAY")} · ${today.weekday.uppercase()} ${java.time.LocalDate.of(today.year.toInt(), today.month.toInt(), today.day.toInt()).format(com.kshana.app.ui.screens.datePattern("d MMM uuuu")).uppercase()}", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
+            Text("${today.lunarMonth}${if (today.extraMonth) " (${tr("the extra month")})" else ""} · ${today.fortnight}", fontFamily = FontFamily.Serif, fontSize = 20.sp, color = KshanaColors.Text)
             for (s in today.solar) Text("${s.calendar.replaceFirstChar { it.uppercase() }}: ${s.day} ${s.month} ${s.year}", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
-            Text("Indian national date: ${today.nationalDate} · ${today.season.replaceFirstChar { it.uppercase() }}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+            Text(trf("Indian national date: {0} · {1}", today.nationalDate, today.season.replaceFirstChar { it.uppercase() }), style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             if (today.festivals.isNotEmpty()) Text(today.festivals.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Gold)
             if (expert) {
-                Text("Tithi ${today.tithi}${if (today.tithiRepeated) " (vriddhi)" else ""}${today.tithiSkipped?.let { " · kshaya: $it" } ?: ""} · Nakshatra ${today.nakshatra}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
-                Text("Samvatsara ${today.samvatsara} (N: ${today.samvatsaraNorth}) · Shaka ${today.shaka} · Vikram ${today.vikram} · Kali ${today.kali} · ${today.ritu} · ${today.ayana}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
+                Text("${trf("Tithi {0}", today.tithi)}${if (today.tithiRepeated) " (${tr("vriddhi")})" else ""}${today.tithiSkipped?.let { " · " + trf("kshaya: {0}", it) } ?: ""} · ${trf("Nakshatra {0}", today.nakshatra)}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Sky)
+                Text("${trf("Samvatsara {0} (N: {1})", today.samvatsara, today.samvatsaraNorth)} · ${trf("Shaka {0}", today.shaka)} · ${trf("Vikram {0}", today.vikram)} · ${trf("Kali {0}", today.kali)} · ${today.ritu} · ${today.ayana}", style = MaterialTheme.typography.bodySmall, color = KshanaColors.Muted)
             }
         }
-        SectionLabel("Festivals and holy days")
+        SectionLabel(tr("Festivals and holy days"))
         val fmt = com.kshana.app.ui.screens.datePattern("EEE d MMM uuuu")
         val withFest = d.filter { it.festivals.isNotEmpty() }
         for (x in withFest) {
@@ -144,7 +144,7 @@ fun AlmanacScreen(place: Place, settings: EngineSettings, onBack: () -> Unit) {
                 Text(x.festivals.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.Text)
             }
         }
-        if (withFest.isEmpty()) Text("No festival falls in the next six weeks here.", style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
+        if (withFest.isEmpty()) Text(tr("No festival falls in the next six weeks here."), style = MaterialTheme.typography.bodyMedium, color = KshanaColors.TextSoft)
     }
 }
 
