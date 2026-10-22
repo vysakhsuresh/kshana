@@ -202,6 +202,8 @@ fn skip_field(f: &str) -> bool {
     const SKIP: &[&str] = &[
         "id", "key", "keys", "rule_id", "rule_ids", "source_keys", "system_keys", "witness_keys", "best_key", "signature", "provenance_engine", "provenance_kernel",
         "provenance_ut1", "provenance_models", "fingerprint", "salt", "hash", "sha", "json", "expert", "why_expert", "verse",
+        // `DoshaRemedyRecord::dosha`: the dosha's key ("Nadi", "Graha Maitri"), never shown.
+        "dosha",
     ];
     SKIP.contains(&f) || f.ends_with("_expert") || f.ends_with("_key") || f.ends_with("_keys") || f.ends_with("_id") || f.ends_with("_ids") || f.ends_with("_hash")
 }
@@ -211,6 +213,9 @@ fn keyish_field(f: &str) -> bool {
     const K: &[&str] = &[
         "area", "areas", "life", "lives", "kind", "tier", "band", "verdict", "source", "topic", "relation", "status", "trend", "purpose", "intent", "unit", "also", "reason",
         "outcome", "planet", "lord", "body", "system", "shape", "lot", "activity", "level", "grade", "direction_key", "mood",
+        // Area keys the ledger compares (`retrodict`), and the Shadbala state keys whose
+        // `*_name` siblings carry the reader's words.
+        "top_areas", "motion", "baladi", "jagradadi", "deeptadi",
     ];
     K.contains(&f)
 }

@@ -412,7 +412,7 @@ fn answer_with(
         ]),
     };
     let samples = series(spk, eop, natal, obs, ayanamsa, at, NS_PER_DAY, 180)?;
-    let st = story(life, &samples);
+    let st = crate::forecast::story_in(lang, life, &samples);
     let ahead_best = st.best.map(|b| b.2).unwrap_or(st.mean);
     let ahead = (0.5 * st.mean + 0.5 * ahead_best).clamp(0.0, 1.0);
 

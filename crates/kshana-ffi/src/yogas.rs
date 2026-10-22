@@ -149,7 +149,7 @@ fn record_in(y: &YogaFound, mahas: &[kshana_vedic::DashaPeriod], now: Instant, l
         meaning: y.def.meaning_in(lang).into(),
         care: y.def.care_in(lang).into(),
         when: when_words(y, &periods, now, lang),
-        lords: y.activators.iter().map(|g| format!("{g:?}")).collect(),
+        lords: y.activators.iter().map(|g| crate::lord_in(*g, lang)).collect(),
         lifelong: y.lifelong,
         periods: periods
             .iter()

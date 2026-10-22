@@ -718,7 +718,7 @@ private fun WindowRow(r: RemedyRecord, w: RemedyWindowRecord, zone: ZoneId) {
     val start = Instants.toLocal(w.start, zone)
     val end = Instants.toLocal(w.end, zone)
     val endText = if (start.toLocalDate() == end.toLocalDate()) end.format(TIME_ONLY) else end.format(DATE_TIME_S)
-    val avoid = w.kind.contains("avoid")
+    val avoid = w.kindKey.contains("avoid")
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {

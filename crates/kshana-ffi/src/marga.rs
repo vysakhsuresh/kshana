@@ -11,7 +11,10 @@ use kshana_vedic::DashaLord;
 use crate::life::natal_chart;
 use crate::{AyanamsaChoice, Engine, ExactInstant, KshanaError};
 
-fn g(l: DashaLord) -> String {
+fn g(l: DashaLord, lang: Lang) -> String {
+    if lang != Lang::En {
+        return kshana_speak::lexicon::graha(l, lang).to_string();
+    }
     format!("{l:?}")
 }
 
@@ -74,8 +77,8 @@ impl SphutaRecord {
             nakshatra: s.nakshatra as u32,
             nakshatra_name: nakshatra_name(s.nakshatra, lang),
             pada: s.pada,
-            lord: g(s.lord),
-            star_lord: g(s.star_lord),
+            lord: g(s.lord, lang),
+            star_lord: g(s.star_lord, lang),
             words: s.words.clone(),
         }
     }
@@ -277,11 +280,11 @@ impl PadaRecord {
             house: p.house,
             sign: p.sign,
             sign_name: sign_name(p.sign, lang),
-            lord: g(p.lord),
+            lord: g(p.lord, lang),
             rasi_house: p.rasi_house,
-            second: p.second.iter().map(|x| g(*x)).collect(),
-            eleventh: p.eleventh.iter().map(|x| g(*x)).collect(),
-            seventh: p.seventh.iter().map(|x| g(*x)).collect(),
+            second: p.second.iter().map(|x| g(*x, lang)).collect(),
+            eleventh: p.eleventh.iter().map(|x| g(*x, lang)).collect(),
+            seventh: p.seventh.iter().map(|x| g(*x, lang)).collect(),
             words: p.words.clone(),
         }
     }
@@ -305,6 +308,9 @@ pub struct SandhiRecord {
     pub level: u8,
     pub from_lord: String,
     pub to_lord: String,
+    /// `from_lord` as the engine names it in English ("Venus"), to pass back to
+    /// `dasha_chidra_lords`; never shown.
+    pub from_lord_key: String,
     pub boundary: ExactInstant,
     pub start: ExactInstant,
     pub end: ExactInstant,
@@ -343,10 +349,10 @@ fn obs(latitude_deg: f64, longitude_deg: f64) -> Observer {
 fn yogi_record(y: &marga::Yogi, lang: Lang) -> YogiRecord {
     YogiRecord {
         point: SphutaRecord::of(&y.point, lang),
-        yogi: g(y.yogi),
-        sahayogi: g(y.sahayogi),
+        yogi: g(y.yogi, lang),
+        sahayogi: g(y.sahayogi, lang),
         avayogi_point: y.avayogi_point,
-        avayogi: g(y.avayogi),
+        avayogi: g(y.avayogi, lang),
         words: y.words.clone(),
     }
 }
@@ -370,7 +376,7 @@ pub fn ashtamangala_number(number: u32, lang: String) -> AshtamangalaRecord {
     AshtamangalaRecord {
         number: a.number,
         digits: a.digits.clone(),
-        planets: a.planets.iter().map(|p| p.map(g)).collect(),
+        planets: a.planets.iter().map(|p| p.map(|l| g(l, lang))).collect(),
         arudha_sign: a.arudha_sign,
         arudha_sign_name: sign_name(a.arudha_sign, lang),
         nakshatra: a.nakshatra.map(|n| n as u32),
@@ -492,8 +498,8 @@ impl Engine {
                     house: a.house,
                     sign: a.sign,
                     sign_name: sign_name(a.sign, lang),
-                    by: a.by.iter().map(|x| g(*x)).collect(),
-                    obstructed_by: a.obstructed_by.iter().map(|x| g(*x)).collect(),
+                    by: a.by.iter().map(|x| g(*x, lang)).collect(),
+                    obstructed_by: a.obstructed_by.iter().map(|x| g(*x, lang)).collect(),
                     net: a.net,
                     pairs: a
                         .pairs
@@ -502,8 +508,8 @@ impl Engine {
                             argala_house: p.argala_house,
                             virodha_house: p.virodha_house,
                             secondary: p.secondary,
-                            by: p.by.iter().map(|x| g(*x)).collect(),
-                            obstructed_by: p.obstructed_by.iter().map(|x| g(*x)).collect(),
+                            by: p.by.iter().map(|x| g(*x, lang)).collect(),
+                            obstructed_by: p.obstructed_by.iter().map(|x| g(*x, lang)).collect(),
                             net: p.net,
                         })
                         .collect(),
@@ -511,12 +517,12 @@ impl Engine {
                 })
                 .collect(),
             karakamsa: KarakamsaRecord {
-                atmakaraka: g(k.atmakaraka),
+                atmakaraka: g(k.atmakaraka, lang),
                 degree_in_sign: k.degree_in_sign,
                 sign: k.sign,
                 sign_name: sign_name(k.sign, lang),
                 navamsa_lagna: k.navamsa_lagna,
-                occupants: k.occupants.iter().map(|x| g(*x)).collect(),
+                occupants: k.occupants.iter().map(|x| g(*x, lang)).collect(),
                 words: k.words.clone(),
             },
             pada_lagna: PadaRecord::of(&marga::jaimini::pada_of_in(&f, 1, lang), lang),
@@ -557,8 +563,9 @@ impl Engine {
         .iter()
         .map(|s| SandhiRecord {
             level: s.level,
-            from_lord: g(s.from_lord),
-            to_lord: g(s.to_lord),
+            from_lord: g(s.from_lord, lang),
+            to_lord: g(s.to_lord, lang),
+            from_lord_key: g(s.from_lord, Lang::En),
             boundary: s.boundary.into(),
             start: s.start.into(),
             end: s.end.into(),
@@ -583,7 +590,7 @@ impl Engine {
         let lord = parse_lord(&dasha_lord)?;
         Ok(marga::sandhi::chidra_lords_in(&f, lord, lang)
             .into_iter()
-            .map(|(l, reason)| ChidraRecord { lord: g(l), reason })
+            .map(|(l, reason)| ChidraRecord { lord: g(l, lang), reason })
             .collect())
     }
 
@@ -602,7 +609,7 @@ impl Engine {
             .map_err(err)?
             .iter()
             .map(|v| VimshopakaRecord {
-                graha: g(v.graha),
+                graha: g(v.graha, lang),
                 shadvarga: v.shadvarga,
                 saptavarga: v.saptavarga,
                 dashavarga: v.dashavarga,

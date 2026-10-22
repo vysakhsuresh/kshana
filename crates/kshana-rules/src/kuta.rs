@@ -313,6 +313,22 @@ pub fn ashtakoota_in(moon_a: f64, moon_b: f64, lang: Lang) -> Ashtakoota {
     r
 }
 
+/// A kuta's name (`KutaScore::name`, the English key) in the reader's script.
+pub fn kuta_name_in(name: &'static str, lang: Lang) -> &'static str {
+    let t = match name {
+        "Varna" => ["Varna", "വർണം", "वर्ण"],
+        "Vashya" => ["Vashya", "വശ്യം", "वश्य"],
+        "Tara" => ["Tara", "താര", "तारा"],
+        "Yoni" => ["Yoni", "യോനി", "योनि"],
+        "Graha Maitri" => ["Graha Maitri", "ഗ്രഹമൈത്രി", "ग्रह मैत्री"],
+        "Gana" => ["Gana", "ഗണം", "गण"],
+        "Bhakoot" => ["Bhakoot", "ഭകൂടം", "भकूट"],
+        "Nadi" => ["Nadi", "നാഡി", "नाड़ी"],
+        _ => return name,
+    };
+    lang.pick(t)
+}
+
 /// [`mangal_dosha`] with the cancellations in the reader's language (expert text).
 pub fn mangal_dosha_in(facts: &Facts, lang: Lang) -> MangalDosha {
     let mut m = mangal_dosha(facts);

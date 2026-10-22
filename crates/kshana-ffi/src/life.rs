@@ -255,18 +255,7 @@ pub struct GlossaryRecord {
 
 /// A kuta's name in the reader's script; the English name is the key.
 fn kuta_name(name: &'static str, lang: kshana_rules::Lang) -> &'static str {
-    let t = match name {
-        "Varna" => ["Varna", "വർണം", "वर्ण"],
-        "Vashya" => ["Vashya", "വശ്യം", "वश्य"],
-        "Tara" => ["Tara", "താര", "तारा"],
-        "Yoni" => ["Yoni", "യോനി", "योनि"],
-        "Graha Maitri" => ["Graha Maitri", "ഗ്രഹമൈത്രി", "ग्रह मैत्री"],
-        "Gana" => ["Gana", "ഗണം", "गण"],
-        "Bhakoot" => ["Bhakoot", "ഭകൂടം", "भकूट"],
-        "Nadi" => ["Nadi", "നാഡി", "नाड़ी"],
-        _ => return name,
-    };
-    lang.pick(t)
+    kshana_rules::kuta::kuta_name_in(name, lang)
 }
 
 fn mangal(m: &kshana_rules::MangalDosha) -> MangalRecord {
@@ -459,10 +448,11 @@ impl Engine {
         let mb = kshana_rules::mangal_dosha(&fb);
         let syn = kshana_rules::synastry(&a, &b, 6.0);
         let words = kshana_speak::compatibility(&ash, &ma, &mb, &syn);
-        // The words above read the English verdict; the record shows the reader's.
+        // The record and, beyond English, the words show the reader's language.
         let ash = kshana_rules::kuta::ashtakoota_in(a.bodies[1].sidereal, b.bodies[1].sidereal, lang);
         let ma = kshana_rules::kuta::mangal_dosha_in(&fa, lang);
         let mb = kshana_rules::kuta::mangal_dosha_in(&fb, lang);
+        let words = if lang == kshana_rules::Lang::En { words } else { kshana_speak::compatibility_in(lang, &ash, &ma, &mb, &syn) };
         Ok(CompatibilityRecord {
             kutas: ash
                 .kutas
@@ -484,9 +474,9 @@ impl Engine {
                 .into_iter()
                 .take(24)
                 .map(|x| SynastryRecord {
-                    a: x.a.to_string(),
-                    b: x.b.to_string(),
-                    aspect: x.aspect.to_string(),
+                    a: kshana_speak::lexicon::name(x.a, lang).to_string(),
+                    b: kshana_speak::lexicon::name(x.b, lang).to_string(),
+                    aspect: kshana_speak::lexicon::aspect_named(x.aspect, lang).to_string(),
                     orb: x.orb,
                     tone: x.tone,
                     weight: x.weight,
@@ -548,7 +538,7 @@ impl Engine {
             .map(|k| KarakaRecord {
                 rank: k.rank as u8,
                 name: kshana_vedic::jaimini::karaka_name_in(k.rank, &lang).to_string(),
-                graha: lord(k.graha),
+                graha: kshana_speak::lexicon::graha(k.graha, kshana_rules::Lang::parse(&lang)).to_string(),
                 degree_in_sign: k.degree_in_sign,
                 meaning: kshana_vedic::jaimini::karaka_meaning_in(k.rank, &lang).to_string(),
             })

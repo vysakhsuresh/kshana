@@ -22,12 +22,15 @@ use kshana_vedic::{kp_lords, DashaLord};
 use crate::life::natal_chart;
 use crate::{AyanamsaChoice, Engine, ExactInstant, KshanaError};
 
-fn n(g: DashaLord) -> String {
+fn n(g: DashaLord, lang: kshana_rules::Lang) -> String {
+    if lang != kshana_rules::Lang::En {
+        return kshana_speak::lexicon::graha(g, lang).to_string();
+    }
     format!("{g:?}")
 }
 
-fn names(gs: &[DashaLord]) -> Vec<String> {
-    gs.iter().map(|g| n(*g)).collect()
+fn names(gs: &[DashaLord], lang: kshana_rules::Lang) -> Vec<String> {
+    gs.iter().map(|g| n(*g, lang)).collect()
 }
 
 /// One step of the four-step chain.
@@ -41,12 +44,12 @@ pub struct KpStepRecord {
     pub houses: Vec<u8>,
 }
 
-fn steps(s: &[Step; 4]) -> Vec<KpStepRecord> {
+fn steps(s: &[Step; 4], lang: kshana_rules::Lang) -> Vec<KpStepRecord> {
     s.iter()
         .enumerate()
         .map(|(i, s)| KpStepRecord {
             step: (i + 1) as u8,
-            planet: n(s.planet),
+            planet: n(s.planet, lang),
             houses: s.houses.clone(),
         })
         .collect()
@@ -181,6 +184,7 @@ fn point(
     retrograde: bool,
     st: &[Step; 4],
     signifies: Vec<u8>,
+    lang: kshana_rules::Lang,
 ) -> KpPointRecord {
     let k = kp_lords(lon);
     KpPointRecord {
@@ -188,13 +192,13 @@ fn point(
         sidereal_deg: lon,
         house,
         retrograde,
-        sign_lord: n(k.sign),
-        star_lord: n(k.star),
-        sub_lord: n(k.sub),
-        sub_sub_lord: n(k.sub_sub),
-        sub_sub_sub_lord: n(k.sub_sub_sub),
+        sign_lord: n(k.sign, lang),
+        star_lord: n(k.star, lang),
+        sub_lord: n(k.sub, lang),
+        sub_sub_lord: n(k.sub_sub, lang),
+        sub_sub_sub_lord: n(k.sub_sub_sub, lang),
         sub_number: k.sub_number,
-        steps: steps(st),
+        steps: steps(st, lang),
         signifies,
     }
 }
@@ -266,6 +270,7 @@ impl Engine {
                     false,
                     &c.steps,
                     c.through_star.clone(),
+                    lang,
                 )
             })
             .collect();
@@ -278,12 +283,13 @@ impl Engine {
                     .map(|s| s.house)
                     .collect();
                 point(
-                    n(p.graha),
+                    n(p.graha, lang),
                     p.sidereal,
                     p.house,
                     p.retrograde,
                     &kshana_rules::kp::four_step(&f, p.graha),
                     sig,
+                    lang,
                 )
             })
             .collect();
@@ -292,13 +298,13 @@ impl Engine {
                 let s = house_significators(&f, h);
                 KpHouseRecord {
                     house: h,
-                    star_of_occupants: names(&s.star_of_occupants),
-                    occupants: names(&s.occupants),
-                    star_of_owner: names(&s.star_of_owner),
-                    owner: n(s.owner),
-                    node_agents: names(&s.node_agents),
-                    ordered: names(&s.ordered),
-                    ruling: names(&rp_overlap(&f, &rp, &[h])),
+                    star_of_occupants: names(&s.star_of_occupants, lang),
+                    occupants: names(&s.occupants, lang),
+                    star_of_owner: names(&s.star_of_owner, lang),
+                    owner: n(s.owner, lang),
+                    node_agents: names(&s.node_agents, lang),
+                    ordered: names(&s.ordered, lang),
+                    ruling: names(&rp_overlap(&f, &rp, &[h]), lang),
                 }
             })
             .collect();
@@ -307,11 +313,11 @@ impl Engine {
             .map(|&g| {
                 let a = node_agency(&f, g);
                 KpNodeRecord {
-                    node: n(g),
-                    conjoined: names(&a.conjoined),
-                    aspecting: names(&a.aspecting),
-                    sign_lord: n(a.sign_lord),
-                    star_lord: n(a.star_lord),
+                    node: n(g, lang),
+                    conjoined: names(&a.conjoined, lang),
+                    aspecting: names(&a.aspecting, lang),
+                    sign_lord: n(a.sign_lord, lang),
+                    star_lord: n(a.star_lord, lang),
                 }
             })
             .collect();
@@ -323,12 +329,12 @@ impl Engine {
             nodes,
             ruling: KpRulingRecord {
                 at,
-                day_lord: n(rp.day_lord),
-                moon: names(&rp.moon),
-                lagna: names(&rp.lagna),
-                nodes: names(&rp.nodes),
-                ordered: names(&rp.ordered),
-                in_retro_star: names(&rp.in_retro_star),
+                day_lord: n(rp.day_lord, lang),
+                moon: names(&rp.moon, lang),
+                lagna: names(&rp.lagna, lang),
+                nodes: names(&rp.nodes, lang),
+                ordered: names(&rp.ordered, lang),
+                in_retro_star: names(&rp.in_retro_star, lang),
             },
             notes: NOTES.iter().map(|s| lang.pick(*s).to_string()).collect(),
         })
@@ -365,7 +371,7 @@ impl Engine {
             .map(|(g, &lord)| {
                 let r = kshana_vedic::reduce(&p, g);
                 AshtakaReductionRecord {
-                    planet: n(lord),
+                    planet: n(lord, kshana_rules::Lang::En),
                     bhinna: r.bhinna.to_vec(),
                     after_trikona: r.trikona.to_vec(),
                     after_ekadhipatya: r.ekadhipatya.to_vec(),
@@ -440,7 +446,10 @@ mod tests {
             for n in &l.notes {
                 assert!(!n.split(|c: char| !c.is_ascii_alphabetic()).any(|w| w.len() >= 3), "{lang}: {n}");
             }
-            assert_eq!(l.ruling.ordered, t.ruling.ordered);
+            // The same planets, named in the reader's script.
+            let named: Vec<String> = t.ruling.ordered.iter().map(|s| kshana_speak::lexicon::name(s, kshana_rules::Lang::parse(lang)).to_string()).collect();
+            assert_eq!(l.ruling.ordered, named);
+            assert!(l.ruling.ordered.iter().all(|s| !s.chars().any(|c| c.is_ascii_alphabetic())), "{lang}: {:?}", l.ruling.ordered);
         }
     }
 

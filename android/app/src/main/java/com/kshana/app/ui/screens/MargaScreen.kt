@@ -658,7 +658,7 @@ private fun SandhiPart(profile: BirthProfile, settings: EngineSettings, zone: Zo
             engine.dashaSystem(birth, profile.latitude, profile.longitude, settings.ayanamsa, "vimshottari", from, "en")
                 .running.firstOrNull { it.level.toInt() == 1 }?.label
         }.getOrNull()
-        running ?: windows?.firstOrNull()?.fromLord ?: throw IllegalStateException("The running mahadasha could not be read.")
+        running ?: windows?.firstOrNull()?.fromLordKey ?: throw IllegalStateException("The running mahadasha could not be read.")
     }
     ErrorLine(lordError)
     val lord = cache.runningLord

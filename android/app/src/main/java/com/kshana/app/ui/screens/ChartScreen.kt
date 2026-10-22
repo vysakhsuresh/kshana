@@ -190,8 +190,8 @@ private fun NatalWheel(chart: ChartRecord, aspects: List<AspectRecord>, sidereal
         val byName = chart.bodies.associateBy { it.name }
         val dash = PathEffect.dashPathEffect(floatArrayOf(7f, 6f))
         for (a in aspects) {
-            val pa = byName[a.bodyA] ?: continue
-            val pb = byName[a.bodyB] ?: continue
+            val pa = byName[a.bodyAKey] ?: continue
+            val pb = byName[a.bodyBKey] ?: continue
             val colour = when (a.aspectKey) {
                 in MAJOR_GOLD -> KshanaColors.Gold.copy(alpha = 0.75f)
                 in MAJOR_SKY -> KshanaColors.Sky.copy(alpha = 0.75f)

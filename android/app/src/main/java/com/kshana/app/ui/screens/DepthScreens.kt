@@ -170,14 +170,16 @@ fun KpFullScreen(profile: BirthProfile, place: Place, settings: EngineSettings, 
             val x = d.mod(30.0); val dd = x.toInt(); val m = ((x - dd) * 60).toInt(); val s = (((x - dd) * 60 - m) * 60).toInt()
             return "%s %02d°%02d′%02d″".format(sign, dd, m, s)
         }
-        fun ab(p: String) = p.take(2)
+        // Two letters in English; the chart-box short forms in Malayalam and Hindi.
+        fun ab(p: String) = PLANET_ABBR[p] ?: p.take(2)
+        fun pt(p: String) = if (p.isNotEmpty() && p[0].code < 128) p.take(4) else PLANET_ABBR[p] ?: p.take(4)
         mono("Ayanamsa %.6f°".format(k.ayanamsaDeg), KshanaColors.Muted)
         SectionLabel("Cusps")
         mono("CUSP  POSITION        SGN STR SUB SS  SSS  SIGNIFIES", KshanaColors.Gold)
         for (c in k.cusps) mono("%-5s %-15s %-3s %-3s %-3s %-3s %-4s %s".format(c.point.take(5), dms(c.siderealDeg), ab(c.signLord), ab(c.starLord), ab(c.subLord), ab(c.subSubLord), ab(c.subSubSubLord), c.signifies.joinToString(",")), KshanaColors.Text)
         SectionLabel("Planets")
         mono("PLAN  POSITION        H  SGN STR SUB SS  SSS  SIGNIFIES", KshanaColors.Gold)
-        for (p in k.planets) mono("%-5s %-15s %-2d %-3s %-3s %-3s %-3s %-4s %s".format(p.point.take(4) + if (p.retrograde) "R" else "", dms(p.siderealDeg), p.house.toInt(), ab(p.signLord), ab(p.starLord), ab(p.subLord), ab(p.subSubLord), ab(p.subSubSubLord), p.signifies.joinToString(",")), KshanaColors.Text)
+        for (p in k.planets) mono("%-5s %-15s %-2d %-3s %-3s %-3s %-3s %-4s %s".format(pt(p.point) + if (p.retrograde) "R" else "", dms(p.siderealDeg), p.house.toInt(), ab(p.signLord), ab(p.starLord), ab(p.subLord), ab(p.subSubLord), ab(p.subSubSubLord), p.signifies.joinToString(",")), KshanaColors.Text)
         SectionLabel("Cuspal interlinks · four steps")
         for (c in k.cusps) if (c.steps.isNotEmpty()) mono("${c.point}: " + c.steps.joinToString("  →  ") { "${ab(it.planet)}[${it.houses.joinToString(",")}]" }, KshanaColors.TextSoft)
         SectionLabel("House significators")

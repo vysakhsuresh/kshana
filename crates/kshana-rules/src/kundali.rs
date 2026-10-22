@@ -8,7 +8,7 @@
 
 use crate::ask::{answer_in, Answer, Question};
 use crate::lang;
-use crate::briefing::{briefing, Briefing};
+use crate::briefing::{briefing_in, Briefing};
 use crate::explain::{explain, Relief};
 use crate::forecast::{date_words, moment, slow_series, Band, ForecastError, Life, Natal, SIGN_NAMES};
 use crate::gochara::{favourable_from_moon, SaturnPhase};
@@ -1242,8 +1242,8 @@ pub fn couple_in(
         v
     };
     // Each person's briefing for love (English: the second turned to the third person).
-    let a_briefing = briefing(spk, eop, a, obs, system, ayanamsa, &[Life::Love], at)?;
-    let mut b_briefing = briefing(spk, eop, b, obs, system, ayanamsa, &[Life::Love], at)?;
+    let a_briefing = briefing_in(l, spk, eop, a, obs, system, ayanamsa, &[Life::Love], at)?;
+    let mut b_briefing = briefing_in(l, spk, eop, b, obs, system, ayanamsa, &[Life::Love], at)?;
     if !en {
         return Ok(couple_local(CoupleLocal {
             lang: l,

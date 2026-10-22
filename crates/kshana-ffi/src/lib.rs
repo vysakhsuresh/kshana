@@ -287,6 +287,15 @@ fn lord_name(l: DashaLord) -> String {
     format!("{l:?}")
 }
 
+/// A graha's name in the reader's script (English: the engine's own name), for fields
+/// the chart pages only show.
+pub(crate) fn lord_in(l: DashaLord, lang: kshana_rules::Lang) -> String {
+    if lang == kshana_rules::Lang::En {
+        return lord_name(l);
+    }
+    kshana_speak::lexicon::graha(l, lang).to_string()
+}
+
 /// A body's placement, as the app receives it.
 #[derive(Clone, Debug, uniffi::Record)]
 #[allow(missing_docs)]
@@ -668,7 +677,7 @@ impl Engine {
                 let agreeing = kshana_rules::agreeing_levels(&funnel) as u8;
                 AreaReading {
                     parashari_score: b.score,
-                    parashari_lord: lord_name(b.lord),
+                    parashari_lord: lord_in(b.lord, kshana_rules::Lang::parse(&lang)),
                     parashari_hits: b.hits.iter().map(hit_record).collect(),
                     traditions_agree: p.promised == (b.score >= 0.5),
                     promise: PromiseRecord {
@@ -676,7 +685,7 @@ impl Engine {
                         primary_cusp: area.primary,
                         group: area.group.to_vec(),
                         negating: area.negating.to_vec(),
-                        sub_lord: lord_name(p.sub_lord),
+                        sub_lord: lord_in(p.sub_lord, kshana_rules::Lang::parse(&lang)),
                         promised: p.promised,
                         strength: p.strength,
                         fulfilling_weight: p.fulfilling_weight,
@@ -809,18 +818,18 @@ impl Engine {
         Ok(PrashnaRecord {
             verdict: format!("{:?}", v.verdict),
             question_genuine: v.question_genuine,
-            moon_sub_lord: lord_name(v.moon_sub_lord),
+            moon_sub_lord: lord_in(v.moon_sub_lord, kshana_rules::Lang::parse(&lang)),
             lagna_sidereal: ch.cusps_sidereal[0],
             moon_sidereal: ch.bodies[1].sidereal,
             cusps_sidereal: ch.cusps_sidereal.to_vec(),
-            ruling_planets: v.ruling.all().into_iter().map(lord_name).collect(),
-            agents: v.agents.iter().copied().map(lord_name).collect(),
+            ruling_planets: v.ruling.all().into_iter().map(|l| lord_in(l, kshana_rules::Lang::parse(&lang))).collect(),
+            agents: v.agents.iter().map(|l| lord_in(*l, kshana_rules::Lang::parse(&lang))).collect(),
             promise: PromiseRecord {
                 area: a.name.to_string(),
                 primary_cusp: a.primary,
                 group: a.group.to_vec(),
                 negating: a.negating.to_vec(),
-                sub_lord: lord_name(v.promise.sub_lord),
+                sub_lord: lord_in(v.promise.sub_lord, kshana_rules::Lang::parse(&lang)),
                 promised: v.promise.promised,
                 strength: v.promise.strength,
                 fulfilling_weight: v.promise.fulfilling_weight,
@@ -847,8 +856,8 @@ impl Engine {
                 .map(|w| MoonWindowRecord {
                     start: w.start.into(),
                     end: w.end.into(),
-                    star: lord_name(w.star),
-                    sub: lord_name(w.sub),
+                    star: lord_in(w.star, kshana_rules::Lang::parse(&lang)),
+                    sub: lord_in(w.sub, kshana_rules::Lang::parse(&lang)),
                 })
                 .collect(),
         })
@@ -895,8 +904,11 @@ impl Engine {
 pub struct RemedyWindowRecord {
     pub start: ExactInstant,
     pub end: ExactInstant,
-    /// "weekday hora", "tithi", "nakshatra", "Rahu kala to avoid" or "Brahma muhurta".
+    /// "weekday hora", "tithi", "nakshatra", "Rahu kala to avoid" or "Brahma muhurta",
+    /// in the reader's language.
     pub kind: String,
+    /// The same in English, for the app to compare ("Rahu kala to avoid").
+    pub kind_key: String,
     pub words: String,
     /// Hora ordinal in the solar day (1 = first after sunrise, 13 = first after sunset); 0 otherwise.
     pub hora_index: u8,
@@ -988,11 +1000,20 @@ pub struct PariharaRecord {
     pub ledger_hint: String,
 }
 
-fn window_record(w: &kshana_rules::RemedyWindow) -> RemedyWindowRecord {
+fn window_record(w: &kshana_rules::RemedyWindow, lang: kshana_rules::Lang) -> RemedyWindowRecord {
+    let kind = match w.kind {
+        "weekday hora" => ["weekday hora", "വാരഹോര", "वार होरा"],
+        "tithi" => ["tithi", "തിഥി", "तिथि"],
+        "nakshatra" => ["nakshatra", "നക്ഷത്രം", "नक्षत्र"],
+        "Rahu kala to avoid" => ["Rahu kala to avoid", "ഒഴിവാക്കേണ്ട രാഹുകാലം", "टालने योग्य राहुकाल"],
+        "Brahma muhurta" => ["Brahma muhurta", "ബ്രാഹ്മമുഹൂർത്തം", "ब्राह्म मुहूर्त"],
+        other => [other, other, other],
+    };
     RemedyWindowRecord {
         start: w.start.into(),
         end: w.end.into(),
-        kind: w.kind.to_string(),
+        kind: lang.pick(kind).to_string(),
+        kind_key: w.kind.to_string(),
         words: w.words.clone(),
         hora_index: w.hora_index,
     }
@@ -1087,7 +1108,7 @@ impl Engine {
                     cadence: r.schedule.cadence.clone(),
                     count: r.schedule.count,
                     duration_days: r.schedule.duration_days,
-                    windows: r.schedule.windows.iter().map(window_record).collect(),
+                    windows: r.schedule.windows.iter().map(|w| window_record(w, lang)).collect(),
                     measurable: r.measurable.clone(),
                     costs_money: r.costs_money,
                     source_keys: keys(&r.source_keys),
@@ -1129,8 +1150,14 @@ impl Engine {
 #[derive(Clone, Debug, uniffi::Record)]
 #[allow(missing_docs)]
 pub struct AspectRecord {
+    /// The first body in the reader's script ("Sun" in English).
     pub body_a: String,
+    /// The second body in the reader's script.
     pub body_b: String,
+    /// The first body's English name, as `chart` names it, for the app to match.
+    pub body_a_key: String,
+    /// The second body's English name.
+    pub body_b_key: String,
     /// The aspect in the reader's language ("Square" in English).
     pub aspect: String,
     /// The aspect's English name ("Square"), for the app to compare.
@@ -1188,8 +1215,10 @@ impl Engine {
                     max_orb_deg,
                 ) {
                     out.push(AspectRecord {
-                        body_a: a.name.to_string(),
-                        body_b: b.name.to_string(),
+                        body_a: kshana_speak::lexicon::name(a.name, lang).to_string(),
+                        body_b: kshana_speak::lexicon::name(b.name, lang).to_string(),
+                        body_a_key: a.name.to_string(),
+                        body_b_key: b.name.to_string(),
                         aspect: if lang == kshana_rules::Lang::En {
                             format!("{:?}", h.aspect)
                         } else {
@@ -1923,7 +1952,7 @@ impl Engine {
                 birth: x.birth.into(),
                 score: x.score,
                 asc_sidereal: x.asc_sidereal,
-                asc_sub_lord: lord_name(x.asc_sub_lord),
+                asc_sub_lord: lord_in(x.asc_sub_lord, lang),
                 per_event: x
                     .per_event
                     .into_iter()
@@ -3250,26 +3279,16 @@ impl Engine {
             a_briefing: {
                 let mut r = briefing_record(&c.a_briefing);
                 if lang != kshana_rules::Lang::En {
-                    // As `briefing` does: the season paragraph, the long test and the
-                    // moment in the reader's language.
-                    let (sw, _) = kshana_rules::saturn_sentence_in(lang, &self.spk, ayanamsa.into(), &a, c.a_briefing.saturn, at.into(), lon);
-                    if let Some(p) = r.paragraphs.first_mut() {
-                        *p = kshana_rules::season_paragraph_in(lang, &a, at.into(), lon, &sw);
-                    }
-                    r.saturn_words = sw;
-                    localise_moment(&mut r.moment, &c.a_briefing.moment, lang, lon);
+                    // As `briefing` does: the briefing was built in `lang`; the Moon and
+                    // the moment's names follow it here.
+                    localise_briefing(&mut r, &c.a_briefing, lang, lon);
                 }
                 r
             },
             b_briefing: {
                 let mut r = briefing_record(&c.b_briefing);
                 if lang != kshana_rules::Lang::En {
-                    let (sw, _) = kshana_rules::saturn_sentence_in(lang, &self.spk, ayanamsa.into(), &b, c.b_briefing.saturn, at.into(), lon);
-                    if let Some(p) = r.paragraphs.first_mut() {
-                        *p = kshana_rules::season_paragraph_in(lang, &b, at.into(), lon, &sw);
-                    }
-                    r.saturn_words = sw;
-                    localise_moment(&mut r.moment, &c.b_briefing.moment, lang, lon);
+                    localise_briefing(&mut r, &c.b_briefing, lang, lon);
                 }
                 r
             },
@@ -3495,7 +3514,7 @@ impl Engine {
                 .returns
                 .iter()
                 .map(|r| ReturnRecord {
-                    graha: lord_name(r.graha),
+                    graha: lord_in(r.graha, lang),
                     nth: r.nth,
                     at: r.at.into(),
                     age: r.age,
@@ -3898,13 +3917,13 @@ pub struct RectifyRecord {
     pub by_sign: Vec<CandidateRecord>,
 }
 
-fn candidate_record(c: &kshana_rules::Candidate) -> CandidateRecord {
+fn candidate_record(c: &kshana_rules::Candidate, lang: kshana_rules::Lang) -> CandidateRecord {
     CandidateRecord {
         birth: c.birth.into(),
         fit: c.fit * 100.0,
-        lagna_sign: kshana_rules::forecast::SIGN_NAMES[c.lagna_sign as usize % 12].to_string(),
-        moon_star: kshana_vedic::panchanga::NAKSHATRA_NAMES[c.moon_star.min(26)].to_string(),
-        dasha_at_birth: lord_name(c.dasha_at_birth),
+        lagna_sign: kshana_speak::lexicon::name(kshana_rules::forecast::SIGN_NAMES[c.lagna_sign as usize % 12], lang).to_string(),
+        moon_star: kshana_speak::lexicon::name(kshana_vedic::panchanga::NAKSHATRA_NAMES[c.moon_star.min(26)], lang).to_string(),
+        dasha_at_birth: lord_in(c.dasha_at_birth, lang),
         explained: c.explained as u32,
         words: c.words.clone(),
     }
@@ -4115,8 +4134,8 @@ impl Engine {
             lang,
         );
         RectifyRecord {
-            by_sign: kshana_rules::by_rising_sign(&v).iter().map(candidate_record).collect(),
-            candidates: v.iter().map(candidate_record).collect(),
+            by_sign: kshana_rules::by_rising_sign(&v).iter().map(|c| candidate_record(c, lang)).collect(),
+            candidates: v.iter().map(|c| candidate_record(c, lang)).collect(),
         }
     }
 }
@@ -4501,7 +4520,7 @@ mod plain_audit {
         "lord", "planet", "graha", "kind", "key", "rule_id", "rule_ids", "source", "life", "band", "trend", "purpose",
         "verdict", "span", "dosha", "tara_name", "moon_star", "moon", "dasha", "lagna_sign", "houses", "sign", "sub",
         "star", "dasha_at_birth", "moon_a", "moon_b", "why_expert", "season_why", "kp_star", "kp_sub", "kp_sub_sub",
-        "provenance_engine", "provenance_kernel", "provenance_models", "body", "body_a", "body_b", "aspect", "unit",
+        "provenance_engine", "provenance_kernel", "provenance_models", "body", "body_a", "body_b", "body_a_key", "body_b_key", "aspect", "unit",
         "signature", "tithi", "nakshatra", "yoga", "hora", "factors", "cautions", "sub_lord", "agents", "ruling_planets",
         "moon_sub_lord", "question", "effort", "day", "mantra", "source_keys",
         // Expert-only remedy fields (the parihara expert page behind "Show the chart

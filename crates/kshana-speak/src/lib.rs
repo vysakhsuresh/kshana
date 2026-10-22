@@ -247,6 +247,11 @@ pub fn who_in(lang: Lang, natal: &Chart) -> Section {
     let sun = &facts.planets[0];
     let nk = nakshatra(moon.sidereal);
     let (nname, pada, syl) = naming_for(moon.sidereal);
+    let syl = match lang {
+        Lang::En => syl,
+        Lang::Ml => kshana_vedic::syllable_native(nk.index, pada).0,
+        Lang::Hi => kshana_vedic::syllable_native(nk.index, pada).1,
+    };
     let sid: [f64; 7] = std::array::from_fn(|i| facts.planets[i].sidereal);
     let kk = chara_karakas(sid);
     let lagna = sign_in(lang, facts.lagna_sign as usize);
@@ -347,7 +352,7 @@ pub fn who_in(lang: Lang, natal: &Chart) -> Section {
                     format!("{g} अपनी राशि में {deg:.2}°; दारकारक (जीवनसाथी) {dk}"),
                 )],
                 1.0,
-                vec!["Jaimini chara karaka, 7-planet scheme".to_string()],
+                vec![lang.pick(["Jaimini chara karaka, 7-planet scheme", "ജൈമിനി ചരകാരകം, 7 ഗ്രഹ രീതി", "जैमिनी चर कारक, 7-ग्रह पद्धति"]).to_string()],
             )
         },
     ];
@@ -507,8 +512,8 @@ pub fn area_section_in(lang: Lang, natal: &Chart, area: kshana_rules::Area, at: 
                 .iter()
                 .map(|x| match lang {
                     Lang::En => format!("{:?} signifies house {} ({:?})", deep.period.lord, x.house, x.level),
-                    Lang::Ml => format!("{g} {}-ാം ഭാവത്തെ സൂചിപ്പിക്കുന്നു ({:?})", x.house, x.level),
-                    Lang::Hi => format!("{g} {}वें भाव का सूचक है ({:?})", x.house, x.level),
+                    Lang::Ml => format!("{g} {}-ാം ഭാവത്തെ സൂചിപ്പിക്കുന്നു ({})", x.house, kshana_rules::kp::level_words_in(lang, x.level)),
+                    Lang::Hi => format!("{g} {}वें भाव का सूचक है ({})", x.house, kshana_rules::kp::level_words_in(lang, x.level)),
                 })
                 .collect(),
             0.4 + 0.12 * agree as f64,
@@ -606,7 +611,7 @@ pub fn now_section_in(lang: Lang, spk: &Spk, natal: &Chart, at: Instant, ayanams
                         format!("शनि निरयण राशि {sat}, जन्म चंद्र राशि {moon}"),
                     )],
                     0.9,
-                    vec!["Gochara: Sade Sati".to_string()],
+                    vec![lang.pick(["Gochara: Sade Sati", "ഗോചരം: ഏഴരശനി", "गोचर: साढ़ेसाती"]).to_string()],
                 ));
             }
             None => {
@@ -626,7 +631,7 @@ pub fn now_section_in(lang: Lang, spk: &Spk, natal: &Chart, at: Instant, ayanams
                             format!("शनि {sat} में, चंद्र {moon} में"),
                         )],
                         0.95,
-                        vec!["Gochara: Sade Sati".to_string()],
+                        vec![lang.pick(["Gochara: Sade Sati", "ഗോചരം: ഏഴരശനി", "गोचर: साढ़ेसाती"]).to_string()],
                     ));
                 }
             }
@@ -684,7 +689,7 @@ pub fn now_section_in(lang: Lang, spk: &Spk, natal: &Chart, at: Instant, ayanams
                     format!("{body} निरयण {:.3}°", t.longitude),
                 )],
                 0.8,
-                vec!["Gochara".to_string()],
+                vec![lang.pick(["Gochara", "ഗോചരം", "गोचर"]).to_string()],
             ));
         }
     }
@@ -757,7 +762,7 @@ pub fn years_ahead_in(lang: Lang, natal: &Chart, at: Instant, years: u32) -> Sec
                 format!("सबसे अच्छा {:.2}, सबसे कमज़ोर {:.2} (पाराशरी दशा-फल)", best.areas[i], worst.areas[i]),
             )],
             0.6,
-            vec!["Parashari period quality".to_string()],
+            vec![lang.pick(["Parashari period quality", "പരാശരി ദശാഫലം", "पाराशरी दशा-फल"]).to_string()],
         ));
     }
     Section {
@@ -892,6 +897,135 @@ pub fn compatibility(
     out
 }
 
+/// [`compatibility`] in `lang`. Pass the kutas and doshas already in the reader's
+/// language (`ashtakoota_in`, `mangal_dosha_in`); the classical names are written in
+/// Malayalam or Devanagari, the planets and aspects in the reader's script. English is
+/// [`compatibility`] unchanged.
+pub fn compatibility_in(
+    lang: Lang,
+    ash: &Ashtakoota,
+    mangal_a: &MangalDosha,
+    mangal_b: &MangalDosha,
+    syn: &[SynastryAspect],
+) -> Vec<Sentence> {
+    if lang == Lang::En {
+        return compatibility(ash, mangal_a, mangal_b, syn);
+    }
+    let hi = lang == Lang::Hi;
+    let t = |ml: String, h: String| if hi { h } else { ml };
+    let kuta = |n: &'static str| kshana_rules::kuta::kuta_name_in(n, lang);
+    let mut out = vec![s(
+        t(
+            format!("ഇരുവരുടെയും ചന്ദ്രനക്ഷത്രങ്ങൾ എട്ടു കൂടങ്ങളിൽ 36-ൽ {:.1} പോയിന്റ് നേടുന്നു: {}.", ash.total, ash.verdict),
+            format!("दोनों के चंद्र नक्षत्र आठ कूटों में 36 में से {:.1} अंक पाते हैं: {}।", ash.total, ash.verdict),
+        ),
+        ash.kutas.iter().map(|k| format!("{} {:.1}/{:.0}: {}", kuta(k.name), k.points, k.max, k.detail)).collect(),
+        0.9,
+        vec![lang.pick(["", "അഷ്ടകൂടം (ചന്ദ്രനക്ഷത്ര പൊരുത്തം)", "अष्टकूट (चंद्र नक्षत्र मिलान)"]).to_string()],
+    )];
+    if ash.nadi_dosha {
+        out.push(s(
+            lang.pick([
+                "",
+                "രണ്ടു ചന്ദ്രന്മാരും ഒരേ നാഡിയിലാണ്. ഗ്രന്ഥങ്ങൾ ഇതിനെ ഏറ്റവും ഭാരമുള്ള ദോഷമായി എണ്ണുന്നു; ചന്ദ്രരാശികളോ അവയുടെ അധിപന്മാരോ ഒന്നാണെങ്കിൽ ചിലർ ഇത് ഒഴിവാക്കുന്നു. ഈ എഞ്ചിൻ അത് കാണിക്കുന്നു, പക്ഷേ മുൻകൂട്ടി കരുതുന്നില്ല.",
+                "दोनों चंद्र एक ही नाड़ी में हैं। ग्रंथ इसे सबसे भारी दोष गिनते हैं; कुछ इसे तब हटाते हैं जब चंद्र राशियाँ या उनके स्वामी एक हों। यह इंजन इसे बताता है, पर मानकर नहीं चलता।",
+            ])
+            .to_string(),
+            vec![format!("{}: {}", kuta("Nadi"), ash.kutas[7].detail)],
+            0.9,
+            vec![lang.pick(["", "നാഡി കൂടം", "नाड़ी कूट"]).to_string()],
+        ));
+    }
+    if ash.bhakoot_dosha {
+        out.push(s(
+            lang.pick([
+                "",
+                "ചന്ദ്രരാശികൾ 2/12, 5/9 അല്ലെങ്കിൽ 6/8 ബന്ധത്തിലാണ് (ഭകൂട ദോഷം); ദിവസേനയുള്ള ജീവിതത്തിലെ ഉരസലായി ഇതിനെ വായിക്കുന്നു.",
+                "चंद्र राशियाँ 2/12, 5/9 या 6/8 के संबंध में हैं (भकूट दोष); इसे रोज़ के जीवन में खटपट के रूप में पढ़ा जाता है।",
+            ])
+            .to_string(),
+            vec![format!("{}: {}", kuta("Bhakoot"), ash.kutas[6].detail)],
+            0.8,
+            vec![lang.pick(["", "ഭകൂടം", "भकूट कूट"]).to_string()],
+        ));
+    }
+    let rule_md = || vec![lang.pick(["", "ചൊവ്വാദോഷം", "मंगल दोष"]).to_string()];
+    let houses = |m: &MangalDosha| {
+        t(
+            format!("ചൊവ്വ ലഗ്നത്തിൽ നിന്ന് {}-ാം ഭാവത്തിൽ, ചന്ദ്രനിൽ നിന്ന് {}-ാം, ശുക്രനിൽ നിന്ന് {}-ാം", m.from_lagna, m.from_moon, m.from_venus),
+            format!("मंगल लग्न से {}वें भाव में, चंद्र से {}वें, शुक्र से {}वें", m.from_lagna, m.from_moon, m.from_venus),
+        )
+    };
+    let md = |m: &MangalDosha, first: bool| -> Sentence {
+        let who = if first { t("ആദ്യത്തെ ജാതകത്തിൽ".into(), "पहली कुंडली में".into()) } else { t("രണ്ടാമത്തെ ജാതകത്തിൽ".into(), "दूसरी कुंडली में".into()) };
+        if !m.present {
+            s(t(format!("{who} ചൊവ്വാദോഷമില്ല."), format!("{who} मंगल दोष नहीं है।")), vec![houses(m)], 0.95, rule_md())
+        } else if m.effective {
+            s(
+                t(format!("{who} ചൊവ്വാദോഷമുണ്ട്; ജാതകത്തിൽ ദോഷഭംഗമൊന്നുമില്ല."), format!("{who} मंगल दोष है; कुंडली में इसका कोई भंग नहीं।")),
+                vec![houses(m)],
+                0.85,
+                rule_md(),
+            )
+        } else {
+            s(
+                t(
+                    format!("{who} സ്ഥാനംകൊണ്ട് ചൊവ്വാദോഷമുണ്ട്, പക്ഷേ ഇവയാൽ ഭംഗം വരുന്നു: {}.", m.cancellations.join("; ")),
+                    format!("{who} स्थिति से मंगल दोष है, पर इनसे भंग होता है: {}।", m.cancellations.join("; ")),
+                ),
+                vec![t(format!("ചൊവ്വ ലഗ്നത്തിൽ നിന്ന് {}-ാം ഭാവത്തിൽ", m.from_lagna), format!("मंगल लग्न से {}वें भाव में", m.from_lagna))],
+                0.7,
+                rule_md(),
+            )
+        }
+    };
+    out.push(md(mangal_a, true));
+    out.push(md(mangal_b, false));
+    let rule_pair = || vec![lang.pick(["", "ചൊവ്വാദോഷ ചേർച്ച", "मंगल दोष मिलान"]).to_string()];
+    match (mangal_a.effective, mangal_b.effective) {
+        (true, true) => out.push(s(
+            lang.pick(["", "ഇരുവർക്കും ചൊവ്വാദോഷമുണ്ട്; സാധാരണ നിയമപ്രകാരം രണ്ടും പരസ്പരം ഇല്ലാതാക്കുന്നു.", "दोनों में मंगल दोष है; सामान्य नियम से दोनों एक-दूसरे को काट देते हैं।"]).to_string(),
+            vec![],
+            0.8,
+            rule_pair(),
+        )),
+        (true, false) | (false, true) => out.push(s(
+            lang.pick([
+                "",
+                "ഒരു ജാതകത്തിൽ മാത്രമാണ് ഭംഗമില്ലാത്ത ചൊവ്വാദോഷം; വിവാഹത്തിനു മുമ്പ് കരുതലും പരിഹാരവും ഗ്രന്ഥങ്ങൾ നിർദ്ദേശിക്കുന്നു.",
+                "केवल एक कुंडली में बिना भंग का मंगल दोष है; ग्रंथ विवाह से पहले सावधानी और उपाय की सलाह देते हैं।",
+            ])
+            .to_string(),
+            vec![],
+            0.7,
+            rule_pair(),
+        )),
+        _ => {}
+    }
+    let harmonious: f64 = syn.iter().filter(|a| a.tone > 0).map(|a| a.weight).sum();
+    let tense: f64 = syn.iter().filter(|a| a.tone < 0).map(|a| a.weight).sum();
+    if !syn.is_empty() {
+        let top: Vec<String> = syn
+            .iter()
+            .take(6)
+            .map(|a| {
+                let (pa, pb, asp) = (lexicon::name(a.a, lang), lexicon::name(a.b, lang), lexicon::aspect_named(a.aspect, lang));
+                t(format!("{pa} {asp} {pb} ({:.1}° അകലം)", a.orb), format!("{pa} {asp} {pb} ({:.1}° अंतर)", a.orb))
+            })
+            .collect();
+        out.push(s(
+            t(
+                format!("പാശ്ചാത്യ സിനാസ്ട്രിയിൽ ഇണക്കമുള്ള ബന്ധങ്ങൾക്ക് {harmonious:.1}, പിരിമുറുക്കമുള്ളവയ്ക്ക് {tense:.1} എന്നാണ് തൂക്കം; ഏറ്റവും അടുത്തവ: {}.", top.join(", ")),
+                format!("पश्चिमी सिनास्ट्री में मेल वाले संबंधों का भार {harmonious:.1} और तनाव वाले का {tense:.1} है; सबसे निकट के हैं: {}।", top.join(", ")),
+            ),
+            top,
+            0.7,
+            vec![lang.pick(["", "സിനാസ്ട്രി ദൃഷ്ടികൾ", "सिनास्ट्री दृष्टियाँ"]).to_string()],
+        ));
+    }
+    out
+}
+
 /// A period in words, for a timeline tile.
 pub fn period_words(lord: DashaLord, sub: Option<DashaLord>, quality: f64, area: &str) -> String {
     let tone = if quality >= 0.7 {
@@ -965,6 +1099,25 @@ mod tests {
         let out = compatibility(&a, &md, &none, &[]);
         assert!(out.len() >= 4);
         assert!(out.iter().all(|x| !x.text.is_empty()));
+        assert_eq!(compatibility_in(Lang::En, &a, &md, &none, &[]), out);
+
+        // Malayalam and Hindi: no English word in the text, the reasons or the rules.
+        let cancelled = MangalDosha { cancellations: vec!["Jupiter aspects or joins Mars".into()], effective: false, ..md.clone() };
+        let syn = [SynastryAspect { a: "Venus", b: "Mars", aspect: "quincunx", orb: 1.2, tone: 0, weight: 0.8 }];
+        for lang in [Lang::Ml, Lang::Hi] {
+            let a = kshana_rules::kuta::ashtakoota_in(100.0, 100.0, lang);
+            let mut cm = cancelled.clone();
+            for x in cm.cancellations.iter_mut() {
+                *x = lang.pick(["", "വ്യാഴം ചൊവ്വയെ നോക്കുന്നു", "गुरु मंगल को देखता है"]).to_string();
+            }
+            let out = compatibility_in(lang, &a, &md, &cm, &syn);
+            assert!(out.len() >= 5);
+            for s in &out {
+                for t in std::iter::once(&s.text).chain(s.why.iter()).chain(s.rules.iter()) {
+                    assert!(!t.split(|c: char| !c.is_ascii_alphabetic()).any(|w| w.len() >= 3), "{lang:?}: {t}");
+                }
+            }
+        }
     }
 }
 
