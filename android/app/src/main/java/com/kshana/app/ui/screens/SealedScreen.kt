@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kshana.app.data.BirthProfile
 import com.kshana.app.data.EngineSettings
+import com.kshana.app.data.Lang
 import com.kshana.app.data.SealedEntry
 import com.kshana.app.data.SealedStore
 import com.kshana.app.engine.EngineProvider
@@ -47,6 +48,7 @@ import kotlinx.coroutines.withContext
 import uniffi.kshana_ffi.ExactInstant
 import uniffi.kshana_ffi.MetricsRecord
 import uniffi.kshana_ffi.SealedRecord
+import uniffi.kshana_ffi.ledgerEventKindName
 import uniffi.kshana_ffi.ledgerEventKinds
 import uniffi.kshana_ffi.resolveForecast
 import uniffi.kshana_ffi.sealedForecastMetrics
@@ -342,7 +344,7 @@ private fun SealForm(
         }
         Text("KIND", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            for (k in kinds) Chip(k.uppercase(), selected = kind == k, onClick = { kind = k })
+            for (k in kinds) Chip(ledgerEventKindName(k, Lang.code).uppercase(), selected = kind == k, onClick = { kind = k })
         }
         Text("WINDOW OPENS", style = MaterialTheme.typography.labelSmall, color = KshanaColors.Gold)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

@@ -5,6 +5,8 @@
 //! from the Moon at mid-period give the sky's part in words.
 
 use crate::event::{month_year, LedgerError};
+use crate::score::{area_word, lord_in, ordinal_in, when_in};
+use kshana_rules::Lang;
 use kshana_chart::Chart;
 use kshana_ephem::Spk;
 use kshana_forecast::transits_at;
@@ -60,6 +62,18 @@ pub fn retrodict(
     from: Instant,
     to: Instant,
 ) -> Result<Vec<PeriodReading>, LedgerError> {
+    retrodict_in(spk, natal, ayanamsa, from, to, Lang::En)
+}
+
+/// [`retrodict`] with the words in the reader's language.
+pub fn retrodict_in(
+    spk: &Spk,
+    natal: &Chart,
+    ayanamsa: Ayanamsa,
+    from: Instant,
+    to: Instant,
+    lang: Lang,
+) -> Result<Vec<PeriodReading>, LedgerError> {
     let (from, to) = if to < from { (to, from) } else { (from, to) };
     let facts = Facts::from_chart(natal);
     let promised: [f64; N_AREAS] = AREAS.map(|a| promise(&facts, a).strength);
@@ -106,6 +120,67 @@ pub fn retrodict(
                 _ => 0,
             };
 
+            if lang != Lang::En {
+                let (an, mn) = (lord_in(lang, p.lord), lord_in(lang, m.lord));
+                let (f, t) = (when_in(lang, p.start), when_in(lang, p.end));
+                let mut words = kshana_rules::say3!(
+                    lang,
+                    "",
+                    "{mn} മഹാദശയിൽ {an} അന്തർദശ, {f} മുതൽ {t} വരെ: ",
+                    "{mn} महादशा में {an} की अंतर्दशा, {f} से {t} तक: "
+                );
+                if top_areas.is_empty() {
+                    words.push_str(lang.pick([
+                        "",
+                        "ഭാവങ്ങൾ വാഗ്ദാനം ചെയ്യുകയും ഈ ദശാനാഥന്മാർ താങ്ങുകയും ചെയ്ത ഒരു മേഖലയും ഉണ്ടായില്ല.",
+                        "ऐसा कोई क्षेत्र नहीं था जिसका वादा भाव करते हों और ये दशा-स्वामी भी थामते हों।",
+                    ]));
+                } else {
+                    let named: Vec<String> = order
+                        .iter()
+                        .filter(|i| area_strengths[**i] > 0.0)
+                        .take(3)
+                        .map(|i| format!("{} ({:.2})", area_word(lang, AREAS[*i].name), area_strengths[*i]))
+                        .collect();
+                    let weakest = order[7];
+                    let (named, w, x) = (named.join(", "), area_word(lang, AREAS[weakest].name), area_strengths[weakest]);
+                    words.push_str(&kshana_rules::say3!(
+                        lang,
+                        "",
+                        "{named} മുന്നിട്ടുനിന്നു; {w} ({x:.2}) ഏറ്റവും ദുർബലം.",
+                        "{named} उभरे; {w} ({x:.2}) सबसे कमज़ोर रहा।"
+                    ));
+                }
+                let (jo, so) = (ordinal_in(lang, jupiter_from_moon), ordinal_in(lang, saturn_from_moon));
+                words.push_str(&kshana_rules::say3!(
+                    lang,
+                    "",
+                    " ദശയുടെ മധ്യത്തിൽ നിങ്ങളുടെ ചന്ദ്രനിൽ നിന്ന് {jo} ഭാവത്തിൽ വ്യാഴവും {so} ഭാവത്തിൽ ശനിയും ആയിരുന്നു",
+                    " अवधि के मध्य में गुरु आपके चंद्र से {jo} भाव में और शनि {so} भाव में थे"
+                ));
+                if sade_sati_phase != 0 {
+                    words.push_str(&kshana_rules::say3!(
+                        lang,
+                        "",
+                        ", ഏഴരശ്ശനി 3-ൽ {sade_sati_phase}-ാം ഘട്ടം",
+                        ", साढ़ेसाती 3 में से चरण {sade_sati_phase}"
+                    ));
+                }
+                words.push_str(lang.pick(["", ".", "।"]));
+                out.push(PeriodReading {
+                    start: p.start,
+                    end: p.end,
+                    maha: m.lord,
+                    antar: p.lord,
+                    area_strengths,
+                    top_areas,
+                    jupiter_from_moon,
+                    saturn_from_moon,
+                    sade_sati_phase,
+                    words,
+                });
+                continue;
+            }
             let mut words = format!(
                 "{:?}'s sub-period in {:?}'s mahadasha, {} to {}: ",
                 p.lord,

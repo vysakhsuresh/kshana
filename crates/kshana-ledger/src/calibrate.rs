@@ -8,7 +8,7 @@ use crate::event::{EventKind, LedgerError, LifeEvent};
 use crate::score::{score_at, EventScore};
 use kshana_chart::Chart;
 use kshana_ephem::Spk;
-use kshana_rules::{area, Facts};
+use kshana_rules::{area, Facts, Lang};
 use kshana_time::Instant;
 use kshana_vedic::Ayanamsa;
 
@@ -183,6 +183,79 @@ fn verdict_words(
     }
     if n < 5 {
         v.push_str(" With fewer than five events this says little either way.");
+    }
+    v
+}
+
+/// A calibration's verdict in the reader's language, rebuilt from its numbers
+/// (English gives back [`Calibration::verdict`]).
+pub fn calibration_verdict(c: &Calibration, lang: Lang) -> String {
+    if lang == Lang::En {
+        return c.verdict.clone();
+    }
+    let (n, bn, mean_fit, base_rate, lift, brier) = (c.n, c.baseline_n, c.mean_fit, c.base_rate, c.lift, c.brier);
+    if n == 0 {
+        return lang
+            .pick([
+                "",
+                "ഇതുവരെ സംഭവങ്ങളൊന്നും കുറിച്ചിട്ടില്ല, അതിനാൽ ഒത്തുനോക്കാൻ ഒന്നുമില്ല.",
+                "अभी तक कोई घटना दर्ज नहीं हुई, इसलिए मिलाने को कुछ नहीं।",
+            ])
+            .to_string();
+    }
+    let pct = c.support_rate * 100.0;
+    let mut v = kshana_rules::say3!(
+        lang,
+        "",
+        "{n} സംഭവങ്ങൾക്ക് ശരാശരി ചേർച്ച {mean_fit:.2}; അവയിൽ {pct:.0}% എണ്ണം 0.50 എങ്കിലും നേടി.",
+        "{n} घटनाओं का औसत मेल {mean_fit:.2}; इनमें से {pct:.0}% ने कम से कम 0.50 पाया।"
+    );
+    if bn == 0 {
+        v.push_str(lang.pick([
+            "",
+            " ആരും കുറിക്കാത്ത താരതമ്യ സമയങ്ങൾ ഒന്നും നോക്കിയില്ല, അതിനാൽ അടിസ്ഥാന നിരക്ക് അറിയില്ല, മുന്നേറ്റം വിലയിരുത്താനാവില്ല.",
+            " तुलना के लिए कोई बिना-दर्ज समय नहीं परखा गया, इसलिए आधार दर पता नहीं और बढ़त नहीं आँकी जा सकती।",
+        ]));
+    } else {
+        v.push_str(&kshana_rules::say3!(
+            lang,
+            "",
+            " ആരും കുറിക്കാത്ത, തുല്യ ഇടവേളയിലുള്ള {bn} സമയങ്ങൾക്ക് ശരാശരി {base_rate:.2}; മുന്നേറ്റം {lift:+.2}; Brier {brier:.2}.",
+            " बराबर अंतराल पर लिए गए {bn} बिना-दर्ज समयों का औसत {base_rate:.2}; बढ़त {lift:+.2}; Brier {brier:.2}।"
+        ));
+        v.push(' ');
+        v.push_str(if lift >= 0.15 {
+            lang.pick([
+                "",
+                "കുറിച്ച സംഭവങ്ങൾക്ക് ക്ഷണ നൽകിയ ചേർച്ച ഊഹത്തേക്കാൾ വ്യക്തമായി മുകളിലാണ്.",
+                "दर्ज घटनाओं पर क्षण का मेल अंदाज़े से साफ़ ऊपर रहा।",
+            ])
+        } else if lift >= 0.05 {
+            lang.pick([
+                "",
+                "കുറിച്ച സംഭവങ്ങൾക്ക് ക്ഷണ നൽകിയ ചേർച്ച ഊഹത്തേക്കാൾ അൽപം മുകളിലാണ്: സൂചനയുണ്ട്, തെളിവല്ല.",
+                "दर्ज घटनाओं पर क्षण का मेल अंदाज़े से थोड़ा ऊपर रहा: संकेत है, प्रमाण नहीं।",
+            ])
+        } else if lift > -0.05 {
+            lang.pick([
+                "",
+                "കുറിച്ച സംഭവങ്ങൾക്ക് ആരും കുറിക്കാത്ത സമയങ്ങളേക്കാൾ മെച്ചമായ ചേർച്ചയില്ല: ചേർച്ചയ്ക്ക് തെളിവില്ല.",
+                "दर्ज घटनाओं का मेल बिना-दर्ज समयों से बेहतर नहीं रहा: मेल का कोई प्रमाण नहीं।",
+            ])
+        } else {
+            lang.pick([
+                "",
+                "കുറിച്ച സംഭവങ്ങൾക്ക് ആരും കുറിക്കാത്ത സമയങ്ങളേക്കാൾ കുറഞ്ഞ ചേർച്ച: അത് അവയിൽ നിന്ന് അകന്നാണ് ചൂണ്ടിയത്.",
+                "दर्ज घटनाओं का मेल बिना-दर्ज समयों से भी कम रहा: इसने उनसे दूर इशारा किया।",
+            ])
+        });
+    }
+    if n < 5 {
+        v.push_str(lang.pick([
+            "",
+            " അഞ്ചിൽ കുറവ് സംഭവങ്ങൾ കൊണ്ട് ഇത് ഏതുവശത്തേക്കും കാര്യമായി ഒന്നും പറയുന്നില്ല.",
+            " पाँच से कम घटनाओं के साथ यह किसी भी ओर ज़्यादा नहीं कहता।",
+        ]));
     }
     v
 }

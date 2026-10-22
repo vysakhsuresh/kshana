@@ -577,7 +577,7 @@ fn chart_pages() {
         a.run(&tag("kp_full"), || e.kp_full(b, la, lo, AY, t, la, lo));
         a.run(&tag("shadbala"), || e.shadbala(b, la, lo, AY));
         a.run(&tag("ashtakavarga"), || e.ashtakavarga(b, la, lo, AY));
-        a.run(&tag("retrodict"), || e.retrodict(b, la, lo, AY, at(2010, 1, 1, 0, 0), at(2026, 1, 1, 0, 0)));
+        a.run(&tag("retrodict"), || e.retrodict(b, la, lo, AY, at(2010, 1, 1, 0, 0), at(2026, 1, 1, 0, 0), ["en", "ml", "hi"][ci % 3].into()));
         a.run(&tag("transit_windows"), || e.transit_windows(b, la, lo, AY, t, at(2029, 1, 1, 0, 0)));
         a.run(&tag("areas"), || e.area_readings(b, la, lo, 0.0, HS, AY, t, 3));
         a.run(&tag("profections"), || e.profections(b, la, lo, AY, t));
