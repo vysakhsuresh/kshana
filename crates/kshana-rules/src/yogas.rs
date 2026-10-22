@@ -43,9 +43,13 @@
 //! theirs throughout life (BPHS ch. 35), and are marked `lifelong`.
 
 use crate::facts::{Facts, PlanetFact};
+use crate::plain::Lang;
 use crate::parashari::{aspected_houses, dignity, exaltation, is_benefic, sarva_for, Dignity};
 use kshana_vedic::{chara_karakas, sign_lord, signs_aspect, varga, DashaLord};
 use DashaLord::*;
+
+#[path = "yogas_text.rs"]
+mod text;
 
 /// Which family a yoga belongs to.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -117,6 +121,40 @@ pub struct YogaDef {
     pub good: bool,
     /// For a difficulty: humane words and what helps. Empty for a gift.
     pub care: &'static str,
+}
+
+impl YogaDef {
+    fn pick(&self, lang: Lang, en: &'static str, f: fn(&'static text::YogaText) -> &'static str) -> &'static str {
+        match (lang, text::text(self.key)) {
+            (Lang::Ml, Some((ml, _))) => f(ml),
+            (Lang::Hi, Some((_, hi))) => f(hi),
+            _ => en,
+        }
+    }
+    /// The expert name in the reader's language.
+    pub fn name_in(&self, lang: Lang) -> &'static str {
+        self.pick(lang, self.name, |t| t.name)
+    }
+    /// The source in the reader's language.
+    pub fn source_in(&self, lang: Lang) -> &'static str {
+        self.pick(lang, self.source, |t| t.source)
+    }
+    /// The condition in the reader's language.
+    pub fn rule_in(&self, lang: Lang) -> &'static str {
+        self.pick(lang, self.rule, |t| t.rule)
+    }
+    /// The plain title in the reader's language.
+    pub fn title_in(&self, lang: Lang) -> &'static str {
+        self.pick(lang, self.title, |t| t.title)
+    }
+    /// The plain meaning in the reader's language.
+    pub fn meaning_in(&self, lang: Lang) -> &'static str {
+        self.pick(lang, self.meaning, |t| t.meaning)
+    }
+    /// The care words in the reader's language (empty for a gift).
+    pub fn care_in(&self, lang: Lang) -> &'static str {
+        self.pick(lang, self.care, |t| t.care)
+    }
 }
 
 macro_rules! y {
