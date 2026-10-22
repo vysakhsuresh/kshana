@@ -46,8 +46,9 @@ internal fun chapterTheme(lord: String): String = when (lord) {
 
 /** The first sentence of a passage. */
 internal fun firstSentence(s: String): String {
-    val i = s.indexOf(". ")
-    return if (i < 0) s.trim().let { if (it.endsWith(".")) it else "$it." } else s.substring(0, i + 1)
+    // A full stop or the Hindi danda ends a sentence.
+    val i = listOf(s.indexOf(". "), s.indexOf("। ")).filter { it >= 0 }.minOrNull() ?: -1
+    return if (i < 0) s.trim().let { if (it.endsWith(".") || it.endsWith("।")) it else "$it." } else s.substring(0, i + 1)
 }
 
 /** The kind of a remedy, as a label a person reads. */

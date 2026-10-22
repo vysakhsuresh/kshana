@@ -646,10 +646,11 @@ private fun HourLoreCard(h: uniffi.kshana_ffi.HoraRecord, tick: Instant) {
  * and the long testing time if one is on. The period's key is parsed, never shown.
  */
 private fun seasonLine(b: BriefingRecord): String {
-    // The engine's key: "Moon mahadasha (to 10 Oct 2030) › Mercury antardasha (to 9 Jan 2028)".
-    val antar = b.dasha.split(" › ").getOrNull(1)
-    val antarLord = antar?.substringBefore(" ")?.trim()
-    val antarEnd = antar?.substringAfter("(to ")?.substringBefore(")")?.trim()
+    // The present sub-period from the moment's own records: an English lord key and an end
+    // instant, so the line reads the same in every language (the engine's `dasha` text is localised).
+    val antar = b.moment.dasha.firstOrNull { it.level.toInt() == 2 }
+    val antarLord = antar?.lord
+    val antarEnd = antar?.let { localText(it.end, DATE_ONLY) }
     val first = if (!antarEnd.isNullOrBlank() && antarLord != null) trf("Until {0}, life moves through {1}.", antarEnd, tr(chapterTheme(antarLord))) else ""
     val saturn = if (b.saturnActive) " " + firstSentence(b.saturnWords.replaceFirstChar { it.uppercase() }) else ""
     return (first + saturn).trim()
